@@ -1,7 +1,7 @@
 <?php
 /**
  * XINDRO — El Sistema Operativo de IA para Creadores de Contenido y Redes Sociales
- * Landing Page de Alto Impacto Visual (Gamma + Indrox Architecture + i18n ES/EN/PT + Cookie Manager)
+ * Landing Page de Alto Impacto Visual (Gamma + Indrox Architecture + i18n ES/EN/PT + Cookie Manager + Responsive Mobile Menu)
  */
 require_once __DIR__ . '/config/security.php';
 require_once __DIR__ . '/config/auth.php';
@@ -26,7 +26,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
 <html lang="<?= htmlspecialchars($initialLang) ?>" class="scroll-smooth">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
   <title id="meta-page-title">XINDRO — El Sistema Operativo de IA para Creadores de Contenido</title>
   <meta name="description" id="meta-page-desc" content="Automatiza tus redes sociales. Responde comentarios en piloto automático, analiza métricas de engagement para encontrar tu horario perfecto y publica en múltiples plataformas desde una sola API.">
   
@@ -158,10 +158,10 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
     }
 
     .glass-nav {
-      background: rgba(255, 255, 255, 0.9);
+      background: rgba(255, 255, 255, 0.92);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
-      border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+      border-bottom: 1px solid rgba(226, 232, 240, 0.85);
     }
 
     .gamma-wordmark {
@@ -209,26 +209,24 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
 <body class="antialiased selection:bg-brand-500 selection:text-white">
 
   <!-- ========================================================================= -->
-  <!-- 1. NAVBAR FIJA CON SELECTOR DE IDIOMA Y LOGO ESTILO GAMMA -->
+  <!-- 1. NAVBAR FIJA RESPONSIVA (DESKTOP + MOBILE DRAWER) -->
   <!-- ========================================================================= -->
   <header class="fixed top-0 left-0 right-0 z-50 glass-nav transition-all duration-300">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4 lg:gap-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-3 sm:gap-6">
       
       <!-- Logo: XINDRO -->
-      <a href="index.php" class="flex items-center gap-3 group shrink-0 mr-2 xl:mr-6">
-        <div class="flex items-center gap-2">
-          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 via-indigo-600 to-brand-700 flex items-center justify-center text-white font-black text-lg shadow-glow-sm group-hover:scale-105 transition-transform">
-            <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-            </svg>
-          </div>
-          <span class="text-2xl gamma-wordmark tracking-tight text-midnight">
-            XINDRO
-          </span>
+      <a href="index.php" class="flex items-center gap-2.5 sm:gap-3 group shrink-0 mr-2 xl:mr-6">
+        <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-brand-500 via-indigo-600 to-brand-700 flex items-center justify-center text-white font-black text-lg shadow-glow-sm group-hover:scale-105 transition-transform">
+          <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+          </svg>
         </div>
+        <span class="text-xl sm:text-2xl gamma-wordmark tracking-tight text-midnight">
+          XINDRO
+        </span>
       </a>
 
-      <!-- Navigation Links with proper padding, whitespace-nowrap and generous spacing -->
+      <!-- Desktop Navigation Links with generous spacing -->
       <nav class="hidden lg:flex items-center gap-1 xl:gap-2.5 text-[13px] xl:text-sm font-semibold text-slate-600">
         <a href="#funciones" data-i18n="nav_products" class="px-3 py-2 rounded-xl whitespace-nowrap hover:text-brand-600 hover:bg-slate-100/70 transition-colors">Productos</a>
         <a href="#por-que-xindro" data-i18n="nav_why" class="px-3 py-2 rounded-xl whitespace-nowrap hover:text-brand-600 hover:bg-slate-100/70 transition-colors">¿Por qué Xindro?</a>
@@ -242,12 +240,12 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         <a href="#faq" data-i18n="nav_faq" class="px-3 py-2 rounded-xl whitespace-nowrap hover:text-brand-600 hover:bg-slate-100/70 transition-colors">FAQ</a>
       </nav>
 
-      <!-- Right Controls: Language Selector & Auth CTAs -->
-      <div class="flex items-center gap-2.5 sm:gap-3.5 shrink-0 ml-auto lg:ml-0">
+      <!-- Right Controls: Language Selector & Auth CTAs & Mobile Toggle -->
+      <div class="flex items-center gap-2 sm:gap-3 shrink-0 ml-auto lg:ml-0">
         
         <!-- Language Switcher Dropdown (ES / EN / PT) -->
         <div class="relative inline-block text-left" id="lang-dropdown-wrapper">
-          <button type="button" id="lang-dropdown-btn" onclick="I18n.toggleLangMenu()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-slate-100/90 hover:bg-slate-200/80 border border-slate-200/80 text-xs font-bold text-slate-700 transition-colors whitespace-nowrap">
+          <button type="button" id="lang-dropdown-btn" onclick="I18n.toggleLangMenu()" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-slate-100/90 hover:bg-slate-200/80 border border-slate-200/80 text-xs font-bold text-slate-700 transition-colors whitespace-nowrap">
             <span class="text-sm">🌐</span>
             <span id="current-lang-label">Español</span>
             <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -271,7 +269,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         </div>
 
         <?php if ($isLoggedIn): ?>
-          <a href="dashboard.php" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-all whitespace-nowrap shimmer-btn">
+          <a href="dashboard.php" class="hidden sm:inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-all whitespace-nowrap shimmer-btn">
             <span data-i18n="nav_dashboard">Ir a mi Panel</span>
             <span>→</span>
           </a>
@@ -279,26 +277,89 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           <a href="login.php" data-i18n="nav_login" class="text-xs sm:text-sm font-bold text-slate-700 hover:text-brand-600 px-3 py-2 rounded-xl hover:bg-slate-100/70 transition-colors whitespace-nowrap hidden md:inline-block">
             Iniciar sesión
           </a>
-          <a href="login.php" data-i18n="nav_cta" class="inline-flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 hover:shadow-md transition-all whitespace-nowrap shimmer-btn">
+          <a href="login.php" data-i18n="nav_cta" class="hidden sm:inline-flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 hover:shadow-md transition-all whitespace-nowrap shimmer-btn">
             <span>Comienza gratis</span>
           </a>
         <?php endif; ?>
+
+        <!-- Mobile Menu Toggle Button (Hamburger) -->
+        <button type="button" id="mobile-menu-btn" onclick="MobileNav.toggle()" class="lg:hidden p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 focus:outline-none transition-colors" aria-label="Abrir menú">
+          <svg id="hamburger-icon-open" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 6h16M4 12h16M4 18h16"></path>
+          </svg>
+          <svg id="hamburger-icon-close" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+
       </div>
 
+    </div>
+
+    <!-- Mobile Slide-Down Navigation Menu -->
+    <div id="mobile-nav-drawer" class="lg:hidden hidden bg-white/95 backdrop-blur-2xl border-b border-slate-200 shadow-2xl px-6 py-6 transition-all">
+      <div class="flex flex-col space-y-3 font-semibold text-slate-700 text-sm">
+        <a href="#funciones" onclick="MobileNav.close()" data-i18n="nav_products" class="p-2.5 rounded-xl hover:bg-brand-50 hover:text-brand-700 transition-colors flex items-center justify-between">
+          <span>📦 Productos</span>
+          <span class="text-slate-400">→</span>
+        </a>
+        <a href="#por-que-xindro" onclick="MobileNav.close()" data-i18n="nav_why" class="p-2.5 rounded-xl hover:bg-brand-50 hover:text-brand-700 transition-colors flex items-center justify-between">
+          <span>🛡️ ¿Por qué Xindro?</span>
+          <span class="text-slate-400">→</span>
+        </a>
+        <a href="#simulador" onclick="MobileNav.close()" data-i18n="nav_simulator" class="p-2.5 rounded-xl hover:bg-brand-50 hover:text-brand-700 transition-colors flex items-center justify-between">
+          <span class="flex items-center gap-2">
+            <span>⚡ Simulador en Vivo</span>
+            <span class="w-2 h-2 rounded-full bg-brand-500 live-dot"></span>
+          </span>
+          <span class="text-slate-400">→</span>
+        </a>
+        <a href="#calculadora-roi" onclick="MobileNav.close()" data-i18n="nav_roi" class="p-2.5 rounded-xl hover:bg-brand-50 hover:text-brand-700 transition-colors flex items-center justify-between">
+          <span>🧮 Calculadora de Impacto</span>
+          <span class="text-slate-400">→</span>
+        </a>
+        <a href="#api-docs" onclick="MobileNav.close()" data-i18n="nav_api" class="p-2.5 rounded-xl hover:bg-brand-50 hover:text-brand-700 transition-colors flex items-center justify-between">
+          <span>🔌 API para Creadores</span>
+          <span class="text-slate-400">→</span>
+        </a>
+        <a href="#precios" onclick="MobileNav.close()" data-i18n="nav_pricing" class="p-2.5 rounded-xl hover:bg-brand-50 hover:text-brand-700 transition-colors flex items-center justify-between">
+          <span>💎 Precios y Planes</span>
+          <span class="text-slate-400">→</span>
+        </a>
+        <a href="#faq" onclick="MobileNav.close()" data-i18n="nav_faq" class="p-2.5 rounded-xl hover:bg-brand-50 hover:text-brand-700 transition-colors flex items-center justify-between">
+          <span>❓ Preguntas Frecuentes</span>
+          <span class="text-slate-400">→</span>
+        </a>
+      </div>
+
+      <div class="mt-6 pt-5 border-t border-slate-200 flex flex-col gap-3">
+        <?php if ($isLoggedIn): ?>
+          <a href="dashboard.php" class="w-full py-3 rounded-xl text-center font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors">
+            <span data-i18n="nav_dashboard">Ir a mi Panel</span> →
+          </a>
+        <?php else: ?>
+          <a href="login.php" data-i18n="nav_cta" class="w-full py-3 rounded-xl text-center font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors">
+            Comienza gratis
+          </a>
+          <a href="login.php" data-i18n="nav_login" class="w-full py-2.5 rounded-xl text-center font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors">
+            Iniciar sesión
+          </a>
+        <?php endif; ?>
+      </div>
     </div>
   </header>
 
   <!-- ========================================================================= -->
   <!-- 2. HERO SECTION MULTILINGÜE -->
   <!-- ========================================================================= -->
-  <section class="relative pt-36 pb-16 md:pt-44 md:pb-24 hero-mesh-bg overflow-hidden border-b border-slate-100">
+  <section class="relative pt-32 pb-14 md:pt-44 md:pb-24 hero-mesh-bg overflow-hidden border-b border-slate-100">
     
     <div class="absolute top-20 left-1/2 -translate-x-1/2 w-[650px] h-[350px] bg-brand-400/10 blur-[120px] rounded-full pointer-events-none -z-10"></div>
     
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
       
       <!-- Top Pill Badge -->
-      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-50 border border-brand-200/80 text-brand-700 text-xs sm:text-sm font-bold mb-8 shadow-sm hover:border-brand-300 transition-colors">
+      <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-50 border border-brand-200/80 text-brand-700 text-xs sm:text-sm font-bold mb-6 sm:mb-8 shadow-sm hover:border-brand-300 transition-colors">
         <span class="flex h-2 w-2 relative">
           <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75"></span>
           <span class="relative inline-flex rounded-full h-2 w-2 bg-brand-500"></span>
@@ -307,89 +368,89 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
       </div>
 
       <!-- Main Headline (H1) -->
-      <h1 class="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-midnight leading-[1.12] mb-6 max-w-4xl mx-auto">
+      <h1 class="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-midnight leading-[1.15] mb-5 sm:mb-6 max-w-4xl mx-auto">
         <span data-i18n="hero_h1_p1">Automatiza tus redes sociales.</span> <br class="hidden sm:inline" />
         <span class="gradient-text" data-i18n="hero_h1_p2">Escala tu comunidad sin perder el toque humano.</span>
       </h1>
 
       <!-- Subtitle (P) -->
-      <p data-i18n="hero_sub" class="text-lg sm:text-xl text-slate-600 max-w-2xl mx-auto mb-10 leading-relaxed font-normal">
+      <p data-i18n="hero_sub" class="text-sm sm:text-lg md:text-xl text-slate-600 max-w-2xl mx-auto mb-8 sm:mb-10 leading-relaxed font-normal">
         Responde comentarios en piloto automático, analiza métricas de engagement para encontrar tu horario perfecto y publica en múltiples plataformas desde una sola API.
       </p>
 
       <!-- CTAs Button Group with Shimmer Glow -->
-      <div class="flex flex-col sm:flex-row items-center justify-center gap-4 max-w-md mx-auto mb-16">
-        <a href="#simulador" class="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-xl text-base font-bold text-white gradient-button shadow-glow-md shimmer-btn">
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 max-w-md mx-auto mb-12 sm:mb-16">
+        <a href="#simulador" class="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-7 py-3.5 sm:px-8 sm:py-4 rounded-xl text-sm sm:text-base font-bold text-white gradient-button shadow-glow-md shimmer-btn">
           <span data-i18n="hero_cta_sim">Prueba el Simulador</span>
           <span class="text-lg">✨</span>
         </a>
-        <a href="#api-docs" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl text-base font-bold text-slate-700 bg-white border border-slate-200 hover:border-brand-300 hover:bg-slate-50 hover:text-brand-700 shadow-sm transition-all">
+        <a href="#api-docs" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3.5 sm:px-8 sm:py-4 rounded-xl text-sm sm:text-base font-bold text-slate-700 bg-white border border-slate-200 hover:border-brand-300 hover:bg-slate-50 hover:text-brand-700 shadow-sm transition-all">
           <span data-i18n="hero_cta_api">Documentación API</span>
           <span>&lt;/&gt;</span>
         </a>
       </div>
 
       <!-- Live Interactive Visual Hero Card -->
-      <div class="relative max-w-4xl mx-auto rounded-2xl bg-white border border-slate-200/90 shadow-elevated-card p-4 sm:p-6 md:p-8 text-left">
+      <div class="relative max-w-4xl mx-auto rounded-2xl sm:rounded-3xl bg-white border border-slate-200/90 shadow-elevated-card p-4 sm:p-6 md:p-8 text-left">
         
-        <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-6">
-          <div class="flex items-center gap-3">
-            <div class="w-3 h-3 rounded-full bg-red-400"></div>
-            <div class="w-3 h-3 rounded-full bg-amber-400"></div>
-            <div class="w-3 h-3 rounded-full bg-emerald-400"></div>
-            <span class="text-xs font-semibold text-slate-400 ml-2" data-i18n="hero_card_title">XINDRO Live Copilot — Flujo en Tiempo Real</span>
+        <div class="flex flex-wrap items-center justify-between border-b border-slate-100 pb-4 mb-5 sm:mb-6 gap-2">
+          <div class="flex items-center gap-2 sm:gap-3">
+            <div class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-red-400"></div>
+            <div class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-amber-400"></div>
+            <div class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-emerald-400"></div>
+            <span class="text-[11px] sm:text-xs font-semibold text-slate-400 ml-1 sm:ml-2" data-i18n="hero_card_title">XINDRO Live Copilot — Flujo en Tiempo Real</span>
           </div>
-          <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold">
+          <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] sm:text-xs font-bold">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 live-dot"></span>
             <span data-i18n="hero_card_status">Meta Webhook Activo</span>
           </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-6 items-center">
           
           <!-- Incoming Comment -->
-          <div class="md:col-span-5 bg-slatecard rounded-xl p-4 border border-slate-200/80">
+          <div class="md:col-span-5 bg-slatecard rounded-xl sm:rounded-2xl p-4 border border-slate-200/80">
             <div class="flex items-center gap-2.5 mb-2.5">
-              <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop&q=80" class="w-8 h-8 rounded-full border border-slate-200 object-cover" alt="Avatar" />
+              <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop&q=80" class="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-slate-200 object-cover" alt="Avatar" />
               <div>
                 <div class="text-xs font-bold text-slate-800">@alejandro.creator</div>
                 <div class="text-[10px] text-slate-500" data-i18n="hero_card_time">Instagram • Hace 2 seg</div>
               </div>
-              <span class="ml-auto text-[11px] font-bold px-2 py-0.5 rounded bg-brand-50 text-brand-700 border border-brand-200/60">
+              <span class="ml-auto text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded bg-brand-50 text-brand-700 border border-brand-200/60">
                 Score: 96/100
               </span>
             </div>
-            <p id="hero-sample-comment" class="text-xs text-slate-700 leading-relaxed font-medium">
+            <p id="hero-sample-comment" class="text-xs sm:text-[13px] text-slate-700 leading-relaxed font-medium">
               "Llevo semanas intentando ser constante en mis redes pero me quedo sin ideas y pierdo motivación. ¿Cómo estructuran su rutina diaria?"
             </p>
-            <div class="mt-3 pt-2.5 border-t border-slate-200/60 flex items-center justify-between text-[11px] text-slate-500 font-semibold">
-              <span data-i18n="hero_card_intent">🎯 Intención: <strong class="text-brand-600">Pregunta de Alto Valor</strong></span>
-              <span class="text-emerald-600 font-bold">⚡ Latencia: 142ms</span>
+            <div class="mt-3 pt-2.5 border-t border-slate-200/60 flex items-center justify-between text-[10px] sm:text-[11px] text-slate-500 font-semibold">
+              <span data-i18n="hero_card_intent">🎯 Intención: <strong class="text-brand-600">Pregunta Clave</strong></span>
+              <span class="text-emerald-600 font-bold">⚡ 142ms</span>
             </div>
           </div>
 
           <!-- Flow Arrow -->
-          <div class="md:col-span-2 flex flex-col items-center justify-center text-brand-600">
-            <div class="w-9 h-9 rounded-full bg-brand-50 border border-brand-200 flex items-center justify-center font-bold text-sm shadow-sm">
+          <div class="md:col-span-2 flex flex-col items-center justify-center text-brand-600 py-1 md:py-0">
+            <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-brand-50 border border-brand-200 flex items-center justify-center font-bold text-xs sm:text-sm shadow-sm">
               ⚡
             </div>
-            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-1" data-i18n="hero_card_calibrated">IA Calibrada</span>
+            <span class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-1" data-i18n="hero_card_calibrated">IA Calibrada</span>
           </div>
 
           <!-- Generated AI Reply -->
-          <div class="md:col-span-5 bg-gradient-to-br from-brand-50/70 to-indigo-50/50 rounded-xl p-4 border border-brand-200/80">
+          <div class="md:col-span-5 bg-gradient-to-br from-brand-50/70 to-indigo-50/50 rounded-xl sm:rounded-2xl p-4 border border-brand-200/80">
             <div class="flex items-center gap-2 mb-2">
               <span class="text-xs font-bold text-brand-800 flex items-center gap-1.5">
                 <span data-i18n="hero_card_bot_reply">🤖 Respuesta con Voz de Marca</span>
               </span>
-              <span class="ml-auto text-[10px] font-bold text-brand-700 bg-brand-100/70 px-2 py-0.5 rounded-full" data-i18n="hero_card_tone">
-                Tono: Mentor Empático
+              <span class="ml-auto text-[9px] sm:text-[10px] font-bold text-brand-700 bg-brand-100/70 px-2 py-0.5 rounded-full" data-i18n="hero_card_tone">
+                Mentor Empático
               </span>
             </div>
-            <p id="hero-sample-reply" class="text-xs text-brand-950 leading-relaxed font-medium">
+            <p id="hero-sample-reply" class="text-xs sm:text-[13px] text-brand-950 leading-relaxed font-medium">
               "Alejandro, la clave no es la motivación que va y viene, sino los sistemas. Bloquea 45 min cada mañana antes de revisar el móvil. La disciplina diaria supera a la inspiración esporádica. ¿Qué es lo primero que harás mañana al despertar? 👇"
             </p>
-            <div class="mt-3 pt-2 border-t border-brand-200/50 flex items-center justify-between text-[11px]">
+            <div class="mt-3 pt-2 border-t border-brand-200/50 flex items-center justify-between text-[10px] sm:text-[11px]">
               <span class="text-brand-700 font-semibold" data-i18n="hero_card_retention">🚀 Retención: <strong class="text-brand-900">+380%</strong></span>
               <span class="text-emerald-600 font-bold" data-i18n="hero_card_ready">✔ Listo para postear</span>
             </div>
@@ -405,52 +466,52 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
   <!-- ========================================================================= -->
   <!-- 3. MARQUEE INFINITO DE TECNOLOGÍAS & ECOSISTEMA -->
   <!-- ========================================================================= -->
-  <section class="py-7 bg-slate-900 border-b border-slate-800 overflow-hidden text-white">
+  <section class="py-6 sm:py-7 bg-slate-900 border-b border-slate-800 overflow-hidden text-white">
     <div class="max-w-7xl mx-auto px-4 mb-3 text-center">
-      <p data-i18n="marquee_title" class="text-[11px] font-extrabold uppercase tracking-[0.25em] text-slate-400">
+      <p data-i18n="marquee_title" class="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-[0.2em] sm:tracking-[0.25em] text-slate-400">
         Integrado con la Infraestructura Oficial de Redes Sociales e Inteligencia Artificial
       </p>
     </div>
 
     <div class="relative overflow-hidden w-full select-none">
-      <div class="animate-marquee items-center gap-12 font-mono text-xs font-bold text-slate-300">
+      <div class="animate-marquee items-center gap-8 sm:gap-12 font-mono text-[11px] sm:text-xs font-bold text-slate-300">
         
-        <span class="flex items-center gap-2 shrink-0 px-4 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
+        <span class="flex items-center gap-2 shrink-0 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
           <span class="text-purple-400">📸</span> Meta Graph API (Instagram & Facebook)
         </span>
-        <span class="flex items-center gap-2 shrink-0 px-4 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
+        <span class="flex items-center gap-2 shrink-0 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
           <span class="text-blue-400">⚡</span> Google Gemini 2.0 Engine
         </span>
-        <span class="flex items-center gap-2 shrink-0 px-4 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
+        <span class="flex items-center gap-2 shrink-0 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
           <span class="text-emerald-400">🧠</span> OpenAI GPT-4o Integration
         </span>
-        <span class="flex items-center gap-2 shrink-0 px-4 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
+        <span class="flex items-center gap-2 shrink-0 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
           <span class="text-amber-400">🔒</span> HMAC-SHA256 Cryptographic Webhooks
         </span>
-        <span class="flex items-center gap-2 shrink-0 px-4 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
+        <span class="flex items-center gap-2 shrink-0 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
           <span class="text-indigo-400">🏢</span> Multi-Tenant SQLite Database Isolation
         </span>
-        <span class="flex items-center gap-2 shrink-0 px-4 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
+        <span class="flex items-center gap-2 shrink-0 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
           <span class="text-cyan-400">🛡️</span> GDPR / CCPA / LGPD Compliant
         </span>
         
         <!-- Duplicate for loop -->
-        <span class="flex items-center gap-2 shrink-0 px-4 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
+        <span class="flex items-center gap-2 shrink-0 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
           <span class="text-purple-400">📸</span> Meta Graph API (Instagram & Facebook)
         </span>
-        <span class="flex items-center gap-2 shrink-0 px-4 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
+        <span class="flex items-center gap-2 shrink-0 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
           <span class="text-blue-400">⚡</span> Google Gemini 2.0 Engine
         </span>
-        <span class="flex items-center gap-2 shrink-0 px-4 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
+        <span class="flex items-center gap-2 shrink-0 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
           <span class="text-emerald-400">🧠</span> OpenAI GPT-4o Integration
         </span>
-        <span class="flex items-center gap-2 shrink-0 px-4 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
+        <span class="flex items-center gap-2 shrink-0 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
           <span class="text-amber-400">🔒</span> HMAC-SHA256 Cryptographic Webhooks
         </span>
-        <span class="flex items-center gap-2 shrink-0 px-4 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
+        <span class="flex items-center gap-2 shrink-0 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
           <span class="text-indigo-400">🏢</span> Multi-Tenant SQLite Database Isolation
         </span>
-        <span class="flex items-center gap-2 shrink-0 px-4 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
+        <span class="flex items-center gap-2 shrink-0 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
           <span class="text-cyan-400">🛡️</span> GDPR / CCPA / LGPD Compliant
         </span>
 
@@ -461,43 +522,43 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
   <!-- ========================================================================= -->
   <!-- 4. SOCIAL PROOF & MÉTRICAS DE IMPACTO -->
   <!-- ========================================================================= -->
-  <section class="py-12 bg-slatecard border-b border-slate-200/80">
+  <section class="py-10 sm:py-12 bg-slatecard border-b border-slate-200/80">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
       
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center divide-x-0 md:divide-x divide-slate-200/80">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 text-center divide-x-0 md:divide-x divide-slate-200/80">
         
         <div class="p-2">
-          <div class="text-3xl sm:text-4xl font-black text-midnight tracking-tight mb-1">
+          <div class="text-2xl sm:text-4xl font-black text-midnight tracking-tight mb-1">
             +500K<span class="text-brand-600">+</span>
           </div>
-          <p data-i18n="stat_1" class="text-xs sm:text-sm font-semibold text-slate-500 uppercase tracking-wider">
+          <p data-i18n="stat_1" class="text-[11px] sm:text-sm font-semibold text-slate-500 uppercase tracking-wider">
             Comentarios Respondidos
           </p>
         </div>
 
         <div class="p-2">
-          <div class="text-3xl sm:text-4xl font-black text-brand-600 tracking-tight mb-1">
+          <div class="text-2xl sm:text-4xl font-black text-brand-600 tracking-tight mb-1">
             3.4x
           </div>
-          <p data-i18n="stat_2" class="text-xs sm:text-sm font-semibold text-slate-500 uppercase tracking-wider">
+          <p data-i18n="stat_2" class="text-[11px] sm:text-sm font-semibold text-slate-500 uppercase tracking-wider">
             Aumento en Engagement
           </p>
         </div>
 
         <div class="p-2">
-          <div class="text-3xl sm:text-4xl font-black text-midnight tracking-tight mb-1">
+          <div class="text-2xl sm:text-4xl font-black text-midnight tracking-tight mb-1">
             99.8%
           </div>
-          <p data-i18n="stat_3" class="text-xs sm:text-sm font-semibold text-slate-500 uppercase tracking-wider">
+          <p data-i18n="stat_3" class="text-[11px] sm:text-sm font-semibold text-slate-500 uppercase tracking-wider">
             Precisión de Voz Humana
           </p>
         </div>
 
         <div class="p-2">
-          <div class="text-3xl sm:text-4xl font-black text-emerald-600 tracking-tight mb-1">
+          <div class="text-2xl sm:text-4xl font-black text-emerald-600 tracking-tight mb-1">
             &lt; 180ms
           </div>
-          <p data-i18n="stat_4" class="text-xs sm:text-sm font-semibold text-slate-500 uppercase tracking-wider">
+          <p data-i18n="stat_4" class="text-[11px] sm:text-sm font-semibold text-slate-500 uppercase tracking-wider">
             Latencia de API en Vivo
           </p>
         </div>
@@ -510,30 +571,30 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
   <!-- ========================================================================= -->
   <!-- 5. ¿POR QUÉ ELEGIR XINDRO? (6 Razones de Valor Real) -->
   <!-- ========================================================================= -->
-  <section id="por-que-xindro" class="py-24 bg-white border-b border-slate-100">
+  <section id="por-que-xindro" class="py-16 sm:py-24 bg-white border-b border-slate-100">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       
-      <div class="text-center max-w-3xl mx-auto mb-16">
+      <div class="text-center max-w-3xl mx-auto mb-12 sm:mb-16">
         <span data-i18n="why_badge" class="text-xs font-extrabold uppercase tracking-wider text-brand-600 bg-brand-50 px-3.5 py-1 rounded-full border border-brand-200">
           Diferenciales Reales
         </span>
-        <h2 data-i18n="why_h2" class="text-3xl sm:text-4xl md:text-5xl font-extrabold text-midnight tracking-tight mt-4 mb-4">
+        <h2 data-i18n="why_h2" class="text-2xl sm:text-4xl md:text-5xl font-extrabold text-midnight tracking-tight mt-3 sm:mt-4 mb-3 sm:mb-4">
           ¿Por qué los creadores y agencias eligen Xindro?
         </h2>
-        <p data-i18n="why_sub" class="text-base sm:text-lg text-slate-600 font-normal">
+        <p data-i18n="why_sub" class="text-sm sm:text-lg text-slate-600 font-normal">
           Diseñado desde el código para responder en segundos, proteger tu reputación y maximizar el algoritmo sin sonar como un robot.
         </p>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-8">
         
         <!-- Pillar 1 -->
-        <div class="rounded-2xl bg-slatecard border border-slate-200/90 p-7 hover:border-brand-400 hover:shadow-elevated-card transition-all duration-300 flex flex-col justify-between group">
+        <div class="rounded-2xl bg-slatecard border border-slate-200/90 p-6 sm:p-7 hover:border-brand-400 hover:shadow-elevated-card transition-all duration-300 flex flex-col justify-between group">
           <div>
-            <div class="w-12 h-12 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center text-xl font-bold mb-5 group-hover:scale-110 transition-transform">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center text-xl font-bold mb-4 sm:mb-5 group-hover:scale-110 transition-transform">
               ⚡
             </div>
-            <h3 data-i18n="why_p1_t" class="text-lg font-bold text-midnight mb-2">
+            <h3 data-i18n="why_p1_t" class="text-base sm:text-lg font-bold text-midnight mb-2">
               Respuestas en Tiempo Real (&lt;180ms)
             </h3>
             <p data-i18n="why_p1_d" class="text-xs sm:text-sm text-slate-600 leading-relaxed">
@@ -546,12 +607,12 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         </div>
 
         <!-- Pillar 2 -->
-        <div class="rounded-2xl bg-slatecard border border-slate-200/90 p-7 hover:border-brand-400 hover:shadow-elevated-card transition-all duration-300 flex flex-col justify-between group">
+        <div class="rounded-2xl bg-slatecard border border-slate-200/90 p-6 sm:p-7 hover:border-brand-400 hover:shadow-elevated-card transition-all duration-300 flex flex-col justify-between group">
           <div>
-            <div class="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center text-xl font-bold mb-5 group-hover:scale-110 transition-transform">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center text-xl font-bold mb-4 sm:mb-5 group-hover:scale-110 transition-transform">
               🧠
             </div>
-            <h3 data-i18n="why_p2_t" class="text-lg font-bold text-midnight mb-2">
+            <h3 data-i18n="why_p2_t" class="text-base sm:text-lg font-bold text-midnight mb-2">
               Voz de Marca Auténtica & Calibrada
             </h3>
             <p data-i18n="why_p2_d" class="text-xs sm:text-sm text-slate-600 leading-relaxed">
@@ -564,12 +625,12 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         </div>
 
         <!-- Pillar 3 -->
-        <div class="rounded-2xl bg-slatecard border border-slate-200/90 p-7 hover:border-brand-400 hover:shadow-elevated-card transition-all duration-300 flex flex-col justify-between group">
+        <div class="rounded-2xl bg-slatecard border border-slate-200/90 p-6 sm:p-7 hover:border-brand-400 hover:shadow-elevated-card transition-all duration-300 flex flex-col justify-between group">
           <div>
-            <div class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl font-bold mb-5 group-hover:scale-110 transition-transform">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl font-bold mb-4 sm:mb-5 group-hover:scale-110 transition-transform">
               🛡️
             </div>
-            <h3 data-i18n="why_p3_t" class="text-lg font-bold text-midnight mb-2">
+            <h3 data-i18n="why_p3_t" class="text-base sm:text-lg font-bold text-midnight mb-2">
               100% Oficial con Meta Graph API
             </h3>
             <p data-i18n="why_p3_d" class="text-xs sm:text-sm text-slate-600 leading-relaxed">
@@ -582,12 +643,12 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         </div>
 
         <!-- Pillar 4 -->
-        <div class="rounded-2xl bg-slatecard border border-slate-200/90 p-7 hover:border-brand-400 hover:shadow-elevated-card transition-all duration-300 flex flex-col justify-between group">
+        <div class="rounded-2xl bg-slatecard border border-slate-200/90 p-6 sm:p-7 hover:border-brand-400 hover:shadow-elevated-card transition-all duration-300 flex flex-col justify-between group">
           <div>
-            <div class="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center text-xl font-bold mb-5 group-hover:scale-110 transition-transform">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center text-xl font-bold mb-4 sm:mb-5 group-hover:scale-110 transition-transform">
               ⏰
             </div>
-            <h3 data-i18n="why_p4_t" class="text-lg font-bold text-midnight mb-2">
+            <h3 data-i18n="why_p4_t" class="text-base sm:text-lg font-bold text-midnight mb-2">
               Smart Timing Basado en Datos
             </h3>
             <p data-i18n="why_p4_d" class="text-xs sm:text-sm text-slate-600 leading-relaxed">
@@ -600,12 +661,12 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         </div>
 
         <!-- Pillar 5 -->
-        <div class="rounded-2xl bg-slatecard border border-slate-200/90 p-7 hover:border-brand-400 hover:shadow-elevated-card transition-all duration-300 flex flex-col justify-between group">
+        <div class="rounded-2xl bg-slatecard border border-slate-200/90 p-6 sm:p-7 hover:border-brand-400 hover:shadow-elevated-card transition-all duration-300 flex flex-col justify-between group">
           <div>
-            <div class="w-12 h-12 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-xl font-bold mb-5 group-hover:scale-110 transition-transform">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-xl font-bold mb-4 sm:mb-5 group-hover:scale-110 transition-transform">
               🔌
             </div>
-            <h3 data-i18n="why_p5_t" class="text-lg font-bold text-midnight mb-2">
+            <h3 data-i18n="why_p5_t" class="text-base sm:text-lg font-bold text-midnight mb-2">
               API REST & Webhooks para Desarrolladores
             </h3>
             <p data-i18n="why_p5_d" class="text-xs sm:text-sm text-slate-600 leading-relaxed">
@@ -618,12 +679,12 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         </div>
 
         <!-- Pillar 6 -->
-        <div class="rounded-2xl bg-slatecard border border-slate-200/90 p-7 hover:border-brand-400 hover:shadow-elevated-card transition-all duration-300 flex flex-col justify-between group">
+        <div class="rounded-2xl bg-slatecard border border-slate-200/90 p-6 sm:p-7 hover:border-brand-400 hover:shadow-elevated-card transition-all duration-300 flex flex-col justify-between group">
           <div>
-            <div class="w-12 h-12 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center text-xl font-bold mb-5 group-hover:scale-110 transition-transform">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center text-xl font-bold mb-4 sm:mb-5 group-hover:scale-110 transition-transform">
               💰
             </div>
-            <h3 data-i18n="why_p6_t" class="text-lg font-bold text-midnight mb-2">
+            <h3 data-i18n="why_p6_t" class="text-base sm:text-lg font-bold text-midnight mb-2">
               Ahorra +35 Horas de Trabajo al Mes
             </h3>
             <p data-i18n="why_p6_d" class="text-xs sm:text-sm text-slate-600 leading-relaxed">
@@ -643,38 +704,38 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
   <!-- ========================================================================= -->
   <!-- 6. CALCULADORA INTERACTIVA DE AHORRO & ROI -->
   <!-- ========================================================================= -->
-  <section id="calculadora-roi" class="py-24 bg-gradient-to-b from-slatecard to-white border-b border-slate-200/80">
+  <section id="calculadora-roi" class="py-16 sm:py-24 bg-gradient-to-b from-slatecard to-white border-b border-slate-200/80">
     <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
       
-      <div class="text-center max-w-2xl mx-auto mb-14">
+      <div class="text-center max-w-2xl mx-auto mb-10 sm:mb-14">
         <span data-i18n="calc_badge" class="text-xs font-extrabold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-3.5 py-1 rounded-full border border-emerald-200">
           Calculadora de Impacto
         </span>
-        <h2 data-i18n="calc_h2" class="text-3xl sm:text-4xl font-extrabold text-midnight tracking-tight mt-3 mb-3">
+        <h2 data-i18n="calc_h2" class="text-2xl sm:text-4xl font-extrabold text-midnight tracking-tight mt-3 mb-2 sm:mb-3">
           ¿Cuánto tiempo y alcance ganas con Xindro?
         </h2>
-        <p data-i18n="calc_sub" class="text-sm sm:text-base text-slate-600 font-normal">
+        <p data-i18n="calc_sub" class="text-xs sm:text-base text-slate-600 font-normal">
           Ajusta el volumen de comentarios mensuales y descubre el impacto real en tu comunidad.
         </p>
       </div>
 
-      <div class="bg-white rounded-3xl border border-slate-200 shadow-elevated-card p-6 sm:p-10">
+      <div class="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 shadow-elevated-card p-5 sm:p-8 md:p-10">
         
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-center">
           
           <!-- Sliders -->
-          <div class="lg:col-span-6 space-y-6">
+          <div class="lg:col-span-6 space-y-5 sm:space-y-6">
             
             <div>
-              <div class="flex justify-between items-center mb-2">
+              <div class="flex justify-between items-center mb-2 gap-2">
                 <label data-i18n="calc_lbl_comments" class="text-xs font-bold text-slate-700 uppercase tracking-wider">
                   Comentarios recibidos al mes:
                 </label>
-                <span id="calc-comments-val" class="text-sm font-black text-brand-600 bg-brand-50 px-2.5 py-0.5 rounded-lg border border-brand-200">
+                <span id="calc-comments-val" class="text-xs sm:text-sm font-black text-brand-600 bg-brand-50 px-2.5 py-0.5 rounded-lg border border-brand-200 whitespace-nowrap">
                   5,000 comentarios
                 </span>
               </div>
-              <input type="range" id="calc-comments-range" min="500" max="50000" step="500" value="5000" oninput="Calculator.update()" class="w-full accent-brand-600 cursor-pointer" />
+              <input type="range" id="calc-comments-range" min="500" max="50000" step="500" value="5000" oninput="Calculator.update()" class="w-full accent-brand-600 cursor-pointer h-2 bg-slate-200 rounded-lg" />
               <div class="flex justify-between text-[10px] text-slate-400 font-bold mt-1">
                 <span>500</span>
                 <span>25,000</span>
@@ -683,15 +744,15 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
             </div>
 
             <div>
-              <div class="flex justify-between items-center mb-2">
+              <div class="flex justify-between items-center mb-2 gap-2">
                 <label data-i18n="calc_lbl_accounts" class="text-xs font-bold text-slate-700 uppercase tracking-wider">
                   Cuentas de Instagram / Facebook:
                 </label>
-                <span id="calc-accounts-val" class="text-sm font-black text-brand-600 bg-brand-50 px-2.5 py-0.5 rounded-lg border border-brand-200">
+                <span id="calc-accounts-val" class="text-xs sm:text-sm font-black text-brand-600 bg-brand-50 px-2.5 py-0.5 rounded-lg border border-brand-200 whitespace-nowrap">
                   2 cuentas
                 </span>
               </div>
-              <input type="range" id="calc-accounts-range" min="1" max="10" step="1" value="2" oninput="Calculator.update()" class="w-full accent-brand-600 cursor-pointer" />
+              <input type="range" id="calc-accounts-range" min="1" max="10" step="1" value="2" oninput="Calculator.update()" class="w-full accent-brand-600 cursor-pointer h-2 bg-slate-200 rounded-lg" />
               <div class="flex justify-between text-[10px] text-slate-400 font-bold mt-1">
                 <span>1 cuenta</span>
                 <span>5 cuentas</span>
@@ -702,34 +763,34 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           </div>
 
           <!-- Results -->
-          <div class="lg:col-span-6 bg-gradient-to-br from-slate-900 to-slate-950 text-white rounded-2xl p-6 sm:p-7 shadow-xl border border-slate-800">
+          <div class="lg:col-span-6 bg-gradient-to-br from-slate-900 to-slate-950 text-white rounded-2xl p-5 sm:p-7 shadow-xl border border-slate-800">
             <div class="text-xs font-bold uppercase tracking-wider text-brand-400 mb-4" data-i18n="calc_res_title">
               Impacto Estimado Mensual
             </div>
 
-            <div class="grid grid-cols-2 gap-4 mb-6">
+            <div class="grid grid-cols-2 gap-3 sm:gap-4 mb-5 sm:mb-6">
               
-              <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-800">
-                <div class="text-2xl sm:text-3xl font-black text-emerald-400 mb-0.5" id="calc-res-hours">
+              <div class="bg-slate-900/90 p-3.5 sm:p-4 rounded-xl border border-slate-800">
+                <div class="text-xl sm:text-3xl font-black text-emerald-400 mb-0.5" id="calc-res-hours">
                   +38 hrs
                 </div>
-                <div class="text-[11px] font-semibold text-slate-400 uppercase" data-i18n="calc_res_h_label">
+                <div class="text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase" data-i18n="calc_res_h_label">
                   Tiempo Manual Ahorrado
                 </div>
               </div>
 
-              <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-800">
-                <div class="text-2xl sm:text-3xl font-black text-brand-400 mb-0.5" id="calc-res-leads">
+              <div class="bg-slate-900/90 p-3.5 sm:p-4 rounded-xl border border-slate-800">
+                <div class="text-xl sm:text-3xl font-black text-brand-400 mb-0.5" id="calc-res-leads">
                   +120
                 </div>
-                <div class="text-[11px] font-semibold text-slate-400 uppercase" data-i18n="calc_res_l_label">
+                <div class="text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase" data-i18n="calc_res_l_label">
                   Leads / Preguntas Clave
                 </div>
               </div>
 
             </div>
 
-            <div class="text-xs text-slate-300 leading-relaxed border-t border-slate-800 pt-3">
+            <div class="text-[11px] sm:text-xs text-slate-300 leading-relaxed border-t border-slate-800 pt-3">
               <span class="text-emerald-400 font-bold">✔ 99.4%</span> <span data-i18n="calc_res_footer">de respuestas entregadas en la ventana de oro del algoritmo sin agotamiento humano.</span>
             </div>
           </div>
@@ -744,43 +805,43 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
   <!-- ========================================================================= -->
   <!-- 7. EL SIMULADOR INTERACTIVO -->
   <!-- ========================================================================= -->
-  <section id="simulador" class="py-24 bg-white border-b border-slate-200/80">
+  <section id="simulador" class="py-16 sm:py-24 bg-white border-b border-slate-200/80">
     <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
       
-      <div class="text-center max-w-2xl mx-auto mb-12">
+      <div class="text-center max-w-2xl mx-auto mb-10 sm:mb-12">
         <span data-i18n="sim_badge" class="text-xs font-extrabold uppercase tracking-wider text-brand-600 bg-brand-50 px-3.5 py-1 rounded-full border border-brand-200">
           Playground en Vivo
         </span>
-        <h2 data-i18n="sim_h2" class="text-3xl sm:text-4xl font-extrabold text-midnight tracking-tight mt-3 mb-3">
+        <h2 data-i18n="sim_h2" class="text-2xl sm:text-4xl font-extrabold text-midnight tracking-tight mt-3 mb-2 sm:mb-3">
           Prueba el Motor de XINDRO en Tiempo Real
         </h2>
-        <p data-i18n="sim_sub" class="text-sm sm:text-base text-slate-600 font-normal">
+        <p data-i18n="sim_sub" class="text-xs sm:text-base text-slate-600 font-normal">
           Selecciona un tono, escribe cualquier comentario de tu comunidad y observa cómo la IA genera respuestas hipercontextualizadas.
         </p>
       </div>
 
-      <div class="bg-white rounded-3xl border border-slate-200 shadow-elevated-card overflow-hidden">
+      <div class="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 shadow-elevated-card overflow-hidden">
         
-        <div class="bg-slate-900 text-white px-6 py-4 flex flex-wrap items-center justify-between gap-4">
-          <div class="flex items-center gap-2.5">
-            <span class="text-brand-400 font-bold text-lg">⚡</span>
-            <span class="text-sm font-bold tracking-tight">XINDRO Interactive Simulator v2.0</span>
+        <div class="bg-slate-900 text-white px-5 sm:px-6 py-3.5 sm:py-4 flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center gap-2 sm:gap-2.5">
+            <span class="text-brand-400 font-bold text-base sm:text-lg">⚡</span>
+            <span class="text-xs sm:text-sm font-bold tracking-tight">XINDRO Interactive Simulator v2.0</span>
           </div>
-          <div class="flex items-center gap-2 text-xs font-mono text-slate-400">
+          <div class="flex items-center gap-2 text-[10px] sm:text-xs font-mono text-slate-400">
             <span class="w-2 h-2 rounded-full bg-emerald-400 live-dot"></span>
             <span>Zero-Latency Heuristic + Gemini LLM Engine</span>
           </div>
         </div>
 
-        <div class="p-6 sm:p-8">
+        <div class="p-5 sm:p-8">
           
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-5 sm:mb-6">
             
             <div>
-              <label data-i18n="sim_lbl_tone" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+              <label data-i18n="sim_lbl_tone" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 sm:mb-2">
                 1. Tono de Marca:
               </label>
-              <select id="sim-tone" class="w-full bg-slatecard border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all cursor-pointer">
+              <select id="sim-tone" class="w-full bg-slatecard border border-slate-300 rounded-xl px-3 py-2 sm:px-3.5 sm:py-2.5 text-xs sm:text-sm font-semibold text-slate-800 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all cursor-pointer">
                 <option value="mentor" data-i18n="sim_opt_mentor">🏛️ Estoico / Mentor Sabio</option>
                 <option value="empathy" selected data-i18n="sim_opt_empathy">🤝 Cercano & Empático</option>
                 <option value="growth" data-i18n="sim_opt_growth">🔥 Dinámico & Venta de Alto Valor</option>
@@ -788,10 +849,10 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
             </div>
 
             <div>
-              <label data-i18n="sim_lbl_plat" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+              <label data-i18n="sim_lbl_plat" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 sm:mb-2">
                 2. Plataforma:
               </label>
-              <select id="sim-platform" class="w-full bg-slatecard border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all cursor-pointer">
+              <select id="sim-platform" class="w-full bg-slatecard border border-slate-300 rounded-xl px-3 py-2 sm:px-3.5 sm:py-2.5 text-xs sm:text-sm font-semibold text-slate-800 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all cursor-pointer">
                 <option value="instagram">📸 Instagram</option>
                 <option value="facebook">📘 Facebook</option>
                 <option value="tiktok">🎵 TikTok</option>
@@ -799,10 +860,10 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
             </div>
 
             <div>
-              <label data-i18n="sim_lbl_close" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+              <label data-i18n="sim_lbl_close" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 sm:mb-2">
                 3. Pregunta al Final:
               </label>
-              <select id="sim-closing" class="w-full bg-slatecard border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all cursor-pointer">
+              <select id="sim-closing" class="w-full bg-slatecard border border-slate-300 rounded-xl px-3 py-2 sm:px-3.5 sm:py-2.5 text-xs sm:text-sm font-semibold text-slate-800 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all cursor-pointer">
                 <option value="always" selected data-i18n="sim_opt_always">Siempre incluir pregunta</option>
                 <option value="relevant" data-i18n="sim_opt_rel">Solo cuando sea relevante</option>
                 <option value="never" data-i18n="sim_opt_never">Sin pregunta final</option>
@@ -811,53 +872,53 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
 
           </div>
 
-          <div class="mb-6">
+          <div class="mb-5 sm:mb-6">
             <label data-i18n="sim_lbl_comment" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
               Comentario de tu seguidor a simular:
             </label>
             <div class="relative">
-              <textarea id="sim-input-text" rows="3" class="w-full bg-slatecard border border-slate-300 rounded-xl p-4 text-sm font-medium text-slate-800 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all resize-none" placeholder="Escribe un comentario...">Me encanta tu contenido pero siempre procrastino mis proyectos importantes por miedo al fracaso. ¿Qué consejo me das para empezar hoy mismo?</textarea>
+              <textarea id="sim-input-text" rows="3" class="w-full bg-slatecard border border-slate-300 rounded-xl p-3.5 sm:p-4 text-xs sm:text-sm font-medium text-slate-800 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all resize-none" placeholder="Escribe un comentario...">Me encanta tu contenido pero siempre procrastino mis proyectos importantes por miedo al fracaso. ¿Qué consejo me das para empezar hoy mismo?</textarea>
             </div>
           </div>
 
-          <div class="flex flex-wrap items-center justify-between gap-4 mb-8">
-            <div class="flex items-center gap-2">
-              <span data-i18n="sim_presets_title" class="text-xs font-bold text-slate-500">Comentarios rápidos:</span>
-              <button type="button" onclick="Simulator.loadPreset(1)" data-i18n="sim_preset_1" class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 hover:bg-brand-50 hover:text-brand-700 transition-colors">
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 mb-6 sm:mb-8">
+            <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <span data-i18n="sim_presets_title" class="text-xs font-bold text-slate-500 mr-1">Rápidos:</span>
+              <button type="button" onclick="Simulator.loadPreset(1)" data-i18n="sim_preset_1" class="text-[11px] sm:text-xs font-semibold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 hover:bg-brand-50 hover:text-brand-700 transition-colors">
                 💡 "¿Precio del curso?"
               </button>
-              <button type="button" onclick="Simulator.loadPreset(2)" data-i18n="sim_preset_2" class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 hover:bg-brand-50 hover:text-brand-700 transition-colors">
+              <button type="button" onclick="Simulator.loadPreset(2)" data-i18n="sim_preset_2" class="text-[11px] sm:text-xs font-semibold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 hover:bg-brand-50 hover:text-brand-700 transition-colors">
                 🔥 "Gran reflexión"
               </button>
             </div>
 
-            <button type="button" id="sim-btn-generate" onclick="Simulator.generate()" class="px-6 py-3 rounded-xl text-sm font-bold text-white gradient-button flex items-center gap-2 shadow-glow-sm shimmer-btn">
+            <button type="button" id="sim-btn-generate" onclick="Simulator.generate()" class="w-full sm:w-auto px-5 py-3 rounded-xl text-xs sm:text-sm font-bold text-white gradient-button flex items-center justify-center gap-2 shadow-glow-sm shimmer-btn">
               <span data-i18n="sim_btn_gen">Generar Respuesta con IA</span>
               <span>⚡</span>
             </button>
           </div>
 
-          <div id="sim-output-card" class="rounded-2xl bg-slate-50 border border-slate-200/90 p-6 transition-all duration-300">
+          <div id="sim-output-card" class="rounded-2xl bg-slate-50 border border-slate-200/90 p-4 sm:p-6 transition-all duration-300">
             
-            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/80 pb-3 mb-4">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/80 pb-3 mb-3 sm:mb-4">
               <div class="flex items-center gap-2">
-                <span data-i18n="sim_res_title" class="text-xs font-bold uppercase tracking-wider text-slate-500">Resultado Generado por XINDRO</span>
-                <span id="sim-badge-intent" class="text-[11px] font-bold px-2 py-0.5 rounded bg-brand-100 text-brand-800 border border-brand-200">
+                <span data-i18n="sim_res_title" class="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">Resultado Generado</span>
+                <span id="sim-badge-intent" class="text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded bg-brand-100 text-brand-800 border border-brand-200">
                   🎯 Intención: Consejo / Crecimiento
                 </span>
               </div>
-              <div class="flex items-center gap-3 text-xs font-semibold text-slate-500">
-                <span>Highlight Score: <strong id="sim-badge-score" class="text-brand-600 font-bold">94/100</strong></span>
+              <div class="flex items-center gap-2 sm:gap-3 text-[11px] sm:text-xs font-semibold text-slate-500">
+                <span>Score: <strong id="sim-badge-score" class="text-brand-600 font-bold">94/100</strong></span>
                 <span class="text-emerald-600 font-bold">⚡ 120ms</span>
               </div>
             </div>
 
-            <p id="sim-output-text" class="text-sm sm:text-base text-slate-800 font-medium leading-relaxed mb-4">
+            <p id="sim-output-text" class="text-xs sm:text-base text-slate-800 font-medium leading-relaxed mb-4">
               "El miedo al fracaso solo desaparece cuando actúas antes de que la mente empiece a dudar. Divide tu meta en una sola acción de 5 minutos para hoy. La perfección no existe, el progreso diario sí. ¿Qué pequeña tarea harás en los próximos 10 minutos? 👇"
             </p>
 
             <div class="flex items-center justify-between pt-3 border-t border-slate-200/60 text-xs text-slate-500">
-              <span data-i18n="sim_autopilot_ok" class="flex items-center gap-1.5 text-emerald-600 font-semibold">
+              <span data-i18n="sim_autopilot_ok" class="flex items-center gap-1.5 text-emerald-600 font-semibold text-[11px] sm:text-xs">
                 <span>✔</span> Apto para Autopilot en Instagram y Facebook
               </span>
               <button type="button" onclick="Simulator.copyResponse()" id="sim-btn-copy" class="text-xs font-bold text-brand-600 hover:text-brand-800 flex items-center gap-1 transition-colors">
@@ -877,45 +938,45 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
   <!-- ========================================================================= -->
   <!-- 8. SECCIÓN DE API PARA CREADORES & DESARROLLADORES -->
   <!-- ========================================================================= -->
-  <section id="api-docs" class="py-24 dark-mesh-bg bg-slate-900 text-white">
+  <section id="api-docs" class="py-16 sm:py-24 dark-mesh-bg bg-slate-900 text-white">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
       
-      <div class="text-center max-w-3xl mx-auto mb-16">
+      <div class="text-center max-w-3xl mx-auto mb-12 sm:mb-16">
         <span data-i18n="api_badge" class="text-xs font-extrabold uppercase tracking-wider text-brand-400 bg-brand-950/80 px-3.5 py-1 rounded-full border border-brand-500/40">
           Developer & Creator API
         </span>
-        <h2 data-i18n="api_h2" class="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight mt-4 mb-4">
+        <h2 data-i18n="api_h2" class="text-2xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight mt-3 sm:mt-4 mb-3 sm:mb-4">
           Ofrece la potencia de XINDRO dentro de tus propias herramientas.
         </h2>
-        <p data-i18n="api_sub" class="text-base sm:text-lg text-slate-300 font-normal">
+        <p data-i18n="api_sub" class="text-xs sm:text-base md:text-lg text-slate-300 font-normal">
           Endpoints RESTful ultrarrápidos, webhooks criptográficos verificados y SDKs listos para integrar en tus bots, paneles o SaaS con 5 líneas de código.
         </p>
       </div>
 
-      <div class="rounded-2xl bg-slate-950 border border-slate-800 shadow-2xl overflow-hidden mb-12">
+      <div class="rounded-2xl bg-slate-950 border border-slate-800 shadow-2xl overflow-hidden mb-8 sm:mb-12">
         
-        <div class="bg-slate-900 px-4 py-3 border-b border-slate-800 flex flex-wrap items-center justify-between gap-4">
+        <div class="bg-slate-900 px-4 py-3 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
           <div class="flex items-center gap-2">
-            <div class="w-3 h-3 rounded-full bg-rose-500"></div>
-            <div class="w-3 h-3 rounded-full bg-amber-500"></div>
-            <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
-            <span class="text-xs font-mono text-slate-400 ml-2">POST https://socialapi.turbogram.site/api/agent.php</span>
+            <div class="w-2.5 h-2.5 rounded-full bg-rose-500"></div>
+            <div class="w-2.5 h-2.5 rounded-full bg-amber-500"></div>
+            <div class="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
+            <span class="text-[11px] sm:text-xs font-mono text-slate-400 ml-1">POST /api/agent.php</span>
           </div>
 
-          <div class="flex items-center gap-1 bg-slate-950/70 p-1 rounded-lg border border-slate-800 text-xs font-mono">
-            <button type="button" onclick="ApiTabs.switch('curl')" id="tab-curl" class="px-3 py-1 rounded bg-brand-600 text-white font-bold">cURL</button>
-            <button type="button" onclick="ApiTabs.switch('js')" id="tab-js" class="px-3 py-1 rounded text-slate-400 hover:text-white">JavaScript</button>
-            <button type="button" onclick="ApiTabs.switch('php')" id="tab-php" class="px-3 py-1 rounded text-slate-400 hover:text-white">PHP</button>
-            <button type="button" onclick="ApiTabs.switch('python')" id="tab-python" class="px-3 py-1 rounded text-slate-400 hover:text-white">Python</button>
+          <div class="flex items-center gap-1 bg-slate-950/70 p-1 rounded-lg border border-slate-800 text-xs font-mono overflow-x-auto">
+            <button type="button" onclick="ApiTabs.switch('curl')" id="tab-curl" class="px-2.5 py-1 rounded bg-brand-600 text-white font-bold text-xs">cURL</button>
+            <button type="button" onclick="ApiTabs.switch('js')" id="tab-js" class="px-2.5 py-1 rounded text-slate-400 hover:text-white text-xs">JS</button>
+            <button type="button" onclick="ApiTabs.switch('php')" id="tab-php" class="px-2.5 py-1 rounded text-slate-400 hover:text-white text-xs">PHP</button>
+            <button type="button" onclick="ApiTabs.switch('python')" id="tab-python" class="px-2.5 py-1 rounded text-slate-400 hover:text-white text-xs">Python</button>
           </div>
         </div>
 
-        <div class="p-6 relative">
-          <button type="button" onclick="ApiTabs.copyCode()" id="btn-copy-code" class="absolute top-4 right-4 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-mono flex items-center gap-1.5 transition-colors">
-            <span data-i18n="api_btn_copy">📋 Copiar Código</span>
+        <div class="p-4 sm:p-6 relative">
+          <button type="button" onclick="ApiTabs.copyCode()" id="btn-copy-code" class="absolute top-3 right-3 sm:top-4 sm:right-4 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-mono flex items-center gap-1 transition-colors">
+            <span data-i18n="api_btn_copy">📋 Copiar</span>
           </button>
 
-          <pre id="code-curl" class="text-xs sm:text-sm font-mono text-slate-200 overflow-x-auto leading-relaxed"><code>curl -X POST https://socialapi.turbogram.site/api/agent.php \
+          <pre id="code-curl" class="text-xs sm:text-sm font-mono text-slate-200 overflow-x-auto leading-relaxed pt-6 sm:pt-0"><code>curl -X POST https://socialapi.turbogram.site/api/agent.php \
   -H "Content-Type: application/json" \
   -H "X-CSRF-Token: tu_api_token" \
   -d '{
@@ -927,7 +988,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
     "brand_depth_level": 80
   }'</code></pre>
 
-          <pre id="code-js" class="hidden text-xs sm:text-sm font-mono text-slate-200 overflow-x-auto leading-relaxed"><code>const response = await fetch('https://socialapi.turbogram.site/api/agent.php', {
+          <pre id="code-js" class="hidden text-xs sm:text-sm font-mono text-slate-200 overflow-x-auto leading-relaxed pt-6 sm:pt-0"><code>const response = await fetch('https://socialapi.turbogram.site/api/agent.php', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
@@ -944,7 +1005,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
 const data = await response.json();
 console.log('Respuesta Generada:', data.replies.wisdom);</code></pre>
 
-          <pre id="code-php" class="hidden text-xs sm:text-sm font-mono text-slate-200 overflow-x-auto leading-relaxed"><code>&lt;?php
+          <pre id="code-php" class="hidden text-xs sm:text-sm font-mono text-slate-200 overflow-x-auto leading-relaxed pt-6 sm:pt-0"><code>&lt;?php
 $payload = json_encode([
     'action' => 'generate_replies',
     'author_name' => 'Carlos Digital',
@@ -962,7 +1023,7 @@ curl_close($ch);
 echo $result['replies']['wisdom'];
 </code></pre>
 
-          <pre id="code-python" class="hidden text-xs sm:text-sm font-mono text-slate-200 overflow-x-auto leading-relaxed"><code>import requests
+          <pre id="code-python" class="hidden text-xs sm:text-sm font-mono text-slate-200 overflow-x-auto leading-relaxed pt-6 sm:pt-0"><code>import requests
 
 url = "https://socialapi.turbogram.site/api/agent.php"
 headers = {
@@ -981,30 +1042,29 @@ print("Respuesta IA:", res["replies"]["wisdom"])
 </code></pre>
         </div>
 
-        <div class="bg-slate-900/80 px-6 py-4 border-t border-slate-800 flex flex-wrap items-center justify-between text-xs font-mono text-slate-400">
+        <div class="bg-slate-900/80 px-4 sm:px-6 py-3 sm:py-4 border-t border-slate-800 flex flex-wrap items-center justify-between text-xs font-mono text-slate-400 gap-2">
           <div class="flex items-center gap-3">
             <span class="text-emerald-400 font-bold">Status: 200 OK</span>
             <span>Latency: 142ms</span>
-            <span>Tokens: 0 (Local Engine)</span>
           </div>
           <span class="text-brand-400 font-bold">JSON Response Ready</span>
         </div>
 
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 text-sm">
         <div class="p-5 rounded-xl bg-slate-950/60 border border-slate-800">
-          <div class="text-brand-400 font-bold text-lg mb-2" data-i18n="api_f1_t">⚡ Webhooks en Tiempo Real</div>
+          <div class="text-brand-400 font-bold text-base sm:text-lg mb-2" data-i18n="api_f1_t">⚡ Webhooks en Tiempo Real</div>
           <p class="text-slate-400 text-xs leading-relaxed" data-i18n="api_f1_d">Recibe y procesa comentarios de Instagram y Facebook en milisegundos con verificación HMAC-SHA256.</p>
         </div>
 
         <div class="p-5 rounded-xl bg-slate-950/60 border border-slate-800">
-          <div class="text-blue-400 font-bold text-lg mb-2" data-i18n="api_f2_t">🛡️ Multi-Tenant & Aislamiento</div>
+          <div class="text-blue-400 font-bold text-base sm:text-lg mb-2" data-i18n="api_f2_t">🛡️ Multi-Tenant & Aislamiento</div>
           <p class="text-slate-400 text-xs leading-relaxed" data-i18n="api_f2_d">Cada usuario y creador cuenta con su propio espacio aislado de datos y rate limiting anti-abusos.</p>
         </div>
 
         <div class="p-5 rounded-xl bg-slate-950/60 border border-slate-800">
-          <div class="text-emerald-400 font-bold text-lg mb-2" data-i18n="api_f3_t">🔌 Integración con Gemini & OpenAI</div>
+          <div class="text-emerald-400 font-bold text-base sm:text-lg mb-2" data-i18n="api_f3_t">🔌 Integración con Gemini & OpenAI</div>
           <p class="text-slate-400 text-xs leading-relaxed" data-i18n="api_f3_d">Conecta tus propias claves o utiliza nuestro motor heurístico local sin coste de tokens.</p>
         </div>
       </div>
@@ -1015,57 +1075,57 @@ print("Respuesta IA:", res["replies"]["wisdom"])
   <!-- ========================================================================= -->
   <!-- 9. PRECIOS & PLANES -->
   <!-- ========================================================================= -->
-  <section id="precios" class="py-24 bg-white border-b border-slate-100">
+  <section id="precios" class="py-16 sm:py-24 bg-white border-b border-slate-100">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
       
-      <div class="text-center max-w-2xl mx-auto mb-16">
+      <div class="text-center max-w-2xl mx-auto mb-12 sm:mb-16">
         <span data-i18n="price_badge" class="text-xs font-extrabold uppercase tracking-wider text-brand-600 bg-brand-50 px-3.5 py-1 rounded-full border border-brand-200">
           Planes Transparentes
         </span>
-        <h2 data-i18n="price_h2" class="text-3xl sm:text-4xl font-extrabold text-midnight tracking-tight mt-3 mb-3">
+        <h2 data-i18n="price_h2" class="text-2xl sm:text-4xl font-extrabold text-midnight tracking-tight mt-3 mb-2 sm:mb-3">
           Comienza gratis y escala con tu comunidad.
         </h2>
-        <p data-i18n="price_sub" class="text-sm sm:text-base text-slate-600 font-normal">
+        <p data-i18n="price_sub" class="text-xs sm:text-base text-slate-600 font-normal">
           Sin contratos forzosos. Cancela en cualquier momento.
         </p>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 items-stretch">
         
         <!-- Plan 1: Starter -->
-        <div class="rounded-3xl bg-slatecard border border-slate-200 p-8 flex flex-col justify-between hover:shadow-subtle-card transition-all">
+        <div class="rounded-2xl sm:rounded-3xl bg-slatecard border border-slate-200 p-6 sm:p-8 flex flex-col justify-between hover:shadow-subtle-card transition-all">
           <div>
-            <h3 data-i18n="plan1_t" class="text-lg font-bold text-midnight mb-1">Creador Starter</h3>
-            <p data-i18n="plan1_d" class="text-xs text-slate-500 mb-6">Para creadores que dan sus primeros pasos.</p>
-            <div class="flex items-baseline gap-1 mb-6">
-              <span class="text-4xl font-black text-midnight">$0</span>
+            <h3 data-i18n="plan1_t" class="text-base sm:text-lg font-bold text-midnight mb-1">Creador Starter</h3>
+            <p data-i18n="plan1_d" class="text-xs text-slate-500 mb-5 sm:mb-6">Para creadores que dan sus primeros pasos.</p>
+            <div class="flex items-baseline gap-1 mb-5 sm:mb-6">
+              <span class="text-3xl sm:text-4xl font-black text-midnight">$0</span>
               <span data-i18n="plan1_p" class="text-xs text-slate-500 font-bold">/ mes gratis</span>
             </div>
-            <ul class="space-y-3 text-xs text-slate-600 font-medium mb-8">
+            <ul class="space-y-3 text-xs text-slate-600 font-medium mb-6 sm:mb-8">
               <li class="flex items-center gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan1_f1">Hasta 1 cuenta de Instagram/Facebook</span></li>
               <li class="flex items-center gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan1_f2">100 respuestas automáticas / mes</span></li>
               <li class="flex items-center gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan1_f3">Asistente Copilot IA</span></li>
               <li class="flex items-center gap-2 text-slate-400"><span class="text-slate-300">✖</span> <span data-i18n="plan1_f4">Acceso a API de desarrolladores</span></li>
             </ul>
           </div>
-          <a href="login.php" data-i18n="plan1_btn" class="w-full py-3 rounded-full text-center text-sm font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition-colors">
+          <a href="login.php" data-i18n="plan1_btn" class="w-full py-3 rounded-full text-center text-xs sm:text-sm font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition-colors">
             Crear Cuenta Gratis
           </a>
         </div>
 
         <!-- Plan 2: Pro Growth (Featured) -->
-        <div class="rounded-3xl bg-white border-2 border-brand-500 p-8 flex flex-col justify-between shadow-glow-sm relative">
-          <div data-i18n="plan2_badge" class="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-brand-600 to-indigo-600 text-white text-[11px] font-extrabold uppercase tracking-wider px-3.5 py-1 rounded-full shadow-sm">
+        <div class="rounded-2xl sm:rounded-3xl bg-white border-2 border-brand-500 p-6 sm:p-8 flex flex-col justify-between shadow-glow-sm relative">
+          <div data-i18n="plan2_badge" class="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-brand-600 to-indigo-600 text-white text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider px-3.5 py-1 rounded-full shadow-sm">
             Más Popular
           </div>
           <div>
-            <h3 data-i18n="plan2_t" class="text-lg font-bold text-midnight mb-1">Creador Pro</h3>
-            <p data-i18n="plan2_d" class="text-xs text-slate-500 mb-6">Para marcas y creadores en rápido crecimiento.</p>
-            <div class="flex items-baseline gap-1 mb-6">
-              <span class="text-4xl font-black text-midnight">$29</span>
+            <h3 data-i18n="plan2_t" class="text-base sm:text-lg font-bold text-midnight mb-1">Creador Pro</h3>
+            <p data-i18n="plan2_d" class="text-xs text-slate-500 mb-5 sm:mb-6">Para marcas y creadores en rápido crecimiento.</p>
+            <div class="flex items-baseline gap-1 mb-5 sm:mb-6">
+              <span class="text-3xl sm:text-4xl font-black text-midnight">$29</span>
               <span data-i18n="plan2_p" class="text-xs text-slate-500 font-bold">/ mes</span>
             </div>
-            <ul class="space-y-3 text-xs text-slate-700 font-medium mb-8">
+            <ul class="space-y-3 text-xs text-slate-700 font-medium mb-6 sm:mb-8">
               <li class="flex items-center gap-2"><span class="text-brand-600 font-bold">✔</span> <span data-i18n="plan2_f1">Cuentas ilimitadas de Meta</span></li>
               <li class="flex items-center gap-2"><span class="text-brand-600 font-bold">✔</span> <span data-i18n="plan2_f2">Respuestas ilimitadas en Autopilot</span></li>
               <li class="flex items-center gap-2"><span class="text-brand-600 font-bold">✔</span> <span data-i18n="plan2_f3">Calibrador de Voz de Marca personalizado</span></li>
@@ -1073,28 +1133,28 @@ print("Respuesta IA:", res["replies"]["wisdom"])
               <li class="flex items-center gap-2"><span class="text-brand-600 font-bold">✔</span> <span data-i18n="plan2_f5">Soporte prioritario 24/7</span></li>
             </ul>
           </div>
-          <a href="login.php" data-i18n="plan2_btn" class="w-full py-3.5 rounded-full text-center text-sm font-bold text-white gradient-button shadow-glow-sm shimmer-btn">
+          <a href="login.php" data-i18n="plan2_btn" class="w-full py-3.5 rounded-full text-center text-xs sm:text-sm font-bold text-white gradient-button shadow-glow-sm shimmer-btn">
             Comenzar con Pro
           </a>
         </div>
 
         <!-- Plan 3: API & Agencias -->
-        <div class="rounded-3xl bg-slatecard border border-slate-200 p-8 flex flex-col justify-between hover:shadow-subtle-card transition-all">
+        <div class="rounded-2xl sm:rounded-3xl bg-slatecard border border-slate-200 p-6 sm:p-8 flex flex-col justify-between hover:shadow-subtle-card transition-all">
           <div>
-            <h3 data-i18n="plan3_t" class="text-lg font-bold text-midnight mb-1">API & Agencias</h3>
-            <p data-i18n="plan3_d" class="text-xs text-slate-500 mb-6">Para desarrolladores y agencias de marketing.</p>
-            <div class="flex items-baseline gap-1 mb-6">
-              <span class="text-4xl font-black text-midnight">$79</span>
+            <h3 data-i18n="plan3_t" class="text-base sm:text-lg font-bold text-midnight mb-1">API & Agencias</h3>
+            <p data-i18n="plan3_d" class="text-xs text-slate-500 mb-5 sm:mb-6">Para desarrolladores y agencias de marketing.</p>
+            <div class="flex items-baseline gap-1 mb-5 sm:mb-6">
+              <span class="text-3xl sm:text-4xl font-black text-midnight">$79</span>
               <span data-i18n="plan3_p" class="text-xs text-slate-500 font-bold">/ mes</span>
             </div>
-            <ul class="space-y-3 text-xs text-slate-600 font-medium mb-8">
+            <ul class="space-y-3 text-xs text-slate-600 font-medium mb-6 sm:mb-8">
               <li class="flex items-center gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan3_f1">Acceso total a REST API & Webhooks</span></li>
               <li class="flex items-center gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan3_f2">Gestión de hasta 25 clientes aislados</span></li>
               <li class="flex items-center gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan3_f3">100,000 llamadas a API incluidas / mes</span></li>
               <li class="flex items-center gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan3_f4">Marca blanca & Webhook dedicado</span></li>
             </ul>
           </div>
-          <a href="login.php" data-i18n="plan3_btn" class="w-full py-3 rounded-full text-center text-sm font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition-colors">
+          <a href="login.php" data-i18n="plan3_btn" class="w-full py-3 rounded-full text-center text-xs sm:text-sm font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition-colors">
             Acceso para Agencias
           </a>
         </div>
@@ -1107,63 +1167,63 @@ print("Respuesta IA:", res["replies"]["wisdom"])
   <!-- ========================================================================= -->
   <!-- 10. PREGUNTAS FRECUENTES (FAQ Acordeón Interactivo) -->
   <!-- ========================================================================= -->
-  <section id="faq" class="py-24 bg-slatecard border-b border-slate-200/80">
+  <section id="faq" class="py-16 sm:py-24 bg-slatecard border-b border-slate-200/80">
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
       
-      <div class="text-center max-w-2xl mx-auto mb-14">
+      <div class="text-center max-w-2xl mx-auto mb-10 sm:mb-14">
         <span data-i18n="faq_badge" class="text-xs font-extrabold uppercase tracking-wider text-brand-600 bg-brand-50 px-3.5 py-1 rounded-full border border-brand-200">
           Respuestas Claras
         </span>
-        <h2 data-i18n="faq_h2" class="text-3xl sm:text-4xl font-extrabold text-midnight tracking-tight mt-3 mb-3">
+        <h2 data-i18n="faq_h2" class="text-2xl sm:text-4xl font-extrabold text-midnight tracking-tight mt-3 mb-2 sm:mb-3">
           Preguntas Frecuentes
         </h2>
-        <p data-i18n="faq_sub" class="text-sm sm:text-base text-slate-600 font-normal">
+        <p data-i18n="faq_sub" class="text-xs sm:text-base text-slate-600 font-normal">
           Todo lo que necesitas saber antes de empezar a automatizar tu comunidad.
         </p>
       </div>
 
-      <div class="space-y-4">
+      <div class="space-y-3 sm:space-y-4">
         
         <!-- Q1 -->
         <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
-          <button type="button" onclick="Faq.toggle(1)" class="w-full p-5 sm:p-6 text-left flex items-center justify-between gap-4 font-bold text-sm sm:text-base text-midnight hover:text-brand-600 transition-colors">
+          <button type="button" onclick="Faq.toggle(1)" class="w-full p-4 sm:p-6 text-left flex items-center justify-between gap-4 font-bold text-xs sm:text-base text-midnight hover:text-brand-600 transition-colors">
             <span data-i18n="faq_q1">¿Es seguro para mi cuenta de Instagram o Facebook?</span>
             <span id="faq-icon-1" class="text-lg font-bold text-slate-400 transition-transform">+</span>
           </button>
-          <div id="faq-ans-1" class="hidden px-5 sm:px-6 pb-6 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-4" data-i18n="faq_a1">
+          <div id="faq-ans-1" class="hidden px-4 sm:px-6 pb-5 sm:pb-6 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-4" data-i18n="faq_a1">
             Totalmente seguro. Xindro opera exclusivamente a través de la API oficial de Meta Graph con permisos autorizados y webhooks verificados. No requerimos tu contraseña de Instagram y no utilizamos navegadores automatizados o emuladores no oficiales.
           </div>
         </div>
 
         <!-- Q2 -->
         <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
-          <button type="button" onclick="Faq.toggle(2)" class="w-full p-5 sm:p-6 text-left flex items-center justify-between gap-4 font-bold text-sm sm:text-base text-midnight hover:text-brand-600 transition-colors">
+          <button type="button" onclick="Faq.toggle(2)" class="w-full p-4 sm:p-6 text-left flex items-center justify-between gap-4 font-bold text-xs sm:text-base text-midnight hover:text-brand-600 transition-colors">
             <span data-i18n="faq_q2">¿La IA puede responder cosas fuera de lugar o inventar información?</span>
             <span id="faq-icon-2" class="text-lg font-bold text-slate-400 transition-transform">+</span>
           </button>
-          <div id="faq-ans-2" class="hidden px-5 sm:px-6 pb-6 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-4" data-i18n="faq_a2">
+          <div id="faq-ans-2" class="hidden px-4 sm:px-6 pb-5 sm:pb-6 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-4" data-i18n="faq_a2">
             No. Cuentas con un calibrador de voz de marca donde defines tus principios, tono y longitud. Además, dispones del <strong>Modo Copilot</strong> que te muestra sugerencias para que las apruebes con un solo clic antes de que se publiquen, dándote control absoluto.
           </div>
         </div>
 
         <!-- Q3 -->
         <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
-          <button type="button" onclick="Faq.toggle(3)" class="w-full p-5 sm:p-6 text-left flex items-center justify-between gap-4 font-bold text-sm sm:text-base text-midnight hover:text-brand-600 transition-colors">
+          <button type="button" onclick="Faq.toggle(3)" class="w-full p-4 sm:p-6 text-left flex items-center justify-between gap-4 font-bold text-xs sm:text-base text-midnight hover:text-brand-600 transition-colors">
             <span data-i18n="faq_q3">¿Cómo puedo integrar la API en mis propias herramientas o software?</span>
             <span id="faq-icon-3" class="text-lg font-bold text-slate-400 transition-transform">+</span>
           </button>
-          <div id="faq-ans-3" class="hidden px-5 sm:px-6 pb-6 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-4" data-i18n="faq_a3">
+          <div id="faq-ans-3" class="hidden px-4 sm:px-6 pb-5 sm:pb-6 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-4" data-i18n="faq_a3">
             Nuestra API RESTful recibe peticiones POST en formato JSON y devuelve las respuestas contextualizadas en menos de 180ms. Puedes enviar comentarios desde cualquier backend en Python, Node.js, PHP o cURL usando tu API Token privado.
           </div>
         </div>
 
         <!-- Q4 -->
         <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
-          <button type="button" onclick="Faq.toggle(4)" class="w-full p-5 sm:p-6 text-left flex items-center justify-between gap-4 font-bold text-sm sm:text-base text-midnight hover:text-brand-600 transition-colors">
+          <button type="button" onclick="Faq.toggle(4)" class="w-full p-4 sm:p-6 text-left flex items-center justify-between gap-4 font-bold text-xs sm:text-base text-midnight hover:text-brand-600 transition-colors">
             <span data-i18n="faq_q4">¿Puedo empezar gratis sin ingresar tarjeta de crédito?</span>
             <span id="faq-icon-4" class="text-lg font-bold text-slate-400 transition-transform">+</span>
           </button>
-          <div id="faq-ans-4" class="hidden px-5 sm:px-6 pb-6 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-4" data-i18n="faq_a4">
+          <div id="faq-ans-4" class="hidden px-4 sm:px-6 pb-5 sm:pb-6 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-4" data-i18n="faq_a4">
             Sí. El plan Creador Starter es 100% gratuito e incluye hasta 100 respuestas al mes y el asistente Copilot para que puedas probar el impacto en tu comunidad antes de decidir actualizar.
           </div>
         </div>
@@ -1176,20 +1236,20 @@ print("Respuesta IA:", res["replies"]["wisdom"])
   <!-- ========================================================================= -->
   <!-- 11. FOOTER PROFESIONAL CON MARCA DE AGUA COMPLETA Y LLAMATIVA -->
   <!-- ========================================================================= -->
-  <footer class="starry-footer-bg starry-overlay pt-16 pb-12 text-slate-300 text-sm overflow-hidden relative">
+  <footer class="starry-footer-bg starry-overlay pt-14 sm:pt-16 pb-12 text-slate-300 text-sm overflow-hidden relative">
     
     <!-- Giant Responsive Watermark: Uses the EXACT same typography (Syne 900 / gamma-wordmark) as the Logo -->
-    <div class="w-full max-w-7xl mx-auto px-4 my-8 flex justify-center items-center select-none pointer-events-none overflow-hidden">
-      <div class="gamma-wordmark text-[clamp(4rem,14vw,12.5rem)] font-black tracking-tight leading-none text-center uppercase bg-clip-text text-transparent bg-gradient-to-r from-violet-300/70 via-purple-300/50 to-sky-300/40 drop-shadow-md select-none">
+    <div class="w-full max-w-full overflow-hidden flex justify-center items-center px-4 my-6 sm:my-8 select-none pointer-events-none">
+      <div class="gamma-wordmark text-[clamp(2.8rem,13vw,11.5rem)] font-black tracking-tight leading-none text-center uppercase bg-clip-text text-transparent bg-gradient-to-r from-violet-300/80 via-purple-300/60 to-cyan-300/50 drop-shadow-md select-none">
         XINDRO
       </div>
     </div>
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
       
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8 mb-16 pt-2">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8 mb-12 sm:mb-16 pt-2">
         
-        <!-- Col 1: Brand Info Card (Reemplazo moderno de App Store / Google Play) -->
+        <!-- Col 1: Brand Info Card -->
         <div class="sm:col-span-2 lg:col-span-1">
           <div class="flex items-center gap-2 mb-3">
             <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 via-indigo-600 to-brand-700 flex items-center justify-center text-white font-bold text-sm shadow-sm">
@@ -1264,8 +1324,8 @@ print("Respuesta IA:", res["replies"]["wisdom"])
       </div>
 
       <!-- Bottom Bar -->
-      <div class="border-t border-slate-800/80 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
-        <div class="flex items-center gap-2">
+      <div class="border-t border-slate-800/80 pt-6 sm:pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
+        <div class="flex items-center gap-2 text-center sm:text-left">
           <span class="font-bold text-white">XINDRO</span>
           <span>•</span>
           <span>© <?= date('Y') ?> Xindro Tech, Inc. <span data-i18n="foot_rights">Todos los derechos reservados.</span></span>
@@ -1283,12 +1343,12 @@ print("Respuesta IA:", res["replies"]["wisdom"])
   </footer>
 
   <!-- ========================================================================= -->
-  <!-- 12. POPUP PROFESIONAL DE COOKIES -->
+  <!-- 12. POPUP PROFESIONAL DE COOKIES (RESPONSIVO MÓVIL Y DESKTOP) -->
   <!-- ========================================================================= -->
-  <div id="cookie-consent-modal" class="fixed bottom-5 left-5 z-50 max-w-[430px] w-[calc(100%-40px)] bg-white/95 backdrop-blur-md rounded-2xl shadow-cookie-popup p-5 border border-slate-200 text-slate-800 cookie-animate hidden">
+  <div id="cookie-consent-modal" class="fixed bottom-3 inset-x-3 sm:inset-x-auto sm:bottom-5 sm:left-5 z-50 sm:max-w-[430px] w-auto bg-white/95 backdrop-blur-md rounded-2xl shadow-cookie-popup p-4 sm:p-5 border border-slate-200 text-slate-800 cookie-animate hidden">
     
     <div class="flex items-start justify-between gap-3 mb-2">
-      <div class="text-sm font-extrabold text-midnight flex items-center gap-1.5">
+      <div class="text-xs sm:text-sm font-extrabold text-midnight flex items-center gap-1.5">
         <span data-i18n="cookie_title">Sobre nuestras cookies</span>
         <span>🍪</span>
       </div>
@@ -1297,20 +1357,20 @@ print("Respuesta IA:", res["replies"]["wisdom"])
       </button>
     </div>
 
-    <p class="text-[12px] text-slate-600 leading-relaxed mb-4">
+    <p class="text-[11px] sm:text-[12px] text-slate-600 leading-relaxed mb-3 sm:mb-4">
       <span data-i18n="cookie_desc_1">Utilizamos cookies y tecnologías similares según se establece en nuestra</span> <a href="privacy-policy.php" data-i18n="cookie_link" class="text-blue-600 hover:underline font-semibold">Política de Cookies</a>. <span data-i18n="cookie_desc_2">Al hacer clic en "Aceptar Todo", aceptas el uso de cookies para personalizar tu experiencia, optimizar la IA y analizar el tráfico de la API.</span>
     </p>
 
     <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
-      <button type="button" onclick="CookieConsent.openSettings()" data-i18n="cookie_btn_settings" class="text-[11px] font-bold px-3.5 py-1.5 rounded-full border border-slate-300 text-slate-700 hover:bg-slate-100 transition-colors">
+      <button type="button" onclick="CookieConsent.openSettings()" data-i18n="cookie_btn_settings" class="text-[10px] sm:text-[11px] font-bold px-3 py-1.5 rounded-full border border-slate-300 text-slate-700 hover:bg-slate-100 transition-colors">
         Configurar Cookies
       </button>
 
       <div class="flex items-center gap-1.5">
-        <button type="button" onclick="CookieConsent.rejectAll()" data-i18n="cookie_btn_reject" class="text-[11px] font-bold px-3.5 py-1.5 rounded-full bg-slate-900 hover:bg-black text-white transition-colors">
+        <button type="button" onclick="CookieConsent.rejectAll()" data-i18n="cookie_btn_reject" class="text-[10px] sm:text-[11px] font-bold px-3 py-1.5 rounded-full bg-slate-900 hover:bg-black text-white transition-colors">
           Rechazar Todo
         </button>
-        <button type="button" onclick="CookieConsent.acceptAll()" data-i18n="cookie_btn_accept" class="text-[11px] font-bold px-4 py-1.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-colors shimmer-btn">
+        <button type="button" onclick="CookieConsent.acceptAll()" data-i18n="cookie_btn_accept" class="text-[10px] sm:text-[11px] font-bold px-3.5 sm:px-4 py-1.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-colors shimmer-btn">
           Aceptar Todo
         </button>
       </div>
@@ -1320,46 +1380,46 @@ print("Respuesta IA:", res["replies"]["wisdom"])
 
   <!-- Detailed Cookies Preferences Modal -->
   <div id="cookie-settings-modal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
-    <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-200 text-slate-800 max-h-[90vh] overflow-y-auto">
+    <div class="bg-white rounded-2xl sm:rounded-3xl max-w-lg w-full p-5 sm:p-8 shadow-2xl border border-slate-200 text-slate-800 max-h-[90vh] overflow-y-auto">
       
       <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
-        <h3 data-i18n="modal_pref_title" class="text-lg font-extrabold text-midnight flex items-center gap-2">
+        <h3 data-i18n="modal_pref_title" class="text-base sm:text-lg font-extrabold text-midnight flex items-center gap-2">
           <span>Centro de Preferencias de Cookies</span>
           <span>🛡️</span>
         </h3>
         <button type="button" onclick="CookieConsent.closeSettings()" class="text-slate-400 hover:text-slate-700 text-2xl font-bold leading-none">&times;</button>
       </div>
       
-      <p data-i18n="modal_pref_desc" class="text-xs text-slate-600 mb-6 leading-relaxed">
+      <p data-i18n="modal_pref_desc" class="text-xs text-slate-600 mb-5 leading-relaxed">
         Cumplimos estrictamente con las normativas internacionales de protección de datos (RGPD de la UE, CCPA y LGPD Brasil). Selecciona qué tipos de cookies deseas permitir:
       </p>
 
-      <div class="space-y-4 text-xs mb-6">
+      <div class="space-y-3.5 text-xs mb-6">
         
-        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200">
+        <div class="p-3.5 sm:p-4 rounded-2xl bg-slate-50 border border-slate-200">
           <div class="flex items-center justify-between mb-1">
-            <div data-i18n="cookie_cat1_t" class="font-bold text-midnight text-sm">Cookies Técnicas y de Seguridad (Esenciales)</div>
-            <span data-i18n="cookie_cat1_status" class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800">Siempre Activas</span>
+            <div data-i18n="cookie_cat1_t" class="font-bold text-midnight text-xs sm:text-sm">Cookies Técnicas y de Seguridad (Esenciales)</div>
+            <span data-i18n="cookie_cat1_status" class="text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">Siempre Activas</span>
           </div>
-          <p data-i18n="cookie_cat1_d" class="text-slate-500 text-[11.5px] leading-relaxed">
+          <p data-i18n="cookie_cat1_d" class="text-slate-500 text-[11px] leading-relaxed">
             Requeridas para la autenticación de sesión, tokens de seguridad CSRF y protección de la infraestructura contra ataques.
           </p>
         </div>
 
-        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-4">
+        <div class="p-3.5 sm:p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-4">
           <div>
-            <div data-i18n="cookie_cat2_t" class="font-bold text-midnight text-sm mb-1">Cookies de Rendimiento & Analítica</div>
-            <p data-i18n="cookie_cat2_d" class="text-slate-500 text-[11.5px] leading-relaxed">
+            <div data-i18n="cookie_cat2_t" class="font-bold text-midnight text-xs sm:text-sm mb-1">Cookies de Rendimiento & Analítica</div>
+            <p data-i18n="cookie_cat2_d" class="text-slate-500 text-[11px] leading-relaxed">
               Nos permiten medir la velocidad de respuesta de la IA, uso de endpoints y optimizar la experiencia de los creadores.
             </p>
           </div>
           <input type="checkbox" id="chk-analytics-cookies" checked class="w-5 h-5 accent-brand-600 rounded cursor-pointer shrink-0" />
         </div>
 
-        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-4">
+        <div class="p-3.5 sm:p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-4">
           <div>
-            <div data-i18n="cookie_cat3_t" class="font-bold text-midnight text-sm mb-1">Cookies de Personalización & Idioma</div>
-            <p data-i18n="cookie_cat3_d" class="text-slate-500 text-[11.5px] leading-relaxed">
+            <div data-i18n="cookie_cat3_t" class="font-bold text-midnight text-xs sm:text-sm mb-1">Cookies de Personalización & Idioma</div>
+            <p data-i18n="cookie_cat3_d" class="text-slate-500 text-[11px] leading-relaxed">
               Recuerdan tus preferencias de idioma (Español, Inglés, Portugués), tono predeterminado y configuraciones del simulador.
             </p>
           </div>
@@ -1369,7 +1429,7 @@ print("Respuesta IA:", res["replies"]["wisdom"])
       </div>
 
       <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
-        <button type="button" onclick="CookieConsent.saveCustom()" data-i18n="modal_pref_save" class="px-5 py-2.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-sm transition-colors">
+        <button type="button" onclick="CookieConsent.saveCustom()" data-i18n="modal_pref_save" class="w-full sm:w-auto px-5 py-2.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-sm transition-colors text-center">
           Guardar Mis Preferencias
         </button>
       </div>
@@ -1377,9 +1437,39 @@ print("Respuesta IA:", res["replies"]["wisdom"])
   </div>
 
   <!-- ========================================================================= -->
-  <!-- 13. JAVASCRIPT: i18n + SIMULATOR + CALCULATOR + FAQ -->
+  <!-- 13. JAVASCRIPT: i18n + MOBILE NAV + SIMULATOR + CALCULATOR + FAQ -->
   <!-- ========================================================================= -->
   <script>
+    // 0. MOBILE NAVIGATION DRAWER
+    const MobileNav = {
+      isOpen: false,
+      toggle() {
+        this.isOpen = !this.isOpen;
+        const drawer = document.getElementById('mobile-nav-drawer');
+        const iconOpen = document.getElementById('hamburger-icon-open');
+        const iconClose = document.getElementById('hamburger-icon-close');
+        
+        if (this.isOpen) {
+          drawer.classList.remove('hidden');
+          iconOpen.classList.add('hidden');
+          iconClose.classList.remove('hidden');
+        } else {
+          drawer.classList.add('hidden');
+          iconOpen.classList.remove('hidden');
+          iconClose.classList.add('hidden');
+        }
+      },
+      close() {
+        this.isOpen = false;
+        const drawer = document.getElementById('mobile-nav-drawer');
+        const iconOpen = document.getElementById('hamburger-icon-open');
+        const iconClose = document.getElementById('hamburger-icon-close');
+        if (drawer) drawer.classList.add('hidden');
+        if (iconOpen) iconOpen.classList.remove('hidden');
+        if (iconClose) iconClose.classList.add('hidden');
+      }
+    };
+
     // 1. CALCULATOR ENGINE
     const Calculator = {
       update() {
@@ -1447,10 +1537,10 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           hero_card_title: "XINDRO Live Copilot — Flujo en Tiempo Real",
           hero_card_status: "Meta Webhook Activo",
           hero_card_time: "Instagram • Hace 2 seg",
-          hero_card_intent: "🎯 Intención: <strong class=\"text-brand-600\">Pregunta de Alto Valor</strong>",
+          hero_card_intent: "🎯 Intención: <strong class=\"text-brand-600\">Pregunta Clave</strong>",
           hero_card_calibrated: "IA Calibrada",
           hero_card_bot_reply: "🤖 Respuesta con Voz de Marca",
-          hero_card_tone: "Tono: Mentor Empático",
+          hero_card_tone: "Mentor Empático",
           hero_card_retention: "🚀 Retención: <strong class=\"text-brand-900\">+380%</strong>",
           hero_card_ready: "✔ Listo para postear",
           hero_comment_sample: "Llevo semanas intentando ser constante en mis redes pero me quedo sin ideas y pierdo motivación. ¿Cómo estructuran su rutina diaria?",
@@ -1503,17 +1593,17 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           sim_opt_rel: "Solo cuando sea relevante",
           sim_opt_never: "Sin pregunta final",
           sim_lbl_comment: "Comentario de tu seguidor a simular:",
-          sim_presets_title: "Comentarios rápidos:",
+          sim_presets_title: "Rápidos:",
           sim_preset_1: "💡 \"¿Precio del curso?\"",
           sim_preset_2: "🔥 \"Gran reflexión\"",
           sim_btn_gen: "Generar Respuesta con IA",
-          sim_res_title: "Resultado Generado por XINDRO",
+          sim_res_title: "Resultado Generado",
           sim_autopilot_ok: "✔ Apto para Autopilot en Instagram y Facebook",
           sim_btn_copy: "📋 Copiar",
           api_badge: "Developer & Creator API",
           api_h2: "Ofrece la potencia de XINDRO dentro de tus propias herramientas.",
           api_sub: "Endpoints RESTful ultrarrápidos, webhooks criptográficos verificados y SDKs listos para integrar en tus bots, paneles o SaaS con 5 líneas de código.",
-          api_btn_copy: "📋 Copiar Código",
+          api_btn_copy: "📋 Copiar",
           api_f1_t: "⚡ Webhooks en Tiempo Real",
           api_f1_d: "Recibe y procesa comentarios de Instagram y Facebook en milisegundos con verificación HMAC-SHA256.",
           api_f2_t: "🛡️ Multi-Tenant & Aislamiento",
@@ -1620,7 +1710,7 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           hero_card_intent: "🎯 Intent: <strong class=\"text-brand-600\">High-Value Question</strong>",
           hero_card_calibrated: "Calibrated AI",
           hero_card_bot_reply: "🤖 Brand Voice Reply",
-          hero_card_tone: "Tone: Empathetic Mentor",
+          hero_card_tone: "Empathetic Mentor",
           hero_card_retention: "🚀 Retention: <strong class=\"text-brand-900\">+380%</strong>",
           hero_card_ready: "✔ Ready to post",
           hero_comment_sample: "I've been trying to stay consistent on social media for weeks but I run out of ideas and lose motivation. How do you structure your daily routine?",
@@ -1677,13 +1767,13 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           sim_preset_1: "💡 \"Course pricing?\"",
           sim_preset_2: "🔥 \"Great post\"",
           sim_btn_gen: "Generate AI Response",
-          sim_res_title: "Result Generated by XINDRO",
+          sim_res_title: "Result Generated",
           sim_autopilot_ok: "✔ Eligible for Autopilot on Instagram and Facebook",
           sim_btn_copy: "📋 Copy",
           api_badge: "Developer & Creator API",
           api_h2: "Deliver the power of XINDRO inside your own tools.",
           api_sub: "Ultra-fast RESTful endpoints, cryptographic verified webhooks, and SDKs ready to integrate in your bots, dashboards, or SaaS in 5 lines of code.",
-          api_btn_copy: "📋 Copy Code",
+          api_btn_copy: "📋 Copy",
           api_f1_t: "⚡ Real-Time Webhooks",
           api_f1_d: "Ingest and process Instagram & Facebook comments in milliseconds with HMAC-SHA256 signatures.",
           api_f2_t: "🛡️ Multi-Tenant & Isolation",
@@ -1787,10 +1877,10 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           hero_card_title: "XINDRO Live Copilot — Fluxo em Tempo Real",
           hero_card_status: "Meta Webhook Ativo",
           hero_card_time: "Instagram • Há 2 seg",
-          hero_card_intent: "🎯 Intenção: <strong class=\"text-brand-600\">Pergunta de Alto Valor</strong>",
+          hero_card_intent: "🎯 Intenção: <strong class=\"text-brand-600\">Pergunta Clave</strong>",
           hero_card_calibrated: "IA Calibrada",
           hero_card_bot_reply: "🤖 Resposta com Tom de Marca",
-          hero_card_tone: "Tom: Mentor Empático",
+          hero_card_tone: "Mentor Empático",
           hero_card_retention: "🚀 Retenção: <strong class=\"text-brand-900\">+380%</strong>",
           hero_card_ready: "✔ Pronto para postar",
           hero_comment_sample: "Estou há semanas tentando ter consistência nas redes, mas fico sem ideias e perco a motivação. Como vocês estruturam a rotina diária?",
@@ -1843,17 +1933,17 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           sim_opt_rel: "Apenas quando relevante",
           sim_opt_never: "Sem pergunta final",
           sim_lbl_comment: "Comentário do seguidor para simular:",
-          sim_presets_title: "Comentários rápidos:",
+          sim_presets_title: "Rápidos:",
           sim_preset_1: "💡 \"Preço do curso?\"",
           sim_preset_2: "🔥 \"Ótima reflexão\"",
           sim_btn_gen: "Gerar Resposta com IA",
-          sim_res_title: "Resultado Gerado pelo XINDRO",
+          sim_res_title: "Resultado Gerado",
           sim_autopilot_ok: "✔ Apto para Autopilot no Instagram e Facebook",
           sim_btn_copy: "📋 Copiar",
           api_badge: "Developer & Creator API",
           api_h2: "Ofereça o poder do XINDRO dentro das suas próprias ferramentas.",
           api_sub: "Endpoints RESTful ultrarrápidos, webhooks criptográficos verificados e SDKs prontos para integrar em seus bots, painéis ou SaaS em 5 linhas de código.",
-          api_btn_copy: "📋 Copiar Código",
+          api_btn_copy: "📋 Copiar",
           api_f1_t: "⚡ Webhooks em Tempo Real",
           api_f1_d: "Receba e processe comentários do Instagram e Facebook em milissegundos com verificação HMAC-SHA256.",
           api_f2_t: "🛡️ Multi-Tenant & Isolamento",
@@ -1924,7 +2014,7 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           cookie_btn_accept: "Aceitar Tudo",
           cookie_btn_pref: "Preferências de cookies",
           modal_pref_title: "Central de Preferências de Cookies",
-          modal_pref_desc: "Cumprimos rigorosamente as normas internacionais de proteção de dados (LGPD Brasil, RGPD da UE e CCPA). Selecione quais categorias de cookies deseja permitir:",
+          modal_pref_desc: "Cumplimos rigorosamente as normas internacionais de proteção de dados (LGPD Brasil, RGPD da UE e CCPA). Selecione quais categorias de cookies deseja permitir:",
           cookie_cat1_t: "Cookies Técnicos e de Segurança (Essenciais)",
           cookie_cat1_status: "Sempre Ativos",
           cookie_cat1_d: "Necessários para autenticação de sessão, tokens de segurança CSRF e proteção da infraestrutura contra ataques.",
@@ -2201,10 +2291,10 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           const tabBtn = document.getElementById('tab-' + l);
           const codeBlock = document.getElementById('code-' + l);
           if (l === lang) {
-            tabBtn.className = 'px-3 py-1 rounded bg-brand-600 text-white font-bold';
+            tabBtn.className = 'px-2.5 py-1 rounded bg-brand-600 text-white font-bold text-xs';
             codeBlock.classList.remove('hidden');
           } else {
-            tabBtn.className = 'px-3 py-1 rounded text-slate-400 hover:text-white';
+            tabBtn.className = 'px-2.5 py-1 rounded text-slate-400 hover:text-white text-xs';
             codeBlock.classList.add('hidden');
           }
         });
@@ -2218,7 +2308,7 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           btn.innerHTML = '<span class="text-emerald-400">✔ ¡Copiado!</span>';
           setTimeout(() => {
             const lang = I18n.current || 'es';
-            btn.innerHTML = `<span>${I18n.dict[lang]?.api_btn_copy || '📋 Copiar Código'}</span>`;
+            btn.innerHTML = `<span>${I18n.dict[lang]?.api_btn_copy || '📋 Copiar'}</span>`;
           }, 2000);
         });
       }
