@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   web-deploy:
@@ -13,7 +14,7 @@ jobs:
       - name: 📥 Get latest code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
 
       - name: 📂 Sync files via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
@@ -23,7 +24,8 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           port: 21
           protocol: ftp
-          server-dir: ./
+          server-dir: /
+          log-level: "verbose"
           exclude: |
             **/.git*
             **/.git*/**
