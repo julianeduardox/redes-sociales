@@ -1,7 +1,7 @@
 <?php
 /**
  * XINDRO — El Sistema Operativo de IA para Creadores de Contenido y Redes Sociales
- * Landing Page de Alto Impacto Visual (Gamma.app Style + Multi-Idioma ES/EN/PT + Cookie Consent Manager RGPD/CCPA)
+ * Landing Page de Alto Impacto Visual (Gamma + Indrox Architecture + i18n ES/EN/PT + Cookie Manager)
  */
 require_once __DIR__ . '/config/security.php';
 require_once __DIR__ . '/config/auth.php';
@@ -139,6 +139,25 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
       transform: translateY(-1px);
     }
 
+    /* Shimmer Button Effect (Inspired by Indrox & modern SaaS) */
+    .shimmer-btn {
+      position: relative;
+      overflow: hidden;
+    }
+    .shimmer-btn::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+      transition: transform 0.75s ease-in-out;
+    }
+    .shimmer-btn:hover::after {
+      transform: translateX(200%);
+    }
+
     .glass-nav {
       background: rgba(255, 255, 255, 0.9);
       backdrop-filter: blur(16px);
@@ -146,7 +165,6 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
       border-bottom: 1px solid rgba(226, 232, 240, 0.8);
     }
 
-    /* Gamma-style Geometric Wordmark */
     .gamma-wordmark {
       font-family: 'Syne', 'Plus Jakarta Sans', sans-serif;
       letter-spacing: -0.03em;
@@ -154,7 +172,6 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
       text-transform: uppercase;
     }
 
-    /* Giant Watermark in Footer */
     .giant-watermark {
       font-family: 'Syne', sans-serif;
       font-weight: 900;
@@ -167,16 +184,23 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
       pointer-events: none;
     }
 
-    /* Cookie popup animation */
+    /* Infinite Marquee Animation for Tech Stack */
+    @keyframes marquee {
+      0% { transform: translateX(0%); }
+      100% { transform: translateX(-50%); }
+    }
+    .animate-marquee {
+      display: flex;
+      width: 200%;
+      animation: marquee 25s linear infinite;
+    }
+    .animate-marquee:hover {
+      animation-play-state: paused;
+    }
+
     @keyframes slideUpCookie {
-      from {
-        opacity: 0;
-        transform: translateY(30px) scale(0.96);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-      }
+      from { opacity: 0; transform: translateY(30px) scale(0.96); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
     }
     .cookie-animate {
       animation: slideUpCookie 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -186,22 +210,12 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
       font-family: 'JetBrains Mono', monospace;
     }
 
-    /* Pulse animation */
     @keyframes pulse-dot {
       0%, 100% { opacity: 1; transform: scale(1); }
       50% { opacity: 0.4; transform: scale(0.85); }
     }
     .live-dot {
       animation: pulse-dot 2s infinite ease-in-out;
-    }
-
-    /* Toggle switch for cookie preferences */
-    .toggle-checkbox:checked {
-      right: 0;
-      border-color: #8B5CF6;
-    }
-    .toggle-checkbox:checked + .toggle-label {
-      background-color: #8B5CF6;
     }
   </style>
 </head>
@@ -213,7 +227,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
   <header class="fixed top-0 left-0 right-0 z-50 glass-nav transition-all duration-300">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
       
-      <!-- Gamma-Style Minimalist Logo: XINDRO -->
+      <!-- Logo: XINDRO -->
       <a href="index.php" class="flex items-center gap-3 group shrink-0">
         <div class="flex items-center gap-2">
           <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 via-indigo-600 to-brand-700 flex items-center justify-center text-white font-black text-lg shadow-glow-sm group-hover:scale-105 transition-transform">
@@ -230,13 +244,15 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
       <!-- Navigation Links -->
       <nav class="hidden lg:flex items-center gap-7 text-sm font-semibold text-slate-600">
         <a href="#funciones" data-i18n="nav_products" class="hover:text-brand-600 transition-colors">Productos</a>
+        <a href="#por-que-xindro" data-i18n="nav_why" class="hover:text-brand-600 transition-colors">¿Por qué Xindro?</a>
         <a href="#simulador" data-i18n="nav_simulator" class="hover:text-brand-600 transition-colors flex items-center gap-1.5">
           Simulador
           <span class="inline-block w-2 h-2 rounded-full bg-brand-500 live-dot"></span>
         </a>
-        <a href="#smart-timing" data-i18n="nav_solutions" class="hover:text-brand-600 transition-colors">Soluciones</a>
+        <a href="#calculadora-roi" data-i18n="nav_roi" class="hover:text-brand-600 transition-colors">Calculadora</a>
         <a href="#api-docs" data-i18n="nav_api" class="hover:text-brand-600 transition-colors">API Creadores</a>
         <a href="#precios" data-i18n="nav_pricing" class="hover:text-brand-600 transition-colors">Precios</a>
+        <a href="#faq" data-i18n="nav_faq" class="hover:text-brand-600 transition-colors">FAQ</a>
       </nav>
 
       <!-- Right Controls: Language Selector & Auth CTAs -->
@@ -268,7 +284,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         </div>
 
         <?php if ($isLoggedIn): ?>
-          <a href="dashboard.php" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-all">
+          <a href="dashboard.php" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-all shimmer-btn">
             <span data-i18n="nav_dashboard">Ir a mi Panel</span>
             <span>→</span>
           </a>
@@ -276,7 +292,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           <a href="login.php" data-i18n="nav_login" class="text-sm font-bold text-slate-700 hover:text-brand-600 px-3 py-2 transition-colors hidden sm:inline-block">
             Iniciar sesión
           </a>
-          <a href="login.php" data-i18n="nav_cta" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 hover:shadow-md transition-all">
+          <a href="login.php" data-i18n="nav_cta" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 hover:shadow-md transition-all shimmer-btn">
             <span>Comienza gratis</span>
           </a>
         <?php endif; ?>
@@ -288,7 +304,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
   <!-- ========================================================================= -->
   <!-- 2. HERO SECTION MULTILINGÜE -->
   <!-- ========================================================================= -->
-  <section class="relative pt-36 pb-20 md:pt-44 md:pb-28 hero-mesh-bg overflow-hidden border-b border-slate-100">
+  <section class="relative pt-36 pb-16 md:pt-44 md:pb-24 hero-mesh-bg overflow-hidden border-b border-slate-100">
     
     <div class="absolute top-20 left-1/2 -translate-x-1/2 w-[650px] h-[350px] bg-brand-400/10 blur-[120px] rounded-full pointer-events-none -z-10"></div>
     
@@ -314,9 +330,9 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         Responde comentarios en piloto automático, analiza métricas de engagement para encontrar tu horario perfecto y publica en múltiples plataformas desde una sola API.
       </p>
 
-      <!-- CTAs Button Group -->
+      <!-- CTAs Button Group with Shimmer Glow -->
       <div class="flex flex-col sm:flex-row items-center justify-center gap-4 max-w-md mx-auto mb-16">
-        <a href="#simulador" class="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-xl text-base font-bold text-white gradient-button shadow-glow-md">
+        <a href="#simulador" class="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-xl text-base font-bold text-white gradient-button shadow-glow-md shimmer-btn">
           <span data-i18n="hero_cta_sim">Prueba el Simulador</span>
           <span class="text-lg">✨</span>
         </a>
@@ -329,7 +345,6 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
       <!-- Live Interactive Visual Hero Card -->
       <div class="relative max-w-4xl mx-auto rounded-2xl bg-white border border-slate-200/90 shadow-elevated-card p-4 sm:p-6 md:p-8 text-left">
         
-        <!-- Header of Card -->
         <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-6">
           <div class="flex items-center gap-3">
             <div class="w-3 h-3 rounded-full bg-red-400"></div>
@@ -343,10 +358,9 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           </div>
         </div>
 
-        <!-- Simulated Creator Post & AI Engagement Stream -->
         <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
           
-          <!-- Incoming Comment (Left) -->
+          <!-- Incoming Comment -->
           <div class="md:col-span-5 bg-slatecard rounded-xl p-4 border border-slate-200/80">
             <div class="flex items-center gap-2.5 mb-2.5">
               <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop&q=80" class="w-8 h-8 rounded-full border border-slate-200 object-cover" alt="Avatar" />
@@ -367,7 +381,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
             </div>
           </div>
 
-          <!-- Flow Arrow (Center) -->
+          <!-- Flow Arrow -->
           <div class="md:col-span-2 flex flex-col items-center justify-center text-brand-600">
             <div class="w-9 h-9 rounded-full bg-brand-50 border border-brand-200 flex items-center justify-center font-bold text-sm shadow-sm">
               ⚡
@@ -375,7 +389,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
             <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-1" data-i18n="hero_card_calibrated">IA Calibrada</span>
           </div>
 
-          <!-- Generated AI Reply (Right) -->
+          <!-- Generated AI Reply -->
           <div class="md:col-span-5 bg-gradient-to-br from-brand-50/70 to-indigo-50/50 rounded-xl p-4 border border-brand-200/80">
             <div class="flex items-center gap-2 mb-2">
               <span class="text-xs font-bold text-brand-800 flex items-center gap-1.5">
@@ -402,9 +416,66 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
   </section>
 
   <!-- ========================================================================= -->
-  <!-- 3. SOCIAL PROOF & MÉTRICAS DE IMPACTO -->
+  <!-- 3. MARQUEE INFINITO DE TECNOLOGÍAS & ECOSISTEMA (Inspirado en Indrox) -->
   <!-- ========================================================================= -->
-  <section class="py-14 bg-slatecard border-b border-slate-200/80">
+  <section class="py-7 bg-slate-900 border-b border-slate-800 overflow-hidden text-white">
+    <div class="max-w-7xl mx-auto px-4 mb-3 text-center">
+      <p data-i18n="marquee_title" class="text-[11px] font-extrabold uppercase tracking-[0.25em] text-slate-400">
+        Integrado con la Infraestructura Oficial de Redes Sociales e Inteligencia Artificial
+      </p>
+    </div>
+
+    <!-- Infinite Scrolling Track -->
+    <div class="relative overflow-hidden w-full select-none">
+      <div class="animate-marquee items-center gap-12 font-mono text-xs font-bold text-slate-300">
+        
+        <span class="flex items-center gap-2 shrink-0 px-4 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
+          <span class="text-purple-400">📸</span> Meta Graph API (Instagram & Facebook)
+        </span>
+        <span class="flex items-center gap-2 shrink-0 px-4 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
+          <span class="text-blue-400">⚡</span> Google Gemini 2.0 Engine
+        </span>
+        <span class="flex items-center gap-2 shrink-0 px-4 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
+          <span class="text-emerald-400">🧠</span> OpenAI GPT-4o Integration
+        </span>
+        <span class="flex items-center gap-2 shrink-0 px-4 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
+          <span class="text-amber-400">🔒</span> HMAC-SHA256 Cryptographic Webhooks
+        </span>
+        <span class="flex items-center gap-2 shrink-0 px-4 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
+          <span class="text-indigo-400">🏢</span> Multi-Tenant SQLite Database Isolation
+        </span>
+        <span class="flex items-center gap-2 shrink-0 px-4 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
+          <span class="text-cyan-400">🛡️</span> GDPR / CCPA / LGPD Compliant
+        </span>
+        
+        <!-- Duplicated for smooth loop -->
+        <span class="flex items-center gap-2 shrink-0 px-4 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
+          <span class="text-purple-400">📸</span> Meta Graph API (Instagram & Facebook)
+        </span>
+        <span class="flex items-center gap-2 shrink-0 px-4 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
+          <span class="text-blue-400">⚡</span> Google Gemini 2.0 Engine
+        </span>
+        <span class="flex items-center gap-2 shrink-0 px-4 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
+          <span class="text-emerald-400">🧠</span> OpenAI GPT-4o Integration
+        </span>
+        <span class="flex items-center gap-2 shrink-0 px-4 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
+          <span class="text-amber-400">🔒</span> HMAC-SHA256 Cryptographic Webhooks
+        </span>
+        <span class="flex items-center gap-2 shrink-0 px-4 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
+          <span class="text-indigo-400">🏢</span> Multi-Tenant SQLite Database Isolation
+        </span>
+        <span class="flex items-center gap-2 shrink-0 px-4 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
+          <span class="text-cyan-400">🛡️</span> GDPR / CCPA / LGPD Compliant
+        </span>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================================= -->
+  <!-- 4. SOCIAL PROOF & MÉTRICAS DE IMPACTO -->
+  <!-- ========================================================================= -->
+  <section class="py-12 bg-slatecard border-b border-slate-200/80">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
       
       <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center divide-x-0 md:divide-x divide-slate-200/80">
@@ -451,85 +522,132 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
   </section>
 
   <!-- ========================================================================= -->
-  <!-- 4. MÓDULOS PRINCIPALES (Bento Grid de 3 Columnas) -->
+  <!-- 5. ¿POR QUÉ ELEGIR XINDRO? (6 Razones de Valor Real - Estilo Indrox) -->
   <!-- ========================================================================= -->
-  <section id="funciones" class="py-24 bg-white border-b border-slate-100">
+  <section id="por-que-xindro" class="py-24 bg-white border-b border-slate-100">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       
-      <!-- Section Header -->
       <div class="text-center max-w-3xl mx-auto mb-16">
-        <span data-i18n="feat_badge" class="text-xs font-extrabold uppercase tracking-wider text-brand-600 bg-brand-50 px-3.5 py-1 rounded-full border border-brand-200">
-          Infraestructura de Nueva Generación
+        <span data-i18n="why_badge" class="text-xs font-extrabold uppercase tracking-wider text-brand-600 bg-brand-50 px-3.5 py-1 rounded-full border border-brand-200">
+          Diferenciales Reales
         </span>
-        <h2 data-i18n="feat_h2" class="text-3xl sm:text-4xl md:text-5xl font-extrabold text-midnight tracking-tight mt-4 mb-4">
-          Todo lo que un creador moderno necesita para dominar el algoritmo.
+        <h2 data-i18n="why_h2" class="text-3xl sm:text-4xl md:text-5xl font-extrabold text-midnight tracking-tight mt-4 mb-4">
+          ¿Por qué los creadores y agencias eligen Xindro?
         </h2>
-        <p data-i18n="feat_sub" class="text-base sm:text-lg text-slate-600 font-normal">
-          Tres pilares integrados en una arquitectura de alta velocidad para maximizar tu retención, leads y alcance orgánico.
+        <p data-i18n="why_sub" class="text-base sm:text-lg text-slate-600 font-normal">
+          Diseñado desde el código para responder en segundos, proteger tu reputación y maximizar el algoritmo sin sonar como un robot.
         </p>
       </div>
 
-      <!-- 3 Columns Bento Grid -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <!-- 6 Reason Value Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
         
-        <!-- Card 1: Auto-Engagement -->
-        <div class="rounded-2xl bg-slatecard border border-slate-200/90 p-8 hover:border-brand-300 hover:shadow-elevated-card transition-all duration-300 flex flex-col justify-between group">
+        <!-- Pillar 1 -->
+        <div class="rounded-2xl bg-slatecard border border-slate-200/90 p-7 hover:border-brand-400 hover:shadow-elevated-card transition-all duration-300 flex flex-col justify-between group">
           <div>
-            <div class="w-14 h-14 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center text-2xl font-bold mb-6 group-hover:scale-110 transition-transform shadow-sm">
-              🤖
+            <div class="w-12 h-12 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center text-xl font-bold mb-5 group-hover:scale-110 transition-transform">
+              ⚡
             </div>
-            <h3 data-i18n="card1_title" class="text-xl font-bold text-midnight mb-3">
-              Auto-Engagement Contextual
+            <h3 data-i18n="why_p1_t" class="text-lg font-bold text-midnight mb-2">
+              Respuestas en Tiempo Real (&lt;180ms)
             </h3>
-            <p data-i18n="card1_desc" class="text-sm text-slate-600 leading-relaxed font-normal mb-6">
-              IA que responde comentarios de forma natural y contextual en tus posts. Filtra spam, detecta intención de compra y fideliza seguidores 24/7 con tu propia voz de marca.
+            <p data-i18n="why_p1_d" class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              El algoritmo de Meta premia a las cuentas que interactúan en los primeros 15 minutos. Nuestro motor heurístico responde casi al instante.
             </p>
           </div>
-          <ul class="space-y-2.5 text-xs text-slate-600 font-semibold border-t border-slate-200 pt-5">
-            <li class="flex items-center gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="card1_b1">Calibración de Calidez, Profundidad y Energía</span></li>
-            <li class="flex items-center gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="card1_b2">Detección instantánea de Leads y Preguntas</span></li>
-            <li class="flex items-center gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="card1_b3">Modo Copilot (Sugerencias) y Autopilot</span></li>
-          </ul>
+          <div class="mt-4 pt-3 border-t border-slate-200 text-xs font-bold text-brand-700" data-i18n="why_p1_tag">
+            ✔ Cero demora de engagement
+          </div>
         </div>
 
-        <!-- Card 2: Smart Timing -->
-        <div class="rounded-2xl bg-slatecard border border-slate-200/90 p-8 hover:border-brand-300 hover:shadow-elevated-card transition-all duration-300 flex flex-col justify-between group">
+        <!-- Pillar 2 -->
+        <div class="rounded-2xl bg-slatecard border border-slate-200/90 p-7 hover:border-brand-400 hover:shadow-elevated-card transition-all duration-300 flex flex-col justify-between group">
           <div>
-            <div class="w-14 h-14 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center text-2xl font-bold mb-6 group-hover:scale-110 transition-transform shadow-sm">
+            <div class="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center text-xl font-bold mb-5 group-hover:scale-110 transition-transform">
+              🧠
+            </div>
+            <h3 data-i18n="why_p2_t" class="text-lg font-bold text-midnight mb-2">
+              Voz de Marca Auténtica & Calibrada
+            </h3>
+            <p data-i18n="why_p2_d" class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              Configura el nivel de calidez, profundidad y energía. Tus seguidores recibirán respuestas empáticas y humanas, nunca genéricas.
+            </p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-200 text-xs font-bold text-blue-700" data-i18n="why_p2_tag">
+            ✔ Personalización total de tono
+          </div>
+        </div>
+
+        <!-- Pillar 3 -->
+        <div class="rounded-2xl bg-slatecard border border-slate-200/90 p-7 hover:border-brand-400 hover:shadow-elevated-card transition-all duration-300 flex flex-col justify-between group">
+          <div>
+            <div class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl font-bold mb-5 group-hover:scale-110 transition-transform">
+              🛡️
+            </div>
+            <h3 data-i18n="why_p3_t" class="text-lg font-bold text-midnight mb-2">
+              100% Oficial con Meta Graph API
+            </h3>
+            <p data-i18n="why_p3_d" class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              Cero riesgo de penalización o bloqueos de cuenta. Conexión autorizada por Meta con cifrado de tokens AES-256-GCM.
+            </p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-200 text-xs font-bold text-emerald-700" data-i18n="why_p3_tag">
+            ✔ Seguridad y cumplimiento oficial
+          </div>
+        </div>
+
+        <!-- Pillar 4 -->
+        <div class="rounded-2xl bg-slatecard border border-slate-200/90 p-7 hover:border-brand-400 hover:shadow-elevated-card transition-all duration-300 flex flex-col justify-between group">
+          <div>
+            <div class="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center text-xl font-bold mb-5 group-hover:scale-110 transition-transform">
               ⏰
             </div>
-            <h3 data-i18n="card2_title" class="text-xl font-bold text-midnight mb-3">
-              Smart Timing (Horarios Óptimos)
+            <h3 data-i18n="why_p4_t" class="text-lg font-bold text-midnight mb-2">
+              Smart Timing Basado en Datos
             </h3>
-            <p data-i18n="card2_desc" class="text-sm text-slate-600 leading-relaxed font-normal mb-6">
-              Análisis profundo de métricas e histórico de interacciones para recomendar el segundo exacto de publicación según los picos de actividad de tu audiencia real.
+            <p data-i18n="why_p4_d" class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              Analiza los patrones de actividad real de tu comunidad para decirte la hora exacta en la que obtendrás mayor alcance y guardados.
             </p>
           </div>
-          <ul class="space-y-2.5 text-xs text-slate-600 font-semibold border-t border-slate-200 pt-5">
-            <li class="flex items-center gap-2"><span class="text-blue-500 font-bold">✔</span> <span data-i18n="card2_b1">Mapas de calor de engagement por hora y día</span></li>
-            <li class="flex items-center gap-2"><span class="text-blue-500 font-bold">✔</span> <span data-i18n="card2_b2">Predicción de alcance orgánico antes de publicar</span></li>
-            <li class="flex items-center gap-2"><span class="text-blue-500 font-bold">✔</span> <span data-i18n="card2_b3">Alertas de ventanas de tráfico de alta retención</span></li>
-          </ul>
+          <div class="mt-4 pt-3 border-t border-slate-200 text-xs font-bold text-amber-700" data-i18n="why_p4_tag">
+            ✔ +142% de alcance orgánico
+          </div>
         </div>
 
-        <!-- Card 3: Multi-Publishing -->
-        <div class="rounded-2xl bg-slatecard border border-slate-200/90 p-8 hover:border-brand-300 hover:shadow-elevated-card transition-all duration-300 flex flex-col justify-between group">
+        <!-- Pillar 5 -->
+        <div class="rounded-2xl bg-slatecard border border-slate-200/90 p-7 hover:border-brand-400 hover:shadow-elevated-card transition-all duration-300 flex flex-col justify-between group">
           <div>
-            <div class="w-14 h-14 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-2xl font-bold mb-6 group-hover:scale-110 transition-transform shadow-sm">
-              🚀
+            <div class="w-12 h-12 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-xl font-bold mb-5 group-hover:scale-110 transition-transform">
+              🔌
             </div>
-            <h3 data-i18n="card3_title" class="text-xl font-bold text-midnight mb-3">
-              Multi-Publishing & Copys IA
+            <h3 data-i18n="why_p5_t" class="text-lg font-bold text-midnight mb-2">
+              API REST & Webhooks para Desarrolladores
             </h3>
-            <p data-i18n="card3_desc" class="text-sm text-slate-600 leading-relaxed font-normal mb-6">
-              Sube una sola imagen o texto y la IA genera los copys adaptados al algoritmo de cada red social (Instagram, TikTok, Facebook) publicando en simultáneo.
+            <p data-i18n="why_p5_d" class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              Integra el motor de engagement en tus propios bots, herramientas de marketing o SaaS con endpoints limpios en cURL, JS, PHP y Python.
             </p>
           </div>
-          <ul class="space-y-2.5 text-xs text-slate-600 font-semibold border-t border-slate-200 pt-5">
-            <li class="flex items-center gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="card3_b1">Adaptación de ganchos (Hooks) y llamadas a la acción</span></li>
-            <li class="flex items-center gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="card3_b2">Selección inteligente de hashtags virales</span></li>
-            <li class="flex items-center gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="card3_b3">Distribución omnicanal con 1 solo clic</span></li>
-          </ul>
+          <div class="mt-4 pt-3 border-t border-slate-200 text-xs font-bold text-indigo-700" data-i18n="why_p5_tag">
+            ✔ Integración en 5 líneas de código
+          </div>
+        </div>
+
+        <!-- Pillar 6 -->
+        <div class="rounded-2xl bg-slatecard border border-slate-200/90 p-7 hover:border-brand-400 hover:shadow-elevated-card transition-all duration-300 flex flex-col justify-between group">
+          <div>
+            <div class="w-12 h-12 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center text-xl font-bold mb-5 group-hover:scale-110 transition-transform">
+              💰
+            </div>
+            <h3 data-i18n="why_p6_t" class="text-lg font-bold text-midnight mb-2">
+              Ahorra +35 Horas de Trabajo al Mes
+            </h3>
+            <p data-i18n="why_p6_d" class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              Elimina el trabajo repetitivo de responder dudas frecuentes y aprovecha ese tiempo para crear contenido que mueva tu negocio.
+            </p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-200 text-xs font-bold text-rose-700" data-i18n="why_p6_tag">
+            ✔ Enfoque 100% en crear
+          </div>
         </div>
 
       </div>
@@ -538,9 +656,113 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
   </section>
 
   <!-- ========================================================================= -->
-  <!-- 5. EL SIMULADOR INTERACTIVO -->
+  <!-- 6. CALCULADORA INTERACTIVA DE AHORRO & ROI -->
   <!-- ========================================================================= -->
-  <section id="simulador" class="py-24 bg-gradient-to-b from-slatecard to-white border-b border-slate-200/80">
+  <section id="calculadora-roi" class="py-24 bg-gradient-to-b from-slatecard to-white border-b border-slate-200/80">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-2xl mx-auto mb-14">
+        <span data-i18n="calc_badge" class="text-xs font-extrabold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-3.5 py-1 rounded-full border border-emerald-200">
+          Calculadora de Impacto
+        </span>
+        <h2 data-i18n="calc_h2" class="text-3xl sm:text-4xl font-extrabold text-midnight tracking-tight mt-3 mb-3">
+          ¿Cuánto tiempo y alcance ganas con Xindro?
+        </h2>
+        <p data-i18n="calc_sub" class="text-sm sm:text-base text-slate-600 font-normal">
+          Ajusta el volumen de comentarios mensuales y descubre el impacto real en tu comunidad.
+        </p>
+      </div>
+
+      <!-- Calculator Card -->
+      <div class="bg-white rounded-3xl border border-slate-200 shadow-elevated-card p-6 sm:p-10">
+        
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          
+          <!-- Left Sliders Column -->
+          <div class="lg:col-span-6 space-y-6">
+            
+            <!-- Slider 1: Comments per month -->
+            <div>
+              <div class="flex justify-between items-center mb-2">
+                <label data-i18n="calc_lbl_comments" class="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  Comentarios recibidos al mes:
+                </label>
+                <span id="calc-comments-val" class="text-sm font-black text-brand-600 bg-brand-50 px-2.5 py-0.5 rounded-lg border border-brand-200">
+                  5,000
+                </span>
+              </div>
+              <input type="range" id="calc-comments-range" min="500" max="50000" step="500" value="5000" oninput="Calculator.update()" class="w-full accent-brand-600 cursor-pointer" />
+              <div class="flex justify-between text-[10px] text-slate-400 font-bold mt-1">
+                <span>500</span>
+                <span>25,000</span>
+                <span>50,000+</span>
+              </div>
+            </div>
+
+            <!-- Slider 2: Accounts -->
+            <div>
+              <div class="flex justify-between items-center mb-2">
+                <label data-i18n="calc_lbl_accounts" class="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  Cuentas de Instagram / Facebook:
+                </label>
+                <span id="calc-accounts-val" class="text-sm font-black text-brand-600 bg-brand-50 px-2.5 py-0.5 rounded-lg border border-brand-200">
+                  2 cuentas
+                </span>
+              </div>
+              <input type="range" id="calc-accounts-range" min="1" max="10" step="1" value="2" oninput="Calculator.update()" class="w-full accent-brand-600 cursor-pointer" />
+              <div class="flex justify-between text-[10px] text-slate-400 font-bold mt-1">
+                <span>1 cuenta</span>
+                <span>5 cuentas</span>
+                <span>10 cuentas</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Right Results Column -->
+          <div class="lg:col-span-6 bg-gradient-to-br from-slate-900 to-slate-950 text-white rounded-2xl p-6 sm:p-7 shadow-xl border border-slate-800">
+            <div class="text-xs font-bold uppercase tracking-wider text-brand-400 mb-4" data-i18n="calc_res_title">
+              Impacto Estimado Mensual
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 mb-6">
+              
+              <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-800">
+                <div class="text-2xl sm:text-3xl font-black text-emerald-400 mb-0.5" id="calc-res-hours">
+                  +38 hrs
+                </div>
+                <div class="text-[11px] font-semibold text-slate-400 uppercase" data-i18n="calc_res_h_label">
+                  Tiempo Manual Ahorrado
+                </div>
+              </div>
+
+              <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-800">
+                <div class="text-2xl sm:text-3xl font-black text-brand-400 mb-0.5" id="calc-res-leads">
+                  +120
+                </div>
+                <div class="text-[11px] font-semibold text-slate-400 uppercase" data-i18n="calc_res_l_label">
+                  Leads / Preguntas Clave
+                </div>
+              </div>
+
+            </div>
+
+            <div class="text-xs text-slate-300 leading-relaxed border-t border-slate-800 pt-3">
+              <span class="text-emerald-400 font-bold">✔ 99.4%</span> <span data-i18n="calc_res_footer">de respuestas entregadas en la ventana de oro del algoritmo sin agotamiento humano.</span>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ========================================================================= -->
+  <!-- 7. EL SIMULADOR INTERACTIVO -->
+  <!-- ========================================================================= -->
+  <section id="simulador" class="py-24 bg-white border-b border-slate-200/80">
     <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
       
       <div class="text-center max-w-2xl mx-auto mb-12">
@@ -631,7 +853,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
               </button>
             </div>
 
-            <button type="button" id="sim-btn-generate" onclick="Simulator.generate()" class="px-6 py-3 rounded-xl text-sm font-bold text-white gradient-button flex items-center gap-2 shadow-glow-sm">
+            <button type="button" id="sim-btn-generate" onclick="Simulator.generate()" class="px-6 py-3 rounded-xl text-sm font-bold text-white gradient-button flex items-center gap-2 shadow-glow-sm shimmer-btn">
               <span data-i18n="sim_btn_gen">Generar Respuesta con IA</span>
               <span>⚡</span>
             </button>
@@ -676,103 +898,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
   </section>
 
   <!-- ========================================================================= -->
-  <!-- 6. SMART TIMING (Análisis de Horarios Óptimos) -->
-  <!-- ========================================================================= -->
-  <section id="smart-timing" class="py-24 bg-white border-b border-slate-100">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-      
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-        
-        <div class="lg:col-span-5">
-          <span data-i18n="timing_badge" class="text-xs font-extrabold uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
-            Algoritmo de Precisión
-          </span>
-          <h2 data-i18n="timing_h2" class="text-3xl sm:text-4xl font-extrabold text-midnight tracking-tight mt-3 mb-4">
-            No publiques a ciegas. Publica en el segundo exacto.
-          </h2>
-          <p data-i18n="timing_sub" class="text-base text-slate-600 leading-relaxed font-normal mb-6">
-            El Smart Timing de XINDRO cruza datos de más de 500,000 interacciones para identificar cuándo tus seguidores más valiosos están activos y listos para interactuar.
-          </p>
-
-          <div class="space-y-4">
-            <div class="flex items-start gap-3.5">
-              <div class="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center font-bold text-sm shrink-0 mt-0.5">
-                📈
-              </div>
-              <div>
-                <h4 data-i18n="timing_b1_t" class="text-sm font-bold text-midnight">Ventana de Máxima Retención</h4>
-                <p data-i18n="timing_b1_d" class="text-xs text-slate-600 leading-relaxed">Publicar en el pico aumenta la retención inicial en los primeros 15 minutos en un 240%.</p>
-              </div>
-            </div>
-
-            <div class="flex items-start gap-3.5">
-              <div class="w-8 h-8 rounded-lg bg-purple-50 border border-purple-200 text-purple-600 flex items-center justify-center font-bold text-sm shrink-0 mt-0.5">
-                🧠
-              </div>
-              <div>
-                <h4 data-i18n="timing_b2_t" class="text-sm font-bold text-midnight">Alineación con el Algoritmo de Meta</h4>
-                <p data-i18n="timing_b2_d" class="text-xs text-slate-600 leading-relaxed">Meta premia a las cuentas que responden rápido durante los picos de visualización.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Heatmap / Activity Widget -->
-        <div class="lg:col-span-7 bg-slatecard rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-subtle-card">
-          <div class="flex items-center justify-between mb-6">
-            <div>
-              <div data-i18n="timing_card_t" class="text-sm font-bold text-midnight">Pico de Engagement Semanal Detectado</div>
-              <div data-i18n="timing_card_s" class="text-xs text-slate-500">Métricas analizadas en tiempo real</div>
-            </div>
-            <span class="text-xs font-bold px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-              +142% Alcance
-            </span>
-          </div>
-
-          <div class="space-y-3 mb-6">
-            <div>
-              <div class="flex justify-between text-xs font-semibold text-slate-600 mb-1">
-                <span data-i18n="timing_bar_1">Miércoles — 19:45 hrs</span>
-                <span class="text-brand-600 font-bold" data-i18n="timing_bar_1_badge">98% Actividad Máxima 🔥</span>
-              </div>
-              <div class="w-full bg-slate-200 h-3 rounded-full overflow-hidden">
-                <div class="bg-gradient-to-r from-brand-500 to-indigo-600 h-full rounded-full" style="width: 98%;"></div>
-              </div>
-            </div>
-
-            <div>
-              <div class="flex justify-between text-xs font-semibold text-slate-600 mb-1">
-                <span data-i18n="timing_bar_2">Viernes — 21:00 hrs</span>
-                <span class="text-slate-600" data-i18n="timing_bar_2_badge">84% Actividad</span>
-              </div>
-              <div class="w-full bg-slate-200 h-3 rounded-full overflow-hidden">
-                <div class="bg-indigo-400 h-full rounded-full" style="width: 84%;"></div>
-              </div>
-            </div>
-
-            <div>
-              <div class="flex justify-between text-xs font-semibold text-slate-600 mb-1">
-                <span data-i18n="timing_bar_3">Domingo — 20:15 hrs</span>
-                <span class="text-slate-600" data-i18n="timing_bar_3_badge">76% Actividad</span>
-              </div>
-              <div class="w-full bg-slate-200 h-3 rounded-full overflow-hidden">
-                <div class="bg-indigo-300 h-full rounded-full" style="width: 76%;"></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="p-4 rounded-xl bg-brand-50/70 border border-brand-200/60 flex items-center justify-between text-xs text-brand-900 font-medium">
-            <span data-i18n="timing_recommendation">💡 <strong>Recomendación XINDRO:</strong> Programa tu próximo post hoy a las <strong>19:42 hrs</strong> para maximizar guardados y comentarios.</span>
-          </div>
-        </div>
-
-      </div>
-
-    </div>
-  </section>
-
-  <!-- ========================================================================= -->
-  <!-- 7. SECCIÓN DE API PARA CREADORES & DESARROLLADORES -->
+  <!-- 8. SECCIÓN DE API PARA CREADORES & DESARROLLADORES -->
   <!-- ========================================================================= -->
   <section id="api-docs" class="py-24 dark-mesh-bg bg-slate-900 text-white">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -912,7 +1038,7 @@ print("Respuesta IA:", res["replies"]["wisdom"])
   </section>
 
   <!-- ========================================================================= -->
-  <!-- 8. PRECIOS & PLANES -->
+  <!-- 9. PRECIOS & PLANES -->
   <!-- ========================================================================= -->
   <section id="precios" class="py-24 bg-white border-b border-slate-100">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -972,7 +1098,7 @@ print("Respuesta IA:", res["replies"]["wisdom"])
               <li class="flex items-center gap-2"><span class="text-brand-600 font-bold">✔</span> <span data-i18n="plan2_f5">Soporte prioritario 24/7</span></li>
             </ul>
           </div>
-          <a href="login.php" data-i18n="plan2_btn" class="w-full py-3.5 rounded-full text-center text-sm font-bold text-white gradient-button shadow-glow-sm">
+          <a href="login.php" data-i18n="plan2_btn" class="w-full py-3.5 rounded-full text-center text-sm font-bold text-white gradient-button shadow-glow-sm shimmer-btn">
             Comenzar con Pro
           </a>
         </div>
@@ -1004,11 +1130,80 @@ print("Respuesta IA:", res["replies"]["wisdom"])
   </section>
 
   <!-- ========================================================================= -->
-  <!-- 9. FOOTER PROFESIONAL CON MARCA DE AGUA GIGANTE -->
+  <!-- 10. PREGUNTAS FRECUENTES (FAQ Acordeón Interactivo) -->
+  <!-- ========================================================================= -->
+  <section id="faq" class="py-24 bg-slatecard border-b border-slate-200/80">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-2xl mx-auto mb-14">
+        <span data-i18n="faq_badge" class="text-xs font-extrabold uppercase tracking-wider text-brand-600 bg-brand-50 px-3.5 py-1 rounded-full border border-brand-200">
+          Respuestas Claras
+        </span>
+        <h2 data-i18n="faq_h2" class="text-3xl sm:text-4xl font-extrabold text-midnight tracking-tight mt-3 mb-3">
+          Preguntas Frecuentes
+        </h2>
+        <p data-i18n="faq_sub" class="text-sm sm:text-base text-slate-600 font-normal">
+          Todo lo que necesitas saber antes de empezar a automatizar tu comunidad.
+        </p>
+      </div>
+
+      <div class="space-y-4">
+        
+        <!-- Q1 -->
+        <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
+          <button type="button" onclick="Faq.toggle(1)" class="w-full p-5 sm:p-6 text-left flex items-center justify-between gap-4 font-bold text-sm sm:text-base text-midnight hover:text-brand-600 transition-colors">
+            <span data-i18n="faq_q1">¿Es seguro para mi cuenta de Instagram o Facebook?</span>
+            <span id="faq-icon-1" class="text-lg font-bold text-slate-400 transition-transform">+</span>
+          </button>
+          <div id="faq-ans-1" class="hidden px-5 sm:px-6 pb-6 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-4" data-i18n="faq_a1">
+            Totalmente seguro. Xindro opera exclusivamente a través de la API oficial de Meta Graph con permisos autorizados y webhooks verificados. No requerimos tu contraseña de Instagram y no utilizamos navegadores automatizados o emuladores no oficiales.
+          </div>
+        </div>
+
+        <!-- Q2 -->
+        <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
+          <button type="button" onclick="Faq.toggle(2)" class="w-full p-5 sm:p-6 text-left flex items-center justify-between gap-4 font-bold text-sm sm:text-base text-midnight hover:text-brand-600 transition-colors">
+            <span data-i18n="faq_q2">¿La IA puede responder cosas fuera de lugar o inventar información?</span>
+            <span id="faq-icon-2" class="text-lg font-bold text-slate-400 transition-transform">+</span>
+          </button>
+          <div id="faq-ans-2" class="hidden px-5 sm:px-6 pb-6 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-4" data-i18n="faq_a2">
+            No. Cuentas con un calibrador de voz de marca donde defines tus principios, tono y longitud. Además, dispones del <strong>Modo Copilot</strong> que te muestra sugerencias para que las apruebes con un solo clic antes de que se publiquen, dándote control absoluto.
+          </div>
+        </div>
+
+        <!-- Q3 -->
+        <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
+          <button type="button" onclick="Faq.toggle(3)" class="w-full p-5 sm:p-6 text-left flex items-center justify-between gap-4 font-bold text-sm sm:text-base text-midnight hover:text-brand-600 transition-colors">
+            <span data-i18n="faq_q3">¿Cómo puedo integrar la API en mis propias herramientas o software?</span>
+            <span id="faq-icon-3" class="text-lg font-bold text-slate-400 transition-transform">+</span>
+          </button>
+          <div id="faq-ans-3" class="hidden px-5 sm:px-6 pb-6 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-4" data-i18n="faq_a3">
+            Nuestra API RESTful recibe peticiones POST en formato JSON y devuelve las respuestas contextualizadas en menos de 180ms. Puedes enviar comentarios desde cualquier backend en Python, Node.js, PHP o cURL usando tu API Token privado.
+          </div>
+        </div>
+
+        <!-- Q4 -->
+        <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
+          <button type="button" onclick="Faq.toggle(4)" class="w-full p-5 sm:p-6 text-left flex items-center justify-between gap-4 font-bold text-sm sm:text-base text-midnight hover:text-brand-600 transition-colors">
+            <span data-i18n="faq_q4">¿Puedo empezar gratis sin ingresar tarjeta de crédito?</span>
+            <span id="faq-icon-4" class="text-lg font-bold text-slate-400 transition-transform">+</span>
+          </button>
+          <div id="faq-ans-4" class="hidden px-5 sm:px-6 pb-6 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-4" data-i18n="faq_a4">
+            Sí. El plan Creador Starter es 100% gratuito e incluye hasta 100 respuestas al mes y el asistente Copilot para que puedas probar el impacto en tu comunidad antes de decidir actualizar.
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ========================================================================= -->
+  <!-- 11. FOOTER PROFESIONAL CON MARCA DE AGUA GIGANTE -->
   <!-- ========================================================================= -->
   <footer class="starry-footer-bg starry-overlay pt-20 pb-12 text-slate-300 text-sm overflow-hidden relative">
     
-    <!-- Giant Gamma-Style Watermark -->
+    <!-- Giant Watermark -->
     <div class="w-full text-center my-6 overflow-hidden select-none pointer-events-none">
       <div class="giant-watermark text-[16vw] font-black uppercase tracking-widest leading-none">
         XINDRO
@@ -1046,10 +1241,8 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           <ul class="space-y-2.5 text-xs text-slate-300 font-medium">
             <li><a href="#precios" data-i18n="foot_c2_1" class="hover:text-white transition-colors">Precios</a></li>
             <li><a href="#simulador" data-i18n="foot_c2_2" class="hover:text-white transition-colors">Inspiración</a></li>
-            <li><a href="#funciones" data-i18n="foot_c2_3" class="hover:text-white transition-colors">Educación</a></li>
-            <li><a href="#simulador" data-i18n="foot_c2_4" class="hover:text-white transition-colors">Guía de prompts</a></li>
-            <li><a href="#funciones" data-i18n="foot_c2_5" class="hover:text-white transition-colors">Plantillas</a></li>
-            <li><a href="#smart-timing" data-i18n="foot_c2_6" class="hover:text-white transition-colors">Explorar</a></li>
+            <li><a href="#por-que-xindro" data-i18n="nav_why" class="hover:text-white transition-colors">¿Por qué Xindro?</a></li>
+            <li><a href="#calculadora-roi" data-i18n="nav_roi" class="hover:text-white transition-colors">Calculadora</a></li>
             <li><a href="#api-docs" data-i18n="foot_c2_7" class="hover:text-white transition-colors">Integraciones</a></li>
           </ul>
         </div>
@@ -1058,12 +1251,10 @@ print("Respuesta IA:", res["replies"]["wisdom"])
         <div>
           <h4 data-i18n="foot_c3_t" class="text-xs font-bold text-white uppercase tracking-wider mb-4">Empresa</h4>
           <ul class="space-y-2.5 text-xs text-slate-300 font-medium">
-            <li><a href="#funciones" data-i18n="foot_c3_1" class="hover:text-white transition-colors">Acerca de</a></li>
+            <li><a href="#por-que-xindro" data-i18n="foot_c3_1" class="hover:text-white transition-colors">Acerca de</a></li>
             <li><a href="login.php" data-i18n="foot_c3_2" class="hover:text-white transition-colors">Carreras</a></li>
             <li><a href="login.php" data-i18n="foot_c3_3" class="hover:text-white transition-colors">Equipo</a></li>
-            <li><a href="login.php" data-i18n="foot_c3_4" class="hover:text-white transition-colors">Ayuda</a></li>
-            <li><a href="#simulador" data-i18n="foot_c3_5" class="hover:text-white transition-colors">Comunidad</a></li>
-            <li><a href="#api-docs" data-i18n="foot_c3_6" class="hover:text-white transition-colors">Documentación para desarrolladores</a></li>
+            <li><a href="#api-docs" data-i18n="foot_c3_6" class="hover:text-white transition-colors">Docs Desarrolladores</a></li>
             <li><a href="privacy-policy.php" data-i18n="foot_c3_7" class="hover:text-white transition-colors">Seguridad</a></li>
           </ul>
         </div>
@@ -1087,7 +1278,6 @@ print("Respuesta IA:", res["replies"]["wisdom"])
             <li><a href="terms-of-service.php" class="hover:text-white transition-colors">Acceptable Use Policy</a></li>
             <li><a href="privacy-policy.php" class="hover:text-white transition-colors">Cookie Notice</a></li>
             <li><a href="javascript:void(0)" onclick="CookieConsent.openSettings()" data-i18n="cookie_btn_pref" class="hover:text-white transition-colors text-brand-300 font-semibold">Preferencias de cookies</a></li>
-            <li><a href="terms-of-service.php" class="hover:text-white transition-colors">Data Processing Addendum</a></li>
             <li><a href="privacy-policy.php" class="hover:text-white transition-colors">Privacy Policy</a></li>
             <li><a href="data-deletion.php" class="hover:text-white transition-colors">Data Deletion (Meta)</a></li>
             <li><a href="terms-of-service.php" class="hover:text-white transition-colors">Terms of Service</a></li>
@@ -1116,11 +1306,10 @@ print("Respuesta IA:", res["replies"]["wisdom"])
   </footer>
 
   <!-- ========================================================================= -->
-  <!-- 10. POPUP PROFESIONAL DE COOKIES (Bottom-Left Banner RGPD/CCPA Compliant) -->
+  <!-- 12. POPUP PROFESIONAL DE COOKIES -->
   <!-- ========================================================================= -->
   <div id="cookie-consent-modal" class="fixed bottom-5 left-5 z-50 max-w-[430px] w-[calc(100%-40px)] bg-white/95 backdrop-blur-md rounded-2xl shadow-cookie-popup p-5 border border-slate-200 text-slate-800 cookie-animate hidden">
     
-    <!-- Top Row: Title + Close Button -->
     <div class="flex items-start justify-between gap-3 mb-2">
       <div class="text-sm font-extrabold text-midnight flex items-center gap-1.5">
         <span data-i18n="cookie_title">Sobre nuestras cookies</span>
@@ -1131,12 +1320,10 @@ print("Respuesta IA:", res["replies"]["wisdom"])
       </button>
     </div>
 
-    <!-- Description Text -->
     <p class="text-[12px] text-slate-600 leading-relaxed mb-4">
       <span data-i18n="cookie_desc_1">Utilizamos cookies y tecnologías similares según se establece en nuestra</span> <a href="privacy-policy.php" data-i18n="cookie_link" class="text-blue-600 hover:underline font-semibold">Política de Cookies</a>. <span data-i18n="cookie_desc_2">Al hacer clic en "Aceptar Todo", aceptas el uso de cookies para personalizar tu experiencia, optimizar la IA y analizar el tráfico de la API.</span>
     </p>
 
-    <!-- Action Buttons Row -->
     <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
       <button type="button" onclick="CookieConsent.openSettings()" data-i18n="cookie_btn_settings" class="text-[11px] font-bold px-3.5 py-1.5 rounded-full border border-slate-300 text-slate-700 hover:bg-slate-100 transition-colors">
         Configurar Cookies
@@ -1146,7 +1333,7 @@ print("Respuesta IA:", res["replies"]["wisdom"])
         <button type="button" onclick="CookieConsent.rejectAll()" data-i18n="cookie_btn_reject" class="text-[11px] font-bold px-3.5 py-1.5 rounded-full bg-slate-900 hover:bg-black text-white transition-colors">
           Rechazar Todo
         </button>
-        <button type="button" onclick="CookieConsent.acceptAll()" data-i18n="cookie_btn_accept" class="text-[11px] font-bold px-4 py-1.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-colors">
+        <button type="button" onclick="CookieConsent.acceptAll()" data-i18n="cookie_btn_accept" class="text-[11px] font-bold px-4 py-1.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-colors shimmer-btn">
           Aceptar Todo
         </button>
       </div>
@@ -1172,7 +1359,6 @@ print("Respuesta IA:", res["replies"]["wisdom"])
 
       <div class="space-y-4 text-xs mb-6">
         
-        <!-- Category 1: Essential (Required) -->
         <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200">
           <div class="flex items-center justify-between mb-1">
             <div data-i18n="cookie_cat1_t" class="font-bold text-midnight text-sm">Cookies Técnicas y de Seguridad (Esenciales)</div>
@@ -1183,7 +1369,6 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           </p>
         </div>
 
-        <!-- Category 2: Analytics & Performance -->
         <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-4">
           <div>
             <div data-i18n="cookie_cat2_t" class="font-bold text-midnight text-sm mb-1">Cookies de Rendimiento & Analítica</div>
@@ -1194,7 +1379,6 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           <input type="checkbox" id="chk-analytics-cookies" checked class="w-5 h-5 accent-brand-600 rounded cursor-pointer shrink-0" />
         </div>
 
-        <!-- Category 3: Personalization & Language -->
         <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-4">
           <div>
             <div data-i18n="cookie_cat3_t" class="font-bold text-midnight text-sm mb-1">Cookies de Personalización & Idioma</div>
@@ -1216,12 +1400,52 @@ print("Respuesta IA:", res["replies"]["wisdom"])
   </div>
 
   <!-- ========================================================================= -->
-  <!-- 11. SISTEMA MULTI-IDIOMA i18n + MOTOR DEL SIMULADOR -->
+  <!-- 13. JAVASCRIPT: i18n + SIMULATOR + CALCULATOR + FAQ -->
   <!-- ========================================================================= -->
   <script>
-    // -------------------------------------------------------------
-    // 1. DICCIONARIO MULTI-IDIOMA (ES / EN / PT)
-    // -------------------------------------------------------------
+    // 1. CALCULATOR ENGINE
+    const Calculator = {
+      update() {
+        const comments = parseInt(document.getElementById('calc-comments-range').value, 10);
+        const accounts = parseInt(document.getElementById('calc-accounts-range').value, 10);
+
+        document.getElementById('calc-comments-val').textContent = comments.toLocaleString() + ' comentarios';
+        document.getElementById('calc-accounts-val').textContent = accounts + (accounts === 1 ? ' cuenta' : ' cuentas');
+
+        // ~45 seconds saved per comment on average
+        const totalMinutes = (comments * accounts * 0.75);
+        const hoursSaved = Math.round(totalMinutes / 60);
+        const leadsDetected = Math.round((comments * accounts) * 0.024);
+
+        document.getElementById('calc-res-hours').textContent = `+${hoursSaved} hrs`;
+        document.getElementById('calc-res-leads').textContent = `+${leadsDetected.toLocaleString()}`;
+      }
+    };
+
+    // 2. FAQ ACCORDION ENGINE
+    const Faq = {
+      toggle(id) {
+        const ans = document.getElementById('faq-ans-' + id);
+        const icon = document.getElementById('faq-icon-' + id);
+        if (!ans) return;
+
+        const isHidden = ans.classList.contains('hidden');
+        // Close all
+        for (let i = 1; i <= 4; i++) {
+          const a = document.getElementById('faq-ans-' + i);
+          const ic = document.getElementById('faq-icon-' + i);
+          if (a) a.classList.add('hidden');
+          if (ic) { ic.textContent = '+'; ic.style.transform = 'rotate(0deg)'; }
+        }
+
+        if (isHidden) {
+          ans.classList.remove('hidden');
+          if (icon) { icon.textContent = '−'; icon.style.transform = 'rotate(180deg)'; }
+        }
+      }
+    };
+
+    // 3. DICCIONARIO MULTI-IDIOMA (ES / EN / PT)
     const I18n = {
       current: '<?= $initialLang ?>',
 
@@ -1230,10 +1454,12 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           page_title: "XINDRO — El Sistema Operativo de IA para Creadores de Contenido",
           page_desc: "Automatiza tus redes sociales. Responde comentarios en piloto automático, analiza métricas de engagement y publica en múltiples plataformas desde una sola API.",
           nav_products: "Productos",
+          nav_why: "¿Por qué Xindro?",
           nav_simulator: "Simulador",
-          nav_solutions: "Soluciones",
+          nav_roi: "Calculadora",
           nav_api: "API Creadores",
           nav_pricing: "Precios",
+          nav_faq: "FAQ",
           nav_login: "Iniciar sesión",
           nav_cta: "Comienza gratis",
           nav_dashboard: "Ir a mi Panel",
@@ -1254,28 +1480,41 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           hero_card_ready: "✔ Listo para postear",
           hero_comment_sample: "Llevo semanas intentando ser constante en mis redes pero me quedo sin ideas y pierdo motivación. ¿Cómo estructuran su rutina diaria?",
           hero_reply_sample: "Alejandro, la clave no es la motivación que va y viene, sino los sistemas. Bloquea 45 min cada mañana antes de revisar el móvil. La disciplina diaria supera a la inspiración esporádica. ¿Qué es lo primero que harás mañana al despertar? 👇",
+          marquee_title: "Integrado con la Infraestructura Oficial de Redes Sociales e Inteligencia Artificial",
           stat_1: "Comentarios Respondidos",
           stat_2: "Aumento en Engagement",
           stat_3: "Precisión de Voz Humana",
           stat_4: "Latencia de API en Vivo",
-          feat_badge: "Infraestructura de Nueva Generación",
-          feat_h2: "Todo lo que un creador moderno necesita para dominar el algoritmo.",
-          feat_sub: "Tres pilares integrados en una arquitectura de alta velocidad para maximizar tu retención, leads y alcance orgánico.",
-          card1_title: "Auto-Engagement Contextual",
-          card1_desc: "IA que responde comentarios de forma natural y contextual en tus posts. Filtra spam, detecta intención de compra y fideliza seguidores 24/7 con tu propia voz de marca.",
-          card1_b1: "Calibración de Calidez, Profundidad y Energía",
-          card1_b2: "Detección instantánea de Leads y Preguntas",
-          card1_b3: "Modo Copilot (Sugerencias) y Autopilot",
-          card2_title: "Smart Timing (Horarios Óptimos)",
-          card2_desc: "Análisis profundo de métricas e histórico de interacciones para recomendar el segundo exacto de publicación según los picos de actividad de tu audiencia real.",
-          card2_b1: "Mapas de calor de engagement por hora y día",
-          card2_b2: "Predicción de alcance orgánico antes de publicar",
-          card2_b3: "Alertas de ventanas de tráfico de alta retención",
-          card3_title: "Multi-Publishing & Copys IA",
-          card3_desc: "Sube una sola imagen o texto y la IA genera los copys adaptados al algoritmo de cada red social (Instagram, TikTok, Facebook) publicando en simultáneo.",
-          card3_b1: "Adaptación de ganchos (Hooks) y llamadas a la acción",
-          card3_b2: "Selección inteligente de hashtags virales",
-          card3_b3: "Distribución omnicanal con 1 solo clic",
+          why_badge: "Diferenciales Reales",
+          why_h2: "¿Por qué los creadores y agencias eligen Xindro?",
+          why_sub: "Diseñado desde el código para responder en segundos, proteger tu reputación y maximizar el algoritmo sin sonar como un robot.",
+          why_p1_t: "Respuestas en Tiempo Real (<180ms)",
+          why_p1_d: "El algoritmo de Meta premia a las cuentas que interactúan en los primeros 15 minutos. Nuestro motor heurístico responde casi al instante.",
+          why_p1_tag: "✔ Cero demora de engagement",
+          why_p2_t: "Voz de Marca Auténtica & Calibrada",
+          why_p2_d: "Configura el nivel de calidez, profundidad y energía. Tus seguidores recibirán respuestas empáticas y humanas, nunca genéricas.",
+          why_p2_tag: "✔ Personalización total de tono",
+          why_p3_t: "100% Oficial con Meta Graph API",
+          why_p3_d: "Cero riesgo de penalización o bloqueos de cuenta. Conexión autorizada por Meta con cifrado de tokens AES-256-GCM.",
+          why_p3_tag: "✔ Seguridad y cumplimiento oficial",
+          why_p4_t: "Smart Timing Basado en Datos",
+          why_p4_d: "Analiza los patrones de actividad real de tu comunidad para decirte la hora exacta en la que obtendrás mayor alcance y guardados.",
+          why_p4_tag: "✔ +142% de alcance orgánico",
+          why_p5_t: "API REST & Webhooks para Desarrolladores",
+          why_p5_d: "Integra el motor de engagement en tus propios bots, herramientas de marketing o SaaS con endpoints limpios en cURL, JS, PHP y Python.",
+          why_p5_tag: "✔ Integración en 5 líneas de código",
+          why_p6_t: "Ahorra +35 Horas de Trabajo al Mes",
+          why_p6_d: "Elimina el trabajo repetitivo de responder dudas frecuentes y aprovecha ese tiempo para crear contenido que mueva tu negocio.",
+          why_p6_tag: "✔ Enfoque 100% en crear",
+          calc_badge: "Calculadora de Impacto",
+          calc_h2: "¿Cuánto tiempo y alcance ganas con Xindro?",
+          calc_sub: "Ajusta el volumen de comentarios mensuales y descubre el impacto real en tu comunidad.",
+          calc_lbl_comments: "Comentarios recibidos al mes:",
+          calc_lbl_accounts: "Cuentas de Instagram / Facebook:",
+          calc_res_title: "Impacto Estimado Mensual",
+          calc_res_h_label: "Tiempo Manual Ahorrado",
+          calc_res_l_label: "Leads / Preguntas Clave",
+          calc_res_footer: "de respuestas entregadas en la ventana de oro del algoritmo sin agotamiento humano.",
           sim_badge: "Playground en Vivo",
           sim_h2: "Prueba el Motor de XINDRO en Tiempo Real",
           sim_sub: "Selecciona un tono, escribe cualquier comentario de tu comunidad y observa cómo la IA genera respuestas hipercontextualizadas.",
@@ -1296,22 +1535,6 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           sim_res_title: "Resultado Generado por XINDRO",
           sim_autopilot_ok: "✔ Apto para Autopilot en Instagram y Facebook",
           sim_btn_copy: "📋 Copiar",
-          timing_badge: "Algoritmo de Precisión",
-          timing_h2: "No publiques a ciegas. Publica en el segundo exacto.",
-          timing_sub: "El Smart Timing de XINDRO cruza datos de más de 500,000 interacciones para identificar cuándo tus seguidores más valiosos están activos y listos para interactuar.",
-          timing_b1_t: "Ventana de Máxima Retención",
-          timing_b1_d: "Publicar en el pico aumenta la retención inicial en los primeros 15 minutos en un 240%.",
-          timing_b2_t: "Alineación con el Algoritmo de Meta",
-          timing_b2_d: "Meta premia a las cuentas que responden rápido durante los picos de visualización.",
-          timing_card_t: "Pico de Engagement Semanal Detectado",
-          timing_card_s: "Métricas analizadas en tiempo real",
-          timing_bar_1: "Miércoles — 19:45 hrs",
-          timing_bar_1_badge: "98% Actividad Máxima 🔥",
-          timing_bar_2: "Viernes — 21:00 hrs",
-          timing_bar_2_badge: "84% Actividad",
-          timing_bar_3: "Domingo — 20:15 hrs",
-          timing_bar_3_badge: "76% Actividad",
-          timing_recommendation: "💡 <strong>Recomendación XINDRO:</strong> Programa tu próximo post hoy a las <strong>19:42 hrs</strong> para maximizar guardados y comentarios.",
           api_badge: "Developer & Creator API",
           api_h2: "Ofrece la potencia de XINDRO dentro de tus propias herramientas.",
           api_sub: "Endpoints RESTful ultrarrápidos, webhooks criptográficos verificados y SDKs listos para integrar en tus bots, paneles o SaaS con 5 líneas de código.",
@@ -1351,22 +1574,27 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           plan3_f3: "100,000 llamadas a API incluidas / mes",
           plan3_f4: "Marca blanca & Webhook dedicado",
           plan3_btn: "Acceso para Agencias",
+          faq_badge: "Respuestas Claras",
+          faq_h2: "Preguntas Frecuentes",
+          faq_sub: "Todo lo que necesitas saber antes de empezar a automatizar tu comunidad.",
+          faq_q1: "¿Es seguro para mi cuenta de Instagram o Facebook?",
+          faq_a1: "Totalmente seguro. Xindro opera exclusivamente a través de la API oficial de Meta Graph con permisos autorizados y webhooks verificados. No requerimos tu contraseña de Instagram y no utilizamos navegadores automatizados o emuladores no oficiales.",
+          faq_q2: "¿La IA puede responder cosas fuera de lugar o inventar información?",
+          faq_a2: "No. Cuentas con un calibrador de voz de marca donde defines tus principios, tono y longitud. Además, dispones del <strong>Modo Copilot</strong> que te muestra sugerencias para que las apruebes con un solo clic antes de que se publiquen, dándote control absoluto.",
+          faq_q3: "¿Cómo puedo integrar la API en mis propias herramientas o software?",
+          faq_a3: "Nuestra API RESTful recibe peticiones POST en formato JSON y devuelve las respuestas contextualizadas en menos de 180ms. Puedes enviar comentarios desde cualquier backend en Python, Node.js, PHP o cURL usando tu API Token privado.",
+          faq_q4: "¿Puedo empezar gratis sin ingresar tarjeta de crédito?",
+          faq_a4: "Sí. El plan Creador Starter es 100% gratuito e incluye hasta 100 respuestas al mes y el asistente Copilot para que puedas probar el impacto en tu comunidad antes de decidir actualizar.",
           foot_c1_t: "Descarga la app",
           foot_c2_t: "Producto",
           foot_c2_1: "Precios",
           foot_c2_2: "Inspiración",
-          foot_c2_3: "Educación",
-          foot_c2_4: "Guía de prompts",
-          foot_c2_5: "Plantillas",
-          foot_c2_6: "Explorar",
           foot_c2_7: "Integraciones",
           foot_c3_t: "Empresa",
           foot_c3_1: "Acerca de",
           foot_c3_2: "Carreras",
           foot_c3_3: "Equipo",
-          foot_c3_4: "Ayuda",
-          foot_c3_5: "Comunidad",
-          foot_c3_6: "Documentación para desarrolladores",
+          foot_c3_6: "Docs Desarrolladores",
           foot_c3_7: "Seguridad",
           foot_c4_t: "Redes sociales",
           foot_c5_t: "Información legal",
@@ -1395,10 +1623,12 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           page_title: "XINDRO — The AI Operating System for Content Creators",
           page_desc: "Automate your social media. Reply to comments on autopilot, analyze engagement metrics to find your perfect posting time, and publish across multiple platforms from a single API.",
           nav_products: "Products",
+          nav_why: "Why Xindro?",
           nav_simulator: "Simulator",
-          nav_solutions: "Solutions",
+          nav_roi: "Calculator",
           nav_api: "Creator API",
           nav_pricing: "Pricing",
+          nav_faq: "FAQ",
           nav_login: "Log in",
           nav_cta: "Get started free",
           nav_dashboard: "Go to Dashboard",
@@ -1419,28 +1649,41 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           hero_card_ready: "✔ Ready to post",
           hero_comment_sample: "I've been trying to stay consistent on social media for weeks but I run out of ideas and lose motivation. How do you structure your daily routine?",
           hero_reply_sample: "Alejandro, the key isn't motivation that comes and goes, but systems. Block 45 min every morning before checking your phone. Daily discipline beats sporadic inspiration. What is the first thing you will do tomorrow when you wake up? 👇",
+          marquee_title: "Integrated with Official Social Media & AI Infrastructure",
           stat_1: "Comments Replied",
           stat_2: "Increase in Engagement",
           stat_3: "Human Voice Accuracy",
           stat_4: "Live API Latency",
-          feat_badge: "Next-Gen Infrastructure",
-          feat_h2: "Everything a modern creator needs to master the algorithm.",
-          feat_sub: "Three pillars integrated into a high-speed architecture to maximize your retention, qualified leads, and organic reach.",
-          card1_title: "Contextual Auto-Engagement",
-          card1_desc: "AI that responds to comments naturally and contextually on your posts. Filters spam, detects buying intent, and retains followers 24/7 with your authentic brand voice.",
-          card1_b1: "Warmth, Depth & Energy calibration",
-          card1_b2: "Instant Lead and Question detection",
-          card1_b3: "Copilot (Suggestions) & Autopilot modes",
-          card2_title: "Smart Timing (Optimal Posting Hours)",
-          card2_desc: "Deep analysis of historical engagement metrics to recommend the exact second to post based on your real audience's peak activity.",
-          card2_b1: "Hourly and daily engagement heatmaps",
-          card2_b2: "Organic reach prediction before posting",
-          card2_b3: "High-retention traffic window alerts",
-          card3_title: "Multi-Publishing & AI Copies",
-          card3_desc: "Upload a single image or text and the AI crafts tailored copy adapted to each platform's algorithm (Instagram, TikTok, Facebook) publishing simultaneously.",
-          card3_b1: "Hooks and call-to-action adaptation",
-          card3_b2: "Intelligent viral hashtag selection",
-          card3_b3: "Omnichannel distribution in 1 click",
+          why_badge: "Real Differentials",
+          why_h2: "Why do creators and agencies choose Xindro?",
+          why_sub: "Architected from code to reply in seconds, protect your brand reputation, and win the algorithm without sounding robotic.",
+          why_p1_t: "Real-Time Responses (<180ms)",
+          why_p1_d: "Meta's algorithm rewards accounts that interact within the first 15 minutes. Our engine responds almost instantly.",
+          why_p1_tag: "✔ Zero engagement lag",
+          why_p2_t: "Authentic & Calibrated Brand Voice",
+          why_p2_d: "Configure warmth, depth, and energy levels. Followers receive genuine, human-feeling replies—never generic fluff.",
+          why_p2_tag: "✔ 100% custom tone control",
+          why_p3_t: "100% Official via Meta Graph API",
+          why_p3_d: "Zero risk of shadowbans or account restrictions. Official Meta connection with AES-256-GCM token encryption.",
+          why_p3_tag: "✔ Enterprise compliance & security",
+          why_p4_t: "Data-Driven Smart Timing",
+          why_p4_d: "Analyzes actual audience activity to predict the exact second your post will receive peak reach and saves.",
+          why_p4_tag: "✔ +142% organic reach boost",
+          why_p5_t: "REST API & Webhooks for Developers",
+          why_p5_d: "Embed the engagement engine into your bots, CRMs, or SaaS via clean JSON endpoints in cURL, JS, PHP, and Python.",
+          why_p5_tag: "✔ Ready in 5 lines of code",
+          why_p6_t: "Save +35 Hours of Manual Work / Month",
+          why_p6_d: "Eliminate repetitive comment triage and spend your valuable energy on creating high-impact content.",
+          why_p6_tag: "✔ 100% focus on creating",
+          calc_badge: "Impact Calculator",
+          calc_h2: "How much time and reach do you gain with Xindro?",
+          calc_sub: "Adjust monthly comment volume and discover the real operational impact on your business.",
+          calc_lbl_comments: "Monthly comments received:",
+          calc_lbl_accounts: "Instagram / Facebook accounts:",
+          calc_res_title: "Estimated Monthly Impact",
+          calc_res_h_label: "Manual Hours Saved",
+          calc_res_l_label: "Qualified Leads / Questions",
+          calc_res_footer: "of replies delivered in the golden algorithm window without human burnout.",
           sim_badge: "Live Playground",
           sim_h2: "Test the XINDRO Engine in Real Time",
           sim_sub: "Select a tone, type any comment from your community, and watch the AI craft hyper-contextualized responses.",
@@ -1461,22 +1704,6 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           sim_res_title: "Result Generated by XINDRO",
           sim_autopilot_ok: "✔ Eligible for Autopilot on Instagram and Facebook",
           sim_btn_copy: "📋 Copy",
-          timing_badge: "Precision Algorithm",
-          timing_h2: "Don't post blindly. Post at the exact second.",
-          timing_sub: "XINDRO Smart Timing analyzes over 500,000 interactions to identify when your most valuable followers are active and ready to engage.",
-          timing_b1_t: "Peak Retention Window",
-          timing_b1_d: "Posting at the peak boosts early 15-minute retention by over 240%.",
-          timing_b2_t: "Meta Algorithm Alignment",
-          timing_b2_d: "Meta rewards accounts that engage rapidly during viewer traffic spikes.",
-          timing_card_t: "Weekly Engagement Peak Detected",
-          timing_card_s: "Metrics analyzed in real-time",
-          timing_bar_1: "Wednesday — 19:45 hrs",
-          timing_bar_1_badge: "98% Peak Activity 🔥",
-          timing_bar_2: "Friday — 21:00 hrs",
-          timing_bar_2_badge: "84% Activity",
-          timing_bar_3: "Sunday — 20:15 hrs",
-          timing_bar_3_badge: "76% Activity",
-          timing_recommendation: "💡 <strong>XINDRO Recommendation:</strong> Schedule your next post today at <strong>19:42 hrs</strong> to maximize saves and comments.",
           api_badge: "Developer & Creator API",
           api_h2: "Deliver the power of XINDRO inside your own tools.",
           api_sub: "Ultra-fast RESTful endpoints, cryptographic verified webhooks, and SDKs ready to integrate in your bots, dashboards, or SaaS in 5 lines of code.",
@@ -1516,21 +1743,26 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           plan3_f3: "100,000 API calls included / month",
           plan3_f4: "White-label & Dedicated Webhook",
           plan3_btn: "Agency Access",
+          faq_badge: "Clear Answers",
+          faq_h2: "Frequently Asked Questions",
+          faq_sub: "Everything you need to know before automating your community.",
+          faq_q1: "Is it safe for my Instagram or Facebook account?",
+          faq_a1: "100% safe. Xindro operates strictly through official Meta Graph API endpoints with verified webhooks and granted permissions. We never ask for your account password or use unofficial scrapers.",
+          faq_q2: "Can the AI hallucinate or post inappropriate replies?",
+          faq_a2: "No. You have a Brand Voice Calibrator to establish guidelines and tone. You also have <strong>Copilot Mode</strong>, which generates suggested replies for 1-click human approval before posting.",
+          faq_q3: "How do I integrate the API into my own software or bot?",
+          faq_a3: "Our RESTful JSON API processes POST requests in under 180ms. You can send comments from any backend in Python, Node.js, PHP, or cURL using your private API token.",
+          faq_q4: "Can I start for free without a credit card?",
+          faq_a4: "Yes! The Creator Starter plan is 100% free with up to 100 automated replies per month and Copilot assistant included.",
           foot_c1_t: "Get the app",
           foot_c2_t: "Product",
           foot_c2_1: "Pricing",
           foot_c2_2: "Inspiration",
-          foot_c2_3: "Education",
-          foot_c2_4: "Prompt guide",
-          foot_c2_5: "Templates",
-          foot_c2_6: "Explore",
           foot_c2_7: "Integrations",
           foot_c3_t: "Company",
           foot_c3_1: "About",
           foot_c3_2: "Careers",
           foot_c3_3: "Team",
-          foot_c3_4: "Help",
-          foot_c3_5: "Community",
           foot_c3_6: "Developer Docs",
           foot_c3_7: "Security",
           foot_c4_t: "Socials",
@@ -1560,10 +1792,12 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           page_title: "XINDRO — O Sistema Operacional de IA para Criadores de Conteúdo",
           page_desc: "Automatize suas redes sociais. Responda a comentários no piloto automático, analise métricas de engajamento para encontrar seu horário perfeito e publique em várias plataformas a partir de uma única API.",
           nav_products: "Produtos",
+          nav_why: "Por que a Xindro?",
           nav_simulator: "Simulador",
-          nav_solutions: "Soluções",
+          nav_roi: "Calculadora",
           nav_api: "API Criadores",
           nav_pricing: "Preços",
+          nav_faq: "FAQ",
           nav_login: "Entrar",
           nav_cta: "Comece grátis",
           nav_dashboard: "Ir ao Painel",
@@ -1584,28 +1818,41 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           hero_card_ready: "✔ Pronto para postar",
           hero_comment_sample: "Estou há semanas tentando ter consistência nas redes, mas fico sem ideias e perco a motivação. Como vocês estruturam a rotina diária?",
           hero_reply_sample: "Alejandro, o segredo não é a motivação que vai e vem, mas os sistemas. Bloqueie 45 min toda manhã antes de olhar o celular. A disciplina diária supera a inspiração passageira. Qual é a primeira coisa que você fará amanhã ao acordar? 👇",
+          marquee_title: "Integrado com a Infraestrutura Oficial de Redes Sociais e Inteligência Artificial",
           stat_1: "Comentários Respondidos",
           stat_2: "Aumento no Engajamento",
           stat_3: "Precisão de Voz Humana",
           stat_4: "Latência de API em Tempo Real",
-          feat_badge: "Infraestrutura de Nova Geração",
-          feat_h2: "Tudo o que um criador moderno precisa para dominar o algoritmo.",
-          feat_sub: "Três pilares integrados em uma arquitetura de alta velocidade para maximizar sua retenção, leads e alcance orgânico.",
-          card1_title: "Autoengajamento Contextual",
-          card1_desc: "IA que responde a comentários de forma natural e contextual nos seus posts. Filtra spam, identifica intenção de compra e fideliza seguidores 24/7 com sua própria voz de marca.",
-          card1_b1: "Calibração de Acolhimento, Profundidade e Energia",
-          card1_b2: "Detecção instantânea de Leads e Perguntas",
-          card1_b3: "Modos Copilot (Sugestões) e Autopilot",
-          card2_title: "Smart Timing (Horários Otimizados)",
-          card2_desc: "Análise profunda de métricas e histórico de interações para recomendar o segundo exato de postagem com base nos picos de atividade da sua audiência real.",
-          card2_b1: "Mapas de calor de engajamento por hora e dia",
-          card2_b2: "Previsão de alcance orgânico antes de postar",
-          card2_b3: "Alertas de janelas de tráfego de alta retenção",
-          card3_title: "Multipublicação e Copys de IA",
-          card3_desc: "Envie uma única imagem ou texto e a IA gera os copys adaptados ao algoritmo de cada rede social (Instagram, TikTok, Facebook) publicando simultaneamente.",
-          card3_b1: "Adaptação de ganchos (Hooks) e chamadas para ação",
-          card3_b2: "Seleção inteligente de hashtags virais",
-          card3_b3: "Distribuição multicanal com 1 clique",
+          why_badge: "Diferenciais Reais",
+          why_h2: "Por que criadores e agências escolhem a Xindro?",
+          why_sub: "Projetado desde o código para responder em segundos, proteger sua marca e vencer o algoritmo sem soar artificial.",
+          why_p1_t: "Respostas em Tempo Real (<180ms)",
+          why_p1_d: "O algoritmo da Meta prioriza contas que interagem nos primeiros 15 minutos. Nosso motor heurístico responde quase instantaneamente.",
+          why_p1_tag: "✔ Zero atraso de engajamento",
+          why_p2_t: "Voz de Marca Autêntica & Calibrada",
+          why_p2_d: "Defina os níveis de acolhimento, profundidade e energia para que seus seguidores recebam respostas empáticas e humanas.",
+          why_p2_tag: "✔ Personalização total de tom",
+          why_p3_t: "100% Oficial com a Meta Graph API",
+          why_p3_d: "Zero risco de bloqueios. Conexão oficial da Meta com criptografia de tokens AES-256-GCM.",
+          why_p3_tag: "✔ Segurança e conformidade oficial",
+          why_p4_t: "Smart Timing Baseado em Dados",
+          why_p4_d: "Analisa a atividade real da sua comunidade para indicar o segundo exato de postagem com maior alcance.",
+          why_p4_tag: "✔ +142% de alcance orgânico",
+          why_p5_t: "REST API & Webhooks para Desenvolvedores",
+          why_p5_d: "Integre o motor de engajamento em seus bots ou SaaS com endpoints simples em cURL, JS, PHP e Python.",
+          why_p5_tag: "✔ Pronto em 5 linhas de código",
+          why_p6_t: "Economize +35 Horas de Trabalho por Mês",
+          why_p6_d: "Elimine o trabalho repetitivo de responder dúvidas frequentes e foque em criar conteúdo de alto impacto.",
+          why_p6_tag: "✔ 100% de foco na criação",
+          calc_badge: "Calculadora de Impacto",
+          calc_h2: "Quanto tempo e alcance você ganha com a Xindro?",
+          calc_sub: "Ajuste o volume mensal de comentários e veja o impacto real no seu negócio.",
+          calc_lbl_comments: "Comentários recebidos por mês:",
+          calc_lbl_accounts: "Contas do Instagram / Facebook:",
+          calc_res_title: "Impacto Estimado Mensal",
+          calc_res_h_label: "Horas Manuais Economizadas",
+          calc_res_l_label: "Leads / Perguntas Qualificadas",
+          calc_res_footer: "das respostas entregues na janela de ouro do algoritmo sem exaustão humana.",
           sim_badge: "Playground ao Vivo",
           sim_h2: "Teste o Motor do XINDRO em Tempo Real",
           sim_sub: "Selecione um tom, digite qualquer comentário da sua comunidade e veja a IA gerar respostas hipercontextualizadas.",
@@ -1626,22 +1873,6 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           sim_res_title: "Resultado Gerado pelo XINDRO",
           sim_autopilot_ok: "✔ Apto para Autopilot no Instagram e Facebook",
           sim_btn_copy: "📋 Copiar",
-          timing_badge: "Algoritmo de Precisão",
-          timing_h2: "Não publique no escuro. Publique no segundo exato.",
-          timing_sub: "O Smart Timing do XINDRO analisa mais de 500.000 interações para identificar quando seus seguidores mais valiosos estão ativos e prontos para interagir.",
-          timing_b1_t: "Janela de Máxima Retenção",
-          timing_b1_d: "Publicar no pico aumenta a retenção inicial nos primeiros 15 minutos em 240%.",
-          timing_b2_t: "Alinhamento com o Algoritmo da Meta",
-          timing_b2_d: "A Meta recompensa contas que respondem rápido durante os picos de visualização.",
-          timing_card_t: "Pico de Engajamento Semanal Detectado",
-          timing_card_s: "Métricas analisadas em tempo real",
-          timing_bar_1: "Quarta-feira — 19:45 hrs",
-          timing_bar_1_badge: "98% Atividade Máxima 🔥",
-          timing_bar_2: "Sexta-feira — 21:00 hrs",
-          timing_bar_2_badge: "84% Atividade",
-          timing_bar_3: "Domingo — 20:15 hrs",
-          timing_bar_3_badge: "76% Atividade",
-          timing_recommendation: "💡 <strong>Recomendação XINDRO:</strong> Agende seu próximo post hoje às <strong>19:42 hrs</strong> para maximizar salvamentos e comentários.",
           api_badge: "Developer & Creator API",
           api_h2: "Ofereça o poder do XINDRO dentro das suas próprias ferramentas.",
           api_sub: "Endpoints RESTful ultrarrápidos, webhooks criptográficos verificados e SDKs prontos para integrar em seus bots, painéis ou SaaS em 5 linhas de código.",
@@ -1673,7 +1904,7 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           plan2_f4: "Smart Timing & Métricas de Engajamento",
           plan2_f5: "Suporte prioritário 24/7",
           plan2_btn: "Começar com Pro",
-          plan3_t: "API & Agências",
+          plan3_t: "API & Agencias",
           plan3_d: "Para desenvolvedores e agências de marketing.",
           plan3_p: "/ mês",
           plan3_f1: "Acesso total à REST API & Webhooks",
@@ -1681,22 +1912,27 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           plan3_f3: "100.000 chamadas de API incluídas / mês",
           plan3_f4: "Marca branca & Webhook dedicado",
           plan3_btn: "Acesso para Agências",
+          faq_badge: "Respostas Claras",
+          faq_h2: "Perguntas Frequentes",
+          faq_sub: "Tudo o que você precisa saber antes de automatizar sua comunidade.",
+          faq_q1: "É seguro para a minha conta do Instagram ou Facebook?",
+          faq_a1: "Totalmente seguro. A Xindro opera exclusivamente através da API oficial da Meta Graph com permissões concedidas e webhooks verificados. Não pedimos sua senha nem usamos emuladores.",
+          faq_q2: "A IA pode inventar informações ou responder algo inapropriado?",
+          faq_a2: "Não. Você possui um Calibrador de Voz de Marca para definir princípios e tom. Além disso, conta com o <strong>Modo Copilot</strong> para aprovação humana com 1 clique.",
+          faq_q3: "Como posso integrar a API em meus próprios sistemas?",
+          faq_a3: "Nossa API RESTful processa requisições JSON em menos de 180ms a partir de qualquer backend em Python, Node.js, PHP ou cURL usando seu token privado.",
+          faq_q4: "Posso começar gratuitamente sem cartão de crédito?",
+          faq_a4: "Sim! O plano Criador Starter é 100% gratuito com até 100 respostas automáticas por mês e assistente Copilot incluso.",
           foot_c1_t: "Baixe o aplicativo",
           foot_c2_t: "Produto",
           foot_c2_1: "Preços",
           foot_c2_2: "Inspiração",
-          foot_c2_3: "Educação",
-          foot_c2_4: "Guia de prompts",
-          foot_c2_5: "Modelos",
-          foot_c2_6: "Explorar",
           foot_c2_7: "Integrações",
           foot_c3_t: "Empresa",
           foot_c3_1: "Sobre nós",
           foot_c3_2: "Carreiras",
           foot_c3_3: "Equipe",
-          foot_c3_4: "Ajuda",
-          foot_c3_5: "Comunidade",
-          foot_c3_6: "Docs para Desenvolvedores",
+          foot_c3_6: "Docs Desenvolvedores",
           foot_c3_7: "Segurança",
           foot_c4_t: "Redes sociais",
           foot_c5_t: "Informações legais",
@@ -1723,20 +1959,14 @@ print("Respuesta IA:", res["replies"]["wisdom"])
       },
 
       init() {
-        // 1. Check saved language in localStorage
         const saved = localStorage.getItem('xindro_lang');
         if (saved && this.dict[saved]) {
           this.current = saved;
         } else {
-          // 2. Auto-detect browser language
           const userLang = (navigator.language || navigator.userLanguage || 'es').toLowerCase();
-          if (userLang.startsWith('pt')) {
-            this.current = 'pt';
-          } else if (userLang.startsWith('en')) {
-            this.current = 'en';
-          } else {
-            this.current = 'es';
-          }
+          if (userLang.startsWith('pt')) this.current = 'pt';
+          else if (userLang.startsWith('en')) this.current = 'en';
+          else this.current = 'es';
         }
 
         this.apply(this.current);
@@ -1756,7 +1986,6 @@ print("Respuesta IA:", res["replies"]["wisdom"])
 
         document.documentElement.lang = lang;
 
-        // Update active label and checks
         const labels = { es: 'Español', en: 'English', pt: 'Português' };
         document.getElementById('current-lang-label').textContent = labels[lang] || 'Español';
 
@@ -1768,7 +1997,6 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           }
         });
 
-        // Translate all data-i18n elements
         document.querySelectorAll('[data-i18n]').forEach(el => {
           const key = el.getAttribute('data-i18n');
           if (d[key] !== undefined) {
@@ -1776,12 +2004,10 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           }
         });
 
-        // Translate Title & Meta
         if (d.page_title) document.title = d.page_title;
         const metaDesc = document.getElementById('meta-page-desc');
         if (metaDesc && d.page_desc) metaDesc.setAttribute('content', d.page_desc);
 
-        // Update simulator samples if applicable
         const sampleComment = document.getElementById('hero-sample-comment');
         const sampleReply = document.getElementById('hero-sample-reply');
         if (sampleComment && d.hero_comment_sample) sampleComment.textContent = `"${d.hero_comment_sample}"`;
@@ -1799,7 +2025,6 @@ print("Respuesta IA:", res["replies"]["wisdom"])
       }
     };
 
-    // Close lang menu when clicking outside
     document.addEventListener('click', (e) => {
       const wrapper = document.getElementById('lang-dropdown-wrapper');
       if (wrapper && !wrapper.contains(e.target)) {
@@ -1807,9 +2032,7 @@ print("Respuesta IA:", res["replies"]["wisdom"])
       }
     });
 
-    // -------------------------------------------------------------
-    // 2. COOKIE CONSENT MANAGER (RGPD / CCPA / LGPD Compliant)
-    // -------------------------------------------------------------
+    // 4. COOKIE CONSENT MANAGER
     const CookieConsent = {
       init() {
         const consent = localStorage.getItem('xindro_cookie_consent');
@@ -1865,9 +2088,7 @@ print("Respuesta IA:", res["replies"]["wisdom"])
       }
     };
 
-    // -------------------------------------------------------------
-    // 3. INTERACTIVE SIMULATOR ENGINE (Multilingual Ready)
-    // -------------------------------------------------------------
+    // 5. SIMULATOR ENGINE
     const Simulator = {
       presets: {
         es: {
@@ -1950,7 +2171,6 @@ print("Respuesta IA:", res["replies"]["wisdom"])
               reply = "Exatamente. Quando você domina sua mente e aplica sabedoria na rotina, os obstáculos externos perdem a força. Obrigado por fazer parte da comunidade. Qual princípio mais te ajudou esta semana? 🏛️";
             }
           } else {
-            // Spanish default
             if (textLower.includes('precio') || textLower.includes('curso') || textLower.includes('cuanto') || textLower.includes('costo') || textLower.includes('cupo')) {
               intent = 'Lead de Alta Conversión 💎';
               score = 98;
@@ -1994,9 +2214,7 @@ print("Respuesta IA:", res["replies"]["wisdom"])
       }
     };
 
-    // -------------------------------------------------------------
-    // 4. API TABS SWITCHER
-    // -------------------------------------------------------------
+    // 6. API TABS SWITCHER
     const ApiTabs = {
       languages: ['curl', 'js', 'php', 'python'],
 
@@ -2028,10 +2246,10 @@ print("Respuesta IA:", res["replies"]["wisdom"])
       }
     };
 
-    // Initialize Everything on Load
     document.addEventListener('DOMContentLoaded', () => {
       I18n.init();
       CookieConsent.init();
+      Calculator.update();
     });
   </script>
 
