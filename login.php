@@ -299,11 +299,6 @@ if (Auth::check()) {
       </button>
     </form>
 
-    <div class="demo-account-hint" id="demo-hint-box">
-      <span>💡 Cuenta de demostración:</span> <strong>admin@menteestoica.com</strong>
-      <button type="button" class="btn-quick-fill" onclick="AuthUI.quickFillDemo()">Autocompletar</button>
-    </div>
-
   </div>
 </div>
 
@@ -324,20 +319,17 @@ const AuthUI = {
     const btnReg = document.getElementById('tab-btn-register');
     const formLogin = document.getElementById('form-login');
     const formReg = document.getElementById('form-register');
-    const demoHint = document.getElementById('demo-hint-box');
 
     if (tab === 'login') {
       btnLogin.classList.add('active');
       btnReg.classList.remove('active');
       formLogin.style.display = 'block';
       formReg.style.display = 'none';
-      if (demoHint) demoHint.style.display = 'block';
     } else {
       btnReg.classList.add('active');
       btnLogin.classList.remove('active');
       formReg.style.display = 'block';
       formLogin.style.display = 'none';
-      if (demoHint) demoHint.style.display = 'none';
     }
   },
 
@@ -352,12 +344,6 @@ const AuthUI = {
   hideAlert() {
     const box = document.getElementById('auth-alert');
     if (box) box.style.display = 'none';
-  },
-
-  quickFillDemo() {
-    document.getElementById('login-email').value = 'admin@menteestoica.com';
-    document.getElementById('login-password').value = 'admin1234';
-    this.showAlert('Credenciales de prueba cargadas. Haz clic en Ingresar.', 'success');
   },
 
   async submitLogin(e) {

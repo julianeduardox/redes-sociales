@@ -123,16 +123,43 @@ class Database {
                 }
             }
 
-            // 4. Ensure default admin user exists
-            $uStmt = $pdo->query("SELECT COUNT(*) as cnt FROM users");
-            $uCount = (int)$uStmt->fetchColumn();
-            if ($uCount === 0) {
-                $defaultHash = password_hash('admin1234', PASSWORD_BCRYPT);
-                $insU = $pdo->prepare("
-                    INSERT INTO users (id, name, email, password_hash, role, avatar_url)
-                    VALUES (1, 'Julian (Admin)', 'admin@menteestoica.com', :hash, 'admin', 'https://ui-avatars.com/api/?name=Julian+Admin&background=6366f1&color=fff')
-                ");
-                $insU->execute([':hash' => $defaultHash]);
+            // 4. Ensure julianeduardox@gmail.com is official administrator & delete demo user
+            $julianStmt = $pdo->prepare("SELECT id FROM users WHERE email = :email LIMIT 1");
+            $julianStmt->execute([':email' => 'julianeduardox@gmail.com']);
+            $julianUser = $julianStmt->fetch();
+
+            if ($julianUser) {
+                $julianId = (int)$julianUser['id'];
+                
+                // Set Julian as Admin
+                $upAdmin = $pdo->prepare("UPDATE users SET role = 'admin' WHERE id = :id");
+                $upAdmin->execute([':id' => $julianId]);
+
+                // Reassign any orphaned accounts, posts, comments from old demo user to Julian
+                $demoStmt = $pdo->prepare("SELECT id FROM users WHERE email = 'admin@menteestoica.com' LIMIT 1");
+                $demoStmt->execute();
+                $demoUser = $demoStmt->fetch();
+
+                if ($demoUser) {
+                    $demoId = (int)$demoUser['id'];
+                    if ($demoId !== $julianId) {
+                        $pdo->prepare("UPDATE OR IGNORE accounts SET user_id = :new_uid WHERE user_id = :old_uid")->execute([':new_uid' => $julianId, ':old_uid' => $demoId]);
+                        $pdo->prepare("UPDATE OR IGNORE posts SET user_id = :new_uid WHERE user_id = :old_uid")->execute([':new_uid' => $julianId, ':old_uid' => $demoId]);
+                        $pdo->prepare("UPDATE OR IGNORE comments SET user_id = :new_uid WHERE user_id = :old_uid")->execute([':new_uid' => $julianId, ':old_uid' => $demoId]);
+                        $pdo->prepare("UPDATE OR IGNORE replies SET user_id = :new_uid WHERE user_id = :old_uid")->execute([':new_uid' => $julianId, ':old_uid' => $demoId]);
+                        $pdo->prepare("UPDATE OR IGNORE settings SET user_id = :new_uid WHERE user_id = :old_uid")->execute([':new_uid' => $julianId, ':old_uid' => $demoId]);
+                        
+                        // Delete demo user
+                        $pdo->prepare("DELETE FROM users WHERE id = :old_uid")->execute([':old_uid' => $demoId]);
+                    }
+                }
+            } else {
+                // If Julian has not registered locally, promote first registered user to admin
+                $firstUserStmt = $pdo->query("SELECT id FROM users ORDER BY id ASC LIMIT 1");
+                $firstUser = $firstUserStmt->fetch();
+                if ($firstUser) {
+                    $pdo->prepare("UPDATE users SET role = 'admin' WHERE id = :id")->execute([':id' => $firstUser['id']]);
+                }
             }
 
         } catch (Throwable $e) {
