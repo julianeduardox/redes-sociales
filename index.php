@@ -102,10 +102,10 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
       background: radial-gradient(circle at 50% 0%, rgba(139, 92, 246, 0.18) 0%, rgba(11, 15, 25, 1) 70%);
     }
 
-    /* Starry Night Footer Background */
+    /* Vibrant Cosmic Starry Night Footer Background */
     .starry-footer-bg {
-      background: radial-gradient(circle at 50% 10%, rgba(99, 102, 241, 0.25) 0%, rgba(15, 23, 42, 0.98) 75%),
-                  linear-gradient(180deg, #131b2e 0%, #0b0f19 100%);
+      background: radial-gradient(circle at 50% 0%, rgba(139, 92, 246, 0.35) 0%, rgba(15, 23, 42, 0.98) 70%),
+                  linear-gradient(180deg, #0f172a 0%, #07090e 100%);
       position: relative;
     }
 
@@ -139,7 +139,6 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
       transform: translateY(-1px);
     }
 
-    /* Shimmer Button Effect (Inspired by Indrox & modern SaaS) */
     .shimmer-btn {
       position: relative;
       overflow: hidden;
@@ -170,18 +169,6 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
       letter-spacing: -0.03em;
       font-weight: 900;
       text-transform: uppercase;
-    }
-
-    .giant-watermark {
-      font-family: 'Syne', sans-serif;
-      font-weight: 900;
-      letter-spacing: -0.02em;
-      line-height: 0.8;
-      background: linear-gradient(180deg, rgba(165, 180, 252, 0.42) 0%, rgba(165, 180, 252, 0.05) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      user-select: none;
-      pointer-events: none;
     }
 
     /* Infinite Marquee Animation for Tech Stack */
@@ -416,7 +403,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
   </section>
 
   <!-- ========================================================================= -->
-  <!-- 3. MARQUEE INFINITO DE TECNOLOGÍAS & ECOSISTEMA (Inspirado en Indrox) -->
+  <!-- 3. MARQUEE INFINITO DE TECNOLOGÍAS & ECOSISTEMA -->
   <!-- ========================================================================= -->
   <section class="py-7 bg-slate-900 border-b border-slate-800 overflow-hidden text-white">
     <div class="max-w-7xl mx-auto px-4 mb-3 text-center">
@@ -425,7 +412,6 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
       </p>
     </div>
 
-    <!-- Infinite Scrolling Track -->
     <div class="relative overflow-hidden w-full select-none">
       <div class="animate-marquee items-center gap-12 font-mono text-xs font-bold text-slate-300">
         
@@ -448,7 +434,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           <span class="text-cyan-400">🛡️</span> GDPR / CCPA / LGPD Compliant
         </span>
         
-        <!-- Duplicated for smooth loop -->
+        <!-- Duplicate for loop -->
         <span class="flex items-center gap-2 shrink-0 px-4 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
           <span class="text-purple-400">📸</span> Meta Graph API (Instagram & Facebook)
         </span>
@@ -522,7 +508,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
   </section>
 
   <!-- ========================================================================= -->
-  <!-- 5. ¿POR QUÉ ELEGIR XINDRO? (6 Razones de Valor Real - Estilo Indrox) -->
+  <!-- 5. ¿POR QUÉ ELEGIR XINDRO? (6 Razones de Valor Real) -->
   <!-- ========================================================================= -->
   <section id="por-que-xindro" class="py-24 bg-white border-b border-slate-100">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -539,7 +525,6 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         </p>
       </div>
 
-      <!-- 6 Reason Value Grid -->
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
         
         <!-- Pillar 1 -->
@@ -673,22 +658,20 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         </p>
       </div>
 
-      <!-- Calculator Card -->
       <div class="bg-white rounded-3xl border border-slate-200 shadow-elevated-card p-6 sm:p-10">
         
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           
-          <!-- Left Sliders Column -->
+          <!-- Sliders -->
           <div class="lg:col-span-6 space-y-6">
             
-            <!-- Slider 1: Comments per month -->
             <div>
               <div class="flex justify-between items-center mb-2">
                 <label data-i18n="calc_lbl_comments" class="text-xs font-bold text-slate-700 uppercase tracking-wider">
                   Comentarios recibidos al mes:
                 </label>
                 <span id="calc-comments-val" class="text-sm font-black text-brand-600 bg-brand-50 px-2.5 py-0.5 rounded-lg border border-brand-200">
-                  5,000
+                  5,000 comentarios
                 </span>
               </div>
               <input type="range" id="calc-comments-range" min="500" max="50000" step="500" value="5000" oninput="Calculator.update()" class="w-full accent-brand-600 cursor-pointer" />
@@ -699,7 +682,6 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
               </div>
             </div>
 
-            <!-- Slider 2: Accounts -->
             <div>
               <div class="flex justify-between items-center mb-2">
                 <label data-i18n="calc_lbl_accounts" class="text-xs font-bold text-slate-700 uppercase tracking-wider">
@@ -719,7 +701,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
 
           </div>
 
-          <!-- Right Results Column -->
+          <!-- Results -->
           <div class="lg:col-span-6 bg-gradient-to-br from-slate-900 to-slate-950 text-white rounded-2xl p-6 sm:p-7 shadow-xl border border-slate-800">
             <div class="text-xs font-bold uppercase tracking-wider text-brand-400 mb-4" data-i18n="calc_res_title">
               Impacto Estimado Mensual
@@ -777,7 +759,6 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         </p>
       </div>
 
-      <!-- Simulator Card Container -->
       <div class="bg-white rounded-3xl border border-slate-200 shadow-elevated-card overflow-hidden">
         
         <div class="bg-slate-900 text-white px-6 py-4 flex flex-wrap items-center justify-between gap-4">
@@ -793,7 +774,6 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
 
         <div class="p-6 sm:p-8">
           
-          <!-- Controls Row -->
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
             
             <div>
@@ -831,7 +811,6 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
 
           </div>
 
-          <!-- Comment Input Area -->
           <div class="mb-6">
             <label data-i18n="sim_lbl_comment" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
               Comentario de tu seguidor a simular:
@@ -841,7 +820,6 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
             </div>
           </div>
 
-          <!-- Trigger Button & Presets -->
           <div class="flex flex-wrap items-center justify-between gap-4 mb-8">
             <div class="flex items-center gap-2">
               <span data-i18n="sim_presets_title" class="text-xs font-bold text-slate-500">Comentarios rápidos:</span>
@@ -859,7 +837,6 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
             </button>
           </div>
 
-          <!-- Simulator Live Output Box -->
           <div id="sim-output-card" class="rounded-2xl bg-slate-50 border border-slate-200/90 p-6 transition-all duration-300">
             
             <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/80 pb-3 mb-4">
@@ -915,7 +892,6 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         </p>
       </div>
 
-      <!-- Code Terminal Component -->
       <div class="rounded-2xl bg-slate-950 border border-slate-800 shadow-2xl overflow-hidden mb-12">
         
         <div class="bg-slate-900 px-4 py-3 border-b border-slate-800 flex flex-wrap items-center justify-between gap-4">
@@ -1016,7 +992,6 @@ print("Respuesta IA:", res["replies"]["wisdom"])
 
       </div>
 
-      <!-- Developer Features 3-Grid -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
         <div class="p-5 rounded-xl bg-slate-950/60 border border-slate-800">
           <div class="text-brand-400 font-bold text-lg mb-2" data-i18n="api_f1_t">⚡ Webhooks en Tiempo Real</div>
@@ -1199,38 +1174,55 @@ print("Respuesta IA:", res["replies"]["wisdom"])
   </section>
 
   <!-- ========================================================================= -->
-  <!-- 11. FOOTER PROFESIONAL CON MARCA DE AGUA GIGANTE -->
+  <!-- 11. FOOTER PROFESIONAL CON MARCA DE AGUA COMPLETA Y LLAMATIVA -->
   <!-- ========================================================================= -->
-  <footer class="starry-footer-bg starry-overlay pt-20 pb-12 text-slate-300 text-sm overflow-hidden relative">
+  <footer class="starry-footer-bg starry-overlay pt-16 pb-12 text-slate-300 text-sm overflow-hidden relative">
     
-    <!-- Giant Watermark -->
-    <div class="w-full text-center my-6 overflow-hidden select-none pointer-events-none">
-      <div class="giant-watermark text-[16vw] font-black uppercase tracking-widest leading-none">
-        XINDRO
-      </div>
+    <!-- Giant Responsive SVG Watermark: Perfectly fitted, vibrant and never cut off -->
+    <div class="w-full max-w-6xl mx-auto px-4 mb-10 flex justify-center items-center select-none pointer-events-none">
+      <svg viewBox="0 0 950 165" class="w-full h-auto max-h-36 sm:max-h-44 opacity-85" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Ambient Glow Gradient Filter -->
+        <defs>
+          <linearGradient id="xindroGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#C4B5FD" stop-opacity="0.55" />
+            <stop offset="50%" stop-color="#8B5CF6" stop-opacity="0.3" />
+            <stop offset="100%" stop-color="#38BDF8" stop-opacity="0.15" />
+          </linearGradient>
+          <linearGradient id="xindroStroke" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#DDD6FE" stop-opacity="0.8" />
+            <stop offset="50%" stop-color="#A78BFA" stop-opacity="0.6" />
+            <stop offset="100%" stop-color="#818CF8" stop-opacity="0.4" />
+          </linearGradient>
+        </defs>
+        <text x="50%" y="80%" text-anchor="middle" font-family="'Syne', 'Plus Jakarta Sans', sans-serif" font-weight="900" font-size="165" fill="url(#xindroGradient)" stroke="url(#xindroStroke)" stroke-width="1.8" letter-spacing="-2">
+          XINDRO
+        </text>
+      </svg>
     </div>
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
       
-      <div class="grid grid-cols-2 md:grid-cols-5 gap-8 mb-16 pt-6">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8 mb-16 pt-2">
         
-        <!-- Col 1: Descarga la app -->
-        <div class="col-span-2 md:col-span-1">
-          <h4 data-i18n="foot_c1_t" class="text-xs font-bold text-white uppercase tracking-wider mb-4">Descarga la app</h4>
-          <div class="space-y-2.5">
-            <a href="login.php" class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900/90 border border-slate-700/80 hover:border-slate-500 transition-colors text-xs text-slate-200">
-              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.62-.75 1.04-1.8 0.92-2.85-.9.04-1.99.6-2.64 1.35-.58.67-.99 1.74-.86 2.76 1 .08 1.96-.51 2.58-1.26z"/></svg>
-              <div>
-                <div class="text-[9px] text-slate-400 leading-none">Consíguelo en el</div>
-                <div class="text-[11px] font-bold text-white">App Store</div>
-              </div>
-            </a>
-            <a href="login.php" class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900/90 border border-slate-700/80 hover:border-slate-500 transition-colors text-xs text-slate-200">
-              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M3.609 1.814L13.792 12 3.61 22.186c-.188-.188-.299-.444-.299-.714V2.528c0-.27.111-.526.298-.714zM15.207 13.414l2.122 2.121-12.015 6.94 9.893-9.061zm0-2.828L5.314 1.525l12.015 6.94-2.122 2.121zm1.414 1.414l3.182-1.838c.848-.49.848-1.286 0-1.776l-3.182-1.838-1.414 1.414 1.414 4.038z"/></svg>
-              <div>
-                <div class="text-[9px] text-slate-400 leading-none">DISPONIBLE EN</div>
-                <div class="text-[11px] font-bold text-white">Google Play</div>
-              </div>
+        <!-- Col 1: Brand Info Card (Reemplazo moderno de App Store / Google Play) -->
+        <div class="sm:col-span-2 lg:col-span-1">
+          <div class="flex items-center gap-2 mb-3">
+            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 via-indigo-600 to-brand-700 flex items-center justify-center text-white font-bold text-sm shadow-sm">
+              ⚡
+            </div>
+            <span class="text-lg font-black tracking-tight text-white gamma-wordmark">XINDRO<span class="text-brand-400">.</span></span>
+          </div>
+          <p data-i18n="foot_brand_desc" class="text-xs text-slate-400 leading-relaxed mb-4">
+            El sistema operativo de IA para creadores y agencias de redes sociales. Respuestas en tiempo real, Smart Timing y API oficial.
+          </p>
+          <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/90 border border-slate-700 text-xs text-emerald-400 font-semibold mb-4">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 live-dot"></span>
+            <span data-i18n="foot_status_pill">Meta API 100% Operativa</span>
+          </div>
+          <div>
+            <a href="login.php" data-i18n="nav_cta" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white gradient-button shadow-glow-sm shimmer-btn">
+              <span>Comenzar gratis</span>
+              <span>🚀</span>
             </a>
           </div>
         </div>
@@ -1412,7 +1404,6 @@ print("Respuesta IA:", res["replies"]["wisdom"])
         document.getElementById('calc-comments-val').textContent = comments.toLocaleString() + ' comentarios';
         document.getElementById('calc-accounts-val').textContent = accounts + (accounts === 1 ? ' cuenta' : ' cuentas');
 
-        // ~45 seconds saved per comment on average
         const totalMinutes = (comments * accounts * 0.75);
         const hoursSaved = Math.round(totalMinutes / 60);
         const leadsDetected = Math.round((comments * accounts) * 0.024);
@@ -1430,7 +1421,6 @@ print("Respuesta IA:", res["replies"]["wisdom"])
         if (!ans) return;
 
         const isHidden = ans.classList.contains('hidden');
-        // Close all
         for (let i = 1; i <= 4; i++) {
           const a = document.getElementById('faq-ans-' + i);
           const ic = document.getElementById('faq-icon-' + i);
@@ -1585,7 +1575,8 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           faq_a3: "Nuestra API RESTful recibe peticiones POST en formato JSON y devuelve las respuestas contextualizadas en menos de 180ms. Puedes enviar comentarios desde cualquier backend en Python, Node.js, PHP o cURL usando tu API Token privado.",
           faq_q4: "¿Puedo empezar gratis sin ingresar tarjeta de crédito?",
           faq_a4: "Sí. El plan Creador Starter es 100% gratuito e incluye hasta 100 respuestas al mes y el asistente Copilot para que puedas probar el impacto en tu comunidad antes de decidir actualizar.",
-          foot_c1_t: "Descarga la app",
+          foot_brand_desc: "El sistema operativo de IA para creadores y agencias de redes sociales. Respuestas en tiempo real, Smart Timing y API oficial.",
+          foot_status_pill: "Meta API 100% Operativa",
           foot_c2_t: "Producto",
           foot_c2_1: "Precios",
           foot_c2_2: "Inspiración",
@@ -1754,7 +1745,8 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           faq_a3: "Our RESTful JSON API processes POST requests in under 180ms. You can send comments from any backend in Python, Node.js, PHP, or cURL using your private API token.",
           faq_q4: "Can I start for free without a credit card?",
           faq_a4: "Yes! The Creator Starter plan is 100% free with up to 100 automated replies per month and Copilot assistant included.",
-          foot_c1_t: "Get the app",
+          foot_brand_desc: "The AI operating system for creators and social media agencies. Real-time replies, Smart Timing, and official API.",
+          foot_status_pill: "Meta API 100% Operational",
           foot_c2_t: "Product",
           foot_c2_1: "Pricing",
           foot_c2_2: "Inspiration",
@@ -1849,7 +1841,7 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           calc_sub: "Ajuste o volume mensal de comentários e veja o impacto real no seu negócio.",
           calc_lbl_comments: "Comentários recebidos por mês:",
           calc_lbl_accounts: "Contas do Instagram / Facebook:",
-          calc_res_title: "Impacto Estimado Mensal",
+          calc_res_title: "Impacto Estimado Mensual",
           calc_res_h_label: "Horas Manuais Economizadas",
           calc_res_l_label: "Leads / Perguntas Qualificadas",
           calc_res_footer: "das respostas entregues na janela de ouro do algoritmo sem exaustão humana.",
@@ -1911,9 +1903,9 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           plan3_f2: "Gerenciamento de até 25 clientes isolados",
           plan3_f3: "100.000 chamadas de API incluídas / mês",
           plan3_f4: "Marca branca & Webhook dedicado",
-          plan3_btn: "Acesso para Agências",
+          plan3_btn: "Acesso para Agencias",
           faq_badge: "Respostas Claras",
-          faq_h2: "Perguntas Frequentes",
+          faq_h2: "Perguntas Frecuentes",
           faq_sub: "Tudo o que você precisa saber antes de automatizar sua comunidade.",
           faq_q1: "É seguro para a minha conta do Instagram ou Facebook?",
           faq_a1: "Totalmente seguro. A Xindro opera exclusivamente através da API oficial da Meta Graph com permissões concedidas e webhooks verificados. Não pedimos sua senha nem usamos emuladores.",
@@ -1923,7 +1915,8 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           faq_a3: "Nossa API RESTful processa requisições JSON em menos de 180ms a partir de qualquer backend em Python, Node.js, PHP ou cURL usando seu token privado.",
           faq_q4: "Posso começar gratuitamente sem cartão de crédito?",
           faq_a4: "Sim! O plano Criador Starter é 100% gratuito com até 100 respostas automáticas por mês e assistente Copilot incluso.",
-          foot_c1_t: "Baixe o aplicativo",
+          foot_brand_desc: "O sistema operacional de IA para criadores e agências de redes sociais. Respostas em tempo real, Smart Timing e API oficial.",
+          foot_status_pill: "Meta API 100% Operacional",
           foot_c2_t: "Produto",
           foot_c2_1: "Preços",
           foot_c2_2: "Inspiração",
