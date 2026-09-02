@@ -1,0 +1,51 @@
+# -----------------------------------------------------------------------------
+# Git Ignore Configuration - SocialBoost AI / Mente Estoica
+# -----------------------------------------------------------------------------
+
+# 1. Databases & Local Data (Never commit real SQLite databases or credentials)
+data/*.sqlite
+data/*.sqlite-journal
+data/*.sqlite3
+data/*.db
+data/*.db-journal
+*.sqlite
+*.sqlite3
+*.db
+
+# Keep .htaccess and .gitkeep inside data/
+!data/.htaccess
+!data/.gitkeep
+
+# 2. Environment & Sensitive Config Files
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+
+# 3. Log Files & Server Errors
+*.log
+error_log
+php_errors.log
+logs/
+
+# 4. Dependency Directories (if Composer / Node.js are added in the future)
+/vendor/
+/node_modules/
+
+# 5. OS & IDE Metadata
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.gemini/
+
+# 6. Temporary / Cache Files
+*.tmp
+*.bak
+*.swp
+*~
