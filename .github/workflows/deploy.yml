@@ -1,0 +1,34 @@
+name: 🚀 Deploy to Hostinger via FTP
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  web-deploy:
+    name: 📦 Sync files to Hostinger
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Get latest code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: 📂 Sync files via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          server-dir: public_html/socialapi/
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/data/*.sqlite*
+            **/data/*.db*
+            **/node_modules/**
+            **/.vscode/**
+            **/.idea/**
+            **/*.zip
+            README.md
