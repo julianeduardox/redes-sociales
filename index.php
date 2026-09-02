@@ -212,10 +212,10 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
   <!-- 1. NAVBAR FIJA CON SELECTOR DE IDIOMA Y LOGO ESTILO GAMMA -->
   <!-- ========================================================================= -->
   <header class="fixed top-0 left-0 right-0 z-50 glass-nav transition-all duration-300">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4 lg:gap-8">
       
       <!-- Logo: XINDRO -->
-      <a href="index.php" class="flex items-center gap-3 group shrink-0">
+      <a href="index.php" class="flex items-center gap-3 group shrink-0 mr-2 xl:mr-6">
         <div class="flex items-center gap-2">
           <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 via-indigo-600 to-brand-700 flex items-center justify-center text-white font-black text-lg shadow-glow-sm group-hover:scale-105 transition-transform">
             <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -228,26 +228,26 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         </div>
       </a>
 
-      <!-- Navigation Links -->
-      <nav class="hidden lg:flex items-center gap-7 text-sm font-semibold text-slate-600">
-        <a href="#funciones" data-i18n="nav_products" class="hover:text-brand-600 transition-colors">Productos</a>
-        <a href="#por-que-xindro" data-i18n="nav_why" class="hover:text-brand-600 transition-colors">¿Por qué Xindro?</a>
-        <a href="#simulador" data-i18n="nav_simulator" class="hover:text-brand-600 transition-colors flex items-center gap-1.5">
-          Simulador
+      <!-- Navigation Links with proper padding, whitespace-nowrap and generous spacing -->
+      <nav class="hidden lg:flex items-center gap-1 xl:gap-2.5 text-[13px] xl:text-sm font-semibold text-slate-600">
+        <a href="#funciones" data-i18n="nav_products" class="px-3 py-2 rounded-xl whitespace-nowrap hover:text-brand-600 hover:bg-slate-100/70 transition-colors">Productos</a>
+        <a href="#por-que-xindro" data-i18n="nav_why" class="px-3 py-2 rounded-xl whitespace-nowrap hover:text-brand-600 hover:bg-slate-100/70 transition-colors">¿Por qué Xindro?</a>
+        <a href="#simulador" data-i18n="nav_simulator" class="px-3 py-2 rounded-xl whitespace-nowrap hover:text-brand-600 hover:bg-slate-100/70 transition-colors flex items-center gap-1.5">
+          <span>Simulador</span>
           <span class="inline-block w-2 h-2 rounded-full bg-brand-500 live-dot"></span>
         </a>
-        <a href="#calculadora-roi" data-i18n="nav_roi" class="hover:text-brand-600 transition-colors">Calculadora</a>
-        <a href="#api-docs" data-i18n="nav_api" class="hover:text-brand-600 transition-colors">API Creadores</a>
-        <a href="#precios" data-i18n="nav_pricing" class="hover:text-brand-600 transition-colors">Precios</a>
-        <a href="#faq" data-i18n="nav_faq" class="hover:text-brand-600 transition-colors">FAQ</a>
+        <a href="#calculadora-roi" data-i18n="nav_roi" class="px-3 py-2 rounded-xl whitespace-nowrap hover:text-brand-600 hover:bg-slate-100/70 transition-colors">Calculadora</a>
+        <a href="#api-docs" data-i18n="nav_api" class="px-3 py-2 rounded-xl whitespace-nowrap hover:text-brand-600 hover:bg-slate-100/70 transition-colors">API Creadores</a>
+        <a href="#precios" data-i18n="nav_pricing" class="px-3 py-2 rounded-xl whitespace-nowrap hover:text-brand-600 hover:bg-slate-100/70 transition-colors">Precios</a>
+        <a href="#faq" data-i18n="nav_faq" class="px-3 py-2 rounded-xl whitespace-nowrap hover:text-brand-600 hover:bg-slate-100/70 transition-colors">FAQ</a>
       </nav>
 
       <!-- Right Controls: Language Selector & Auth CTAs -->
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2.5 sm:gap-3.5 shrink-0 ml-auto lg:ml-0">
         
         <!-- Language Switcher Dropdown (ES / EN / PT) -->
         <div class="relative inline-block text-left" id="lang-dropdown-wrapper">
-          <button type="button" id="lang-dropdown-btn" onclick="I18n.toggleLangMenu()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100/90 hover:bg-slate-200/80 border border-slate-200/80 text-xs font-bold text-slate-700 transition-colors">
+          <button type="button" id="lang-dropdown-btn" onclick="I18n.toggleLangMenu()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-slate-100/90 hover:bg-slate-200/80 border border-slate-200/80 text-xs font-bold text-slate-700 transition-colors whitespace-nowrap">
             <span class="text-sm">🌐</span>
             <span id="current-lang-label">Español</span>
             <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -271,15 +271,15 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         </div>
 
         <?php if ($isLoggedIn): ?>
-          <a href="dashboard.php" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-all shimmer-btn">
+          <a href="dashboard.php" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-all whitespace-nowrap shimmer-btn">
             <span data-i18n="nav_dashboard">Ir a mi Panel</span>
             <span>→</span>
           </a>
         <?php else: ?>
-          <a href="login.php" data-i18n="nav_login" class="text-sm font-bold text-slate-700 hover:text-brand-600 px-3 py-2 transition-colors hidden sm:inline-block">
+          <a href="login.php" data-i18n="nav_login" class="text-xs sm:text-sm font-bold text-slate-700 hover:text-brand-600 px-3 py-2 rounded-xl hover:bg-slate-100/70 transition-colors whitespace-nowrap hidden md:inline-block">
             Iniciar sesión
           </a>
-          <a href="login.php" data-i18n="nav_cta" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 hover:shadow-md transition-all shimmer-btn">
+          <a href="login.php" data-i18n="nav_cta" class="inline-flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 hover:shadow-md transition-all whitespace-nowrap shimmer-btn">
             <span>Comienza gratis</span>
           </a>
         <?php endif; ?>
@@ -1178,26 +1178,11 @@ print("Respuesta IA:", res["replies"]["wisdom"])
   <!-- ========================================================================= -->
   <footer class="starry-footer-bg starry-overlay pt-16 pb-12 text-slate-300 text-sm overflow-hidden relative">
     
-    <!-- Giant Responsive SVG Watermark: Perfectly fitted, vibrant and never cut off -->
-    <div class="w-full max-w-6xl mx-auto px-4 mb-10 flex justify-center items-center select-none pointer-events-none">
-      <svg viewBox="0 0 950 165" class="w-full h-auto max-h-36 sm:max-h-44 opacity-85" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <!-- Ambient Glow Gradient Filter -->
-        <defs>
-          <linearGradient id="xindroGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#C4B5FD" stop-opacity="0.55" />
-            <stop offset="50%" stop-color="#8B5CF6" stop-opacity="0.3" />
-            <stop offset="100%" stop-color="#38BDF8" stop-opacity="0.15" />
-          </linearGradient>
-          <linearGradient id="xindroStroke" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stop-color="#DDD6FE" stop-opacity="0.8" />
-            <stop offset="50%" stop-color="#A78BFA" stop-opacity="0.6" />
-            <stop offset="100%" stop-color="#818CF8" stop-opacity="0.4" />
-          </linearGradient>
-        </defs>
-        <text x="50%" y="80%" text-anchor="middle" font-family="'Syne', 'Plus Jakarta Sans', sans-serif" font-weight="900" font-size="165" fill="url(#xindroGradient)" stroke="url(#xindroStroke)" stroke-width="1.8" letter-spacing="-2">
-          XINDRO
-        </text>
-      </svg>
+    <!-- Giant Responsive Watermark: Uses the EXACT same typography (Syne 900 / gamma-wordmark) as the Logo -->
+    <div class="w-full max-w-7xl mx-auto px-4 my-8 flex justify-center items-center select-none pointer-events-none overflow-hidden">
+      <div class="gamma-wordmark text-[clamp(4rem,14vw,12.5rem)] font-black tracking-tight leading-none text-center uppercase bg-clip-text text-transparent bg-gradient-to-r from-violet-300/70 via-purple-300/50 to-sky-300/40 drop-shadow-md select-none">
+        XINDRO
+      </div>
     </div>
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
