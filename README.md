@@ -46,5 +46,10 @@ Sistema inteligente de gestión de engagement, moderación asistida con Intelige
 
 ---
 
+---
+
 ## 🔒 Licencia y Seguridad
 Este proyecto está protegido bajo estrictos estándares de seguridad y confidencialidad. No compartas tus tokens de acceso ni claves de API en repositorios públicos.
+
+---
+*Despliegue Continuo (CI/CD) automatizado vía GitHub Actions & Hostinger FTP.*
