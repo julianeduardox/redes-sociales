@@ -1,7 +1,7 @@
 <?php
 /**
  * Xindro — El Sistema Operativo de IA para Creadores de Contenido y Redes Sociales
- * Landing Page de Alto Impacto Visual (Gamma.app Style)
+ * Landing Page de Alto Impacto Visual (Gamma.app Style + Giant Watermark + Cookie Popup)
  */
 require_once __DIR__ . '/config/security.php';
 require_once __DIR__ . '/config/auth.php';
@@ -15,21 +15,21 @@ $currentUser = $isLoggedIn ? Auth::user() : null;
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Xindro — El Sistema Operativo de IA para Creadores de Contenido</title>
+  <title>XINDRO — El Sistema Operativo de IA para Creadores de Contenido</title>
   <meta name="description" content="Automatiza tus redes sociales. Responde comentarios en piloto automático, analiza métricas de engagement para encontrar tu horario perfecto y publica en múltiples plataformas desde una sola API.">
   
   <!-- Open Graph / Meta -->
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Xindro — Automatización Inteligente de Redes Sociales">
+  <meta property="og:title" content="XINDRO — Automatización Inteligente de Redes Sociales">
   <meta property="og:description" content="Escala tu comunidad sin perder el toque humano con Auto-Engagement, Smart Timing y API para Creadores.">
   <meta property="og:url" content="https://socialapi.turbogram.site/">
   
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
 
-  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <!-- Google Fonts: Plus Jakarta Sans, Syne & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=Syne:wght@700;800;900&display=swap" rel="stylesheet">
 
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -39,6 +39,7 @@ $currentUser = $isLoggedIn ? Auth::user() : null;
         extend: {
           fontFamily: {
             sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            display: ['"Syne"', '"Plus Jakarta Sans"', 'sans-serif'],
             mono: ['"JetBrains Mono"', 'monospace'],
           },
           colors: {
@@ -54,7 +55,7 @@ $currentUser = $isLoggedIn ? Auth::user() : null;
               800: '#5B21B6',
               900: '#4C1D95',
             },
-            midnight: '#0F172A',
+            midnight: '#0B0F19',
             slatecard: '#F8FAFC',
           },
           boxShadow: {
@@ -63,6 +64,7 @@ $currentUser = $isLoggedIn ? Auth::user() : null;
             'glow-lg': '0 10px 40px -10px rgba(139, 92, 246, 0.45)',
             'subtle-card': '0 10px 30px -10px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.05)',
             'elevated-card': '0 20px 40px -15px rgba(15, 23, 42, 0.08), 0 0 1px 1px rgba(226, 232, 240, 0.8)',
+            'cookie-popup': '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(226, 232, 240, 0.9)',
           }
         }
       }
@@ -72,7 +74,7 @@ $currentUser = $isLoggedIn ? Auth::user() : null;
   <style>
     body {
       background-color: #FFFFFF;
-      color: #0F172A;
+      color: #0B0F19;
       font-family: 'Plus Jakarta Sans', sans-serif;
       overflow-x: hidden;
     }
@@ -85,7 +87,28 @@ $currentUser = $isLoggedIn ? Auth::user() : null;
     }
 
     .dark-mesh-bg {
-      background: radial-gradient(circle at 50% 0%, rgba(139, 92, 246, 0.18) 0%, rgba(15, 23, 42, 1) 70%);
+      background: radial-gradient(circle at 50% 0%, rgba(139, 92, 246, 0.18) 0%, rgba(11, 15, 25, 1) 70%);
+    }
+
+    /* Gamma-style Starry Night Footer Background */
+    .starry-footer-bg {
+      background: radial-gradient(circle at 50% 10%, rgba(99, 102, 241, 0.25) 0%, rgba(15, 23, 42, 0.98) 75%),
+                  linear-gradient(180deg, #131b2e 0%, #0b0f19 100%);
+      position: relative;
+    }
+
+    .starry-overlay {
+      background-image: radial-gradient(2px 2px at 20px 30px, #ffffff, rgba(0,0,0,0)),
+                        radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.7), rgba(0,0,0,0)),
+                        radial-gradient(1.5px 1.5px at 90px 40px, #ffffff, rgba(0,0,0,0)),
+                        radial-gradient(2px 2px at 160px 120px, rgba(255,255,255,0.8), rgba(0,0,0,0)),
+                        radial-gradient(1.5px 1.5px at 230px 80px, #ffffff, rgba(0,0,0,0)),
+                        radial-gradient(2px 2px at 290px 150px, rgba(255,255,255,0.6), rgba(0,0,0,0)),
+                        radial-gradient(1.5px 1.5px at 340px 50px, #ffffff, rgba(0,0,0,0)),
+                        radial-gradient(2px 2px at 420px 180px, rgba(255,255,255,0.8), rgba(0,0,0,0)),
+                        radial-gradient(1.5px 1.5px at 500px 90px, #ffffff, rgba(0,0,0,0));
+      background-repeat: repeat;
+      background-size: 550px 300px;
     }
 
     .gradient-text {
@@ -109,6 +132,42 @@ $currentUser = $isLoggedIn ? Auth::user() : null;
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+    }
+
+    /* Gamma-style Geometric Wordmark */
+    .gamma-wordmark {
+      font-family: 'Syne', 'Plus Jakarta Sans', sans-serif;
+      letter-spacing: -0.03em;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    /* Giant Watermark in Footer */
+    .giant-watermark {
+      font-family: 'Syne', sans-serif;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      line-height: 0.8;
+      background: linear-gradient(180deg, rgba(165, 180, 252, 0.45) 0%, rgba(165, 180, 252, 0.08) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      user-select: none;
+      pointer-events: none;
+    }
+
+    /* Cookie popup entrance animation */
+    @keyframes slideUpCookie {
+      from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.96);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+    .cookie-animate {
+      animation: slideUpCookie 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
 
     /* Code block styling */
@@ -144,32 +203,34 @@ $currentUser = $isLoggedIn ? Auth::user() : null;
 <body class="antialiased selection:bg-brand-500 selection:text-white">
 
   <!-- ========================================================================= -->
-  <!-- 1. NAVBAR FIJA (Glassmorphism Minimalista) -->
+  <!-- 1. NAVBAR FIJA (Estilo Gamma.app) -->
   <!-- ========================================================================= -->
   <header class="fixed top-0 left-0 right-0 z-50 glass-nav transition-all duration-300">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
       
-      <!-- Brand Logo -->
-      <a href="index.php" class="flex items-center gap-2.5 group">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white font-bold text-xl shadow-glow-sm group-hover:scale-105 transition-transform">
-          ⚡
+      <!-- Gamma-Style Minimalist Logo: XINDRO -->
+      <a href="index.php" class="flex items-center gap-3 group">
+        <!-- Geometric Gamma-Style Symbol & Typography -->
+        <div class="flex items-center gap-2">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 via-indigo-600 to-brand-700 flex items-center justify-center text-white font-black text-lg shadow-glow-sm group-hover:scale-105 transition-transform">
+            <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+            </svg>
+          </div>
+          <span class="text-2xl gamma-wordmark tracking-tight text-midnight">
+            XINDRO
+          </span>
         </div>
-        <span class="text-2xl font-black tracking-tight text-midnight">
-          Xindro<span class="text-brand-600">.</span>
-        </span>
-        <span class="hidden sm:inline-flex items-center text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-200/60 ml-1">
-          AI Platform
-        </span>
       </a>
 
       <!-- Navigation Links -->
       <nav class="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-600">
-        <a href="#funciones" class="hover:text-brand-600 transition-colors">Funciones</a>
+        <a href="#funciones" class="hover:text-brand-600 transition-colors">Productos</a>
         <a href="#simulador" class="hover:text-brand-600 transition-colors flex items-center gap-1.5">
           Simulador
           <span class="inline-block w-2 h-2 rounded-full bg-brand-500 live-dot"></span>
         </a>
-        <a href="#smart-timing" class="hover:text-brand-600 transition-colors">Smart Timing</a>
+        <a href="#smart-timing" class="hover:text-brand-600 transition-colors">Soluciones</a>
         <a href="#api-docs" class="hover:text-brand-600 transition-colors">API Creadores</a>
         <a href="#precios" class="hover:text-brand-600 transition-colors">Precios</a>
       </nav>
@@ -177,17 +238,16 @@ $currentUser = $isLoggedIn ? Auth::user() : null;
       <!-- Right Action CTA -->
       <div class="flex items-center gap-3">
         <?php if ($isLoggedIn): ?>
-          <a href="dashboard.php" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white gradient-button shadow-glow-sm">
+          <a href="dashboard.php" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-all">
             <span>Ir a mi Panel</span>
             <span>→</span>
           </a>
         <?php else: ?>
           <a href="login.php" class="text-sm font-bold text-slate-700 hover:text-brand-600 px-3 py-2 transition-colors">
-            Iniciar Sesión
+            Iniciar sesión
           </a>
-          <a href="#simulador" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white gradient-button shadow-glow-sm">
-            <span>Probar Simulador</span>
-            <span>🚀</span>
+          <a href="login.php" class="inline-flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 hover:shadow-md transition-all">
+            <span>Comienza gratis</span>
           </a>
         <?php endif; ?>
       </div>
@@ -246,7 +306,7 @@ $currentUser = $isLoggedIn ? Auth::user() : null;
             <div class="w-3 h-3 rounded-full bg-red-400"></div>
             <div class="w-3 h-3 rounded-full bg-amber-400"></div>
             <div class="w-3 h-3 rounded-full bg-emerald-400"></div>
-            <span class="text-xs font-semibold text-slate-400 ml-2">Xindro Live Copilot — Flujo en Tiempo Real</span>
+            <span class="text-xs font-semibold text-slate-400 ml-2">XINDRO Live Copilot — Flujo en Tiempo Real</span>
           </div>
           <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 live-dot"></span>
@@ -477,7 +537,7 @@ $currentUser = $isLoggedIn ? Auth::user() : null;
           Playground en Vivo
         </span>
         <h2 class="text-3xl sm:text-4xl font-extrabold text-midnight tracking-tight mt-3 mb-3">
-          Prueba el Motor de Xindro en Tiempo Real
+          Prueba el Motor de XINDRO en Tiempo Real
         </h2>
         <p class="text-sm sm:text-base text-slate-600 font-normal">
           Selecciona un tono, escribe cualquier comentario de tu comunidad y observa cómo la IA genera respuestas hipercontextualizadas.
@@ -491,7 +551,7 @@ $currentUser = $isLoggedIn ? Auth::user() : null;
         <div class="bg-slate-900 text-white px-6 py-4 flex flex-wrap items-center justify-between gap-4">
           <div class="flex items-center gap-2.5">
             <span class="text-brand-400 font-bold text-lg">⚡</span>
-            <span class="text-sm font-bold tracking-tight">Xindro Interactive Simulator v2.0</span>
+            <span class="text-sm font-bold tracking-tight">XINDRO Interactive Simulator v2.0</span>
           </div>
           <div class="flex items-center gap-2 text-xs font-mono text-slate-400">
             <span class="w-2 h-2 rounded-full bg-emerald-400 live-dot"></span>
@@ -572,7 +632,7 @@ $currentUser = $isLoggedIn ? Auth::user() : null;
             
             <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/80 pb-3 mb-4">
               <div class="flex items-center gap-2">
-                <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Resultado Generado por Xindro</span>
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Resultado Generado por XINDRO</span>
                 <span id="sim-badge-intent" class="text-[11px] font-bold px-2 py-0.5 rounded bg-brand-100 text-brand-800 border border-brand-200">
                   🎯 Intención: Consejo / Crecimiento
                 </span>
@@ -623,7 +683,7 @@ $currentUser = $isLoggedIn ? Auth::user() : null;
             No publiques a ciegas. Publica en el segundo exacto.
           </h2>
           <p class="text-base text-slate-600 leading-relaxed font-normal mb-6">
-            El Smart Timing de Xindro cruza datos de más de 500,000 interacciones para identificar cuándo tus seguidores más valiosos están activos y listos para interactuar.
+            El Smart Timing de XINDRO cruza datos de más de 500,000 interacciones para identificar cuándo tus seguidores más valiosos están activos y listos para interactuar.
           </p>
 
           <div class="space-y-4">
@@ -697,7 +757,7 @@ $currentUser = $isLoggedIn ? Auth::user() : null;
           </div>
 
           <div class="p-4 rounded-xl bg-brand-50/70 border border-brand-200/60 flex items-center justify-between text-xs text-brand-900 font-medium">
-            <span>💡 <strong>Recomendación Xindro:</strong> Programa tu próximo post hoy a las <strong>19:42 hrs</strong> para maximizar guardados y comentarios.</span>
+            <span>💡 <strong>Recomendación XINDRO:</strong> Programa tu próximo post hoy a las <strong>19:42 hrs</strong> para maximizar guardados y comentarios.</span>
           </div>
         </div>
 
@@ -718,7 +778,7 @@ $currentUser = $isLoggedIn ? Auth::user() : null;
           Developer & Creator API
         </span>
         <h2 class="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight mt-4 mb-4">
-          Ofrece la potencia de Xindro dentro de tus propias herramientas.
+          Ofrece la potencia de XINDRO dentro de tus propias herramientas.
         </h2>
         <p class="text-base sm:text-lg text-slate-300 font-normal">
           Endpoints RESTful ultrarrápidos, webhooks criptográficos verificados y SDKs listos para integrar en tus bots, paneles o SaaS con 5 líneas de código.
@@ -894,7 +954,7 @@ print("Respuesta IA:", res["replies"]["wisdom"])
               <li class="flex items-center gap-2 text-slate-400"><span class="text-slate-300">✖</span> Acceso a API de desarrolladores</li>
             </ul>
           </div>
-          <a href="login.php" class="w-full py-3 rounded-xl text-center text-sm font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition-colors">
+          <a href="login.php" class="w-full py-3 rounded-full text-center text-sm font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition-colors">
             Crear Cuenta Gratis
           </a>
         </div>
@@ -919,7 +979,7 @@ print("Respuesta IA:", res["replies"]["wisdom"])
               <li class="flex items-center gap-2"><span class="text-brand-600 font-bold">✔</span> Soporte prioritario 24/7</li>
             </ul>
           </div>
-          <a href="login.php" class="w-full py-3.5 rounded-xl text-center text-sm font-bold text-white gradient-button shadow-glow-sm">
+          <a href="login.php" class="w-full py-3.5 rounded-full text-center text-sm font-bold text-white gradient-button shadow-glow-sm">
             Comenzar con Pro
           </a>
         </div>
@@ -940,7 +1000,7 @@ print("Respuesta IA:", res["replies"]["wisdom"])
               <li class="flex items-center gap-2"><span class="text-emerald-500 font-bold">✔</span> Marca blanca & Webhook dedicado</li>
             </ul>
           </div>
-          <a href="login.php" class="w-full py-3 rounded-xl text-center text-sm font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition-colors">
+          <a href="login.php" class="w-full py-3 rounded-full text-center text-sm font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition-colors">
             Acceso para Agencias
           </a>
         </div>
@@ -951,80 +1011,259 @@ print("Respuesta IA:", res["replies"]["wisdom"])
   </section>
 
   <!-- ========================================================================= -->
-  <!-- 9. FOOTER PROFESIONAL (Xindro Labs) -->
+  <!-- 9. FOOTER PROFESIONAL CON MARCA DE AGUA GIGANTE ESTILO GAMMA -->
   <!-- ========================================================================= -->
-  <footer class="bg-slatecard border-t border-slate-200 py-14 text-slate-600 text-sm">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+  <footer class="starry-footer-bg starry-overlay pt-20 pb-12 text-slate-300 text-sm overflow-hidden relative">
+    
+    <!-- Giant Gamma-Style Watermark Behind Links -->
+    <div class="w-full text-center my-6 overflow-hidden select-none pointer-events-none">
+      <div class="giant-watermark text-[16vw] font-black uppercase tracking-widest leading-none">
+        XINDRO
+      </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
       
-      <div class="grid grid-cols-1 md:grid-cols-5 gap-10 mb-12">
+      <!-- Footer Columns (Gamma Structure) -->
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-8 mb-16 pt-6">
         
-        <!-- Brand Info -->
-        <div class="md:col-span-2">
-          <div class="flex items-center gap-2 mb-3">
-            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white font-bold text-base shadow-sm">
-              ⚡
-            </div>
-            <span class="text-xl font-black text-midnight tracking-tight">Xindro<span class="text-brand-600">.</span></span>
-          </div>
-          <p class="text-xs text-slate-500 leading-relaxed max-w-sm mb-4">
-            El sistema operativo de inteligencia artificial para creadores, marcas y agencias. Escala tu engagement sin perder el toque humano.
-          </p>
-          <div class="text-xs text-slate-400">
-            Desarrollado con orgullo por <strong>Xindro Labs</strong>.
+        <!-- Col 1: Descarga la app / Acceso -->
+        <div class="col-span-2 md:col-span-1">
+          <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-4">Descarga la app</h4>
+          <div class="space-y-2.5">
+            <a href="login.php" class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900/90 border border-slate-700/80 hover:border-slate-500 transition-colors text-xs text-slate-200">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.62-.75 1.04-1.8 0.92-2.85-.9.04-1.99.6-2.64 1.35-.58.67-.99 1.74-.86 2.76 1 .08 1.96-.51 2.58-1.26z"/></svg>
+              <div>
+                <div class="text-[9px] text-slate-400 leading-none">Consíguelo en el</div>
+                <div class="text-[11px] font-bold text-white">App Store</div>
+              </div>
+            </a>
+            <a href="login.php" class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900/90 border border-slate-700/80 hover:border-slate-500 transition-colors text-xs text-slate-200">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M3.609 1.814L13.792 12 3.61 22.186c-.188-.188-.299-.444-.299-.714V2.528c0-.27.111-.526.298-.714zM15.207 13.414l2.122 2.121-12.015 6.94 9.893-9.061zm0-2.828L5.314 1.525l12.015 6.94-2.122 2.121zm1.414 1.414l3.182-1.838c.848-.49.848-1.286 0-1.776l-3.182-1.838-1.414 1.414 1.414 4.038z"/></svg>
+              <div>
+                <div class="text-[9px] text-slate-400 leading-none">DISPONIBLE EN</div>
+                <div class="text-[11px] font-bold text-white">Google Play</div>
+              </div>
+            </a>
           </div>
         </div>
 
-        <!-- Links Column 1: Producto -->
+        <!-- Col 2: Producto -->
         <div>
-          <h4 class="text-xs font-extrabold uppercase tracking-wider text-midnight mb-3">Producto</h4>
-          <ul class="space-y-2 text-xs">
-            <li><a href="#funciones" class="hover:text-brand-600 transition-colors">Auto-Engagement</a></li>
-            <li><a href="#smart-timing" class="hover:text-brand-600 transition-colors">Smart Timing</a></li>
-            <li><a href="#simulador" class="hover:text-brand-600 transition-colors">Simulador en Vivo</a></li>
-            <li><a href="#api-docs" class="hover:text-brand-600 transition-colors">API para Creadores</a></li>
-            <li><a href="#precios" class="hover:text-brand-600 transition-colors">Precios</a></li>
+          <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-4">Producto</h4>
+          <ul class="space-y-2.5 text-xs text-slate-300 font-medium">
+            <li><a href="#precios" class="hover:text-white transition-colors">Precios</a></li>
+            <li><a href="#simulador" class="hover:text-white transition-colors">Inspiración</a></li>
+            <li><a href="#funciones" class="hover:text-white transition-colors">Educación</a></li>
+            <li><a href="#simulador" class="hover:text-white transition-colors">Guía de prompts</a></li>
+            <li><a href="#funciones" class="hover:text-white transition-colors">Plantillas</a></li>
+            <li><a href="#smart-timing" class="hover:text-white transition-colors">Explorar</a></li>
+            <li><a href="#api-docs" class="hover:text-white transition-colors">Integraciones</a></li>
+            <li><a href="dashboard.php" class="hover:text-white transition-colors">Accesibilidad</a></li>
           </ul>
         </div>
 
-        <!-- Links Column 2: Legal & Meta -->
+        <!-- Col 3: Empresa -->
         <div>
-          <h4 class="text-xs font-extrabold uppercase tracking-wider text-midnight mb-3">Legal & Meta</h4>
-          <ul class="space-y-2 text-xs">
-            <li><a href="privacy-policy.php" class="hover:text-brand-600 transition-colors">Política de Privacidad</a></li>
-            <li><a href="terms-of-service.php" class="hover:text-brand-600 transition-colors">Términos de Servicio</a></li>
-            <li><a href="data-deletion.php" class="hover:text-brand-600 transition-colors">Eliminación de Datos</a></li>
+          <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-4">Empresa</h4>
+          <ul class="space-y-2.5 text-xs text-slate-300 font-medium">
+            <li><a href="#funciones" class="hover:text-white transition-colors">Acerca de</a></li>
+            <li><a href="login.php" class="hover:text-white transition-colors">Carreras</a></li>
+            <li><a href="login.php" class="hover:text-white transition-colors">Equipo</a></li>
+            <li><a href="login.php" class="hover:text-white transition-colors">Ayuda</a></li>
+            <li><a href="#simulador" class="hover:text-white transition-colors">Comunidad</a></li>
+            <li><a href="#api-docs" class="hover:text-white transition-colors">Documentación para desarrolladores</a></li>
+            <li><a href="#funciones" class="hover:text-white transition-colors">Marca</a></li>
+            <li><a href="privacy-policy.php" class="hover:text-white transition-colors">Seguridad</a></li>
+            <li><a href="login.php" class="hover:text-white transition-colors">Contáctanos</a></li>
           </ul>
         </div>
 
-        <!-- Links Column 3: Acceso -->
+        <!-- Col 4: Redes sociales -->
         <div>
-          <h4 class="text-xs font-extrabold uppercase tracking-wider text-midnight mb-3">Acceso</h4>
-          <ul class="space-y-2 text-xs">
-            <li><a href="login.php" class="hover:text-brand-600 transition-colors">Iniciar Sesión</a></li>
-            <li><a href="login.php" class="hover:text-brand-600 transition-colors">Crear Cuenta</a></li>
-            <li><a href="dashboard.php" class="hover:text-brand-600 transition-colors">Dashboard App</a></li>
+          <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-4">Redes sociales</h4>
+          <ul class="space-y-2.5 text-xs text-slate-300 font-medium">
+            <li><a href="https://instagram.com" target="_blank" rel="noopener" class="hover:text-white transition-colors">Instagram</a></li>
+            <li><a href="https://linkedin.com" target="_blank" rel="noopener" class="hover:text-white transition-colors">LinkedIn</a></li>
+            <li><a href="https://tiktok.com" target="_blank" rel="noopener" class="hover:text-white transition-colors">TikTok</a></li>
+            <li><a href="https://x.com" target="_blank" rel="noopener" class="hover:text-white transition-colors">X (Twitter)</a></li>
+            <li><a href="https://youtube.com" target="_blank" rel="noopener" class="hover:text-white transition-colors">YouTube</a></li>
+          </ul>
+        </div>
+
+        <!-- Col 5: Información legal -->
+        <div>
+          <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-4">Información legal</h4>
+          <ul class="space-y-2.5 text-xs text-slate-300 font-medium">
+            <li><a href="terms-of-service.php" class="hover:text-white transition-colors">Acceptable Use Policy</a></li>
+            <li><a href="privacy-policy.php" class="hover:text-white transition-colors">Cookie Notice</a></li>
+            <li><a href="javascript:void(0)" onclick="CookieConsent.openSettings()" class="hover:text-white transition-colors">Preferencias de cookies</a></li>
+            <li><a href="terms-of-service.php" class="hover:text-white transition-colors">Data Processing Addendum</a></li>
+            <li><a href="privacy-policy.php" class="hover:text-white transition-colors">Privacy Policy</a></li>
+            <li><a href="data-deletion.php" class="hover:text-white transition-colors">Data Deletion (Meta)</a></li>
+            <li><a href="terms-of-service.php" class="hover:text-white transition-colors">Terms of Service</a></li>
+            <li><a href="terms-of-service.php" class="hover:text-white transition-colors">Third Party Terms</a></li>
           </ul>
         </div>
 
       </div>
 
       <!-- Bottom Bar -->
-      <div class="border-t border-slate-200/80 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
-        <p>© <?= date('Y') ?> Xindro Labs. Todos los derechos reservados.</p>
-        <p class="flex items-center gap-1.5">
-          <span>Integrado con Meta Graph API (Facebook & Instagram)</span>
-          <span class="text-emerald-500 font-bold">● Live</span>
-        </p>
+      <div class="border-t border-slate-800/80 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
+        <div class="flex items-center gap-2">
+          <span class="font-bold text-white">XINDRO</span>
+          <span>•</span>
+          <span>© <?= date('Y') ?> Xindro Tech, Inc. Todos los derechos reservados.</span>
+        </div>
+        <div class="flex items-center gap-4">
+          <span class="flex items-center gap-1.5 text-emerald-400">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 live-dot"></span>
+            Meta Graph API Verified
+          </span>
+          <a href="javascript:void(0)" onclick="CookieConsent.openSettings()" class="text-slate-400 hover:text-white underline">Ajustes de Cookies</a>
+        </div>
       </div>
 
     </div>
   </footer>
 
   <!-- ========================================================================= -->
-  <!-- 10. JAVASCRIPT DEL SIMULADOR Y PESTAÑAS DE CÓDIGO -->
+  <!-- 10. POPUP DE COOKIES EXACTO AL ESTILO GAMMA (Bottom-Left Card Modal) -->
+  <!-- ========================================================================= -->
+  <div id="cookie-consent-modal" class="fixed bottom-5 left-5 z-50 max-w-[420px] w-[calc(100%-40px)] bg-white rounded-2xl shadow-cookie-popup p-5 border border-slate-200/90 text-slate-800 cookie-animate hidden">
+    
+    <!-- Top Row: Title + Close Button -->
+    <div class="flex items-start justify-between gap-3 mb-2">
+      <div class="text-sm font-extrabold text-midnight flex items-center gap-1.5">
+        <span>About our cookies</span>
+        <span>🍪</span>
+      </div>
+      <button type="button" onclick="CookieConsent.close()" class="text-slate-400 hover:text-slate-700 text-lg font-bold leading-none p-1" title="Cerrar">
+        &times;
+      </button>
+    </div>
+
+    <!-- Description Text -->
+    <p class="text-[11.5px] text-slate-600 leading-relaxed mb-4">
+      We use cookies and similar technologies as set out in our <a href="privacy-policy.php" class="text-blue-600 hover:underline font-semibold">Cookie Notice</a>. By clicking "Accept All", you agree to our use of optional cookies and similar technologies for the purposes set out in our <a href="privacy-policy.php" class="text-blue-600 hover:underline font-semibold">Cookie Notice</a>.
+    </p>
+
+    <!-- Action Buttons Row (Exact Gamma Layout) -->
+    <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+      <button type="button" onclick="CookieConsent.openSettings()" class="text-[11px] font-bold px-3.5 py-1.5 rounded-full border border-slate-300 text-slate-700 hover:bg-slate-50 transition-colors">
+        Cookies Settings
+      </button>
+
+      <div class="flex items-center gap-1.5">
+        <button type="button" onclick="CookieConsent.rejectAll()" class="text-[11px] font-bold px-3.5 py-1.5 rounded-full bg-slate-900 hover:bg-black text-white transition-colors">
+          Reject All
+        </button>
+        <button type="button" onclick="CookieConsent.acceptAll()" class="text-[11px] font-bold px-4 py-1.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-colors">
+          Accept All
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Detailed Cookies Preferences Modal (Optional Modal) -->
+  <div id="cookie-settings-modal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 text-slate-800">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+        <h3 class="text-base font-extrabold text-midnight">Centro de Preferencias de Cookies</h3>
+        <button type="button" onclick="CookieConsent.closeSettings()" class="text-slate-400 hover:text-slate-700 text-xl font-bold">&times;</button>
+      </div>
+      <p class="text-xs text-slate-600 mb-4 leading-relaxed">
+        Gestiona las categorías de cookies que utilizamos para brindarte la mejor experiencia en XINDRO.
+      </p>
+
+      <div class="space-y-3 text-xs mb-6">
+        <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+          <div>
+            <div class="font-bold text-midnight">Cookies Esenciales (Requeridas)</div>
+            <div class="text-slate-500 text-[11px]">Necesarias para la autenticación y seguridad de la plataforma.</div>
+          </div>
+          <span class="text-[11px] font-bold text-emerald-600">Siempre activas</span>
+        </div>
+
+        <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+          <div>
+            <div class="font-bold text-midnight">Cookies de Rendimiento & Analítica</div>
+            <div class="text-slate-500 text-[11px]">Nos ayudan a medir el rendimiento de la API y el simulador.</div>
+          </div>
+          <input type="checkbox" id="chk-analytics-cookies" checked class="w-4 h-4 text-brand-600 rounded cursor-pointer" />
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+        <button type="button" onclick="CookieConsent.saveCustom()" class="px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors">
+          Guardar Preferencias
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- 11. JAVASCRIPT DEL SIMULADOR, COOKIES Y PESTAÑAS DE CÓDIGO -->
   <!-- ========================================================================= -->
   <script>
-    // 1. Interactive Simulator Engine
+    // 1. Cookie Consent Manager (Exact Gamma Style with localStorage persistence)
+    const CookieConsent = {
+      init() {
+        const consent = localStorage.getItem('xindro_cookie_consent');
+        if (!consent) {
+          // Show popup after a smooth delay of 800ms
+          setTimeout(() => {
+            const modal = document.getElementById('cookie-consent-modal');
+            if (modal) modal.classList.remove('hidden');
+          }, 800);
+        }
+      },
+
+      acceptAll() {
+        localStorage.setItem('xindro_cookie_consent', 'accepted_all');
+        this.hideModal();
+      },
+
+      rejectAll() {
+        localStorage.setItem('xindro_cookie_consent', 'rejected_optional');
+        this.hideModal();
+      },
+
+      close() {
+        localStorage.setItem('xindro_cookie_consent', 'closed');
+        this.hideModal();
+      },
+
+      hideModal() {
+        const modal = document.getElementById('cookie-consent-modal');
+        if (modal) modal.classList.add('hidden');
+      },
+
+      openSettings() {
+        const settingsModal = document.getElementById('cookie-settings-modal');
+        if (settingsModal) settingsModal.classList.remove('hidden');
+      },
+
+      closeSettings() {
+        const settingsModal = document.getElementById('cookie-settings-modal');
+        if (settingsModal) settingsModal.classList.add('hidden');
+      },
+
+      saveCustom() {
+        const analytics = document.getElementById('chk-analytics-cookies')?.checked;
+        localStorage.setItem('xindro_cookie_consent', JSON.stringify({ essential: true, analytics: !!analytics }));
+        this.closeSettings();
+        this.hideModal();
+      }
+    };
+
+    // Initialize cookies on DOM ready
+    document.addEventListener('DOMContentLoaded', () => {
+      CookieConsent.init();
+    });
+
+    // 2. Interactive Simulator Engine
     const Simulator = {
       presets: {
         1: {
@@ -1063,7 +1302,6 @@ print("Respuesta IA:", res["replies"]["wisdom"])
         btn.disabled = true;
         btn.innerHTML = '<span>Generando respuesta con IA...</span>';
 
-        // High-converting simulated response bank with live calibration
         setTimeout(() => {
           let reply = '';
           let intent = 'Interés / Comunidad';
@@ -1104,7 +1342,6 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           }
 
           if (closing === 'never') {
-            // Strip question if configured
             reply = reply.replace(/\¿[^\?]+\?\s*(👇|✨|🔥|🚀|📩|🤝)?$/i, '');
           }
 
@@ -1129,7 +1366,7 @@ print("Respuesta IA:", res["replies"]["wisdom"])
       }
     };
 
-    // 2. API Code Tabs Switcher
+    // 3. API Code Tabs Switcher
     const ApiTabs = {
       languages: ['curl', 'js', 'php', 'python'],
 
