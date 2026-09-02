@@ -9,9 +9,9 @@ require_once __DIR__ . '/config/auth.php';
 Security::applySecurityHeaders(false);
 $csrfToken = Security::getCsrfToken();
 
-// If already logged in, redirect to main app
+// If already logged in, redirect to dashboard app
 if (Auth::check()) {
-    header('Location: index.php');
+    header('Location: dashboard.php');
     exit;
 }
 ?>
@@ -376,7 +376,7 @@ const AuthUI = {
       if (res.success) {
         this.showAlert('¡Bienvenido de vuelta! Redirigiendo al panel...', 'success');
         setTimeout(() => {
-          window.location.href = 'index.php';
+          window.location.href = 'dashboard.php';
         }, 600);
       } else {
         this.showAlert(res.error || 'Error al iniciar sesión.');
@@ -423,7 +423,7 @@ const AuthUI = {
       if (res.success) {
         this.showAlert('¡Cuenta creada con éxito! Entrando a tu espacio privado...', 'success');
         setTimeout(() => {
-          window.location.href = 'index.php';
+          window.location.href = 'dashboard.php';
         }, 700);
       } else {
         this.showAlert(res.error || 'Error al crear la cuenta.');
