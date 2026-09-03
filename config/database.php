@@ -196,6 +196,22 @@ class Database {
                 CREATE INDEX IF NOT EXISTS idx_reset_expires ON password_resets(expires_at);
             ");
 
+            // 6. Ensure dedicated tester user exists for API & Integration Testing
+            $testerStmt = $pdo->prepare("SELECT id FROM users WHERE email = 'tester@xindro.app' LIMIT 1");
+            $testerStmt->execute();
+            $testerUser = $testerStmt->fetch();
+
+            if (!$testerUser) {
+                $testerHash = password_hash('TesterPassword2026!', PASSWORD_BCRYPT, ['cost' => 12]);
+                $stmtInsTester = $pdo->prepare("
+                    INSERT INTO users (tenant_id, name, email, password_hash, role, avatar_url, last_login_at)
+                    VALUES ('tnt_tester_api_01', 'Usuario de Prueba API', 'tester@xindro.app', :hash, 'tester', 'https://ui-avatars.com/api/?name=Tester+API&background=7c3aed&color=fff&size=96', CURRENT_TIMESTAMP)
+                ");
+                $stmtInsTester->execute([':hash' => $testerHash]);
+                $testerId = (int)$pdo->lastInsertId();
+                self::seedInitialData($pdo, $testerId);
+            }
+
         } catch (Throwable $e) {
             error_log("Multi-tenant schema migration error: " . $e->getMessage());
         }
