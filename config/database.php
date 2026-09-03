@@ -420,19 +420,8 @@ class Database {
         $pdo->exec($schema);
     }
 
-    public static function seedInitialData(PDO $pdo, int $userId = 1): void {
-        // Fetch user name
-        $uStmt = $pdo->prepare("SELECT name FROM users WHERE id = :uid LIMIT 1");
-        $uStmt->execute([':uid' => $userId]);
-        $uRow = $uStmt->fetch();
-        $uName = $uRow['name'] ?? 'Xindro Studio';
-
-        // 1. Seed or update Brand Voice record
-        $bvCheck = $pdo->prepare("SELECT id FROM brand_voices WHERE user_id = :uid LIMIT 1");
-        $bvCheck->execute([':uid' => $userId]);
-        $bvRow = $bvCheck->fetch();
-
-        $defaultFewShots = [
+    public static function getDefaultFewShots(): array {
+        return [
             [
                 'tag' => 'precio_leads',
                 'comment' => '¿Cuál es el precio del servicio y qué incluye?',
@@ -454,43 +443,62 @@ class Database {
                 'reply' => '¡Muchísimas gracias por tus palabras, {nombre}! Nos alegra enorme saber que te ha sido de gran valor. ¿De qué tema te gustaría que profundicemos en la siguiente publicación?'
             ]
         ];
+    }
 
-        $brandVoiceId = 1;
-        if (!$bvRow) {
-            $stmtBv = $pdo->prepare("
-                INSERT INTO brand_voices (
-                    user_id, brand_name, persona_name, industry, tone_level, language, system_prompt,
-                    warmth_level, depth_level, energy_level, closing_question_rule, emoji_style,
-                    key_phrases, forbidden_phrases, few_shot_examples, is_default
-                ) VALUES (
-                    :uid, :bname, :pname, :industry, :tone, :lang, :prompt,
-                    :warmth, :depth, :energy, :crule, :emojis,
-                    :kphrases, :fphrases, :fewshots, 1
-                )
-            ");
-            $stmtBv->execute([
-                ':uid' => $userId,
-                ':bname' => $uName . ' Oficial',
-                ':pname' => 'Alex — Asistente de Marca',
-                ':industry' => 'Comercio Electrónico, Servicios & Creadores',
-                ':tone' => 'friendly_engaging',
-                ':lang' => 'es',
-                ':prompt' => 'Eres el estratega oficial de comunicación de la marca. Responde siempre con carisma, empatía y claridad, captando leads y orientando a los usuarios con soluciones útiles y profesionales sin sonar como un robot.',
-                ':warmth' => 85,
-                ':depth' => 75,
-                ':energy' => 80,
-                ':crule' => 'always',
-                ':emojis' => 'moderate',
-                ':kphrases' => json_encode(['Calidad garantizada', 'Atención personalizada', 'Envíos a todo el país', 'Comunidad oficial', 'Asesoría directa'], JSON_UNESCAPED_UNICODE),
-                ':fphrases' => json_encode(['Estimado cliente', 'Compra ya', 'Oferta engañosa', 'Somos un bot', 'Haz clic aquí'], JSON_UNESCAPED_UNICODE),
-                ':fewshots' => json_encode($defaultFewShots, JSON_UNESCAPED_UNICODE)
-            ]);
-            $brandVoiceId = (int)$pdo->lastInsertId();
-        } else {
-            $brandVoiceId = (int)$bvRow['id'];
+    public static function ensureDefaultBrandVoice(PDO $pdo, int $userId, string $brandName = 'Mi Marca'): int {
+        $bvCheck = $pdo->prepare("SELECT id FROM brand_voices WHERE user_id = :uid LIMIT 1");
+        $bvCheck->execute([':uid' => $userId]);
+        $bvRow = $bvCheck->fetch();
+
+        if ($bvRow) {
+            return (int)$bvRow['id'];
         }
 
+        $defaultFewShots = self::getDefaultFewShots();
+
+        $stmtBv = $pdo->prepare("
+            INSERT INTO brand_voices (
+                user_id, brand_name, persona_name, industry, tone_level, language, system_prompt,
+                warmth_level, depth_level, energy_level, closing_question_rule, emoji_style,
+                key_phrases, forbidden_phrases, few_shot_examples, is_default
+            ) VALUES (
+                :uid, :bname, :pname, :industry, :tone, :lang, :prompt,
+                :warmth, :depth, :energy, :crule, :emojis,
+                :kphrases, :fphrases, :fewshots, 1
+            )
+        ");
+        $stmtBv->execute([
+            ':uid' => $userId,
+            ':bname' => $brandName . ' Oficial',
+            ':pname' => 'Alex — Asistente de Marca',
+            ':industry' => 'Comercio Electrónico, Servicios & Creadores',
+            ':tone' => 'friendly_engaging',
+            ':lang' => 'es',
+            ':prompt' => 'Eres el estratega oficial de comunicación de la marca. Responde siempre con carisma, empatía y claridad, captando leads y orientando a los usuarios con soluciones útiles y profesionales sin sonar como un robot.',
+            ':warmth' => 85,
+            ':depth' => 75,
+            ':energy' => 80,
+            ':crule' => 'always',
+            ':emojis' => 'moderate',
+            ':kphrases' => json_encode(['Calidad garantizada', 'Atención personalizada', 'Envíos a todo el país', 'Comunidad oficial', 'Asesoría directa'], JSON_UNESCAPED_UNICODE),
+            ':fphrases' => json_encode(['Estimado cliente', 'Compra ya', 'Oferta engañosa', 'Somos un bot', 'Haz clic aquí'], JSON_UNESCAPED_UNICODE),
+            ':fewshots' => json_encode($defaultFewShots, JSON_UNESCAPED_UNICODE)
+        ]);
+        return (int)$pdo->lastInsertId();
+    }
+
+    public static function seedInitialData(PDO $pdo, int $userId = 1): void {
+        // Fetch user name
+        $uStmt = $pdo->prepare("SELECT name FROM users WHERE id = :uid LIMIT 1");
+        $uStmt->execute([':uid' => $userId]);
+        $uRow = $uStmt->fetch();
+        $uName = $uRow['name'] ?? 'Xindro Studio';
+
+        // 1. Seed or update Brand Voice record
+        $brandVoiceId = self::ensureDefaultBrandVoice($pdo, $userId, $uName);
+
         // 2. Default System & AI Settings for User
+        $defaultFewShots = self::getDefaultFewShots();
         $defaultSettings = [
             'brand_name' => $uName . ' Oficial',
             'brand_industry' => 'Comercio Electrónico, Servicios & Creadores',

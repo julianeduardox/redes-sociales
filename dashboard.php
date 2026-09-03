@@ -12,17 +12,23 @@ Auth::requireAuth(false);
 $currentUser = Auth::user();
 $userId = $currentUser['id'] ?? 1;
 $csrfToken = Security::getCsrfToken();
-$pdo = Database::getConnection();
+$userBrands = [];
 
-// Pre-render user's brand voices for instant display
-$stmtBrands = $pdo->prepare("SELECT id, brand_name, industry, is_default FROM brand_voices WHERE user_id = ? ORDER BY is_default DESC, id ASC");
-$stmtBrands->execute([$userId]);
-$userBrands = $stmtBrands->fetchAll(PDO::FETCH_ASSOC);
-
-if (empty($userBrands)) {
-    Database::ensureDefaultBrandVoice($pdo, $userId, $currentUser['name'] ?? 'Mi Marca');
+try {
+    $pdo = Database::getConnection();
+    // Pre-render user's brand voices for instant display
+    $stmtBrands = $pdo->prepare("SELECT id, brand_name, industry, is_default FROM brand_voices WHERE user_id = ? ORDER BY is_default DESC, id ASC");
     $stmtBrands->execute([$userId]);
     $userBrands = $stmtBrands->fetchAll(PDO::FETCH_ASSOC);
+
+    if (empty($userBrands)) {
+        Database::ensureDefaultBrandVoice($pdo, $userId, $currentUser['name'] ?? 'Mi Marca');
+        $stmtBrands->execute([$userId]);
+        $userBrands = $stmtBrands->fetchAll(PDO::FETCH_ASSOC);
+    }
+} catch (Throwable $e) {
+    error_log("Brand pre-render notice: " . $e->getMessage());
+    $userBrands = [];
 }
 ?>
 <!DOCTYPE html>
