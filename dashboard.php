@@ -1246,7 +1246,7 @@ try {
 </div>
 
 <!-- Modal: Add New Brand Voice (Agency Multi-Client) -->
-<div class="modal-overlay" id="modal-new-brand">
+<div class="modal-overlay" id="modal-new-brand" onclick="if(event.target===this) App.closeModal('modal-new-brand')">
   <div class="modal-box" style="max-width: 580px;">
     <div class="modal-header">
       <div style="display: flex; align-items: center; gap: 12px;">
@@ -1324,10 +1324,10 @@ try {
 <!-- Toast Container -->
 <div class="toast-container" id="toast-container"></div>
 
-<!-- Scripts -->
-<script src="assets/js/agent-controller.js"></script>
-<script src="assets/js/analytics.js"></script>
-<script src="assets/js/app.js"></script>
+<!-- Scripts (Cache Busted) -->
+<script src="assets/js/agent-controller.js?v=<?= time() ?>"></script>
+<script src="assets/js/analytics.js?v=<?= time() ?>"></script>
+<script src="assets/js/app.js?v=<?= time() ?>"></script>
 
 </body>
 </html>

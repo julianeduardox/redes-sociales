@@ -299,6 +299,14 @@ const App = {
       });
     }
 
+    // New Brand button listener in topbar
+    document.querySelectorAll('.btn-new-brand-pill, [data-action="new-brand"]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.openNewBrandModal();
+      });
+    });
+
     // Escape key listener for closing modals
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
@@ -1366,12 +1374,24 @@ const App = {
 
   openModal(modalId) {
     const modal = document.getElementById(modalId);
-    if (modal) modal.classList.add('active');
+    if (modal) {
+      modal.classList.add('active');
+      modal.style.display = 'flex';
+      modal.style.opacity = '1';
+      modal.style.pointerEvents = 'auto';
+      modal.style.visibility = 'visible';
+    }
   },
 
   closeModal(modalId) {
     const modal = document.getElementById(modalId);
-    if (modal) modal.classList.remove('active');
+    if (modal) {
+      modal.classList.remove('active');
+      modal.style.display = '';
+      modal.style.opacity = '';
+      modal.style.pointerEvents = '';
+      modal.style.visibility = '';
+    }
   },
 
   async logout() {
