@@ -31,10 +31,11 @@ class Database {
                 CREATE INDEX IF NOT EXISTS idx_rate_expires ON rate_limits(expires_at);
             ");
 
-            // Ensure users table exists
+            // Ensure users table exists with tenant_id support
             self::$pdo->exec("
                 CREATE TABLE IF NOT EXISTS users (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    tenant_id TEXT UNIQUE,
                     name TEXT NOT NULL,
                     email TEXT UNIQUE NOT NULL,
                     password_hash TEXT NOT NULL,
@@ -61,6 +62,24 @@ class Database {
 
     private static function migrateMultiTenantSchema(PDO $pdo): void {
         try {
+            // 0. Ensure tenant_id column in users table
+            $uColsStmt = $pdo->query("PRAGMA table_info(users)");
+            $uCols = [];
+            while ($uc = $uColsStmt->fetch()) {
+                $uCols[] = $uc['name'];
+            }
+            if (!empty($uCols) && !in_array('tenant_id', $uCols, true)) {
+                $pdo->exec("ALTER TABLE users ADD COLUMN tenant_id TEXT");
+            }
+
+            // Fill missing tenant_id for existing users
+            $usersWithoutTenant = $pdo->query("SELECT id, created_at FROM users WHERE tenant_id IS NULL OR tenant_id = ''")->fetchAll();
+            $upTenant = $pdo->prepare("UPDATE users SET tenant_id = :tenant_id WHERE id = :id");
+            foreach ($usersWithoutTenant as $u) {
+                $tenantKey = 'tnt_' . substr(md5($u['id'] . '_' . ($u['created_at'] ?? time())), 0, 12);
+                $upTenant->execute([':tenant_id' => $tenantKey, ':id' => $u['id']]);
+            }
+
             // 1. Migrate posts table for Meta Insights
             $colsStmt = $pdo->query("PRAGMA table_info(posts)");
             $existingCols = [];
@@ -317,46 +336,45 @@ class Database {
             $stmt->execute([':uid' => $userId, ':key' => $k, ':value' => $v]);
         }
 
-        // Insert Default Accounts for user 1
-        if ($userId === 1) {
+        // Ensure initial starter account and workspace data exist for this user tenant
+        $accCheck = $pdo->prepare("SELECT COUNT(*) FROM accounts WHERE user_id = :uid");
+        $accCheck->execute([':uid' => $userId]);
+        if ((int)$accCheck->fetchColumn() === 0) {
+            $uStmt = $pdo->prepare("SELECT name FROM users WHERE id = :uid LIMIT 1");
+            $uStmt->execute([':uid' => $userId]);
+            $uRow = $uStmt->fetch();
+            $uName = $uRow['name'] ?? 'Mente Estoica Oficial';
+            $cleanHandle = strtolower(preg_replace('/[^a-zA-Z0-9_]/', '', str_replace(' ', '', $uName)));
+            $uHandle = '@' . (!empty($cleanHandle) ? $cleanHandle : 'usuario_' . $userId);
+
             $stmtAcc = $pdo->prepare("
-                INSERT OR IGNORE INTO accounts (id, user_id, platform, account_name, account_handle, page_id, avatar_url) 
-                VALUES (:id, 1, :platform, :name, :handle, :page_id, :avatar)
+                INSERT INTO accounts (user_id, platform, account_name, account_handle, page_id, avatar_url) 
+                VALUES (:uid, 'instagram', :name, :handle, :page_id, :avatar)
             ");
             
             $stmtAcc->execute([
-                ':id' => 1,
-                ':platform' => 'instagram',
-                ':name' => 'Mente Estoica Oficial',
-                ':handle' => '@mente.estoica',
-                ':page_id' => 'page_stoic_1001',
+                ':uid' => $userId,
+                ':name' => $uName,
+                ':handle' => $uHandle,
+                ':page_id' => 'page_user_' . $userId . '_ig',
                 ':avatar' => 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=96&h=96&fit=crop&crop=faces&auto=format&q=75'
             ]);
+            $accId = (int)$pdo->lastInsertId();
 
-            $stmtAcc->execute([
-                ':id' => 2,
-                ':platform' => 'facebook',
-                ':name' => 'Comunidad Estoica & Disciplina',
-                ':handle' => 'mente.estoica.fb',
-                ':page_id' => 'page_stoic_1002',
-                ':avatar' => 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=96&h=96&fit=crop&crop=faces&auto=format&q=75'
-            ]);
-
-            // Insert Initial Posts for user 1
+            // Insert Initial Starter Post for this user
             $stmtPost = $pdo->prepare("
-                INSERT OR IGNORE INTO posts (id, user_id, account_id, platform, external_post_id, caption, media_url, media_type, permalink, total_likes, total_comments, total_shares, impressions, reach, saved_count, engagement_rate) 
-                VALUES (:id, 1, :acc, :platform, :ext_id, :caption, :media, :mtype, :permalink, :likes, :comments, :shares, :impressions, :reach, :saved, :eng_rate)
+                INSERT INTO posts (user_id, account_id, platform, external_post_id, caption, media_url, media_type, permalink, total_likes, total_comments, total_shares, impressions, reach, saved_count, engagement_rate) 
+                VALUES (:uid, :acc, 'instagram', :ext_id, :caption, :media, :mtype, :permalink, :likes, :comments, :shares, :impressions, :reach, :saved, :eng_rate)
             ");
 
             $stmtPost->execute([
-                ':id' => 1,
-                ':acc' => 1,
-                ':platform' => 'instagram',
-                ':ext_id' => 'ig_post_9001',
+                ':uid' => $userId,
+                ':acc' => $accId,
+                ':ext_id' => 'ig_post_user_' . $userId,
                 ':caption' => '🏛️ "Tienes poder sobre tu mente, no sobre los acontecimientos externos. Comprende esto y encontrarás la fuerza." — Marco Aurelio. ⚔️ Cuando la vida se pone difícil, recuerda la Dicotomía del Control: no sufras por lo que no puedes cambiar, domina cómo reaccionas. ¿Qué situación hoy te está retando a aplicar esto? 👇 #Estoicismo #MarcoAurelio #Disciplina #Motivacion #PazMental',
                 ':media' => 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=480&h=320&fit=crop&auto=format&q=75',
                 ':mtype' => 'image',
-                ':permalink' => 'https://instagram.com/p/C_stoic01',
+                ':permalink' => 'https://instagram.com/p/C_welcome_' . $userId,
                 ':likes' => 3840,
                 ':comments' => 48,
                 ':shares' => 820,
@@ -365,18 +383,18 @@ class Database {
                 ':saved' => 1240,
                 ':eng_rate' => 8.42
             ]);
+            $postId = (int)$pdo->lastInsertId();
 
-            // Insert Initial Comments for user 1
+            // Insert Initial Starter Comment for this user
             $stmtComm = $pdo->prepare("
-                INSERT OR IGNORE INTO comments (id, user_id, post_id, platform, external_comment_id, author_name, author_handle, author_avatar, comment_text, sentiment, intent, highlight_score, is_highlighted, highlight_reason, likes_count, status)
-                VALUES (:id, 1, :post_id, :platform, :ext_id, :author, :handle, :avatar, :text, :sentiment, :intent, :score, :is_high, :reason, :likes, :status)
+                INSERT INTO comments (user_id, post_id, platform, external_comment_id, author_name, author_handle, author_avatar, comment_text, sentiment, intent, highlight_score, is_highlighted, highlight_reason, likes_count, status)
+                VALUES (:uid, :post_id, 'instagram', :ext_id, :author, :handle, :avatar, :text, :sentiment, :intent, :score, :is_high, :reason, :likes, :status)
             ");
 
             $stmtComm->execute([
-                ':id' => 1,
-                ':post_id' => 1,
-                ':platform' => 'instagram',
-                ':ext_id' => 'cmt_1001',
+                ':uid' => $userId,
+                ':post_id' => $postId,
+                ':ext_id' => 'cmt_user_' . $userId . '_1',
                 ':author' => 'Alejandro Morales',
                 ':handle' => '@alejandro_m',
                 ':avatar' => 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=96&h=96&fit=crop&crop=faces&auto=format&q=75',

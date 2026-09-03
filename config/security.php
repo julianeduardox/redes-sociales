@@ -5,16 +5,26 @@
  */
 
 if (session_status() === PHP_SESSION_NONE) {
-    // Secure session cookie settings
-    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
+    // Determine HTTPS status including proxy headers
+    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443)
+        || (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https');
+    
+    // Strict session security configurations
+    ini_set('session.use_strict_mode', '1');
+    ini_set('session.use_only_cookies', '1');
+    ini_set('session.cookie_httponly', '1');
+    if ($isHttps) {
+        ini_set('session.cookie_secure', '1');
+    }
     
     session_set_cookie_params([
-        'lifetime' => 0,
+        'lifetime' => 86400 * 7, // 7 days
         'path' => '/',
         'domain' => '',
         'secure' => $isHttps,
         'httponly' => true,
-        'samesite' => 'Lax'
+        'samesite' => 'Strict'
     ]);
     session_start();
 }

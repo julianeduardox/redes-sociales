@@ -21,6 +21,7 @@ try {
                     'authenticated' => true,
                     'user' => [
                         'id' => (int)$user['id'],
+                        'tenant_id' => $user['tenant_id'] ?? ('tnt_' . $user['id']),
                         'name' => htmlspecialchars($user['name'], ENT_QUOTES, 'UTF-8'),
                         'email' => htmlspecialchars($user['email'], ENT_QUOTES, 'UTF-8'),
                         'role' => $user['role'],
