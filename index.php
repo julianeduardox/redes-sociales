@@ -28,12 +28,12 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
   <title id="meta-page-title">XINDRO — El Sistema Operativo de IA para Creadores de Contenido</title>
-  <meta name="description" id="meta-page-desc" content="Automatiza tus redes sociales. Responde comentarios en piloto automático, analiza métricas de engagement para encontrar tu horario perfecto y publica en múltiples plataformas desde una sola API.">
+  <meta name="description" id="meta-page-desc" content="Automatiza tus redes sociales. Responde comentarios en piloto automático, analiza métricas de engagement para encontrar tu horario perfecto y escala tu presencia en Instagram y Facebook.">
   
   <!-- Open Graph / Meta -->
   <meta property="og:type" content="website">
   <meta property="og:title" content="XINDRO — Automatización Inteligente de Redes Sociales">
-  <meta property="og:description" content="Escala tu comunidad sin perder el toque humano con Auto-Engagement, Smart Timing y API para Creadores.">
+  <meta property="og:description" content="Escala tu comunidad sin perder el toque humano con Auto-Engagement, Smart Timing y Respuestas con IA.">
   <meta property="og:url" content="https://socialapi.turbogram.site/">
   
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
@@ -306,7 +306,6 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           <span class="inline-block w-2 h-2 rounded-full bg-brand-500 live-dot"></span>
         </a>
         <a href="#calculadora-roi" data-i18n="nav_roi" class="px-3 py-2 rounded-xl whitespace-nowrap hover:text-brand-600 hover:bg-slate-100/70 transition-colors">Calculadora</a>
-        <a href="#api-docs" data-i18n="nav_api" class="px-3 py-2 rounded-xl whitespace-nowrap hover:text-brand-600 hover:bg-slate-100/70 transition-colors">API Creadores</a>
         <a href="#precios" data-i18n="nav_pricing" class="px-3 py-2 rounded-xl whitespace-nowrap hover:text-brand-600 hover:bg-slate-100/70 transition-colors">Precios</a>
         <a href="#faq" data-i18n="nav_faq" class="px-3 py-2 rounded-xl whitespace-nowrap hover:text-brand-600 hover:bg-slate-100/70 transition-colors">FAQ</a>
       </nav>
@@ -389,10 +388,6 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           <span>🧮 Calculadora de Impacto</span>
           <span class="text-slate-400">→</span>
         </a>
-        <a href="#api-docs" onclick="MobileNav.close()" data-i18n="nav_api" class="p-2.5 rounded-xl hover:bg-brand-50 hover:text-brand-700 transition-colors flex items-center justify-between">
-          <span>🔌 API para Creadores</span>
-          <span class="text-slate-400">→</span>
-        </a>
         <a href="#precios" onclick="MobileNav.close()" data-i18n="nav_pricing" class="p-2.5 rounded-xl hover:bg-brand-50 hover:text-brand-700 transition-colors flex items-center justify-between">
           <span>💎 Precios y Planes</span>
           <span class="text-slate-400">→</span>
@@ -446,7 +441,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
 
       <!-- Subtitle (P) -->
       <p data-i18n="hero_sub" class="text-sm sm:text-lg md:text-xl text-slate-600 max-w-2xl mx-auto mb-8 sm:mb-10 leading-relaxed font-normal">
-        Responde comentarios en piloto automático, analiza métricas de engagement para encontrar tu horario perfecto y publica en múltiples plataformas desde una sola API.
+        Responde comentarios en piloto automático, analiza métricas de engagement para encontrar tu horario perfecto y escala tu presencia en Instagram y Facebook sin esfuerzo manual.
       </p>
 
       <!-- CTAs Button Group with Shimmer Glow -->
@@ -455,9 +450,9 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           <span data-i18n="hero_cta_sim">Prueba el Simulador</span>
           <span class="text-lg">✨</span>
         </a>
-        <a href="#api-docs" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3.5 sm:px-8 sm:py-4 rounded-xl text-sm sm:text-base font-bold text-slate-700 bg-white border border-slate-200 hover:border-brand-300 hover:bg-slate-50 hover:text-brand-700 shadow-sm secondary-btn">
-          <span data-i18n="hero_cta_api">Documentación API</span>
-          <span>&lt;/&gt;</span>
+        <a href="#calculadora-roi" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3.5 sm:px-8 sm:py-4 rounded-xl text-sm sm:text-base font-bold text-slate-700 bg-white border border-slate-200 hover:border-brand-300 hover:bg-slate-50 hover:text-brand-700 shadow-sm secondary-btn">
+          <span data-i18n="hero_cta_calc">Calcular Impacto ROI</span>
+          <span>📊</span>
         </a>
       </div>
 
@@ -735,17 +730,17 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         <div class="rounded-2xl bg-slatecard border border-slate-200/90 p-6 sm:p-7 hover:border-brand-400 hover:shadow-elevated-card transition-all duration-300 flex flex-col justify-between group">
           <div>
             <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-xl font-bold mb-4 sm:mb-5 group-hover:scale-110 transition-transform">
-              🔌
+              🎯
             </div>
             <h3 data-i18n="why_p5_t" class="text-base sm:text-lg font-bold text-midnight mb-2">
-              API REST & Webhooks para Desarrolladores
+              Detección de Leads & Filtro Anti-Spam
             </h3>
             <p data-i18n="why_p5_d" class="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              Integra el motor de engagement en tus propios bots, herramientas de marketing o SaaS con endpoints limpios en cURL, JS, PHP y Python.
+              Identifica automáticamente intenciones de compra, dudas frecuentes de clientes y filtra comentarios repetitivos o spam para proteger tu reputación.
             </p>
           </div>
           <div class="mt-4 pt-3 border-t border-slate-200 text-xs font-bold text-indigo-700" data-i18n="why_p5_tag">
-            ✔ Integración en 5 líneas de código
+            ✔ Comunidad protegida y fidelizada
           </div>
         </div>
 
@@ -1006,142 +1001,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
     </div>
   </section>
 
-  <!-- ========================================================================= -->
-  <!-- 8. SECCIÓN DE API PARA CREADORES & DESARROLLADORES -->
-  <!-- ========================================================================= -->
-  <section id="api-docs" class="py-16 sm:py-24 dark-mesh-bg bg-slate-900 text-white">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-      
-      <div class="text-center max-w-3xl mx-auto mb-12 sm:mb-16">
-        <span data-i18n="api_badge" class="text-xs font-extrabold uppercase tracking-wider text-brand-400 bg-brand-950/80 px-3.5 py-1 rounded-full border border-brand-500/40">
-          Developer & Creator API
-        </span>
-        <h2 data-i18n="api_h2" class="text-2xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight mt-3 sm:mt-4 mb-3 sm:mb-4">
-          Ofrece la potencia de XINDRO dentro de tus propias herramientas.
-        </h2>
-        <p data-i18n="api_sub" class="text-xs sm:text-base md:text-lg text-slate-300 font-normal">
-          Endpoints RESTful ultrarrápidos, webhooks criptográficos verificados y SDKs listos para integrar en tus bots, paneles o SaaS con 5 líneas de código.
-        </p>
-      </div>
 
-      <div class="rounded-2xl bg-slate-950 border border-slate-800 shadow-2xl overflow-hidden mb-8 sm:mb-12">
-        
-        <div class="bg-slate-900 px-4 py-3 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
-          <div class="flex items-center gap-2">
-            <div class="w-2.5 h-2.5 rounded-full bg-rose-500"></div>
-            <div class="w-2.5 h-2.5 rounded-full bg-amber-500"></div>
-            <div class="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
-            <span class="text-[11px] sm:text-xs font-mono text-slate-400 ml-1">POST /api/agent.php</span>
-          </div>
-
-          <div class="flex items-center gap-1 bg-slate-950/70 p-1 rounded-lg border border-slate-800 text-xs font-mono overflow-x-auto">
-            <button type="button" onclick="ApiTabs.switch('curl')" id="tab-curl" class="px-2.5 py-1 rounded bg-brand-600 text-white font-bold text-xs">cURL</button>
-            <button type="button" onclick="ApiTabs.switch('js')" id="tab-js" class="px-2.5 py-1 rounded text-slate-400 hover:text-white text-xs">JS</button>
-            <button type="button" onclick="ApiTabs.switch('php')" id="tab-php" class="px-2.5 py-1 rounded text-slate-400 hover:text-white text-xs">PHP</button>
-            <button type="button" onclick="ApiTabs.switch('python')" id="tab-python" class="px-2.5 py-1 rounded text-slate-400 hover:text-white text-xs">Python</button>
-          </div>
-        </div>
-
-        <div class="p-4 sm:p-6 relative">
-          <button type="button" onclick="ApiTabs.copyCode()" id="btn-copy-code" class="absolute top-3 right-3 sm:top-4 sm:right-4 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-mono flex items-center gap-1 transition-colors">
-            <span data-i18n="api_btn_copy">📋 Copiar</span>
-          </button>
-
-          <pre id="code-curl" class="text-xs sm:text-sm font-mono text-slate-200 overflow-x-auto leading-relaxed pt-6 sm:pt-0"><code>curl -X POST https://socialapi.turbogram.site/api/agent.php \
-  -H "Content-Type: application/json" \
-  -H "X-CSRF-Token: tu_api_token" \
-  -d '{
-    "action": "test_voice_playground",
-    "author_name": "Carlos Digital",
-    "comment_text": "Me encanta tu contenido, ¿cómo forjar disciplina diaria?",
-    "brand_tone": "mentor",
-    "brand_warmth_level": 85,
-    "brand_depth_level": 80
-  }'</code></pre>
-
-          <pre id="code-js" class="hidden text-xs sm:text-sm font-mono text-slate-200 overflow-x-auto leading-relaxed pt-6 sm:pt-0"><code>const response = await fetch('https://socialapi.turbogram.site/api/agent.php', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'X-CSRF-Token': 'TU_API_TOKEN_AQUI'
-  },
-  body: JSON.stringify({
-    action: 'generate_replies',
-    author_name: 'Carlos Digital',
-    comment_text: 'Me encanta tu contenido, ¿cómo forjar disciplina diaria?',
-    brand_tone: 'mentor'
-  })
-});
-
-const data = await response.json();
-console.log('Respuesta Generada:', data.replies.wisdom);</code></pre>
-
-          <pre id="code-php" class="hidden text-xs sm:text-sm font-mono text-slate-200 overflow-x-auto leading-relaxed pt-6 sm:pt-0"><code>&lt;?php
-$payload = json_encode([
-    'action' => 'generate_replies',
-    'author_name' => 'Carlos Digital',
-    'comment_text' => 'Me encanta tu contenido, ¿cómo forjar disciplina diaria?',
-    'brand_tone' => 'mentor'
-]);
-
-$ch = curl_init('https://socialapi.turbogram.site/api/agent.php');
-curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
-curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type:application/json', 'X-CSRF-Token: TU_API_TOKEN']);
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-$result = json_decode(curl_exec($ch), true);
-curl_close($ch);
-
-echo $result['replies']['wisdom'];
-</code></pre>
-
-          <pre id="code-python" class="hidden text-xs sm:text-sm font-mono text-slate-200 overflow-x-auto leading-relaxed pt-6 sm:pt-0"><code>import requests
-
-url = "https://socialapi.turbogram.site/api/agent.php"
-headers = {
-    "Content-Type": "application/json",
-    "X-CSRF-Token": "TU_API_TOKEN"
-}
-payload = {
-    "action": "generate_replies",
-    "author_name": "Carlos Digital",
-    "comment_text": "Me encanta tu contenido, ¿cómo forjar disciplina diaria?",
-    "brand_tone": "mentor"
-}
-
-res = requests.post(url, json=payload, headers=headers).json()
-print("Respuesta IA:", res["replies"]["wisdom"])
-</code></pre>
-        </div>
-
-        <div class="bg-slate-900/80 px-4 sm:px-6 py-3 sm:py-4 border-t border-slate-800 flex flex-wrap items-center justify-between text-xs font-mono text-slate-400 gap-2">
-          <div class="flex items-center gap-3">
-            <span class="text-emerald-400 font-bold">Status: 200 OK</span>
-            <span>Latency: 142ms</span>
-          </div>
-          <span class="text-brand-400 font-bold">JSON Response Ready</span>
-        </div>
-
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 text-sm">
-        <div class="p-5 rounded-xl bg-slate-950/60 border border-slate-800">
-          <div class="text-brand-400 font-bold text-base sm:text-lg mb-2" data-i18n="api_f1_t">⚡ Webhooks en Tiempo Real</div>
-          <p class="text-slate-400 text-xs leading-relaxed" data-i18n="api_f1_d">Recibe y procesa comentarios de Instagram y Facebook en milisegundos con verificación HMAC-SHA256.</p>
-        </div>
-
-        <div class="p-5 rounded-xl bg-slate-950/60 border border-slate-800">
-          <div class="text-blue-400 font-bold text-base sm:text-lg mb-2" data-i18n="api_f2_t">🛡️ Multi-Tenant & Aislamiento</div>
-          <p class="text-slate-400 text-xs leading-relaxed" data-i18n="api_f2_d">Cada usuario y creador cuenta con su propio espacio aislado de datos y rate limiting anti-abusos.</p>
-        </div>
-
-        <div class="p-5 rounded-xl bg-slate-950/60 border border-slate-800">
-          <div class="text-emerald-400 font-bold text-base sm:text-lg mb-2" data-i18n="api_f3_t">🔌 Integración con Gemini & OpenAI</div>
-          <p class="text-slate-400 text-xs leading-relaxed" data-i18n="api_f3_d">Conecta tus propias claves o utiliza nuestro motor heurístico local sin coste de tokens.</p>
-        </div>
-      </div>
-
-    </div>
-  </section>
 
   <!-- ========================================================================= -->
   <!-- 9. PRECIOS & PLANES -->
@@ -1351,7 +1211,7 @@ print("Respuesta IA:", res["replies"]["wisdom"])
             <li><a href="#simulador" data-i18n="foot_c2_2" class="hover:text-white transition-colors">Inspiración</a></li>
             <li><a href="#por-que-xindro" data-i18n="nav_why" class="hover:text-white transition-colors">¿Por qué Xindro?</a></li>
             <li><a href="#calculadora-roi" data-i18n="nav_roi" class="hover:text-white transition-colors">Calculadora</a></li>
-            <li><a href="#api-docs" data-i18n="foot_c2_7" class="hover:text-white transition-colors">Integraciones</a></li>
+            <li><a href="#funciones" data-i18n="nav_products" class="hover:text-white transition-colors">Funciones</a></li>
           </ul>
         </div>
 
@@ -1362,7 +1222,7 @@ print("Respuesta IA:", res["replies"]["wisdom"])
             <li><a href="#por-que-xindro" data-i18n="foot_c3_1" class="hover:text-white transition-colors">Acerca de</a></li>
             <li><a href="login.php" data-i18n="foot_c3_2" class="hover:text-white transition-colors">Carreras</a></li>
             <li><a href="login.php" data-i18n="foot_c3_3" class="hover:text-white transition-colors">Equipo</a></li>
-            <li><a href="#api-docs" data-i18n="foot_c3_6" class="hover:text-white transition-colors">Docs Desarrolladores</a></li>
+            <li><a href="#faq" data-i18n="nav_faq" class="hover:text-white transition-colors">Preguntas Frecuentes</a></li>
             <li><a href="privacy-policy.php" data-i18n="foot_c3_7" class="hover:text-white transition-colors">Seguridad</a></li>
           </ul>
         </div>
@@ -1593,7 +1453,6 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           nav_why: "¿Por qué Xindro?",
           nav_simulator: "Simulador",
           nav_roi: "Calculadora",
-          nav_api: "API Creadores",
           nav_pricing: "Precios",
           nav_faq: "FAQ",
           nav_login: "Iniciar sesión",
@@ -1602,9 +1461,8 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           hero_badge: "El sistema operativo de IA para creadores de contenido",
           hero_h1_p1: "Automatiza tus redes sociales.",
           hero_h1_p2: "Escala tu comunidad sin perder el toque humano.",
-          hero_sub: "Responde comentarios en piloto automático, analiza métricas de engagement para encontrar tu horario perfecto y publica en múltiples plataformas desde una sola API.",
+          hero_sub: "Responde comentarios en piloto automático, analiza métricas de engagement para encontrar tu horario perfecto y publica en múltiples plataformas.",
           hero_cta_sim: "Prueba el Simulador",
-          hero_cta_api: "Documentación API",
           hero_card_title: "XINDRO Live Copilot — Flujo en Tiempo Real",
           hero_card_status: "Meta Webhook Activo",
           hero_card_time: "Instagram • Hace 2 seg",
@@ -1620,7 +1478,7 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           stat_1: "Comentarios Respondidos",
           stat_2: "Aumento en Engagement",
           stat_3: "Precisión de Voz Humana",
-          stat_4: "Latencia de API en Vivo",
+          stat_4: "Latencia de Sistema en Vivo",
           why_badge: "Diferenciales Reales",
           why_h2: "¿Por qué los creadores y agencias eligen Xindro?",
           why_sub: "Diseñado desde el código para responder en segundos, proteger tu reputación y maximizar el algoritmo sin sonar como un robot.",
@@ -1636,9 +1494,9 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           why_p4_t: "Smart Timing Basado en Datos",
           why_p4_d: "Analiza los patrones de actividad real de tu comunidad para decirte la hora exacta en la que obtendrás mayor alcance y guardados.",
           why_p4_tag: "✔ +142% de alcance orgánico",
-          why_p5_t: "API REST & Webhooks para Desarrolladores",
-          why_p5_d: "Integra el motor de engagement en tus propios bots, herramientas de marketing o SaaS con endpoints limpios en cURL, JS, PHP y Python.",
-          why_p5_tag: "✔ Integración en 5 líneas de código",
+          why_p5_t: "Motor de Engagement Avanzado",
+          why_p5_d: "Integra el motor de engagement en tus propios procesos de marketing con endpoints limpios y optimizados para alto rendimiento.",
+          why_p5_tag: "✔ Flujo de trabajo optimizado",
           why_p6_t: "Ahorra +35 Horas de Trabajo al Mes",
           why_p6_d: "Elimina el trabajo repetitivo de responder dudas frecuentes y aprovecha ese tiempo para crear contenido que mueva tu negocio.",
           why_p6_tag: "✔ Enfoque 100% en crear",
@@ -1671,16 +1529,6 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           sim_res_title: "Resultado Generado",
           sim_autopilot_ok: "✔ Apto para Autopilot en Instagram y Facebook",
           sim_btn_copy: "📋 Copiar",
-          api_badge: "Developer & Creator API",
-          api_h2: "Ofrece la potencia de XINDRO dentro de tus propias herramientas.",
-          api_sub: "Endpoints RESTful ultrarrápidos, webhooks criptográficos verificados y SDKs listos para integrar en tus bots, paneles o SaaS con 5 líneas de código.",
-          api_btn_copy: "📋 Copiar",
-          api_f1_t: "⚡ Webhooks en Tiempo Real",
-          api_f1_d: "Recibe y procesa comentarios de Instagram y Facebook en milisegundos con verificación HMAC-SHA256.",
-          api_f2_t: "🛡️ Multi-Tenant & Aislamiento",
-          api_f2_d: "Cada usuario y creador cuenta con su propio espacio aislado de datos y rate limiting anti-abusos.",
-          api_f3_t: "🔌 Integración con Gemini & OpenAI",
-          api_f3_d: "Conecta tus propias claves o utiliza nuestro motor heurístico local sin coste de tokens.",
           price_badge: "Planes Transparentes",
           price_h2: "Comienza gratis y escala con tu comunidad.",
           price_sub: "Sin contratos forzosos. Cancela en cualquier momento.",
@@ -1690,7 +1538,7 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           plan1_f1: "Hasta 1 cuenta de Instagram/Facebook",
           plan1_f2: "100 respuestas automáticas / mes",
           plan1_f3: "Asistente Copilot IA",
-          plan1_f4: "Acceso a API de desarrolladores",
+          plan1_f4: "Acceso al motor base",
           plan1_btn: "Crear Cuenta Gratis",
           plan2_badge: "Más Popular",
           plan2_t: "Creador Pro",
@@ -1702,13 +1550,13 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           plan2_f4: "Smart Timing & Analíticas de Engagement",
           plan2_f5: "Soporte prioritario 24/7",
           plan2_btn: "Comenzar con Pro",
-          plan3_t: "API & Agencias",
-          plan3_d: "Para desarrolladores y agencias de marketing.",
+          plan3_t: "Agencias",
+          plan3_d: "Para equipos de marketing y gestión de marcas.",
           plan3_p: "/ mes",
-          plan3_f1: "Acceso total a REST API & Webhooks",
+          plan3_f1: "Gestión de cuentas centralizada",
           plan3_f2: "Gestión de hasta 25 clientes aislados",
-          plan3_f3: "100,000 llamadas a API incluidas / mes",
-          plan3_f4: "Marca blanca & Webhook dedicado",
+          plan3_f3: "Respuestas automáticas ilimitadas",
+          plan3_f4: "Marca blanca & Soporte dedicado",
           plan3_btn: "Acceso para Agencias",
           faq_badge: "Respuestas Claras",
           faq_h2: "Preguntas Frecuentes",
@@ -1717,21 +1565,19 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           faq_a1: "Totalmente seguro. Xindro opera exclusivamente a través de la API oficial de Meta Graph con permisos autorizados y webhooks verificados. No requerimos tu contraseña de Instagram y no utilizamos navegadores automatizados o emuladores no oficiales.",
           faq_q2: "¿La IA puede responder cosas fuera de lugar o inventar información?",
           faq_a2: "No. Cuentas con un calibrador de voz de marca donde defines tus principios, tono y longitud. Además, dispones del <strong>Modo Copilot</strong> que te muestra sugerencias para que las apruebes con un solo clic antes de que se publiquen, dándote control absoluto.",
-          faq_q3: "¿Cómo puedo integrar la API en mis propias herramientas o software?",
-          faq_a3: "Nuestra API RESTful recibe peticiones POST en formato JSON y devuelve las respuestas contextualizadas en menos de 180ms. Puedes enviar comentarios desde cualquier backend en Python, Node.js, PHP o cURL usando tu API Token privado.",
+          faq_q3: "¿Puedo conectar varias cuentas al mismo tiempo?",
+          faq_a3: "Sí, puedes conectar y gestionar múltiples cuentas de Instagram y Páginas de Facebook de forma centralizada.",
           faq_q4: "¿Puedo empezar gratis sin ingresar tarjeta de crédito?",
           faq_a4: "Sí. El plan Creador Starter es 100% gratuito e incluye hasta 100 respuestas al mes y el asistente Copilot para que puedas probar el impacto en tu comunidad antes de decidir actualizar.",
-          foot_brand_desc: "El sistema operativo de IA para creadores y agencias de redes sociales. Respuestas en tiempo real, Smart Timing y API oficial.",
+          foot_brand_desc: "El sistema operativo de IA para creadores y agencias de redes sociales. Respuestas en tiempo real, Smart Timing y sincronización oficial.",
           foot_status_pill: "Meta API 100% Operativa",
           foot_c2_t: "Producto",
           foot_c2_1: "Precios",
           foot_c2_2: "Inspiración",
-          foot_c2_7: "Integraciones",
           foot_c3_t: "Empresa",
           foot_c3_1: "Acerca de",
           foot_c3_2: "Carreras",
           foot_c3_3: "Equipo",
-          foot_c3_6: "Docs Desarrolladores",
           foot_c3_7: "Seguridad",
           foot_c4_t: "Redes sociales",
           foot_c5_t: "Información legal",
@@ -1739,7 +1585,7 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           cookie_title: "Sobre nuestras cookies",
           cookie_desc_1: "Utilizamos cookies y tecnologías similares según se establece en nuestra",
           cookie_link: "Política de Cookies",
-          cookie_desc_2: "Al hacer clic en \"Aceptar Todo\", aceptas el uso de cookies para personalizar tu experiencia, optimizar la IA y analizar el tráfico de la API.",
+          cookie_desc_2: "Al hacer clic en \"Aceptar Todo\", aceptas el uso de cookies para personalizar tu experiencia, optimizar la IA y analizar el tráfico.",
           cookie_btn_settings: "Configurar Cookies",
           cookie_btn_reject: "Rechazar Todo",
           cookie_btn_accept: "Aceptar Todo",
@@ -1750,7 +1596,7 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           cookie_cat1_status: "Siempre Activas",
           cookie_cat1_d: "Requeridas para la autenticación de sesión, tokens de seguridad CSRF y protección de la infraestructura contra ataques.",
           cookie_cat2_t: "Cookies de Rendimiento & Analítica",
-          cookie_cat2_d: "Nos permiten medir la velocidad de respuesta de la IA, uso de endpoints y optimizar la experiencia de los creadores.",
+          cookie_cat2_d: "Nos permiten medir la velocidad de respuesta de la IA y optimizar la experiencia de los creadores.",
           cookie_cat3_t: "Cookies de Personalización & Idioma",
           cookie_cat3_d: "Recuerdan tus preferencias de idioma (Español, Inglés, Portugués), tono predeterminado y configuraciones del simulador.",
           modal_pref_save: "Guardar Mis Preferencias"
@@ -1758,12 +1604,11 @@ print("Respuesta IA:", res["replies"]["wisdom"])
 
         en: {
           page_title: "XINDRO — The AI Operating System for Content Creators",
-          page_desc: "Automate your social media. Reply to comments on autopilot, analyze engagement metrics to find your perfect posting time, and publish across multiple platforms from a single API.",
+          page_desc: "Automate your social media. Reply to comments on autopilot, analyze engagement metrics to find your perfect posting time, and scale your presence across platforms.",
           nav_products: "Products",
           nav_why: "Why Xindro?",
           nav_simulator: "Simulator",
           nav_roi: "Calculator",
-          nav_api: "Creator API",
           nav_pricing: "Pricing",
           nav_faq: "FAQ",
           nav_login: "Log in",
@@ -1772,9 +1617,8 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           hero_badge: "The AI operating system for content creators",
           hero_h1_p1: "Automate your social media.",
           hero_h1_p2: "Scale your community without losing the human touch.",
-          hero_sub: "Reply to comments on autopilot, analyze engagement metrics to find your perfect posting time, and publish across multiple platforms from a single API.",
+          hero_sub: "Reply to comments on autopilot, analyze engagement metrics to find your perfect posting time, and publish across multiple platforms seamlessly.",
           hero_cta_sim: "Try the Simulator",
-          hero_cta_api: "API Documentation",
           hero_card_title: "XINDRO Live Copilot — Real-Time Flow",
           hero_card_status: "Meta Webhook Active",
           hero_card_time: "Instagram • 2s ago",
@@ -1790,7 +1634,7 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           stat_1: "Comments Replied",
           stat_2: "Increase in Engagement",
           stat_3: "Human Voice Accuracy",
-          stat_4: "Live API Latency",
+          stat_4: "Live System Latency",
           why_badge: "Real Differentials",
           why_h2: "Why do creators and agencies choose Xindro?",
           why_sub: "Architected from code to reply in seconds, protect your brand reputation, and win the algorithm without sounding robotic.",
@@ -1806,9 +1650,9 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           why_p4_t: "Data-Driven Smart Timing",
           why_p4_d: "Analyzes actual audience activity to predict the exact second your post will receive peak reach and saves.",
           why_p4_tag: "✔ +142% organic reach boost",
-          why_p5_t: "REST API & Webhooks for Developers",
-          why_p5_d: "Embed the engagement engine into your bots, CRMs, or SaaS via clean JSON endpoints in cURL, JS, PHP, and Python.",
-          why_p5_tag: "✔ Ready in 5 lines of code",
+          why_p5_t: "Advanced Engagement Engine",
+          why_p5_d: "Embed the engagement engine into your own marketing workflows with clean, high-performance API endpoints.",
+          why_p5_tag: "✔ Optimized workflows",
           why_p6_t: "Save +35 Hours of Manual Work / Month",
           why_p6_d: "Eliminate repetitive comment triage and spend your valuable energy on creating high-impact content.",
           why_p6_tag: "✔ 100% focus on creating",
@@ -1841,16 +1685,6 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           sim_res_title: "Result Generated",
           sim_autopilot_ok: "✔ Eligible for Autopilot on Instagram and Facebook",
           sim_btn_copy: "📋 Copy",
-          api_badge: "Developer & Creator API",
-          api_h2: "Deliver the power of XINDRO inside your own tools.",
-          api_sub: "Ultra-fast RESTful endpoints, cryptographic verified webhooks, and SDKs ready to integrate in your bots, dashboards, or SaaS in 5 lines of code.",
-          api_btn_copy: "📋 Copy",
-          api_f1_t: "⚡ Real-Time Webhooks",
-          api_f1_d: "Ingest and process Instagram & Facebook comments in milliseconds with HMAC-SHA256 signatures.",
-          api_f2_t: "🛡️ Multi-Tenant & Isolation",
-          api_f2_d: "Each creator and client enjoys isolated storage, dedicated configs, and anti-abuse rate limiting.",
-          api_f3_t: "🔌 Gemini & OpenAI Integration",
-          api_f3_d: "Plug in your own API keys or leverage our zero-token local heuristic engine at no cost.",
           price_badge: "Transparent Pricing",
           price_h2: "Start free and scale with your audience.",
           price_sub: "No lock-in contracts. Cancel anytime.",
@@ -1860,7 +1694,7 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           plan1_f1: "Up to 1 Instagram/Facebook account",
           plan1_f2: "100 automated replies / month",
           plan1_f3: "AI Copilot Assistant",
-          plan1_f4: "Developer API access",
+          plan1_f4: "Base engine access",
           plan1_btn: "Create Free Account",
           plan2_badge: "Most Popular",
           plan2_t: "Creator Pro",
@@ -1872,13 +1706,13 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           plan2_f4: "Smart Timing & Engagement Analytics",
           plan2_f5: "24/7 Priority Support",
           plan2_btn: "Get Started with Pro",
-          plan3_t: "API & Agencies",
-          plan3_d: "For developers and marketing agencies.",
+          plan3_t: "Agencies",
+          plan3_d: "For content teams and marketing agencies.",
           plan3_p: "/ month",
-          plan3_f1: "Full REST API & Webhooks access",
+          plan3_f1: "Centralized account management",
           plan3_f2: "Manage up to 25 isolated client tenants",
-          plan3_f3: "100,000 API calls included / month",
-          plan3_f4: "White-label & Dedicated Webhook",
+          plan3_f3: "Unlimited automated replies",
+          plan3_f4: "White-label & Dedicated support",
           plan3_btn: "Agency Access",
           faq_badge: "Clear Answers",
           faq_h2: "Frequently Asked Questions",
@@ -1887,21 +1721,19 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           faq_a1: "100% safe. Xindro operates strictly through official Meta Graph API endpoints with verified webhooks and granted permissions. We never ask for your account password or use unofficial scrapers.",
           faq_q2: "Can the AI hallucinate or post inappropriate replies?",
           faq_a2: "No. You have a Brand Voice Calibrator to establish guidelines and tone. You also have <strong>Copilot Mode</strong>, which generates suggested replies for 1-click human approval before posting.",
-          faq_q3: "How do I integrate the API into my own software or bot?",
-          faq_a3: "Our RESTful JSON API processes POST requests in under 180ms. You can send comments from any backend in Python, Node.js, PHP, or cURL using your private API token.",
+          faq_q3: "Can I connect multiple accounts simultaneously?",
+          faq_a3: "Yes, you can manage multiple Instagram accounts and Facebook Pages from a single centralized dashboard.",
           faq_q4: "Can I start for free without a credit card?",
           faq_a4: "Yes! The Creator Starter plan is 100% free with up to 100 automated replies per month and Copilot assistant included.",
-          foot_brand_desc: "The AI operating system for creators and social media agencies. Real-time replies, Smart Timing, and official API.",
+          foot_brand_desc: "The AI operating system for creators and social media agencies. Real-time replies, Smart Timing, and official synchronization.",
           foot_status_pill: "Meta API 100% Operational",
           foot_c2_t: "Product",
           foot_c2_1: "Pricing",
           foot_c2_2: "Inspiration",
-          foot_c2_7: "Integrations",
           foot_c3_t: "Company",
           foot_c3_1: "About",
           foot_c3_2: "Careers",
           foot_c3_3: "Team",
-          foot_c3_6: "Developer Docs",
           foot_c3_7: "Security",
           foot_c4_t: "Socials",
           foot_c5_t: "Legal",
@@ -1909,7 +1741,7 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           cookie_title: "About our cookies",
           cookie_desc_1: "We use cookies and similar technologies as set out in our",
           cookie_link: "Cookie Notice",
-          cookie_desc_2: "By clicking \"Accept All\", you agree to our use of optional cookies to personalize your experience, optimize AI inference, and analyze API traffic.",
+          cookie_desc_2: "By clicking \"Accept All\", you agree to our use of optional cookies to personalize your experience and optimize the platform.",
           cookie_btn_settings: "Cookies Settings",
           cookie_btn_reject: "Reject All",
           cookie_btn_accept: "Accept All",
@@ -1920,7 +1752,7 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           cookie_cat1_status: "Always Active",
           cookie_cat1_d: "Required for session authentication, CSRF security tokens, and infrastructure attack defense.",
           cookie_cat2_t: "Performance & Analytics Cookies",
-          cookie_cat2_d: "Allow us to monitor AI response latency, endpoint usage, and optimize creator workflows.",
+          cookie_cat2_d: "Allow us to monitor AI response latency and optimize creator workflows.",
           cookie_cat3_t: "Personalization & Language Cookies",
           cookie_cat3_d: "Remember your language preferences (Spanish, English, Portuguese), default tone, and simulator presets.",
           modal_pref_save: "Save My Preferences"
@@ -1928,12 +1760,11 @@ print("Respuesta IA:", res["replies"]["wisdom"])
 
         pt: {
           page_title: "XINDRO — O Sistema Operacional de IA para Criadores de Conteúdo",
-          page_desc: "Automatize suas redes sociais. Responda a comentários no piloto automático, analise métricas de engajamento para encontrar seu horário perfeito e publique em várias plataformas a partir de uma única API.",
+          page_desc: "Automatize suas redes sociais. Responda a comentários no piloto automático, analise métricas de engajamento para encontrar seu horário perfeito e escale sua presença.",
           nav_products: "Produtos",
           nav_why: "Por que a Xindro?",
           nav_simulator: "Simulador",
           nav_roi: "Calculadora",
-          nav_api: "API Criadores",
           nav_pricing: "Preços",
           nav_faq: "FAQ",
           nav_login: "Entrar",
@@ -1942,9 +1773,8 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           hero_badge: "O sistema operacional de IA para criadores de conteúdo",
           hero_h1_p1: "Automatize suas redes sociais.",
           hero_h1_p2: "Escale sua comunidade sem perder o toque humano.",
-          hero_sub: "Responda a comentários no piloto automático, analise métricas de engajamento para encontrar seu horário perfeito e publique em várias plataformas a partir de uma única API.",
+          hero_sub: "Responda a comentários no piloto automático, analise métricas de engajamento para encontrar seu horário perfeito e publique em várias plataformas.",
           hero_cta_sim: "Testar o Simulador",
-          hero_cta_api: "Documentação da API",
           hero_card_title: "XINDRO Live Copilot — Fluxo em Tempo Real",
           hero_card_status: "Meta Webhook Ativo",
           hero_card_time: "Instagram • Há 2 seg",
@@ -1960,7 +1790,7 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           stat_1: "Comentários Respondidos",
           stat_2: "Aumento no Engajamento",
           stat_3: "Precisão de Voz Humana",
-          stat_4: "Latência de API em Tempo Real",
+          stat_4: "Latência de Sistema em Vivo",
           why_badge: "Diferenciais Reais",
           why_h2: "Por que criadores e agências escolhem a Xindro?",
           why_sub: "Projetado desde o código para responder em segundos, proteger sua marca e vencer o algoritmo sem soar artificial.",
@@ -1975,10 +1805,10 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           why_p3_tag: "✔ Segurança e conformidade oficial",
           why_p4_t: "Smart Timing Baseado em Dados",
           why_p4_d: "Analisa a atividade real da sua comunidade para indicar o segundo exato de postagem com maior alcance.",
-          why_p4_tag: "✔ +142% de alcance orgânico",
-          why_p5_t: "REST API & Webhooks para Desenvolvedores",
-          why_p5_d: "Integre o motor de engajamento em seus bots ou SaaS com endpoints simples em cURL, JS, PHP e Python.",
-          why_p5_tag: "✔ Pronto em 5 linhas de código",
+          why_p4_tag: "✔ +142% de alcance orgánico",
+          why_p5_t: "Motor de Engagement Avançado",
+          why_p5_d: "Integre o motor de engajamento em seus próprios fluxos de marketing com endpoints simples e de alto desempenho.",
+          why_p5_tag: "✔ Fluxos de trabalho otimizados",
           why_p6_t: "Economize +35 Horas de Trabalho por Mês",
           why_p6_d: "Elimine o trabalho repetitivo de responder dúvidas frequentes e foque em criar conteúdo de alto impacto.",
           why_p6_tag: "✔ 100% de foco na criação",
@@ -2011,16 +1841,6 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           sim_res_title: "Resultado Gerado",
           sim_autopilot_ok: "✔ Apto para Autopilot no Instagram e Facebook",
           sim_btn_copy: "📋 Copiar",
-          api_badge: "Developer & Creator API",
-          api_h2: "Ofereça o poder do XINDRO dentro das suas próprias ferramentas.",
-          api_sub: "Endpoints RESTful ultrarrápidos, webhooks criptográficos verificados e SDKs prontos para integrar em seus bots, painéis ou SaaS em 5 linhas de código.",
-          api_btn_copy: "📋 Copiar",
-          api_f1_t: "⚡ Webhooks em Tempo Real",
-          api_f1_d: "Receba e processe comentários do Instagram e Facebook em milissegundos com verificação HMAC-SHA256.",
-          api_f2_t: "🛡️ Multi-Tenant & Isolamento",
-          api_f2_d: "Cada criador e cliente possui seu próprio espaço isolado de dados e rate limiting anti-abusos.",
-          api_f3_t: "🔌 Integração com Gemini & OpenAI",
-          api_f3_d: "Conecte suas próprias chaves ou use nosso motor heurístico local sem custo de tokens.",
           price_badge: "Planos Transparentes",
           price_h2: "Comece grátis e escale com sua comunidade.",
           price_sub: "Sem contratos obrigatórios. Cancele quando quiser.",
@@ -2030,67 +1850,65 @@ print("Respuesta IA:", res["replies"]["wisdom"])
           plan1_f1: "Até 1 conta do Instagram/Facebook",
           plan1_f2: "100 respostas automáticas / mês",
           plan1_f3: "Assistente Copilot IA",
-          plan1_f4: "Acesso à API de desenvolvedores",
+          plan1_f4: "Acesso ao motor base",
           plan1_btn: "Criar Conta Grátis",
           plan2_badge: "Mais Popular",
           plan2_t: "Criador Pro",
-          plan2_d: "Para criadores e marcas em rápido crescimento.",
+          plan2_d: "Para marcas e criadores em rápido crescimento.",
           plan2_p: "/ mês",
           plan2_f1: "Contas ilimitadas da Meta",
-          plan2_f2: "Respostas ilimitadas em Autopilot",
+          plan2_f2: "Respostas ilimitadas no Autopilot",
           plan2_f3: "Calibrador de Tom de Marca personalizado",
           plan2_f4: "Smart Timing & Métricas de Engajamento",
           plan2_f5: "Suporte prioritário 24/7",
           plan2_btn: "Começar com Pro",
-          plan3_t: "API & Agencias",
-          plan3_d: "Para desenvolvedores e agências de marketing.",
+          plan3_t: "Agências",
+          plan3_d: "Para equipes de marketing e gestão de marcas.",
           plan3_p: "/ mês",
-          plan3_f1: "Acesso total à REST API & Webhooks",
+          plan3_f1: "Gerenciamento centralizado de contas",
           plan3_f2: "Gerenciamento de até 25 clientes isolados",
-          plan3_f3: "100.000 chamadas de API incluídas / mês",
-          plan3_f4: "Marca branca & Webhook dedicado",
-          plan3_btn: "Acesso para Agencias",
+          plan3_f3: "Respostas automáticas ilimitadas",
+          plan3_f4: "Marca branca & Suporte dedicado",
+          plan3_btn: "Acesso para Agências",
           faq_badge: "Respostas Claras",
-          faq_h2: "Perguntas Frecuentes",
+          faq_h2: "Perguntas Frequentes",
           faq_sub: "Tudo o que você precisa saber antes de automatizar sua comunidade.",
-          faq_q1: "É seguro para a minha conta do Instagram ou Facebook?",
-          faq_a1: "Totalmente seguro. A Xindro opera exclusivamente através da API oficial da Meta Graph com permissões concedidas e webhooks verificados. Não pedimos sua senha nem usamos emuladores.",
-          faq_q2: "A IA pode inventar informações ou responder algo inapropriado?",
-          faq_a2: "Não. Você possui um Calibrador de Voz de Marca para definir princípios e tom. Além disso, conta com o <strong>Modo Copilot</strong> para aprovação humana com 1 clique.",
-          faq_q3: "Como posso integrar a API em meus próprios sistemas?",
-          faq_a3: "Nossa API RESTful processa requisições JSON em menos de 180ms a partir de qualquer backend em Python, Node.js, PHP ou cURL usando seu token privado.",
-          faq_q4: "Posso começar gratuitamente sem cartão de crédito?",
-          faq_a4: "Sim! O plano Criador Starter é 100% gratuito com até 100 respostas automáticas por mês e assistente Copilot incluso.",
-          foot_brand_desc: "O sistema operacional de IA para criadores e agências de redes sociais. Respostas em tempo real, Smart Timing e API oficial.",
+          faq_q1: "É seguro para minha conta do Instagram ou Facebook?",
+          faq_a1: "Totalmente seguro. O Xindro opera estritamente através da API oficial do Meta Graph com permissões autorizadas e webhooks verificados. Nunca solicitamos sua senha e não usamos navegadores ou emuladores não oficiais.",
+          faq_q2: "A IA pode responder coisas fora de contexto?",
+          faq_a2: "Não. Você conta com um calibrador de voz de marca para definir princípios e tom. Além disso, o <strong>Modo Copilot</strong> gera sugestões para aprovação humana com 1 clique antes de postar.",
+          faq_q3: "Posso conectar várias contas ao mesmo tempo?",
+          faq_a3: "Sim, você pode conectar e gerenciar várias contas do Instagram e Páginas do Facebook de forma centralizada.",
+          faq_q4: "Posso começar grátis sem cartão de crédito?",
+          faq_a4: "Sim! O plano Criador Starter é 100% gratuito com até 100 respostas automáticas por mês e assistente Copilot incluído.",
+          foot_brand_desc: "O sistema operacional de IA para criadores e agências de redes sociais. Respostas em tempo real, Smart Timing e sincronização oficial.",
           foot_status_pill: "Meta API 100% Operacional",
           foot_c2_t: "Produto",
           foot_c2_1: "Preços",
           foot_c2_2: "Inspiração",
-          foot_c2_7: "Integrações",
           foot_c3_t: "Empresa",
-          foot_c3_1: "Sobre nós",
+          foot_c3_1: "Sobre",
           foot_c3_2: "Carreiras",
           foot_c3_3: "Equipe",
-          foot_c3_6: "Docs Desenvolvedores",
           foot_c3_7: "Segurança",
           foot_c4_t: "Redes sociais",
           foot_c5_t: "Informações legais",
           foot_rights: "Todos os direitos reservados.",
-          cookie_title: "Sobre os nossos cookies",
-          cookie_desc_1: "Utilizamos cookies e tecnologias semelhantes conforme estabelecido no nosso",
-          cookie_link: "Aviso de Cookies",
-          cookie_desc_2: "Ao clicar em \"Aceitar Tudo\", você concorda com o uso de cookies para personalizar sua experiência, otimizar a IA e analisar o tráfego da API.",
+          cookie_title: "Sobre nossos cookies",
+          cookie_desc_1: "Usamos cookies e tecnologias semelhantes conforme estabelecido em nossa",
+          cookie_link: "Política de Cookies",
+          cookie_desc_2: "Ao clicar em \"Aceitar Tudo\", você concorda com o uso de cookies para personalizar sua experiência e otimizar a plataforma.",
           cookie_btn_settings: "Configurar Cookies",
           cookie_btn_reject: "Rejeitar Tudo",
           cookie_btn_accept: "Aceitar Tudo",
           cookie_btn_pref: "Preferências de cookies",
-          modal_pref_title: "Central de Preferências de Cookies",
-          modal_pref_desc: "Cumplimos rigorosamente as normas internacionais de proteção de dados (LGPD Brasil, RGPD da UE e CCPA). Selecione quais categorias de cookies deseja permitir:",
-          cookie_cat1_t: "Cookies Técnicos e de Segurança (Essenciais)",
+          modal_pref_title: "Centro de Preferências de Cookies",
+          modal_pref_desc: "Cumprimos rigorosamente os regulamentos globais de privacidade de dados (LGPD Brasil, GDPR da UE e CCPA). Selecione quais categorias de cookies deseja permitir:",
+          cookie_cat1_t: "Cookies Essenciais e de Segurança (Obrigatórios)",
           cookie_cat1_status: "Sempre Ativos",
           cookie_cat1_d: "Necessários para autenticação de sessão, tokens de segurança CSRF e proteção da infraestrutura contra ataques.",
           cookie_cat2_t: "Cookies de Desempenho & Análise",
-          cookie_cat2_d: "Permitem medir a velocidade de resposta da IA, uso de endpoints e otimizar a experiência dos criadores.",
+          cookie_cat2_d: "Permitem medir a velocidade de resposta da IA e otimizar a experiência dos criadores.",
           cookie_cat3_t: "Cookies de Personalização & Idioma",
           cookie_cat3_d: "Lembram suas preferências de idioma (Espanhol, Inglês, Português), tom padrão e configurações do simulador.",
           modal_pref_save: "Salvar Minhas Preferências"
@@ -2353,37 +2171,7 @@ print("Respuesta IA:", res["replies"]["wisdom"])
       }
     };
 
-    // 6. API TABS SWITCHER
-    const ApiTabs = {
-      languages: ['curl', 'js', 'php', 'python'],
 
-      switch(lang) {
-        this.languages.forEach(l => {
-          const tabBtn = document.getElementById('tab-' + l);
-          const codeBlock = document.getElementById('code-' + l);
-          if (l === lang) {
-            tabBtn.className = 'px-2.5 py-1 rounded bg-brand-600 text-white font-bold text-xs';
-            codeBlock.classList.remove('hidden');
-          } else {
-            tabBtn.className = 'px-2.5 py-1 rounded text-slate-400 hover:text-white text-xs';
-            codeBlock.classList.add('hidden');
-          }
-        });
-      },
-
-      copyCode() {
-        const visiblePre = document.querySelector('pre:not(.hidden) code');
-        if (!visiblePre) return;
-        navigator.clipboard.writeText(visiblePre.textContent).then(() => {
-          const btn = document.getElementById('btn-copy-code');
-          btn.innerHTML = '<span class="text-emerald-400">✔ ¡Copiado!</span>';
-          setTimeout(() => {
-            const lang = I18n.current || 'es';
-            btn.innerHTML = `<span>${I18n.dict[lang]?.api_btn_copy || '📋 Copiar'}</span>`;
-          }, 2000);
-        });
-      }
-    };
 
     document.addEventListener('DOMContentLoaded', () => {
       I18n.init();
