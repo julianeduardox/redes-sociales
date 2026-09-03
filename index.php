@@ -637,7 +637,8 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
   <!-- ========================================================================= -->
   <!-- 5. ¿POR QUÉ ELEGIR XINDRO? (6 Razones de Valor Real) -->
   <!-- ========================================================================= -->
-  <section id="por-que-xindro" class="py-16 sm:py-24 bg-white border-b border-slate-100">
+  <section id="por-que-xindro" class="py-16 sm:py-24 bg-white border-b border-slate-100 relative">
+    <div id="funciones" class="absolute -top-20"></div>
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       
       <div class="text-center max-w-3xl mx-auto mb-12 sm:mb-16">

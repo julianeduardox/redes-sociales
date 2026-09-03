@@ -10,8 +10,20 @@ Security::applySecurityHeaders(false);
 Auth::requireAuth(false);
 
 $currentUser = Auth::user();
+$userId = $currentUser['id'] ?? 1;
 $csrfToken = Security::getCsrfToken();
 $pdo = Database::getConnection();
+
+// Pre-render user's brand voices for instant display
+$stmtBrands = $pdo->prepare("SELECT id, brand_name, industry, is_default FROM brand_voices WHERE user_id = ? ORDER BY is_default DESC, id ASC");
+$stmtBrands->execute([$userId]);
+$userBrands = $stmtBrands->fetchAll(PDO::FETCH_ASSOC);
+
+if (empty($userBrands)) {
+    Database::ensureDefaultBrandVoice($pdo, $userId, $currentUser['name'] ?? 'Mi Marca');
+    $stmtBrands->execute([$userId]);
+    $userBrands = $stmtBrands->fetchAll(PDO::FETCH_ASSOC);
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -157,9 +169,17 @@ $pdo = Database::getConnection();
 
         <!-- Agency Multi-Brand Switcher -->
         <div class="topbar-brand-switcher" id="topbar-brand-switcher" title="Cambiar de marca o cliente activo">
-          <span style="font-size: 0.95rem;">🏢</span>
+          <span class="topbar-brand-icon">🏢</span>
           <select id="topbar-brand-select" class="topbar-brand-select" onchange="App.switchActiveBrand(this.value)">
-            <option value="">Cargando marcas...</option>
+            <?php if (empty($userBrands)): ?>
+              <option value="">Cargando marcas...</option>
+            <?php else: ?>
+              <?php foreach ($userBrands as $b): ?>
+                <option value="<?= (int)$b['id'] ?>" <?= !empty($b['is_default']) ? 'selected' : '' ?>>
+                  <?= htmlspecialchars($b['brand_name'], ENT_QUOTES, 'UTF-8') ?> (<?= htmlspecialchars($b['industry'] ?? 'General', ENT_QUOTES, 'UTF-8') ?>)
+                </option>
+              <?php endforeach; ?>
+            <?php endif; ?>
           </select>
           <button type="button" class="btn-new-brand-pill" onclick="App.openNewBrandModal()">+ Nueva Marca</button>
         </div>
@@ -335,7 +355,15 @@ $pdo = Database::getConnection();
             <div style="background: rgba(255,255,255,0.04); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 4px 10px; display: flex; align-items: center; gap: 8px;">
               <span style="font-size: 0.85rem;">🏢 Marca en Edición:</span>
               <select id="settings-brand-voice-selector" class="topbar-brand-select" onchange="App.loadBrandVoiceDetails(this.value)">
-                <!-- Dynamically populated -->
+                <?php if (empty($userBrands)): ?>
+                  <option value="">Cargando marcas...</option>
+                <?php else: ?>
+                  <?php foreach ($userBrands as $b): ?>
+                    <option value="<?= (int)$b['id'] ?>" <?= !empty($b['is_default']) ? 'selected' : '' ?>>
+                      <?= htmlspecialchars($b['brand_name'], ENT_QUOTES, 'UTF-8') ?> (<?= htmlspecialchars($b['industry'] ?? 'General', ENT_QUOTES, 'UTF-8') ?>)
+                    </option>
+                  <?php endforeach; ?>
+                <?php endif; ?>
               </select>
             </div>
             <button type="button" class="btn-primary-action" onclick="App.openNewBrandModal()">

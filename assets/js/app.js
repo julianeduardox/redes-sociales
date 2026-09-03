@@ -41,9 +41,9 @@ const App = {
   async init() {
     this.bindEvents();
     this.initViewDensity();
-    await this.loadBrands();
-    await this.loadSettings();
-    await this.loadComments();
+    try { await this.loadBrands(); } catch (e) { console.error('loadBrands error:', e); }
+    try { await this.loadSettings(); } catch (e) { console.error('loadSettings error:', e); }
+    try { await this.loadComments(); } catch (e) { console.error('loadComments error:', e); }
     this.renderTagChips();
     this.renderFewShotExamples();
   },
@@ -53,7 +53,7 @@ const App = {
     try {
       const res = await this.fetchWithCsrf('api/settings.php?action=list_brands');
       const data = await res.json();
-      if (data.success && Array.isArray(data.brands)) {
+      if (data.success && Array.isArray(data.brands) && data.brands.length > 0) {
         const topbarSelect = document.getElementById('topbar-brand-select');
         const settingsSelect = document.getElementById('settings-brand-voice-selector');
         const activeId = data.active_brand_id;
