@@ -42,7 +42,7 @@ try {
   <link rel="dns-prefetch" href="https://images.unsplash.com">
   <link rel="preconnect" href="https://ui-avatars.com" crossorigin>
   
-  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/style.css?v=<?= time() ?>">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏛️</text></svg>">
 </head>
 <body>
@@ -65,7 +65,7 @@ try {
 
     <!-- Active User Profile Pill -->
     <div class="user-session-card">
-      <img src="<?= htmlspecialchars($currentUser['avatar_url'] ?? 'https://ui-avatars.com/api/?name=User&background=6366f1&color=fff&size=96', ENT_QUOTES, 'UTF-8') ?>" width="36" height="36" loading="lazy" decoding="async" class="user-avatar-mini" alt="avatar" />
+      <img src="<?= htmlspecialchars($currentUser['avatar_url'] ?? 'https://ui-avatars.com/api/?name=User&background=6366f1&color=fff&size=96', ENT_QUOTES, 'UTF-8') ?>" width="34" height="34" loading="lazy" decoding="async" class="user-avatar-mini" alt="avatar" />
       <div class="user-session-info">
         <div class="user-session-name"><?= htmlspecialchars($currentUser['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8') ?></div>
         <div class="user-session-email"><?= htmlspecialchars($currentUser['email'] ?? '', ENT_QUOTES, 'UTF-8') ?></div>
@@ -76,21 +76,27 @@ try {
     <!-- Left Sidebar Assistant Widget -->
     <div class="sidebar-assistant-card" onclick="AgentController.openAssistantModal()" title="Abrir Copiloto de Conversión & Respuestas">
       <div class="sidebar-assistant-top">
-        <div class="sidebar-assistant-icon-box">🪄</div>
+        <div class="sidebar-assistant-icon-box">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L14.7 8.5L21.5 9.5L16.5 14.3L17.8 21.1L12 17.8L6.2 21.1L7.5 14.3L2.5 9.5L9.3 8.5L12 2Z"/>
+          </svg>
+        </div>
         <div class="sidebar-assistant-text">
           <div class="sidebar-assistant-title">
             <span>Copiloto IA</span>
-            <span class="sidebar-assistant-pill">✨ CONVERSIÓN</span>
+            <span class="sidebar-assistant-pill">CONVERSIÓN</span>
           </div>
           <div class="sidebar-assistant-sub">Respuestas inteligentes & ventas</div>
         </div>
       </div>
-      <button type="button" class="btn-sidebar-assistant" onclick="event.stopPropagation(); AgentController.openAssistantModal()">
-        <span>Abrir Copiloto ✨</span>
-      </button>
-      <button type="button" class="sidebar-score-guide-btn" onclick="event.stopPropagation(); App.openScoreGuideModal()" title="Ver cómo se calcula el Score de IA">
-        <span>🎯 ¿Cómo funciona el Score?</span>
-      </button>
+      <div class="sidebar-assistant-actions">
+        <button type="button" class="btn-sidebar-assistant" onclick="event.stopPropagation(); AgentController.openAssistantModal()">
+          <span>Abrir Copiloto ✨</span>
+        </button>
+        <button type="button" class="sidebar-score-guide-btn" onclick="event.stopPropagation(); App.openScoreGuideModal()" title="Ver cómo se calcula el Score de IA">
+          <span>🎯 Score</span>
+        </button>
+      </div>
     </div>
 
     <nav class="sidebar-nav">
@@ -124,7 +130,7 @@ try {
         <span class="nav-badge" id="badge-count-spam" style="background: rgba(244,63,94,0.25); color: #fb7185;">0</span>
       </button>
 
-      <div class="nav-section-title" style="margin-top: 14px;">Inteligencia & Config</div>
+      <div class="nav-section-title" style="margin-top: 10px;">Inteligencia & Config</div>
       <button class="nav-btn" data-tab="analytics">
         <span class="icon">📈</span>
         <span>Métricas de Audiencia</span>
@@ -153,9 +159,9 @@ try {
         </label>
       </div>
 
-      <div style="margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--border-subtle); display: flex; flex-direction: column; gap: 4px; font-size: 0.72rem; color: var(--text-dim);">
-        <div style="font-weight: 700; color: var(--text-muted); margin-bottom: 2px;">Legal & Meta Compliance:</div>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+      <div style="margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--border-subtle); display: flex; flex-direction: column; gap: 3px; font-size: 0.7rem; color: var(--text-dim);">
+        <div style="font-weight: 700; color: var(--text-muted); margin-bottom: 1px;">Legal & Meta Compliance:</div>
+        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
           <a href="privacy-policy.php" target="_blank" style="color: var(--text-dim); text-decoration: none; transition: 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='var(--text-dim)'">Privacidad</a> •
           <a href="terms-of-service.php" target="_blank" style="color: var(--text-dim); text-decoration: none; transition: 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='var(--text-dim)'">Términos</a> •
           <a href="data-deletion.php" target="_blank" style="color: var(--text-dim); text-decoration: none; transition: 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='var(--text-dim)'">Eliminar Datos</a>
@@ -173,21 +179,25 @@ try {
         <button type="button" class="btn-mobile-menu" id="btn-mobile-menu" onclick="App.toggleMobileSidebar(true)" aria-label="Abrir Menú">☰</button>
         <h2 class="page-title" id="topbar-page-title">Gestor de Comunidad & Conversión</h2>
 
-        <!-- Agency Multi-Brand Switcher -->
+        <!-- Agency Multi-Brand Switcher (Styled as Capsule Pill Group) -->
         <div class="topbar-brand-switcher" id="topbar-brand-switcher" title="Cambiar de marca o cliente activo">
-          <span class="topbar-brand-icon">🏢</span>
-          <select id="topbar-brand-select" class="topbar-brand-select" onchange="App.switchActiveBrand(this.value)">
-            <?php if (empty($userBrands)): ?>
-              <option value="">Cargando marcas...</option>
-            <?php else: ?>
-              <?php foreach ($userBrands as $b): ?>
-                <option value="<?= (int)$b['id'] ?>" <?= !empty($b['is_default']) ? 'selected' : '' ?>>
-                  <?= htmlspecialchars($b['brand_name'], ENT_QUOTES, 'UTF-8') ?> (<?= htmlspecialchars($b['industry'] ?? 'General', ENT_QUOTES, 'UTF-8') ?>)
-                </option>
-              <?php endforeach; ?>
-            <?php endif; ?>
-          </select>
-          <button type="button" class="btn-new-brand-pill" onclick="App.openNewBrandModal()">+ Nueva Marca</button>
+          <div class="brand-select-pill">
+            <span class="brand-pill-icon">🏢</span>
+            <select id="topbar-brand-select" class="topbar-brand-select" onchange="App.switchActiveBrand(this.value)">
+              <?php if (empty($userBrands)): ?>
+                <option value="">Cargando marcas...</option>
+              <?php else: ?>
+                <?php foreach ($userBrands as $b): ?>
+                  <option value="<?= (int)$b['id'] ?>" <?= !empty($b['is_default']) ? 'selected' : '' ?>>
+                    <?= htmlspecialchars($b['brand_name'], ENT_QUOTES, 'UTF-8') ?>
+                  </option>
+                <?php endforeach; ?>
+              <?php endif; ?>
+            </select>
+          </div>
+          <button type="button" class="btn-new-brand-pill" onclick="App.openNewBrandModal()">
+            <span>+ Nueva Marca</span>
+          </button>
         </div>
 
         <div class="platform-pill-group">
