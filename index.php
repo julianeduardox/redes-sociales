@@ -43,6 +43,11 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=Syne:wght@700;800;900&display=swap" rel="stylesheet">
 
+  <!-- Performance Preconnect for External Assets (Unsplash & UI-Avatars) -->
+  <link rel="preconnect" href="https://images.unsplash.com" crossorigin>
+  <link rel="dns-prefetch" href="https://images.unsplash.com">
+  <link rel="preconnect" href="https://ui-avatars.com" crossorigin>
+
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -131,12 +136,78 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
 
     .gradient-button {
       background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%);
-      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
     }
     .gradient-button:hover {
       background: linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%);
-      box-shadow: 0 8px 25px -4px rgba(124, 58, 237, 0.45);
-      transform: translateY(-1px);
+      box-shadow: 0 10px 28px -4px rgba(124, 58, 237, 0.5), 0 0 20px rgba(139, 92, 246, 0.35);
+      transform: translateY(-2px) scale(1.02);
+    }
+    .gradient-button:active {
+      transform: translateY(1px) scale(0.97);
+      box-shadow: 0 2px 10px rgba(124, 58, 237, 0.3);
+    }
+
+    /* Secondary interactive button with subtle micro-interactions */
+    .secondary-btn {
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .secondary-btn:hover {
+      transform: translateY(-1.5px) scale(1.02);
+      box-shadow: 0 6px 20px -4px rgba(15, 23, 42, 0.1);
+    }
+    .secondary-btn:active {
+      transform: translateY(1px) scale(0.97);
+    }
+
+    /* Simulator native select styling for touch & no-text-overlap */
+    .sim-select-custom {
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%237C3AED' stroke-width='2.5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      background-size: 16px 16px;
+      padding-right: 2.75rem !important;
+      min-height: 44px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    @media (max-width: 640px) {
+      .sim-select-custom {
+        font-size: 15px;
+        min-height: 46px;
+      }
+    }
+
+    /* Preset & action pill micro-interactions */
+    .preset-pill-btn {
+      transition: all 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .preset-pill-btn:hover {
+      transform: translateY(-1px) scale(1.04);
+      box-shadow: 0 2px 8px rgba(124, 58, 237, 0.15);
+    }
+    .preset-pill-btn:active {
+      transform: translateY(1px) scale(0.95);
+    }
+
+    .copy-btn-action {
+      transition: all 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .copy-btn-action:hover {
+      transform: scale(1.06);
+    }
+    .copy-btn-action:active {
+      transform: scale(0.93);
     }
 
     .shimmer-btn {
@@ -384,7 +455,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           <span data-i18n="hero_cta_sim">Prueba el Simulador</span>
           <span class="text-lg">✨</span>
         </a>
-        <a href="#api-docs" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3.5 sm:px-8 sm:py-4 rounded-xl text-sm sm:text-base font-bold text-slate-700 bg-white border border-slate-200 hover:border-brand-300 hover:bg-slate-50 hover:text-brand-700 shadow-sm transition-all">
+        <a href="#api-docs" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3.5 sm:px-8 sm:py-4 rounded-xl text-sm sm:text-base font-bold text-slate-700 bg-white border border-slate-200 hover:border-brand-300 hover:bg-slate-50 hover:text-brand-700 shadow-sm secondary-btn">
           <span data-i18n="hero_cta_api">Documentación API</span>
           <span>&lt;/&gt;</span>
         </a>
@@ -411,7 +482,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           <!-- Incoming Comment -->
           <div class="md:col-span-5 bg-slatecard rounded-xl sm:rounded-2xl p-4 border border-slate-200/80">
             <div class="flex items-center gap-2.5 mb-2.5">
-              <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop&q=80" class="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-slate-200 object-cover" alt="Avatar" />
+              <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=96&h=96&fit=crop&crop=faces&auto=format&q=75" width="32" height="32" loading="lazy" decoding="async" class="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-slate-200 object-cover" alt="Avatar" />
               <div>
                 <div class="text-xs font-bold text-slate-800">@alejandro.creator</div>
                 <div class="text-[10px] text-slate-500" data-i18n="hero_card_time">Instagram • Hace 2 seg</div>
@@ -525,40 +596,40 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
   <section class="py-10 sm:py-12 bg-slatecard border-b border-slate-200/80">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
       
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 text-center divide-x-0 md:divide-x divide-slate-200/80">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 md:gap-8 text-center divide-x-0 md:divide-x divide-slate-200/80">
         
-        <div class="p-2">
-          <div class="text-2xl sm:text-4xl font-black text-midnight tracking-tight mb-1">
+        <div class="p-2 sm:p-3 min-w-0">
+          <div class="text-2xl sm:text-3xl md:text-4xl font-black text-midnight tracking-tight mb-1">
             +500K<span class="text-brand-600">+</span>
           </div>
-          <p data-i18n="stat_1" class="text-[11px] sm:text-sm font-semibold text-slate-500 uppercase tracking-wider">
+          <p data-i18n="stat_1" class="text-[10px] sm:text-xs md:text-sm font-semibold text-slate-500 uppercase tracking-wider leading-tight break-words">
             Comentarios Respondidos
           </p>
         </div>
 
-        <div class="p-2">
-          <div class="text-2xl sm:text-4xl font-black text-brand-600 tracking-tight mb-1">
+        <div class="p-2 sm:p-3 min-w-0">
+          <div class="text-2xl sm:text-3xl md:text-4xl font-black text-brand-600 tracking-tight mb-1">
             3.4x
           </div>
-          <p data-i18n="stat_2" class="text-[11px] sm:text-sm font-semibold text-slate-500 uppercase tracking-wider">
+          <p data-i18n="stat_2" class="text-[10px] sm:text-xs md:text-sm font-semibold text-slate-500 uppercase tracking-wider leading-tight break-words">
             Aumento en Engagement
           </p>
         </div>
 
-        <div class="p-2">
-          <div class="text-2xl sm:text-4xl font-black text-midnight tracking-tight mb-1">
+        <div class="p-2 sm:p-3 min-w-0">
+          <div class="text-2xl sm:text-3xl md:text-4xl font-black text-midnight tracking-tight mb-1">
             99.8%
           </div>
-          <p data-i18n="stat_3" class="text-[11px] sm:text-sm font-semibold text-slate-500 uppercase tracking-wider">
+          <p data-i18n="stat_3" class="text-[10px] sm:text-xs md:text-sm font-semibold text-slate-500 uppercase tracking-wider leading-tight break-words">
             Precisión de Voz Humana
           </p>
         </div>
 
-        <div class="p-2">
-          <div class="text-2xl sm:text-4xl font-black text-emerald-600 tracking-tight mb-1">
+        <div class="p-2 sm:p-3 min-w-0">
+          <div class="text-2xl sm:text-3xl md:text-4xl font-black text-emerald-600 tracking-tight mb-1">
             &lt; 180ms
           </div>
-          <p data-i18n="stat_4" class="text-[11px] sm:text-sm font-semibold text-slate-500 uppercase tracking-wider">
+          <p data-i18n="stat_4" class="text-[10px] sm:text-xs md:text-sm font-semibold text-slate-500 uppercase tracking-wider leading-tight break-words">
             Latencia de API en Vivo
           </p>
         </div>
@@ -770,20 +841,20 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
 
             <div class="grid grid-cols-2 gap-3 sm:gap-4 mb-5 sm:mb-6">
               
-              <div class="bg-slate-900/90 p-3.5 sm:p-4 rounded-xl border border-slate-800">
-                <div class="text-xl sm:text-3xl font-black text-emerald-400 mb-0.5" id="calc-res-hours">
+              <div class="bg-slate-900/90 p-3 sm:p-4 rounded-xl border border-slate-800 min-w-0">
+                <div class="text-lg sm:text-2xl md:text-3xl font-black text-emerald-400 mb-0.5 tracking-tight" id="calc-res-hours">
                   +38 hrs
                 </div>
-                <div class="text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase" data-i18n="calc_res_h_label">
+                <div class="text-[9.5px] sm:text-[11px] font-semibold text-slate-400 uppercase leading-tight break-words tracking-normal sm:tracking-wider" data-i18n="calc_res_h_label">
                   Tiempo Manual Ahorrado
                 </div>
               </div>
 
-              <div class="bg-slate-900/90 p-3.5 sm:p-4 rounded-xl border border-slate-800">
-                <div class="text-xl sm:text-3xl font-black text-brand-400 mb-0.5" id="calc-res-leads">
+              <div class="bg-slate-900/90 p-3 sm:p-4 rounded-xl border border-slate-800 min-w-0">
+                <div class="text-lg sm:text-2xl md:text-3xl font-black text-brand-400 mb-0.5 tracking-tight" id="calc-res-leads">
                   +120
                 </div>
-                <div class="text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase" data-i18n="calc_res_l_label">
+                <div class="text-[9.5px] sm:text-[11px] font-semibold text-slate-400 uppercase leading-tight break-words tracking-normal sm:tracking-wider" data-i18n="calc_res_l_label">
                   Leads / Preguntas Clave
                 </div>
               </div>
@@ -841,7 +912,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
               <label data-i18n="sim_lbl_tone" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 sm:mb-2">
                 1. Tono de Marca:
               </label>
-              <select id="sim-tone" class="w-full bg-slatecard border border-slate-300 rounded-xl px-3 py-2 sm:px-3.5 sm:py-2.5 text-xs sm:text-sm font-semibold text-slate-800 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all cursor-pointer">
+              <select id="sim-tone" class="sim-select-custom w-full bg-slatecard border border-slate-300 rounded-xl px-3.5 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold text-slate-800 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all cursor-pointer shadow-sm">
                 <option value="mentor" data-i18n="sim_opt_mentor">🏛️ Estoico / Mentor Sabio</option>
                 <option value="empathy" selected data-i18n="sim_opt_empathy">🤝 Cercano & Empático</option>
                 <option value="growth" data-i18n="sim_opt_growth">🔥 Dinámico & Venta de Alto Valor</option>
@@ -852,7 +923,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
               <label data-i18n="sim_lbl_plat" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 sm:mb-2">
                 2. Plataforma:
               </label>
-              <select id="sim-platform" class="w-full bg-slatecard border border-slate-300 rounded-xl px-3 py-2 sm:px-3.5 sm:py-2.5 text-xs sm:text-sm font-semibold text-slate-800 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all cursor-pointer">
+              <select id="sim-platform" class="sim-select-custom w-full bg-slatecard border border-slate-300 rounded-xl px-3.5 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold text-slate-800 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all cursor-pointer shadow-sm">
                 <option value="instagram">📸 Instagram</option>
                 <option value="facebook">📘 Facebook</option>
                 <option value="tiktok">🎵 TikTok</option>
@@ -863,7 +934,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
               <label data-i18n="sim_lbl_close" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 sm:mb-2">
                 3. Pregunta al Final:
               </label>
-              <select id="sim-closing" class="w-full bg-slatecard border border-slate-300 rounded-xl px-3 py-2 sm:px-3.5 sm:py-2.5 text-xs sm:text-sm font-semibold text-slate-800 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all cursor-pointer">
+              <select id="sim-closing" class="sim-select-custom w-full bg-slatecard border border-slate-300 rounded-xl px-3.5 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold text-slate-800 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all cursor-pointer shadow-sm">
                 <option value="always" selected data-i18n="sim_opt_always">Siempre incluir pregunta</option>
                 <option value="relevant" data-i18n="sim_opt_rel">Solo cuando sea relevante</option>
                 <option value="never" data-i18n="sim_opt_never">Sin pregunta final</option>
@@ -884,15 +955,15 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 mb-6 sm:mb-8">
             <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
               <span data-i18n="sim_presets_title" class="text-xs font-bold text-slate-500 mr-1">Rápidos:</span>
-              <button type="button" onclick="Simulator.loadPreset(1)" data-i18n="sim_preset_1" class="text-[11px] sm:text-xs font-semibold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 hover:bg-brand-50 hover:text-brand-700 transition-colors">
+              <button type="button" onclick="Simulator.loadPreset(1)" data-i18n="sim_preset_1" class="preset-pill-btn text-[11px] sm:text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-brand-50 hover:text-brand-700 border border-slate-200/80">
                 💡 "¿Precio del curso?"
               </button>
-              <button type="button" onclick="Simulator.loadPreset(2)" data-i18n="sim_preset_2" class="text-[11px] sm:text-xs font-semibold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 hover:bg-brand-50 hover:text-brand-700 transition-colors">
+              <button type="button" onclick="Simulator.loadPreset(2)" data-i18n="sim_preset_2" class="preset-pill-btn text-[11px] sm:text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-brand-50 hover:text-brand-700 border border-slate-200/80">
                 🔥 "Gran reflexión"
               </button>
             </div>
 
-            <button type="button" id="sim-btn-generate" onclick="Simulator.generate()" class="w-full sm:w-auto px-5 py-3 rounded-xl text-xs sm:text-sm font-bold text-white gradient-button flex items-center justify-center gap-2 shadow-glow-sm shimmer-btn">
+            <button type="button" id="sim-btn-generate" onclick="Simulator.generate()" class="w-full sm:w-auto px-6 py-3.5 rounded-xl text-xs sm:text-sm font-bold text-white gradient-button flex items-center justify-center gap-2 shadow-glow-sm shimmer-btn">
               <span data-i18n="sim_btn_gen">Generar Respuesta con IA</span>
               <span>⚡</span>
             </button>
@@ -900,14 +971,14 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
 
           <div id="sim-output-card" class="rounded-2xl bg-slate-50 border border-slate-200/90 p-4 sm:p-6 transition-all duration-300">
             
-            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/80 pb-3 mb-3 sm:mb-4">
-              <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center justify-between gap-2.5 border-b border-slate-200/80 pb-3 mb-3 sm:mb-4">
+              <div class="flex flex-wrap items-center gap-2">
                 <span data-i18n="sim_res_title" class="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">Resultado Generado</span>
-                <span id="sim-badge-intent" class="text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded bg-brand-100 text-brand-800 border border-brand-200">
+                <span id="sim-badge-intent" class="text-[10px] sm:text-[11px] font-bold px-2.5 py-0.5 rounded bg-brand-100 text-brand-800 border border-brand-200">
                   🎯 Intención: Consejo / Crecimiento
                 </span>
               </div>
-              <div class="flex items-center gap-2 sm:gap-3 text-[11px] sm:text-xs font-semibold text-slate-500">
+              <div class="flex items-center gap-2 sm:gap-3 text-[11px] sm:text-xs font-semibold text-slate-500 ml-auto sm:ml-0">
                 <span>Score: <strong id="sim-badge-score" class="text-brand-600 font-bold">94/100</strong></span>
                 <span class="text-emerald-600 font-bold">⚡ 120ms</span>
               </div>
@@ -921,7 +992,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
               <span data-i18n="sim_autopilot_ok" class="flex items-center gap-1.5 text-emerald-600 font-semibold text-[11px] sm:text-xs">
                 <span>✔</span> Apto para Autopilot en Instagram y Facebook
               </span>
-              <button type="button" onclick="Simulator.copyResponse()" id="sim-btn-copy" class="text-xs font-bold text-brand-600 hover:text-brand-800 flex items-center gap-1 transition-colors">
+              <button type="button" onclick="Simulator.copyResponse()" id="sim-btn-copy" class="copy-btn-action text-xs font-bold text-brand-600 hover:text-brand-800 flex items-center gap-1">
                 <span data-i18n="sim_btn_copy">📋 Copiar</span>
               </button>
             </div>

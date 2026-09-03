@@ -284,7 +284,7 @@ class MetaApiService {
                 foreach ($mediaData['data'] as $media) {
                     $mediaId = $media['id'];
                     $caption = $media['caption'] ?? 'Publicación de Instagram';
-                    $mediaImg = $media['media_url'] ?? 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=800&auto=format&fit=crop&q=80';
+                    $mediaImg = $media['media_url'] ?? 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=480&h=320&auto=format&fit=crop&q=75';
                     $mediaType = strtolower($media['media_type'] ?? 'image');
                     $likes = (int)($media['like_count'] ?? 0);
                     $comments = (int)($media['comments_count'] ?? 0);

@@ -206,7 +206,7 @@ const AnalyticsController = {
     };
 
     container.innerHTML = posts.map(p => {
-      const safeImg = App.sanitizeUrl(p.media_url, 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=800');
+      const safeImg = App.sanitizeUrl(p.media_url, 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=480&h=320&fit=crop&auto=format&q=75');
       const safeCaption = App.escapeHtml(p.caption || 'Publicación');
       const safeLikes = formatNumber(p.total_likes || 0);
       const safeComments = formatNumber(p.total_comments || 0);
@@ -239,7 +239,7 @@ const AnalyticsController = {
       return `
         <div class="post-analytics-card">
           <div class="post-card-media-wrapper">
-            <img src="${safeImg}" class="post-card-media" loading="lazy" alt="Media preview" />
+            <img src="${safeImg}" class="post-card-media" loading="lazy" decoding="async" alt="Media preview" />
             <div class="media-type-badge">${mediaIcon}</div>
             <div class="post-platform-badge ${isInstagram ? 'instagram' : 'facebook'}">
               ${isInstagram ? '📸 Instagram' : '📘 Facebook'}

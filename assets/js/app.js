@@ -363,8 +363,8 @@ const App = {
       else if (isUrgent) scoreClass += ' urgent';
       else scoreClass += ' high';
 
-      const safeAvatar = this.sanitizeUrl(c.author_avatar, 'https://ui-avatars.com/api/?name=User');
-      const safePostImg = this.sanitizeUrl(c.post_media_url, 'https://images.unsplash.com/photo-1552346154-21d32810aba3?w=50');
+      const safeAvatar = this.sanitizeUrl(c.author_avatar, 'https://ui-avatars.com/api/?name=User&background=6366f1&color=fff&size=96');
+      const safePostImg = this.sanitizeUrl(c.post_media_url, 'https://images.unsplash.com/photo-1552346154-21d32810aba3?w=160&h=160&fit=crop&auto=format&q=75');
       const safeScore = parseInt(c.highlight_score, 10) || 50;
 
       if (isCompact) {
@@ -373,7 +373,7 @@ const App = {
           <div class="${cardClass}" onclick="App.selectCommentById(${parseInt(c.id, 10)}, true)">
             <div class="card-top">
               <div class="author-info">
-                <img src="${safeAvatar}" class="author-avatar" alt="avatar" loading="lazy" />
+                <img src="${safeAvatar}" class="author-avatar" alt="avatar" loading="lazy" decoding="async" width="36" height="36" />
                 <div class="author-name">
                   ${this.escapeHtml(c.author_name)}
                   <span class="platform-badge-mini ${c.platform === 'facebook' ? 'facebook' : 'instagram'}">${c.platform === 'instagram' ? 'IG' : 'FB'}</span>
@@ -409,7 +409,7 @@ const App = {
           <div class="card-origin-post">
             <div class="card-origin-post-left">
               <div class="card-origin-post-thumb-wrap">
-                <img src="${safePostImg}" class="card-origin-post-thumb" alt="post thumbnail" loading="lazy" />
+                <img src="${safePostImg}" class="card-origin-post-thumb" alt="post thumbnail" loading="lazy" decoding="async" width="48" height="48" />
                 <span class="card-origin-platform-badge ${c.platform === 'facebook' ? 'facebook' : 'instagram'}">${c.platform === 'instagram' ? '📸 IG' : '📘 FB'}</span>
               </div>
               <div class="card-origin-post-details">
@@ -428,7 +428,7 @@ const App = {
           <div class="card-follower-section">
             <div class="card-top">
               <div class="author-info">
-                <img src="${safeAvatar}" class="author-avatar" alt="avatar" loading="lazy" />
+                <img src="${safeAvatar}" class="author-avatar" alt="avatar" loading="lazy" decoding="async" width="36" height="36" />
                 <div class="author-names">
                   <div class="author-name">
                     ${this.escapeHtml(c.author_name)}
@@ -537,7 +537,7 @@ const App = {
     const postCaption = document.getElementById('detail-post-caption-text');
     const scoreBadge = document.getElementById('detail-score-badge');
 
-    const safePostImg = this.sanitizeUrl(comment.post_media_url, 'https://images.unsplash.com/photo-1552346154-21d32810aba3?w=100');
+    const safePostImg = this.sanitizeUrl(comment.post_media_url, 'https://images.unsplash.com/photo-1552346154-21d32810aba3?w=160&h=160&fit=crop&auto=format&q=75');
     if (postImg) postImg.src = safePostImg;
     if (postBadge) {
       postBadge.className = `detail-platform-badge ${comment.platform === 'facebook' ? 'facebook' : 'instagram'}`;
@@ -564,7 +564,7 @@ const App = {
     const commentTime = document.getElementById('detail-comment-time');
     const sentimentBadge = document.getElementById('detail-sentiment-badge');
 
-    const safeAvatar = this.sanitizeUrl(comment.author_avatar, 'https://ui-avatars.com/api/?name=User');
+    const safeAvatar = this.sanitizeUrl(comment.author_avatar, 'https://ui-avatars.com/api/?name=User&background=6366f1&color=fff&size=96');
     if (authorAvatar) authorAvatar.src = safeAvatar;
     if (authorName) authorName.textContent = comment.author_name || 'Usuario';
     if (authorHandle) authorHandle.textContent = comment.author_handle || '';

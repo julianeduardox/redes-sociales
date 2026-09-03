@@ -228,7 +228,7 @@ try {
                 // If user has no posts yet, create a default welcome post for them
                 $insPost = $pdo->prepare("
                     INSERT INTO posts (user_id, account_id, platform, caption, media_url, total_likes, total_comments, reach)
-                    VALUES (:uid, 1, :platform, '¡Bienvenidos a nuestra comunidad oficial! Déjanos tus preguntas y reflexiones aquí 👇', 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=800', 120, 5, 1200)
+                    VALUES (:uid, 1, :platform, '¡Bienvenidos a nuestra comunidad oficial! Déjanos tus preguntas y reflexiones aquí 👇', 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=480&h=320&fit=crop&auto=format&q=75', 120, 5, 1200)
                 ");
                 $insPost->execute([':uid' => $userId, ':platform' => $platform]);
                 $postId = (int)$pdo->lastInsertId();
@@ -243,7 +243,7 @@ try {
 
             $cleanHandle = preg_replace('/[^a-zA-Z0-9_\.]/', '', strtolower(str_replace(' ', '', $authorName)));
             $handle = '@' . (empty($cleanHandle) ? 'usuario' : $cleanHandle);
-            $avatar = 'https://ui-avatars.com/api/?name=' . urlencode($authorName) . '&background=6366f1&color=fff';
+            $avatar = 'https://ui-avatars.com/api/?name=' . urlencode($authorName) . '&background=6366f1&color=fff&size=96';
 
             $stmtInsert = $pdo->prepare("
                 INSERT INTO comments (

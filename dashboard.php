@@ -19,7 +19,11 @@ $pdo = Database::getConnection();
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="csrf-token" content="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
-  <title>Mente Estoica AI - Agente de Engagement y Comunidad para Redes Sociales</title>
+  <!-- Performance Preconnect for External Assets -->
+  <link rel="preconnect" href="https://images.unsplash.com" crossorigin>
+  <link rel="dns-prefetch" href="https://images.unsplash.com">
+  <link rel="preconnect" href="https://ui-avatars.com" crossorigin>
+  
   <link rel="stylesheet" href="assets/css/style.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏛️</text></svg>">
 </head>
@@ -43,7 +47,7 @@ $pdo = Database::getConnection();
 
     <!-- Active User Profile Pill -->
     <div class="user-session-card">
-      <img src="<?= htmlspecialchars($currentUser['avatar_url'] ?? 'https://ui-avatars.com/api/?name=User', ENT_QUOTES, 'UTF-8') ?>" class="user-avatar-mini" alt="avatar" />
+      <img src="<?= htmlspecialchars($currentUser['avatar_url'] ?? 'https://ui-avatars.com/api/?name=User&background=6366f1&color=fff&size=96', ENT_QUOTES, 'UTF-8') ?>" width="36" height="36" loading="lazy" decoding="async" class="user-avatar-mini" alt="avatar" />
       <div class="user-session-info">
         <div class="user-session-name"><?= htmlspecialchars($currentUser['name'] ?? 'Usuario', ENT_QUOTES, 'UTF-8') ?></div>
         <div class="user-session-email"><?= htmlspecialchars($currentUser['email'] ?? '', ENT_QUOTES, 'UTF-8') ?></div>
@@ -191,7 +195,7 @@ $pdo = Database::getConnection();
         <!-- Active Post Filter Banner (Rendered dynamically when activePostId is set) -->
         <div id="active-post-banner" class="active-post-banner" style="display: none;">
           <div class="active-post-banner-left">
-            <img src="" id="active-post-thumb" class="active-post-banner-thumb" alt="post thumb" />
+            <img src="" id="active-post-thumb" width="48" height="48" loading="lazy" decoding="async" class="active-post-banner-thumb" alt="post thumb" />
             <div class="active-post-banner-info">
               <div id="active-post-caption" class="active-post-banner-caption">Filtrando comentarios de publicación...</div>
               <div class="active-post-banner-meta">
@@ -811,7 +815,7 @@ $pdo = Database::getConnection();
         <div class="modal-follower-context-card">
           <div class="modal-follower-header">
             <div class="modal-follower-info">
-              <img src="https://ui-avatars.com/api/?name=User" id="modal-author-avatar" class="modal-follower-avatar" alt="avatar" />
+              <img src="https://ui-avatars.com/api/?name=User&background=6366f1&color=fff&size=96" id="modal-author-avatar" width="44" height="44" loading="lazy" decoding="async" class="modal-follower-avatar" alt="avatar" />
               <div>
                 <div class="modal-follower-name-row">
                   <strong id="modal-author-name">Selecciona un comentario</strong>
@@ -1066,7 +1070,7 @@ $pdo = Database::getConnection();
           <span class="detail-platform-badge" id="detail-post-platform-badge">Instagram</span>
         </div>
         <div class="detail-post-card">
-          <img src="https://images.unsplash.com/photo-1552346154-21d32810aba3?w=100" id="detail-post-image" class="detail-post-thumb" alt="post thumbnail" />
+          <img src="https://images.unsplash.com/photo-1552346154-21d32810aba3?w=160&h=160&fit=crop&auto=format&q=75" id="detail-post-image" width="70" height="70" loading="lazy" decoding="async" class="detail-post-thumb" alt="post thumbnail" />
           <div class="detail-post-content">
             <div class="detail-post-meta" id="detail-post-meta-text">
               👁️ Alcance • ❤️ Likes • 💬 Comentarios
@@ -1087,7 +1091,7 @@ $pdo = Database::getConnection();
         </div>
         <div class="detail-follower-card">
           <div class="detail-follower-header">
-            <img src="https://ui-avatars.com/api/?name=User" id="detail-author-avatar" class="detail-author-avatar" alt="avatar" />
+            <img src="https://ui-avatars.com/api/?name=User&background=6366f1&color=fff&size=96" id="detail-author-avatar" width="40" height="40" loading="lazy" decoding="async" class="detail-author-avatar" alt="avatar" />
             <div class="detail-author-names">
               <strong id="detail-author-name">Nombre del seguidor</strong>
               <span id="detail-author-handle" class="detail-author-handle">@usuario</span>

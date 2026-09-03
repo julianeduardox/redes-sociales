@@ -330,7 +330,7 @@ class Database {
                 ':name' => 'Mente Estoica Oficial',
                 ':handle' => '@mente.estoica',
                 ':page_id' => 'page_stoic_1001',
-                ':avatar' => 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=120&auto=format&fit=crop&q=80'
+                ':avatar' => 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=96&h=96&fit=crop&crop=faces&auto=format&q=75'
             ]);
 
             $stmtAcc->execute([
@@ -339,7 +339,7 @@ class Database {
                 ':name' => 'Comunidad Estoica & Disciplina',
                 ':handle' => 'mente.estoica.fb',
                 ':page_id' => 'page_stoic_1002',
-                ':avatar' => 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=120&auto=format&fit=crop&q=80'
+                ':avatar' => 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=96&h=96&fit=crop&crop=faces&auto=format&q=75'
             ]);
 
             // Insert Initial Posts for user 1
@@ -354,7 +354,7 @@ class Database {
                 ':platform' => 'instagram',
                 ':ext_id' => 'ig_post_9001',
                 ':caption' => '🏛️ "Tienes poder sobre tu mente, no sobre los acontecimientos externos. Comprende esto y encontrarás la fuerza." — Marco Aurelio. ⚔️ Cuando la vida se pone difícil, recuerda la Dicotomía del Control: no sufras por lo que no puedes cambiar, domina cómo reaccionas. ¿Qué situación hoy te está retando a aplicar esto? 👇 #Estoicismo #MarcoAurelio #Disciplina #Motivacion #PazMental',
-                ':media' => 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=800&auto=format&fit=crop&q=80',
+                ':media' => 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=480&h=320&fit=crop&auto=format&q=75',
                 ':mtype' => 'image',
                 ':permalink' => 'https://instagram.com/p/C_stoic01',
                 ':likes' => 3840,
@@ -379,7 +379,7 @@ class Database {
                 ':ext_id' => 'cmt_1001',
                 ':author' => 'Alejandro Morales',
                 ':handle' => '@alejandro_m',
-                ':avatar' => 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
+                ':avatar' => 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=96&h=96&fit=crop&crop=faces&auto=format&q=75',
                 ':text' => 'Me cuesta mucho aceptar las cosas que no puedo controlar, especialmente cuando tengo problemas en el trabajo y siento que todo se derrumba. ¿Cómo puedo empezar a practicar la dicotomía del control en mi día a día?',
                 ':sentiment' => 'question',
                 ':intent' => 'lead_info',
