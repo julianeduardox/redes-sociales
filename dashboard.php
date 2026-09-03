@@ -37,10 +37,10 @@ $pdo = Database::getConnection();
   <!-- Sidebar Navigation -->
   <aside class="app-sidebar" id="app-sidebar">
     <div class="sidebar-header">
-      <div class="brand-icon-box">🏛️</div>
+      <div class="brand-icon-box" style="background: linear-gradient(135deg, #7c3aed, #4f46e5); color: #fff;">⚡</div>
       <div class="brand-text">
-        <h1>Mente Estoica AI</h1>
-        <div class="brand-tag">Community & Engagement Agent</div>
+        <h1 style="font-family: 'Syne', sans-serif; font-weight: 900; letter-spacing: -0.02em;">XINDRO Copilot</h1>
+        <div class="brand-tag">Multi-Brand & Agency AI OS</div>
       </div>
       <button type="button" class="btn-close-sidebar-mobile" onclick="App.toggleMobileSidebar(false)">&times;</button>
     </div>
@@ -56,19 +56,19 @@ $pdo = Database::getConnection();
     </div>
 
     <!-- Left Sidebar Assistant Widget -->
-    <div class="sidebar-assistant-card" onclick="AgentController.openAssistantModal()" title="Abrir Asistente de Respuestas & Conexión">
+    <div class="sidebar-assistant-card" onclick="AgentController.openAssistantModal()" title="Abrir Copiloto de Conversión & Respuestas">
       <div class="sidebar-assistant-top">
         <div class="sidebar-assistant-icon-box">🪄</div>
         <div class="sidebar-assistant-text">
           <div class="sidebar-assistant-title">
-            <span>Asistente IA</span>
-            <span class="sidebar-assistant-pill">✨ CONEXIÓN</span>
+            <span>Copiloto IA</span>
+            <span class="sidebar-assistant-pill">✨ CONVERSIÓN</span>
           </div>
-          <div class="sidebar-assistant-sub">Sugerencias reflexivas & apoyo</div>
+          <div class="sidebar-assistant-sub">Respuestas inteligentes & ventas</div>
         </div>
       </div>
       <button type="button" class="btn-sidebar-assistant" onclick="event.stopPropagation(); AgentController.openAssistantModal()">
-        <span>Abrir Asistente ✨</span>
+        <span>Abrir Copiloto ✨</span>
       </button>
       <button type="button" class="sidebar-score-guide-btn" onclick="event.stopPropagation(); App.openScoreGuideModal()" title="Ver cómo se calcula el Score de IA">
         <span>🎯 ¿Cómo funciona el Score?</span>
@@ -90,19 +90,19 @@ $pdo = Database::getConnection();
       </button>
 
       <button class="nav-btn" data-tab="leads">
-        <span class="icon">🧠</span>
-        <span>Preguntas & Consejos</span>
+        <span class="icon">🎯</span>
+        <span>Leads & Precios</span>
         <span class="nav-badge" id="badge-count-leads">0</span>
       </button>
 
       <button class="nav-btn" data-tab="urgent">
         <span class="icon">🛡️</span>
-        <span>Apoyo & Resiliencia</span>
+        <span>Objeciones & Soporte</span>
       </button>
 
       <button class="nav-btn" data-tab="spam">
         <span class="icon">🚫</span>
-        <span>Spam / Por Revisar</span>
+        <span>Filtro Anti-Spam</span>
         <span class="nav-badge" id="badge-count-spam" style="background: rgba(244,63,94,0.25); color: #fb7185;">0</span>
       </button>
 
@@ -114,7 +114,7 @@ $pdo = Database::getConnection();
 
       <button class="nav-btn" data-tab="settings">
         <span class="icon">🤖</span>
-        <span>Voz de Marca & IA</span>
+        <span>Voz de Marca & Prompt</span>
       </button>
 
       <button class="nav-btn" data-tab="meta">
@@ -153,7 +153,17 @@ $pdo = Database::getConnection();
     <header class="app-topbar">
       <div class="topbar-left">
         <button type="button" class="btn-mobile-menu" id="btn-mobile-menu" onclick="App.toggleMobileSidebar(true)" aria-label="Abrir Menú">☰</button>
-        <h2 class="page-title" id="topbar-page-title">Gestor de Comunidad Estoica</h2>
+        <h2 class="page-title" id="topbar-page-title">Gestor de Comunidad & Conversión</h2>
+
+        <!-- Agency Multi-Brand Switcher -->
+        <div class="topbar-brand-switcher" id="topbar-brand-switcher" title="Cambiar de marca o cliente activo">
+          <span style="font-size: 0.95rem;">🏢</span>
+          <select id="topbar-brand-select" class="topbar-brand-select" onchange="App.switchActiveBrand(this.value)">
+            <option value="">Cargando marcas...</option>
+          </select>
+          <button type="button" class="btn-new-brand-pill" onclick="App.openNewBrandModal()">+ Nueva Marca</button>
+        </div>
+
         <div class="platform-pill-group">
           <button class="platform-pill active" data-platform="all">🌐 Todos</button>
           <button class="platform-pill ig-active" data-platform="instagram">📸 IG</button>
@@ -168,11 +178,11 @@ $pdo = Database::getConnection();
         </div>
         <div class="stat-pill leads">
           <div class="dot"></div>
-          <span id="count-pill-leads">0 Consejos</span>
+          <span id="count-pill-leads">0 Leads</span>
         </div>
         <div class="stat-pill urgent">
           <div class="dot"></div>
-          <span id="count-pill-urgent">0 Apoyo</span>
+          <span id="count-pill-urgent">0 Soporte</span>
         </div>
         <button class="btn-primary-action" onclick="App.openModal('modal-simulate')">
           <span>+ Simular Comentario</span>
@@ -212,14 +222,14 @@ $pdo = Database::getConnection();
         <div class="feed-header">
           <div class="search-box">
             <span class="search-icon">🔍</span>
-            <input type="text" id="feed-search-input" placeholder="Buscar por usuario, frase estoica, pregunta o palabra clave..." />
+            <input type="text" id="feed-search-input" placeholder="Buscar por usuario, pregunta de precio, producto o palabra clave..." />
           </div>
 
           <div class="filter-tags">
             <button class="filter-tag active" data-filter="all">Todos</button>
             <button class="filter-tag" data-filter="highlighted">⭐ Más Resaltantes</button>
-            <button class="filter-tag" data-filter="leads">🧠 Preguntas & Consejos</button>
-            <button class="filter-tag" data-filter="urgent">🛡️ Apoyo & Resiliencia</button>
+            <button class="filter-tag" data-filter="leads">🎯 Leads & Precios</button>
+            <button class="filter-tag" data-filter="urgent">🛡️ Objeciones & Soporte</button>
             <button class="filter-tag" data-filter="pending">⏳ Pendientes</button>
             <button class="filter-tag" data-filter="replied">✅ Respondidos</button>
           </div>
@@ -227,8 +237,8 @@ $pdo = Database::getConnection();
           <div class="feed-toolbar-row">
             <div class="feed-toolbar-left">
               <span class="feed-counter-text" id="feed-counter-display">Cargando comentarios...</span>
-              <button type="button" class="btn-toolbar-assistant" onclick="AgentController.openAssistantModal()" title="Abrir Asistente de Respuestas & Conexión">
-                <span>🪄 Asistente IA</span>
+              <button type="button" class="btn-toolbar-assistant" onclick="AgentController.openAssistantModal()" title="Abrir Copiloto de Conversión & Respuestas">
+                <span>🪄 Copiloto IA</span>
               </button>
             </div>
             <div class="density-toggle-group">
@@ -314,45 +324,81 @@ $pdo = Database::getConnection();
     <!-- View 3: AI Brand Voice Studio & Identity Calibrator -->
     <div id="view-settings" style="display: none; padding: 28px; overflow-y: auto; height: calc(100vh - 70px);">
       <div style="max-width: 1280px; margin: 0 auto;">
-        <div style="margin-bottom: 24px;">
-          <h3 style="font-size: 1.45rem; font-weight: 800; color: #fff; margin-bottom: 6px;">🏛️ Estudio de Voz de Marca & Entrenamiento de IA</h3>
-          <p style="font-size: 0.88rem; color: var(--text-muted);">Calibra la personalidad, calidez y sabiduría de la IA para que responda con identidad nivelada y profesional sin depender obligatoriamente de tokens de API.</p>
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-bottom: 24px;">
+          <div>
+            <h3 style="font-size: 1.45rem; font-weight: 800; color: #fff; margin-bottom: 6px;">🤖 Estudio de Voz de Marca & Prompt Dinámico</h3>
+            <p style="font-size: 0.88rem; color: var(--text-muted);">Configura la personalidad, persona, idioma y prompt de la IA adaptado a cualquier cliente o nicho comercial.</p>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="background: rgba(255,255,255,0.04); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 4px 10px; display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 0.85rem;">🏢 Marca en Edición:</span>
+              <select id="settings-brand-voice-selector" class="topbar-brand-select" onchange="App.loadBrandVoiceDetails(this.value)">
+                <!-- Dynamically populated -->
+              </select>
+            </div>
+            <button type="button" class="btn-primary-action" onclick="App.openNewBrandModal()">
+              <span>+ Nueva Marca</span>
+            </button>
+          </div>
         </div>
 
         <div class="studio-grid-layout">
           <!-- Left Column: Identity Tuning & Golden Rules -->
           <div>
             <form onsubmit="App.saveBrandStudioForm(event)">
+              <input type="hidden" id="setting-brand-id" value="" />
               
               <!-- Block 1: Brand Fundamentals -->
               <div style="background: var(--bg-card); padding: 24px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 20px;">
                 <h4 style="font-size: 1rem; font-weight: 800; margin-bottom: 16px; color: var(--accent-cyan); display: flex; align-items: center; gap: 8px;">
-                  <span>🏛️ Identidad & Filosofía de la Comunidad</span>
+                  <span>🏢 Identidad, Persona & Nicho del Cliente</span>
                 </h4>
 
-                <div class="form-group">
-                  <label>Nombre de la Cuenta o Comunidad:</label>
-                  <input type="text" id="setting-brand-name" placeholder="Ej: Mente Estoica / Camino Estoico" />
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                  <div class="form-group">
+                    <label>Nombre de la Marca o Cliente:</label>
+                    <input type="text" id="setting-brand-name" placeholder="Ej: Xindro Studio / Nike / Inmobiliaria Premier" required />
+                  </div>
+
+                  <div class="form-group">
+                    <label>Nombre de la Persona / Asistente:</label>
+                    <input type="text" id="setting-persona-name" placeholder="Ej: Alex — Consultor Comercial / Sofía de Soporte" required />
+                  </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                  <div class="form-group">
+                    <label>Industria / Nicho de Negocio:</label>
+                    <input type="text" id="setting-brand-industry" placeholder="Ej: E-commerce, Fitness, Moda, Real Estate, Servicios B2B" required />
+                  </div>
+
+                  <div class="form-group">
+                    <label>Idioma Principal de Respuestas:</label>
+                    <select id="setting-brand-language">
+                      <option value="es" selected>🇪🇸 Español (Predeterminado)</option>
+                      <option value="en">🇺🇸 English</option>
+                      <option value="pt">🇧🇷 Português</option>
+                      <option value="any">🌐 Auto-detectar idioma del usuario</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div class="form-group">
-                  <label>Enfoque de Contenido:</label>
-                  <input type="text" id="setting-brand-industry" placeholder="Ej: Estoicismo, Disciplina, Motivación y Autodominio" />
-                </div>
-
-                <div class="form-group">
-                  <label>Tono Base del Creador:</label>
+                  <label>Tono Base de Comunicación:</label>
                   <select id="setting-brand-tone">
-                    <option value="stoic_mentor">🏛️ Estoico & Sabio (Filosófico, Reflexivo e Inspirador)</option>
-                    <option value="disciplined_drive">⚔️ Motivador & Disciplinado (Fuerza, Carácter y Cero Excusas)</option>
-                    <option value="empathetic_brother">🤝 Empático & Fraternal (Cercano, Comprensivo y Solidario)</option>
-                    <option value="stoic_quotes">📜 Citas & Sabiduría Práctica (Marco Aurelio, Séneca, Epicteto)</option>
+                    <option value="friendly_engaging">🤝 Cercano, Amable & Empático (Conversacional)</option>
+                    <option value="commercial_sales">🎯 Comercial & Orientado a Ventas (Enfoque CTA / DM)</option>
+                    <option value="executive_formal">💼 Ejecutivo, Profesional & Corporativo</option>
+                    <option value="educational_expert">💡 Educativo, Autoridad & Mentor Experto</option>
+                    <option value="humorous_casual">🔥 Dinámico, Juvenil & Desenfadado</option>
                   </select>
                 </div>
 
-                <div class="form-group">
-                  <label>Valores Centrales y Contexto para la IA:</label>
-                  <textarea id="setting-brand-desc" rows="3" placeholder="Ej: Promovemos la dicotomía del control, amor fati, memento mori, la disciplina diaria y la calma mental ante la adversidad. Queremos que cada seguidor se sienta acompañado en su crecimiento personal."></textarea>
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label>System Prompt Dinámico Personalizado (Instrucciones de la IA):</label>
+                  <textarea id="setting-brand-desc" rows="4" placeholder="Ej: Eres el estratega oficial de comunicación de la marca. Responde siempre con carisma, aporta valor útil, resuelve dudas de clientes potenciales y orienta las conversaciones hacia la compra o contacto por DM sin sonar como un robot."></textarea>
                 </div>
               </div>
 
@@ -368,34 +414,34 @@ $pdo = Database::getConnection();
                   <div class="tuning-slider-header">
                     <div class="tuning-slider-title">
                       <span>🤝 Cercanía & Calidez Humana:</span>
-                      <span id="label-warmth-status" style="font-size: 0.78rem; color: var(--text-dim); font-weight: 600;">(Fraternal & Cercano)</span>
+                      <span id="label-warmth-status" style="font-size: 0.78rem; color: var(--text-dim); font-weight: 600;">(Empático & Cálido)</span>
                     </div>
                     <span class="tuning-slider-badge emerald" id="badge-warmth-val">85%</span>
                   </div>
-                  <div class="tuning-slider-desc">Controla la empatía, el trato fraternal por su nombre y la calidez en el saludo.</div>
+                  <div class="tuning-slider-desc">Controla la empatía, el saludo por su nombre de pila y la cercanía conversacional.</div>
                   <input type="range" min="1" max="100" value="85" class="range-slider-input" id="slider-warmth" oninput="App.updateSliderVal('warmth', this.value)" />
                   <div class="slider-scale-labels">
                     <span>Formal & Distante (10%)</span>
                     <span>Equilibrado (50%)</span>
-                    <span>Fraternal & Muy Cercano (100%)</span>
+                    <span>Muy Cercano & Fraternal (100%)</span>
                   </div>
                 </div>
 
-                <!-- Slider 2: Philosophical Depth -->
+                <!-- Slider 2: Expertise & Depth -->
                 <div class="tuning-slider-card">
                   <div class="tuning-slider-header">
                     <div class="tuning-slider-title">
-                      <span>🧠 Sabiduría Filosófica / Profundidad:</span>
-                      <span id="label-depth-status" style="font-size: 0.78rem; color: var(--text-dim); font-weight: 600;">(Citas & Principios Estoicos)</span>
+                      <span>🧠 Profundidad / Expertise & Solución:</span>
+                      <span id="label-depth-status" style="font-size: 0.78rem; color: var(--text-dim); font-weight: 600;">(Informativo & Sólido)</span>
                     </div>
-                    <span class="tuning-slider-badge cyan" id="badge-depth-val">80%</span>
+                    <span class="tuning-slider-badge cyan" id="badge-depth-val">75%</span>
                   </div>
-                  <div class="tuning-slider-desc">Determina la frecuencia de conceptos y citas de Marco Aurelio, Séneca y Epicteto.</div>
-                  <input type="range" min="1" max="100" value="80" class="range-slider-input" id="slider-depth" oninput="App.updateSliderVal('depth', this.value)" />
+                  <div class="tuning-slider-desc">Determina el nivel de detalle técnico, fundamentación y claridad en las explicaciones.</div>
+                  <input type="range" min="1" max="100" value="75" class="range-slider-input" id="slider-depth" oninput="App.updateSliderVal('depth', this.value)" />
                   <div class="slider-scale-labels">
-                    <span>Práctico & Directo (10%)</span>
-                    <span>Reflexivo (50%)</span>
-                    <span>Profundamente Filosófico (100%)</span>
+                    <span>Práctico & Breve (10%)</span>
+                    <span>Equilibrado (50%)</span>
+                    <span>Alta Autoridad & Detallado (100%)</span>
                   </div>
                 </div>
 
@@ -403,34 +449,34 @@ $pdo = Database::getConnection();
                 <div class="tuning-slider-card">
                   <div class="tuning-slider-header">
                     <div class="tuning-slider-title">
-                      <span>⚔️ Firmeza & Disciplina:</span>
-                      <span id="label-energy-status" style="font-size: 0.78rem; color: var(--text-dim); font-weight: 600;">(Impulso & Cero Excusas)</span>
+                      <span>🚀 Enfoque a la Acción & Conversión:</span>
+                      <span id="label-energy-status" style="font-size: 0.78rem; color: var(--text-dim); font-weight: 600;">(Proactivo & Venta)</span>
                     </div>
-                    <span class="tuning-slider-badge" id="badge-energy-val">75%</span>
+                    <span class="tuning-slider-badge" id="badge-energy-val">80%</span>
                   </div>
-                  <div class="tuning-slider-desc">Define el nivel de energía, superación de excusas y enfoque en la acción.</div>
-                  <input type="range" min="1" max="100" value="75" class="range-slider-input" id="slider-energy" oninput="App.updateSliderVal('energy', this.value)" />
+                  <div class="tuning-slider-desc">Define la energía y proactividad para cerrar ventas, invitar al DM o derivar al catálogo.</div>
+                  <input type="range" min="1" max="100" value="80" class="range-slider-input" id="slider-energy" oninput="App.updateSliderVal('energy', this.value)" />
                   <div class="slider-scale-labels">
-                    <span>Sereno & Pasivo (10%)</span>
-                    <span>Motivador (50%)</span>
-                    <span>Enérgico & Acción Innegociable (100%)</span>
+                    <span>Informativo Pasivo (10%)</span>
+                    <span>Proactivo (50%)</span>
+                    <span>Enfocado en Cierre & CTA (100%)</span>
                   </div>
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px;">
                   <div class="form-group" style="margin-bottom: 0;">
-                    <label>Pregunta de Cierre (Engagement):</label>
+                    <label>Pregunta de Cierre (Engagement / Ventas):</label>
                     <select id="setting-closing-rule">
-                      <option value="always">Siempre rematar con pregunta introspectiva</option>
-                      <option value="relevant">Solo en comentarios relevantes o dudas</option>
+                      <option value="always">Siempre rematar con pregunta para fomentar el chat</option>
+                      <option value="relevant">Solo en consultas comerciales o dudas</option>
                       <option value="never">Sin preguntas de cierre</option>
                     </select>
                   </div>
                   <div class="form-group" style="margin-bottom: 0;">
                     <label>Estilo de Emojis:</label>
                     <select id="setting-emoji-style">
-                      <option value="minimal">Sobrio (1 emoji selecto: 🏛️ o ⚔️)</option>
-                      <option value="moderate" selected>Moderado (2-3 emojis: 🏛️ ⚔️ 🤝 ✨)</option>
+                      <option value="minimal">Sobrio (1 emoji selecto: 🤝 o 💡)</option>
+                      <option value="moderate" selected>Moderado (2-3 emojis: 🚀 🤝 💡 ✨)</option>
                       <option value="expressive">Expresivo & Dinámico (3-4 emojis)</option>
                     </select>
                   </div>
@@ -440,15 +486,15 @@ $pdo = Database::getConnection();
               <!-- Block 3: Golden Rules (Keywords & Forbidden Words) -->
               <div style="background: var(--bg-card); padding: 24px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 20px;">
                 <h4 style="font-size: 1rem; font-weight: 800; margin-bottom: 6px; color: var(--accent-cyan); display: flex; align-items: center; gap: 8px;">
-                  <span>🛡️ Reglas de Oro & Parámetros Innegociables</span>
+                  <span>🛡️ Conceptos Clave & Frases Prohibidas</span>
                 </h4>
-                <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 16px;">Define los términos que la IA debe incorporar y las palabras prohibidas para erradicar respuestas de bot genérico.</p>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 16px;">Define los términos que la IA debe incorporar y las palabras prohibidas para erradicar respuestas genéricas.</p>
 
                 <!-- Key Phrases -->
                 <div class="form-group">
-                  <label>✨ Conceptos Clave de la Marca a Promover (Escribe y pulsa Enter):</label>
+                  <label>✨ Conceptos / Propuestas de Valor a Promover (Escribe y pulsa Enter):</label>
                   <div class="tag-chips-wrapper" id="key-phrases-container">
-                    <input type="text" class="tag-chip-input" id="input-new-key-phrase" placeholder="+ Añadir concepto (ej: Amor Fati) y Enter..." onkeydown="App.handleTagInput(event, 'key')" />
+                    <input type="text" class="tag-chip-input" id="input-new-key-phrase" placeholder="+ Añadir concepto (ej: Envíos gratis) y Enter..." onkeydown="App.handleTagInput(event, 'key')" />
                   </div>
                 </div>
 
@@ -468,7 +514,7 @@ $pdo = Database::getConnection();
                     <h4 style="font-size: 1rem; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 8px;">
                       <span>🧠 Ejemplos Maestros de Entrenamiento (Cero Tokens)</span>
                     </h4>
-                    <p style="font-size: 0.78rem; color: var(--text-muted);">Enseña a la IA exactamente cómo responder a situaciones reales sin gastar saldo en re-entrenamientos.</p>
+                    <p style="font-size: 0.78rem; color: var(--text-muted);">Enseña a la IA exactamente cómo responder a preguntas de precios, dudas o soporte de esta marca.</p>
                   </div>
                   <button type="button" class="btn-primary-action" style="padding: 6px 12px; font-size: 0.76rem;" onclick="App.openAddExampleModal()">
                     + Añadir Ejemplo de Oro
@@ -482,14 +528,14 @@ $pdo = Database::getConnection();
 
               <!-- Block 5: Optional AI Engines -->
               <div style="background: var(--bg-card); padding: 24px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 24px;">
-                <h4 style="font-size: 1rem; font-weight: 800; margin-bottom: 14px; color: #fff;">🔌 Motor de Generación</h4>
+                <h4 style="font-size: 1rem; font-weight: 800; margin-bottom: 14px; color: #fff;">🔌 Motor de Generación & Claves</h4>
 
                 <div class="form-group">
                   <label>Proveedor de Inteligencia:</label>
                   <select id="setting-ai-provider">
-                    <option value="heuristic">⚡ Motor Heurístico Estoico Local (100% Gratuito - Cero Tokens)</option>
-                    <option value="gemini" selected>Google Gemini AI (Ultrarrápido y Reflexivo con Calibración)</option>
-                    <option value="openai">OpenAI (GPT-4o Mini con Calibración)</option>
+                    <option value="gemini" selected>Google Gemini AI (Ultrarrápido y Calibrado con Voz de Marca)</option>
+                    <option value="openai">OpenAI (GPT-4o Mini con Calibración Dinámica)</option>
+                    <option value="heuristic">⚡ Motor Heurístico Calibrado Local (100% Gratuito - Cero Tokens)</option>
                   </select>
                 </div>
 
@@ -505,7 +551,7 @@ $pdo = Database::getConnection();
               </div>
 
               <button type="submit" class="btn-primary-action" style="width: 100%; justify-content: center; padding: 14px; font-size: 0.95rem; font-weight: 800;">
-                Guardar Identidad de Marca y Calibración 💾
+                Guardar Voz de Marca y Calibración 💾
               </button>
             </form>
           </div>
@@ -516,18 +562,18 @@ $pdo = Database::getConnection();
               <div class="playground-header">
                 <span style="font-size: 1.4rem;">⚡</span>
                 <div>
-                  <h4 style="font-size: 1.05rem; font-weight: 800; color: #fff;">Simulador de Voz en Vivo (Sin Costo)</h4>
-                  <p style="font-size: 0.76rem; color: var(--text-muted);">Prueba cómo responde la IA con tus parámetros actuales en tiempo real.</p>
+                  <h4 style="font-size: 1.05rem; font-weight: 800; color: #fff;">Simulador de Voz en Vivo</h4>
+                  <p style="font-size: 0.76rem; color: var(--text-muted);">Evalúa cómo responde la IA con los parámetros de la marca activa en tiempo real.</p>
                 </div>
               </div>
 
               <!-- Quick Scenarios -->
               <div style="font-size: 0.74rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; margin-bottom: 6px;">Casos Rápidos de Prueba:</div>
               <div class="quick-scenarios-row">
-                <button type="button" class="quick-scenario-btn" onclick="App.setPlaygroundScenario('vulnerable')">🛡️ Desmotivación</button>
-                <button type="button" class="quick-scenario-btn" onclick="App.setPlaygroundScenario('habits')">🧠 Hábitos & Disciplina</button>
-                <button type="button" class="quick-scenario-btn" onclick="App.setPlaygroundScenario('gratitude')">✨ Agradecimiento</button>
-                <button type="button" class="quick-scenario-btn" onclick="App.setPlaygroundScenario('books')">📖 Recomendación Libros</button>
+                <button type="button" class="quick-scenario-btn" onclick="App.setPlaygroundScenario('price_lead')">🎯 Precio / Lead</button>
+                <button type="button" class="quick-scenario-btn" onclick="App.setPlaygroundScenario('objection')">🛡️ Garantía / Objeción</button>
+                <button type="button" class="quick-scenario-btn" onclick="App.setPlaygroundScenario('support')">🛠️ Soporte / Ayuda</button>
+                <button type="button" class="quick-scenario-btn" onclick="App.setPlaygroundScenario('gratitude')">✨ Elogio / Testimonio</button>
               </div>
 
               <div class="form-group" style="margin-bottom: 10px;">
@@ -1115,9 +1161,9 @@ $pdo = Database::getConnection();
         <div id="detail-reply-content-box" class="detail-reply-box" style="display: none;">
           <div class="detail-reply-header">
             <div style="display: flex; align-items: center; gap: 8px;">
-              <span class="detail-brand-avatar">🏛️</span>
-              <strong style="color: #fff; font-size: 0.88rem;">Mente Estoica AI</strong>
-              <span class="detail-variant-pill" id="detail-reply-variant-tag">Reflexión Estoica</span>
+              <span class="detail-brand-avatar">⚡</span>
+              <strong style="color: #fff; font-size: 0.88rem;" id="detail-brand-name-display">XINDRO Copilot</strong>
+              <span class="detail-variant-pill" id="detail-reply-variant-tag">Respuesta Publicada</span>
             </div>
             <span class="detail-reply-time" id="detail-reply-time">Publicada</span>
           </div>
@@ -1126,7 +1172,7 @@ $pdo = Database::getConnection();
           </div>
           <div class="detail-reply-actions">
             <button type="button" class="btn-detail-reopen-assistant" onclick="App.openAssistantFromDetail()">
-              <span>🪄 Abrir en Asistente para Responder Otra Cosa</span>
+              <span>🪄 Abrir en Copiloto para Responder Otra Cosa</span>
             </button>
           </div>
         </div>
@@ -1136,10 +1182,10 @@ $pdo = Database::getConnection();
           <div class="detail-pending-icon">⏳</div>
           <div class="detail-pending-info">
             <h4>Este comentario aún no ha sido respondido</h4>
-            <p>Abre el Asistente de Respuestas & Conexión para forjar una respuesta reflexiva o motivacional con IA.</p>
+            <p>Abre el Copiloto de Conversión para forjar una respuesta inteligente calibrada con la voz de tu marca.</p>
           </div>
           <button type="button" class="btn-detail-respond-now" onclick="App.openAssistantFromDetail()">
-            <span>🪄 Responder con Asistente ✨</span>
+            <span>🪄 Responder con Copiloto ✨</span>
           </button>
         </div>
       </div>
@@ -1152,6 +1198,82 @@ $pdo = Database::getConnection();
       </button>
     </div>
 
+  </div>
+</div>
+
+<!-- Modal: Add New Brand Voice (Agency Multi-Client) -->
+<div class="modal-overlay" id="modal-new-brand">
+  <div class="modal-box" style="max-width: 580px;">
+    <div class="modal-header">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="font-size: 1.5rem;">🏢</span>
+        <div>
+          <h3 style="font-size: 1.18rem; font-weight: 800; color: #fff;">Crear Nueva Marca o Cliente</h3>
+          <p style="font-size: 0.78rem; color: var(--text-muted);">Añade un nuevo cliente con su propia persona, nicho y prompt dinámico independiente.</p>
+        </div>
+      </div>
+      <button type="button" class="btn-close-modal" onclick="App.closeModal('modal-new-brand')">&times;</button>
+    </div>
+
+    <form onsubmit="App.submitCreateNewBrand(event)">
+      <div class="modal-body" style="padding: 16px 0;">
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label>Nombre de la Marca / Cliente:</label>
+            <input type="text" id="new-brand-name" placeholder="Ej: Tienda Aurora / Inmobiliaria VIP" required />
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <label>Persona / Asistente de Marca:</label>
+            <input type="text" id="new-brand-persona" placeholder="Ej: Sofía de Ventas / Coach Daniel" required />
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label>Industria / Nicho:</label>
+            <input type="text" id="new-brand-industry" placeholder="Ej: Moda & Calzado, Fitness, Consultoría" required />
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <label>Idioma Principal:</label>
+            <select id="new-brand-language">
+              <option value="es" selected>🇪🇸 Español</option>
+              <option value="en">🇺🇸 English</option>
+              <option value="pt">🇧🇷 Português</option>
+              <option value="any">🌐 Auto-detectar</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label>Tono Base de Comunicación:</label>
+          <select id="new-brand-tone">
+            <option value="friendly_engaging">🤝 Cercano, Amable & Empático</option>
+            <option value="commercial_sales" selected>🎯 Comercial & Ventas (Enfoque en Leads / DM)</option>
+            <option value="executive_formal">💼 Ejecutivo & Corporativo</option>
+            <option value="educational_expert">💡 Educativo & Experto</option>
+            <option value="humorous_casual">🔥 Dinámico & Casual</option>
+          </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label>System Prompt Dinámico Inicial (Instrucciones para la IA):</label>
+          <textarea id="new-brand-prompt" rows="3" placeholder="Describe cómo debe responder la IA, qué servicios o productos vende esta marca y cómo dirigir a los prospectos al DM o web..."></textarea>
+        </div>
+
+      </div>
+
+      <div class="modal-footer" style="padding-top: 14px; border-top: 1px solid var(--border-subtle); display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn-primary-action" style="background: rgba(255,255,255,0.08); color: var(--text-muted);" onclick="App.closeModal('modal-new-brand')">
+          Cancelar
+        </button>
+        <button type="submit" class="btn-primary-action" style="background: linear-gradient(135deg, #7c3aed, #4f46e5);">
+          Crear Marca y Activar 🚀
+        </button>
+      </div>
+    </form>
   </div>
 </div>
 

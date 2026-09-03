@@ -196,7 +196,52 @@ class Database {
                 CREATE INDEX IF NOT EXISTS idx_reset_expires ON password_resets(expires_at);
             ");
 
-            // 6. Ensure dedicated tester user exists for API & Integration Testing
+            // 6. Ensure brand_voices table exists for multi-niche & agency clients
+            $pdo->exec("
+                CREATE TABLE IF NOT EXISTS brand_voices (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    brand_name TEXT NOT NULL,
+                    persona_name TEXT NOT NULL DEFAULT 'Copiloto de Marca',
+                    industry TEXT NOT NULL DEFAULT 'Comercio & Creadores',
+                    tone_level TEXT NOT NULL DEFAULT 'friendly_engaging',
+                    language TEXT NOT NULL DEFAULT 'es',
+                    system_prompt TEXT NOT NULL,
+                    warmth_level INTEGER DEFAULT 85,
+                    depth_level INTEGER DEFAULT 75,
+                    energy_level INTEGER DEFAULT 80,
+                    closing_question_rule TEXT DEFAULT 'always',
+                    emoji_style TEXT DEFAULT 'moderate',
+                    key_phrases TEXT,
+                    forbidden_phrases TEXT,
+                    few_shot_examples TEXT,
+                    is_default INTEGER DEFAULT 0,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                );
+                CREATE INDEX IF NOT EXISTS idx_brand_user ON brand_voices(user_id);
+            ");
+
+            // Ensure brand_voice_id column exists in accounts and posts
+            $accColsStmt = $pdo->query("PRAGMA table_info(accounts)");
+            $accCols = [];
+            while ($ac = $accColsStmt->fetch()) {
+                $accCols[] = $ac['name'];
+            }
+            if (!empty($accCols) && !in_array('brand_voice_id', $accCols, true)) {
+                $pdo->exec("ALTER TABLE accounts ADD COLUMN brand_voice_id INTEGER DEFAULT 1");
+            }
+
+            $postColsStmt = $pdo->query("PRAGMA table_info(posts)");
+            $postCols = [];
+            while ($pc = $postColsStmt->fetch()) {
+                $postCols[] = $pc['name'];
+            }
+            if (!empty($postCols) && !in_array('brand_voice_id', $postCols, true)) {
+                $pdo->exec("ALTER TABLE posts ADD COLUMN brand_voice_id INTEGER DEFAULT 1");
+            }
+
+            // 7. Ensure dedicated tester user exists for API & Integration Testing
             $testerStmt = $pdo->prepare("SELECT id FROM users WHERE email = 'tester@xindro.app' LIMIT 1");
             $testerStmt->execute();
             $testerUser = $testerStmt->fetch();
@@ -229,6 +274,7 @@ class Database {
         $schema = "
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tenant_id TEXT UNIQUE,
             name TEXT NOT NULL,
             email TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
@@ -238,9 +284,33 @@ class Database {
             last_login_at DATETIME
         );
 
+        CREATE TABLE IF NOT EXISTS brand_voices (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL DEFAULT 1,
+            brand_name TEXT NOT NULL,
+            persona_name TEXT NOT NULL DEFAULT 'Copiloto de Marca',
+            industry TEXT NOT NULL DEFAULT 'Comercio & Creadores',
+            tone_level TEXT NOT NULL DEFAULT 'friendly_engaging',
+            language TEXT NOT NULL DEFAULT 'es',
+            system_prompt TEXT NOT NULL,
+            warmth_level INTEGER DEFAULT 85,
+            depth_level INTEGER DEFAULT 75,
+            energy_level INTEGER DEFAULT 80,
+            closing_question_rule TEXT DEFAULT 'always',
+            emoji_style TEXT DEFAULT 'moderate',
+            key_phrases TEXT,
+            forbidden_phrases TEXT,
+            few_shot_examples TEXT,
+            is_default INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_brand_user ON brand_voices(user_id);
+
         CREATE TABLE IF NOT EXISTS accounts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL DEFAULT 1,
+            brand_voice_id INTEGER DEFAULT 1,
             platform TEXT NOT NULL,
             account_name TEXT NOT NULL,
             account_handle TEXT NOT NULL,
@@ -249,13 +319,15 @@ class Database {
             access_token TEXT,
             is_active INTEGER DEFAULT 1,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (brand_voice_id) REFERENCES brand_voices(id) ON DELETE SET NULL
         );
 
         CREATE TABLE IF NOT EXISTS posts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL DEFAULT 1,
             account_id INTEGER NOT NULL,
+            brand_voice_id INTEGER DEFAULT 1,
             platform TEXT NOT NULL,
             external_post_id TEXT,
             caption TEXT NOT NULL,
@@ -349,19 +421,89 @@ class Database {
     }
 
     public static function seedInitialData(PDO $pdo, int $userId = 1): void {
-        // Default Stoic & Motivational Creator Settings for User
+        // Fetch user name
+        $uStmt = $pdo->prepare("SELECT name FROM users WHERE id = :uid LIMIT 1");
+        $uStmt->execute([':uid' => $userId]);
+        $uRow = $uStmt->fetch();
+        $uName = $uRow['name'] ?? 'Xindro Studio';
+
+        // 1. Seed or update Brand Voice record
+        $bvCheck = $pdo->prepare("SELECT id FROM brand_voices WHERE user_id = :uid LIMIT 1");
+        $bvCheck->execute([':uid' => $userId]);
+        $bvRow = $bvCheck->fetch();
+
+        $defaultFewShots = [
+            [
+                'tag' => 'precio_leads',
+                'comment' => '¿Cuál es el precio del servicio y qué incluye?',
+                'reply' => '¡Hola {nombre}! Con gusto te comparto todos los detalles. Manejamos paquetes adaptados al tamaño de tu negocio. Te acabo de enviar un mensaje directo (DM) con la propuesta y el catálogo completo. ¿Qué objetivo principal te gustaría alcanzar este mes?'
+            ],
+            [
+                'tag' => 'objecion_garantia',
+                'comment' => '¿Qué garantía tienen y cómo sé si funcionará para mi empresa?',
+                'reply' => 'Excelente pregunta, {nombre}. Respaldamos todo nuestro trabajo con garantía de satisfacción y soporte prioritario 1 a 1. Además, puedes revisar nuestros casos de éxito verificados en el enlace de la bio. ¿Te gustaría agendar una llamada rápida de 10 min para evaluar tu caso?'
+            ],
+            [
+                'tag' => 'soporte_ayuda',
+                'comment' => 'Tengo una duda con mi cuenta y necesito soporte urgente por favor.',
+                'reply' => '¡Hola {nombre}! Por supuesto, nuestro equipo de soporte está listo para asistirte. Ya mismo te escribimos por DM para solucionar tu duda de inmediato. ¡Cuenta con nosotros!'
+            ],
+            [
+                'tag' => 'felicitacion_agradecimiento',
+                'comment' => '¡Excelente contenido y qué gran servicio! Me ayudó muchísimo su recomendación.',
+                'reply' => '¡Muchísimas gracias por tus palabras, {nombre}! Nos alegra enorme saber que te ha sido de gran valor. ¿De qué tema te gustaría que profundicemos en la siguiente publicación?'
+            ]
+        ];
+
+        $brandVoiceId = 1;
+        if (!$bvRow) {
+            $stmtBv = $pdo->prepare("
+                INSERT INTO brand_voices (
+                    user_id, brand_name, persona_name, industry, tone_level, language, system_prompt,
+                    warmth_level, depth_level, energy_level, closing_question_rule, emoji_style,
+                    key_phrases, forbidden_phrases, few_shot_examples, is_default
+                ) VALUES (
+                    :uid, :bname, :pname, :industry, :tone, :lang, :prompt,
+                    :warmth, :depth, :energy, :crule, :emojis,
+                    :kphrases, :fphrases, :fewshots, 1
+                )
+            ");
+            $stmtBv->execute([
+                ':uid' => $userId,
+                ':bname' => $uName . ' Oficial',
+                ':pname' => 'Alex — Asistente de Marca',
+                ':industry' => 'Comercio Electrónico, Servicios & Creadores',
+                ':tone' => 'friendly_engaging',
+                ':lang' => 'es',
+                ':prompt' => 'Eres el estratega oficial de comunicación de la marca. Responde siempre con carisma, empatía y claridad, captando leads y orientando a los usuarios con soluciones útiles y profesionales sin sonar como un robot.',
+                ':warmth' => 85,
+                ':depth' => 75,
+                ':energy' => 80,
+                ':crule' => 'always',
+                ':emojis' => 'moderate',
+                ':kphrases' => json_encode(['Calidad garantizada', 'Atención personalizada', 'Envíos a todo el país', 'Comunidad oficial', 'Asesoría directa'], JSON_UNESCAPED_UNICODE),
+                ':fphrases' => json_encode(['Estimado cliente', 'Compra ya', 'Oferta engañosa', 'Somos un bot', 'Haz clic aquí'], JSON_UNESCAPED_UNICODE),
+                ':fewshots' => json_encode($defaultFewShots, JSON_UNESCAPED_UNICODE)
+            ]);
+            $brandVoiceId = (int)$pdo->lastInsertId();
+        } else {
+            $brandVoiceId = (int)$bvRow['id'];
+        }
+
+        // 2. Default System & AI Settings for User
         $defaultSettings = [
-            'brand_name' => 'Mente Estoica Oficial',
-            'brand_industry' => 'Estoicismo, Filosofía Práctica y Disciplina',
-            'brand_tone' => 'stoic_mentor',
-            'brand_description' => 'Espacio dedicado a compartir reflexiones de Marco Aurelio, Séneca y Epicteto, desarrollo del carácter, superación de la adversidad, disciplina diaria y paz mental.',
+            'brand_name' => $uName . ' Oficial',
+            'brand_industry' => 'Comercio Electrónico, Servicios & Creadores',
+            'brand_tone' => 'friendly_engaging',
+            'brand_description' => 'Marca líder dedicada a ofrecer soluciones innovadoras, productos de alta calidad y atención personalizada a nuestra comunidad.',
             'brand_warmth_level' => '85',
-            'brand_depth_level' => '80',
-            'brand_energy_level' => '75',
+            'brand_depth_level' => '75',
+            'brand_energy_level' => '80',
             'brand_closing_question_rule' => 'always',
             'brand_emoji_style' => 'moderate',
-            'brand_key_phrases' => json_encode(['Dicotomía del control', 'Amor Fati', 'Memento Mori', 'Autodominio', 'Fortaleza mental', 'Disciplina diaria'], JSON_UNESCAPED_UNICODE),
-            'brand_forbidden_phrases' => json_encode(['Estimado cliente', 'Compra ya', 'Oferta imperdible', 'Somos un bot', 'Haz clic aquí'], JSON_UNESCAPED_UNICODE),
+            'brand_key_phrases' => json_encode(['Calidad garantizada', 'Atención personalizada', 'Envíos a todo el país', 'Comunidad oficial', 'Asesoría directa'], JSON_UNESCAPED_UNICODE),
+            'brand_forbidden_phrases' => json_encode(['Estimado cliente', 'Compra ya', 'Oferta engañosa', 'Somos un bot', 'Haz clic aquí'], JSON_UNESCAPED_UNICODE),
+            'brand_few_shot_examples' => json_encode($defaultFewShots, JSON_UNESCAPED_UNICODE),
             'ai_provider' => 'gemini',
             'gemini_api_key' => '',
             'openai_api_key' => '',
@@ -379,42 +521,40 @@ class Database {
             $stmt->execute([':uid' => $userId, ':key' => $k, ':value' => $v]);
         }
 
-        // Ensure initial starter account and workspace data exist for this user tenant
+        // 3. Ensure initial starter account and workspace data exist for this user tenant
         $accCheck = $pdo->prepare("SELECT COUNT(*) FROM accounts WHERE user_id = :uid");
         $accCheck->execute([':uid' => $userId]);
         if ((int)$accCheck->fetchColumn() === 0) {
-            $uStmt = $pdo->prepare("SELECT name FROM users WHERE id = :uid LIMIT 1");
-            $uStmt->execute([':uid' => $userId]);
-            $uRow = $uStmt->fetch();
-            $uName = $uRow['name'] ?? 'Mente Estoica Oficial';
             $cleanHandle = strtolower(preg_replace('/[^a-zA-Z0-9_]/', '', str_replace(' ', '', $uName)));
-            $uHandle = '@' . (!empty($cleanHandle) ? $cleanHandle : 'usuario_' . $userId);
+            $uHandle = '@' . (!empty($cleanHandle) ? $cleanHandle : 'marca_' . $userId);
 
             $stmtAcc = $pdo->prepare("
-                INSERT INTO accounts (user_id, platform, account_name, account_handle, page_id, avatar_url) 
-                VALUES (:uid, 'instagram', :name, :handle, :page_id, :avatar)
+                INSERT INTO accounts (user_id, brand_voice_id, platform, account_name, account_handle, page_id, avatar_url) 
+                VALUES (:uid, :bvid, 'instagram', :name, :handle, :page_id, :avatar)
             ");
             
             $stmtAcc->execute([
                 ':uid' => $userId,
-                ':name' => $uName,
+                ':bvid' => $brandVoiceId,
+                ':name' => $uName . ' Oficial',
                 ':handle' => $uHandle,
                 ':page_id' => 'page_user_' . $userId . '_ig',
                 ':avatar' => 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=96&h=96&fit=crop&crop=faces&auto=format&q=75'
             ]);
             $accId = (int)$pdo->lastInsertId();
 
-            // Insert Initial Starter Post for this user
+            // Insert Initial Universal Starter Post for this user
             $stmtPost = $pdo->prepare("
-                INSERT INTO posts (user_id, account_id, platform, external_post_id, caption, media_url, media_type, permalink, total_likes, total_comments, total_shares, impressions, reach, saved_count, engagement_rate) 
-                VALUES (:uid, :acc, 'instagram', :ext_id, :caption, :media, :mtype, :permalink, :likes, :comments, :shares, :impressions, :reach, :saved, :eng_rate)
+                INSERT INTO posts (user_id, account_id, brand_voice_id, platform, external_post_id, caption, media_url, media_type, permalink, total_likes, total_comments, total_shares, impressions, reach, saved_count, engagement_rate) 
+                VALUES (:uid, :acc, :bvid, 'instagram', :ext_id, :caption, :media, :mtype, :permalink, :likes, :comments, :shares, :impressions, :reach, :saved, :eng_rate)
             ");
 
             $stmtPost->execute([
                 ':uid' => $userId,
                 ':acc' => $accId,
+                ':bvid' => $brandVoiceId,
                 ':ext_id' => 'ig_post_user_' . $userId,
-                ':caption' => '🏛️ "Tienes poder sobre tu mente, no sobre los acontecimientos externos. Comprende esto y encontrarás la fuerza." — Marco Aurelio. ⚔️ Cuando la vida se pone difícil, recuerda la Dicotomía del Control: no sufras por lo que no puedes cambiar, domina cómo reaccionas. ¿Qué situación hoy te está retando a aplicar esto? 👇 #Estoicismo #MarcoAurelio #Disciplina #Motivacion #PazMental',
+                ':caption' => '🚀 ¡Bienvenidos a nuestro espacio oficial! Innovación, soluciones a tu medida y atención personalizada. ¿Desde qué ciudad nos visitas y en qué podemos ayudarte hoy? 👇 #Emprendimiento #Innovacion #Calidad #Comunidad',
                 ':media' => 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=480&h=320&fit=crop&auto=format&q=75',
                 ':mtype' => 'image',
                 ':permalink' => 'https://instagram.com/p/C_welcome_' . $userId,
@@ -428,7 +568,7 @@ class Database {
             ]);
             $postId = (int)$pdo->lastInsertId();
 
-            // Insert Initial Starter Comment for this user
+            // Insert Initial Commercial Lead Comment for this user
             $stmtComm = $pdo->prepare("
                 INSERT INTO comments (user_id, post_id, platform, external_comment_id, author_name, author_handle, author_avatar, comment_text, sentiment, intent, highlight_score, is_highlighted, highlight_reason, likes_count, status)
                 VALUES (:uid, :post_id, 'instagram', :ext_id, :author, :handle, :avatar, :text, :sentiment, :intent, :score, :is_high, :reason, :likes, :status)
@@ -441,12 +581,12 @@ class Database {
                 ':author' => 'Alejandro Morales',
                 ':handle' => '@alejandro_m',
                 ':avatar' => 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=96&h=96&fit=crop&crop=faces&auto=format&q=75',
-                ':text' => 'Me cuesta mucho aceptar las cosas que no puedo controlar, especialmente cuando tengo problemas en el trabajo y siento que todo se derrumba. ¿Cómo puedo empezar a practicar la dicotomía del control en mi día a día?',
+                ':text' => '¡Hola! Me interesan mucho sus servicios. ¿Tienen catálogo disponible y qué precio tiene la asesoría personalizada?',
                 ':sentiment' => 'question',
                 ':intent' => 'lead_info',
                 ':score' => 96,
                 ':is_high' => 1,
-                ':reason' => '🧠 Pregunta Filosófica de Alto Valor: Oportunidad de oro para profundizar y fidelizar con sabiduría estoica',
+                ':reason' => '🎯 Oportunidad Comercial / Lead Calificado: Pregunta de precio y catálogo lista para cerrar por DM',
                 ':likes' => 24,
                 ':status' => 'pending'
             ]);

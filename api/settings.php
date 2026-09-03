@@ -1,11 +1,12 @@
 <?php
 /**
- * REST API: Settings & Brand Voice Training Controller
- * Hardened with CSRF, Rate Limiting & Strict Validation
+ * REST API: Settings & Multi-Brand Voice Controller
+ * Supports Agency Multi-Brand Voice Management, CSRF & Rate Limiting
  */
 require_once __DIR__ . '/../config/security.php';
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/settings.php';
+require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../services/MetaApiService.php';
 require_once __DIR__ . '/../services/AiAgentService.php';
 
@@ -13,43 +14,100 @@ Security::applySecurityHeaders(true);
 Auth::requireAuth(true);
 
 $userId = Auth::id();
-
+$pdo = Database::getConnection();
 $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
 
 try {
     if ($method === 'GET') {
+        $action = trim($_GET['action'] ?? 'get_all');
+
+        // 1. Action: List all brand voices for the user
+        if ($action === 'list_brands') {
+            $stmt = $pdo->prepare("SELECT * FROM brand_voices WHERE user_id = :uid ORDER BY is_default DESC, id ASC");
+            $stmt->execute([':uid' => $userId]);
+            $brands = $stmt->fetchAll();
+
+            // If no brand voices exist yet, seed initial
+            if (empty($brands)) {
+                Database::seedInitialData($pdo, $userId);
+                $stmt->execute([':uid' => $userId]);
+                $brands = $stmt->fetchAll();
+            }
+
+            $activeBrandId = $_SESSION['active_brand_id'] ?? null;
+            if (!$activeBrandId && !empty($brands)) {
+                $activeBrandId = (int)$brands[0]['id'];
+                $_SESSION['active_brand_id'] = $activeBrandId;
+            }
+
+            echo json_encode([
+                'success' => true,
+                'active_brand_id' => $activeBrandId,
+                'brands' => $brands
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        // 2. Action: Get specific brand voice
+        if ($action === 'get_brand') {
+            $brandId = (int)($_GET['id'] ?? ($_SESSION['active_brand_id'] ?? 0));
+            $stmt = $pdo->prepare("SELECT * FROM brand_voices WHERE id = :id AND user_id = :uid LIMIT 1");
+            $stmt->execute([':id' => $brandId, ':uid' => $userId]);
+            $brand = $stmt->fetch();
+
+            if (!$brand) {
+                // Fallback to active brand
+                $brand = AiAgentService::resolveActiveBrandVoice($pdo);
+            }
+
+            // Decode JSON fields
+            $brand['key_phrases'] = !empty($brand['key_phrases']) ? json_decode($brand['key_phrases'], true) : [];
+            $brand['forbidden_phrases'] = !empty($brand['forbidden_phrases']) ? json_decode($brand['forbidden_phrases'], true) : [];
+            $brand['few_shot_examples'] = !empty($brand['few_shot_examples']) ? json_decode($brand['few_shot_examples'], true) : AiAgentService::getDefaultFewShotExamples();
+
+            echo json_encode([
+                'success' => true,
+                'brand' => $brand
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        // 3. Default: Get all global settings & active brand voice merged
         $settings = Settings::getAll();
-        
-        // Mask keys partially for safe display in dashboard
+        $activeBrand = AiAgentService::resolveActiveBrandVoice($pdo);
+
+        // Mask keys partially for safe display
         $maskedGemini = !empty($settings['gemini_api_key']) ? substr($settings['gemini_api_key'], 0, 4) . '...' . substr($settings['gemini_api_key'], -4) : '';
         $maskedOpenAi = !empty($settings['openai_api_key']) ? substr($settings['openai_api_key'], 0, 4) . '...' . substr($settings['openai_api_key'], -4) : '';
         $maskedMetaToken = !empty($settings['meta_page_access_token']) ? substr($settings['meta_page_access_token'], 0, 6) . '...' . substr($settings['meta_page_access_token'], -4) : '';
 
-        // Default training data if not yet saved
-        $keyPhrases = !empty($settings['brand_key_phrases']) ? json_decode($settings['brand_key_phrases'], true) : [
-            'Dicotomía del control', 'Amor Fati', 'Memento Mori', 'Autodominio', 'Fortaleza mental', 'Disciplina diaria'
+        $keyPhrases = !empty($activeBrand['key_phrases']) ? json_decode($activeBrand['key_phrases'], true) : [
+            'Calidad garantizada', 'Atención personalizada', 'Envíos a todo el país', 'Comunidad oficial', 'Asesoría directa'
         ];
 
-        $forbiddenPhrases = !empty($settings['brand_forbidden_phrases']) ? json_decode($settings['brand_forbidden_phrases'], true) : [
-            'Estimado cliente', 'Compra ya', 'Oferta imperdible', 'Somos un bot', 'Haz clic aquí'
+        $forbiddenPhrases = !empty($activeBrand['forbidden_phrases']) ? json_decode($activeBrand['forbidden_phrases'], true) : [
+            'Estimado cliente', 'Compra ya', 'Oferta engañosa', 'Somos un bot', 'Haz clic aquí'
         ];
 
-        $fewShotExamples = !empty($settings['brand_few_shot_examples']) ? json_decode($settings['brand_few_shot_examples'], true) : AiAgentService::getDefaultFewShotExamples();
+        $fewShotExamples = !empty($activeBrand['few_shot_examples']) ? json_decode($activeBrand['few_shot_examples'], true) : AiAgentService::getDefaultFewShotExamples();
 
         echo json_encode([
             'success' => true,
             'data' => [
-                'brand_name' => htmlspecialchars($settings['brand_name'] ?? 'Mente Estoica', ENT_QUOTES, 'UTF-8'),
-                'brand_industry' => htmlspecialchars($settings['brand_industry'] ?? 'Estoicismo, Disciplina y Crecimiento Personal', ENT_QUOTES, 'UTF-8'),
-                'brand_tone' => $settings['brand_tone'] ?? 'stoic_mentor',
-                'brand_description' => htmlspecialchars($settings['brand_description'] ?? 'Comunidad dedicada a la filosofía estoica (Marco Aurelio, Séneca, Epicteto), disciplina diaria, resiliencia mental y autodominio.', ENT_QUOTES, 'UTF-8'),
+                'active_brand_id' => (int)($activeBrand['id'] ?? 1),
+                'brand_name' => htmlspecialchars($activeBrand['brand_name'] ?? 'Xindro Studio', ENT_QUOTES, 'UTF-8'),
+                'persona_name' => htmlspecialchars($activeBrand['persona_name'] ?? 'Alex — Asistente de Marca', ENT_QUOTES, 'UTF-8'),
+                'brand_industry' => htmlspecialchars($activeBrand['industry'] ?? 'Comercio Electrónico & Creadores', ENT_QUOTES, 'UTF-8'),
+                'brand_tone' => $activeBrand['tone_level'] ?? 'friendly_engaging',
+                'language' => $activeBrand['language'] ?? 'es',
+                'brand_description' => htmlspecialchars($activeBrand['system_prompt'] ?? 'Marca dedicada a ofrecer soluciones innovadoras y atención personalizada a la comunidad.', ENT_QUOTES, 'UTF-8'),
                 
                 // Calibration Sliders & Identity Rules
-                'brand_warmth_level' => (int)($settings['brand_warmth_level'] ?? 85),
-                'brand_depth_level' => (int)($settings['brand_depth_level'] ?? 80),
-                'brand_energy_level' => (int)($settings['brand_energy_level'] ?? 75),
-                'brand_closing_question_rule' => $settings['brand_closing_question_rule'] ?? 'always',
-                'brand_emoji_style' => $settings['brand_emoji_style'] ?? 'moderate',
+                'brand_warmth_level' => (int)($activeBrand['warmth_level'] ?? 85),
+                'brand_depth_level' => (int)($activeBrand['depth_level'] ?? 75),
+                'brand_energy_level' => (int)($activeBrand['energy_level'] ?? 80),
+                'brand_closing_question_rule' => $activeBrand['closing_question_rule'] ?? 'always',
+                'brand_emoji_style' => $activeBrand['emoji_style'] ?? 'moderate',
                 'brand_key_phrases' => is_array($keyPhrases) ? $keyPhrases : [],
                 'brand_forbidden_phrases' => is_array($forbiddenPhrases) ? $forbiddenPhrases : [],
                 'brand_few_shot_examples' => is_array($fewShotExamples) ? $fewShotExamples : [],
@@ -75,14 +133,180 @@ try {
     }
 
     if ($method === 'POST') {
-        // Enforce anti-CSRF check on all settings mutations
         Security::requireCsrf();
-        Security::requireRateLimit('settings_mutate', 40, 60);
+        Security::requireRateLimit('settings_mutate', 50, 60);
 
         $rawInput = file_get_contents('php://input');
         $input = json_decode($rawInput, true) ?? $_POST;
-        $action = Security::validateEnum($input['action'] ?? 'save_all', ['save_all', 'sync_meta', 'test_meta'], 'save_all');
+        $action = Security::validateEnum($input['action'] ?? 'save_all', [
+            'save_all', 'save_brand', 'set_active_brand', 'delete_brand', 'sync_meta', 'test_meta'
+        ], 'save_all');
 
+        // 1. Action: Switch Active Brand Voice
+        if ($action === 'set_active_brand') {
+            $brandId = (int)($input['brand_id'] ?? 0);
+            $stmt = $pdo->prepare("SELECT id, brand_name, persona_name FROM brand_voices WHERE id = :id AND user_id = :uid LIMIT 1");
+            $stmt->execute([':id' => $brandId, ':uid' => $userId]);
+            $brand = $stmt->fetch();
+
+            if ($brand) {
+                $_SESSION['active_brand_id'] = (int)$brand['id'];
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Marca activa cambiada a ' . $brand['brand_name'],
+                    'brand' => $brand
+                ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            } else {
+                echo json_encode(['success' => false, 'error' => 'Marca no encontrada']);
+            }
+            exit;
+        }
+
+        // 2. Action: Save or Update Brand Voice
+        if ($action === 'save_brand') {
+            $brandId = isset($input['brand_id']) && !empty($input['brand_id']) ? (int)$input['brand_id'] : null;
+            $brandName = Security::sanitizeString($input['brand_name'] ?? 'Nueva Marca', 150);
+            $personaName = Security::sanitizeString($input['persona_name'] ?? 'Asistente de Marca', 100);
+            $industry = Security::sanitizeString($input['brand_industry'] ?? $input['industry'] ?? 'Comercio & Creadores', 200);
+            $toneLevel = Security::validateEnum($input['brand_tone'] ?? $input['tone_level'] ?? 'friendly_engaging', [
+                'friendly_engaging', 'commercial_sales', 'executive_formal', 'humorous_casual', 'educational_expert'
+            ], 'friendly_engaging');
+            $language = Security::validateEnum($input['language'] ?? 'es', ['es', 'en', 'pt', 'any'], 'es');
+            $systemPrompt = Security::sanitizeString($input['brand_description'] ?? $input['system_prompt'] ?? 'Asistente oficial de la marca.', 3000);
+
+            $warmth = Security::sanitizeInt($input['brand_warmth_level'] ?? $input['warmth_level'] ?? 85, 1, 100, 85);
+            $depth = Security::sanitizeInt($input['brand_depth_level'] ?? $input['depth_level'] ?? 75, 1, 100, 75);
+            $energy = Security::sanitizeInt($input['brand_energy_level'] ?? $input['energy_level'] ?? 80, 1, 100, 80);
+            $closingRule = Security::validateEnum($input['brand_closing_question_rule'] ?? $input['closing_question_rule'] ?? 'always', ['always', 'relevant', 'never'], 'always');
+            $emojiStyle = Security::validateEnum($input['brand_emoji_style'] ?? $input['emoji_style'] ?? 'moderate', ['minimal', 'moderate', 'expressive'], 'moderate');
+
+            // Arrays
+            $keyPhrases = is_array($input['brand_key_phrases'] ?? null) ? $input['brand_key_phrases'] : [];
+            $cleanKeyPhrases = array_values(array_filter(array_map(fn($p) => Security::sanitizeString((string)$p, 80), $keyPhrases)));
+            $keyPhrasesJson = json_encode($cleanKeyPhrases, JSON_UNESCAPED_UNICODE);
+
+            $forbiddenPhrases = is_array($input['brand_forbidden_phrases'] ?? null) ? $input['brand_forbidden_phrases'] : [];
+            $cleanForbid = array_values(array_filter(array_map(fn($f) => Security::sanitizeString((string)$f, 80), $forbiddenPhrases)));
+            $forbiddenPhrasesJson = json_encode($cleanForbid, JSON_UNESCAPED_UNICODE);
+
+            $fewShots = is_array($input['brand_few_shot_examples'] ?? null) ? $input['brand_few_shot_examples'] : [];
+            $cleanFewShots = [];
+            foreach ($fewShots as $ex) {
+                if (!empty($ex['comment']) && !empty($ex['reply'])) {
+                    $cleanFewShots[] = [
+                        'tag' => Security::sanitizeString($ex['tag'] ?? 'general', 50),
+                        'comment' => Security::sanitizeString($ex['comment'], 500),
+                        'reply' => Security::sanitizeString($ex['reply'], 1000)
+                    ];
+                }
+            }
+            $fewShotsJson = json_encode(!empty($cleanFewShots) ? $cleanFewShots : AiAgentService::getDefaultFewShotExamples(), JSON_UNESCAPED_UNICODE);
+
+            if ($brandId) {
+                // Update
+                $stmtUp = $pdo->prepare("
+                    UPDATE brand_voices 
+                    SET brand_name = :bname, persona_name = :pname, industry = :industry,
+                        tone_level = :tone, language = :lang, system_prompt = :prompt,
+                        warmth_level = :warmth, depth_level = :depth, energy_level = :energy,
+                        closing_question_rule = :crule, emoji_style = :emojis,
+                        key_phrases = :kphrases, forbidden_phrases = :fphrases, few_shot_examples = :fewshots
+                    WHERE id = :id AND user_id = :uid
+                ");
+                $stmtUp->execute([
+                    ':bname' => $brandName,
+                    ':pname' => $personaName,
+                    ':industry' => $industry,
+                    ':tone' => $toneLevel,
+                    ':lang' => $language,
+                    ':prompt' => $systemPrompt,
+                    ':warmth' => $warmth,
+                    ':depth' => $depth,
+                    ':energy' => $energy,
+                    ':crule' => $closingRule,
+                    ':emojis' => $emojiStyle,
+                    ':kphrases' => $keyPhrasesJson,
+                    ':fphrases' => $forbiddenPhrasesJson,
+                    ':fewshots' => $fewShotsJson,
+                    ':id' => $brandId,
+                    ':uid' => $userId
+                ]);
+            } else {
+                // Insert new
+                $stmtIns = $pdo->prepare("
+                    INSERT INTO brand_voices (
+                        user_id, brand_name, persona_name, industry, tone_level, language, system_prompt,
+                        warmth_level, depth_level, energy_level, closing_question_rule, emoji_style,
+                        key_phrases, forbidden_phrases, few_shot_examples, is_default
+                    ) VALUES (
+                        :uid, :bname, :pname, :industry, :tone, :lang, :prompt,
+                        :warmth, :depth, :energy, :crule, :emojis,
+                        :kphrases, :fphrases, :fewshots, 0
+                    )
+                ");
+                $stmtIns->execute([
+                    ':uid' => $userId,
+                    ':bname' => $brandName,
+                    ':pname' => $personaName,
+                    ':industry' => $industry,
+                    ':tone' => $toneLevel,
+                    ':lang' => $language,
+                    ':prompt' => $systemPrompt,
+                    ':warmth' => $warmth,
+                    ':depth' => $depth,
+                    ':energy' => $energy,
+                    ':crule' => $closingRule,
+                    ':emojis' => $emojiStyle,
+                    ':kphrases' => $keyPhrasesJson,
+                    ':fphrases' => $forbiddenPhrasesJson,
+                    ':fewshots' => $fewShotsJson
+                ]);
+                $brandId = (int)$pdo->lastInsertId();
+                $_SESSION['active_brand_id'] = $brandId;
+            }
+
+            // Also keep settings in sync for active brand
+            Settings::set('brand_name', $brandName);
+            Settings::set('brand_industry', $industry);
+            Settings::set('brand_tone', $toneLevel);
+            Settings::set('brand_description', $systemPrompt);
+
+            echo json_encode([
+                'success' => true,
+                'message' => 'Voz de Marca guardada correctamente.',
+                'brand_id' => $brandId
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        // 3. Action: Delete Brand Voice
+        if ($action === 'delete_brand') {
+            $brandId = (int)($input['brand_id'] ?? 0);
+            
+            // Check count
+            $countStmt = $pdo->prepare("SELECT COUNT(*) FROM brand_voices WHERE user_id = :uid");
+            $countStmt->execute([':uid' => $userId]);
+            if ((int)$countStmt->fetchColumn() <= 1) {
+                echo json_encode(['success' => false, 'error' => 'No puedes eliminar la única marca existente en tu cuenta.']);
+                exit;
+            }
+
+            $stmtDel = $pdo->prepare("DELETE FROM brand_voices WHERE id = :id AND user_id = :uid");
+            $stmtDel->execute([':id' => $brandId, ':uid' => $userId]);
+
+            // If active was deleted, reset to first
+            if (($_SESSION['active_brand_id'] ?? 0) === $brandId) {
+                unset($_SESSION['active_brand_id']);
+            }
+
+            echo json_encode([
+                'success' => true,
+                'message' => 'Marca eliminada correctamente.'
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        // 4. Meta Actions
         if ($action === 'test_meta') {
             $tokenToTest = !empty($input['meta_page_access_token']) && !str_contains($input['meta_page_access_token'], '...') ? trim($input['meta_page_access_token']) : null;
             $testResult = MetaApiService::testMetaConnection($tokenToTest);
@@ -96,69 +320,7 @@ try {
             exit;
         }
 
-        // Validate and sanitize standard settings fields
-        if (isset($input['brand_name'])) {
-            Settings::set('brand_name', Security::sanitizeString($input['brand_name'], 150));
-        }
-        if (isset($input['brand_industry'])) {
-            Settings::set('brand_industry', Security::sanitizeString($input['brand_industry'], 250));
-        }
-        if (isset($input['brand_tone'])) {
-            $allowedTones = ['stoic_mentor', 'disciplined_drive', 'empathetic_brother', 'stoic_quotes', 'challenging', 'friendly_engaging'];
-            Settings::set('brand_tone', Security::validateEnum($input['brand_tone'], $allowedTones, 'stoic_mentor'));
-        }
-        if (isset($input['brand_description'])) {
-            Settings::set('brand_description', Security::sanitizeString($input['brand_description'], 2000));
-        }
-
-        // Calibration Sliders & Identity Rules
-        if (isset($input['brand_warmth_level'])) {
-            $w = Security::sanitizeInt($input['brand_warmth_level'], 1, 100, 85);
-            Settings::set('brand_warmth_level', (string)$w);
-        }
-        if (isset($input['brand_depth_level'])) {
-            $d = Security::sanitizeInt($input['brand_depth_level'], 1, 100, 80);
-            Settings::set('brand_depth_level', (string)$d);
-        }
-        if (isset($input['brand_energy_level'])) {
-            $e = Security::sanitizeInt($input['brand_energy_level'], 1, 100, 75);
-            Settings::set('brand_energy_level', (string)$e);
-        }
-        if (isset($input['brand_closing_question_rule'])) {
-            Settings::set('brand_closing_question_rule', Security::validateEnum($input['brand_closing_question_rule'], ['always', 'relevant', 'never'], 'always'));
-        }
-        if (isset($input['brand_emoji_style'])) {
-            Settings::set('brand_emoji_style', Security::validateEnum($input['brand_emoji_style'], ['minimal', 'moderate', 'expressive'], 'moderate'));
-        }
-
-        // Arrays / JSON settings
-        if (isset($input['brand_key_phrases'])) {
-            $phrases = is_array($input['brand_key_phrases']) ? $input['brand_key_phrases'] : [];
-            $cleanPhrases = array_values(array_filter(array_map(fn($p) => Security::sanitizeString((string)$p, 80), $phrases)));
-            Settings::set('brand_key_phrases', json_encode($cleanPhrases, JSON_UNESCAPED_UNICODE));
-        }
-
-        if (isset($input['brand_forbidden_phrases'])) {
-            $forbid = is_array($input['brand_forbidden_phrases']) ? $input['brand_forbidden_phrases'] : [];
-            $cleanForbid = array_values(array_filter(array_map(fn($f) => Security::sanitizeString((string)$f, 80), $forbid)));
-            Settings::set('brand_forbidden_phrases', json_encode($cleanForbid, JSON_UNESCAPED_UNICODE));
-        }
-
-        if (isset($input['brand_few_shot_examples'])) {
-            $examples = is_array($input['brand_few_shot_examples']) ? $input['brand_few_shot_examples'] : [];
-            $cleanExamples = [];
-            foreach ($examples as $ex) {
-                if (!empty($ex['comment']) && !empty($ex['reply'])) {
-                    $cleanExamples[] = [
-                        'tag' => Security::sanitizeString($ex['tag'] ?? 'general', 50),
-                        'comment' => Security::sanitizeString($ex['comment'], 500),
-                        'reply' => Security::sanitizeString($ex['reply'], 1000)
-                    ];
-                }
-            }
-            Settings::set('brand_few_shot_examples', json_encode($cleanExamples, JSON_UNESCAPED_UNICODE));
-        }
-
+        // 5. Action: save_all (Legacy & Global Engine Settings)
         if (isset($input['ai_provider'])) {
             Settings::set('ai_provider', Security::validateEnum($input['ai_provider'], ['gemini', 'openai', 'heuristic'], 'gemini'));
         }
@@ -193,7 +355,7 @@ try {
 
         echo json_encode([
             'success' => true,
-            'message' => 'Identidad de marca y configuración de IA guardadas correctamente.'
+            'message' => 'Configuración de IA y claves guardadas correctamente.'
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
         exit;
     }

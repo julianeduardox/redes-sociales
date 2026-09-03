@@ -48,8 +48,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'request_manual_deletio
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Instrucciones de Eliminación de Datos | SocialBoost AI & Meta</title>
-  <meta name="description" content="Instrucciones oficiales para solicitar la eliminación de datos de usuario de Meta (Facebook e Instagram) en SocialBoost AI.">
+  <title>Instrucciones de Eliminación de Datos | XINDRO AI & Meta</title>
+  <meta name="description" content="Instrucciones oficiales para solicitar la eliminación de datos de usuario de Meta (Facebook e Instagram) en XINDRO AI Platform.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -205,8 +205,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'request_manual_deletio
       <div class="step-box">
         <div class="step-number">3</div>
         <div class="step-content">
-          <h3>Elimina SocialBoost AI</h3>
-          <p>Busca <strong>SocialBoost AI / Mente Estoica</strong> en la lista y haz clic en <strong>Eliminar</strong>. Asegúrate de marcar la casilla <em>"Permitir que Facebook envíe una notificación a SocialBoost AI para eliminar mis datos"</em>.</p>
+          <h3>Elimina XINDRO AI Platform</h3>
+          <p>Busca <strong>XINDRO AI Platform</strong> en la lista y haz clic en <strong>Eliminar</strong>. Asegúrate de marcar la casilla <em>"Permitir que Facebook envíe una notificación a XINDRO AI para eliminar mis datos"</em>.</p>
         </div>
       </div>
 
@@ -231,7 +231,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'request_manual_deletio
 
         <div class="form-group">
           <label style="color: #f1f5f9;">Usuario de Instagram / Facebook (@usuario o Nombre):</label>
-          <input type="text" name="user_identifier" placeholder="Ej: @usuario.estoico o Tu Nombre Público" required style="width: 100%;" />
+          <input type="text" name="user_identifier" placeholder="Ej: @usuario o Tu Nombre Público" required style="width: 100%;" />
         </div>
 
         <button type="submit" class="btn-primary-action" style="background: linear-gradient(135deg, #f43f5e, #e11d48); padding: 12px 24px; font-size: 0.88rem; font-weight: 700;">

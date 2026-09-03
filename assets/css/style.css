@@ -4136,3 +4136,51 @@ input:checked + .slider:before {
     gap: 10px !important;
   }
 }
+
+/* Agency & Multi-Brand Switcher */
+.topbar-brand-switcher {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  margin-left: 12px;
+}
+
+.topbar-brand-select {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+  padding-right: 6px;
+}
+
+.topbar-brand-select option {
+  background: #111827;
+  color: #fff;
+  padding: 8px;
+}
+
+.btn-new-brand-pill {
+  background: rgba(124, 58, 237, 0.2);
+  border: 1px solid rgba(124, 58, 237, 0.4);
+  color: #c084fc;
+  font-size: 0.74rem;
+  font-weight: 800;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-new-brand-pill:hover {
+  background: var(--primary);
+  color: #fff;
+}
+

@@ -42,10 +42,10 @@ const AgentController = {
           </div>
 
           <div class="timeline-event">
-            <div class="timeline-icon" style="background: rgba(99,102,241,0.2); border-color: var(--primary);">🏛️</div>
+            <div class="timeline-icon" style="background: rgba(99,102,241,0.2); border-color: var(--primary);">⚡</div>
             <div class="timeline-content" style="border-left: 2px solid var(--accent-emerald); background: rgba(16,185,129,0.05);">
               <div class="timeline-top">
-                <span class="timeline-author" style="color: var(--accent-emerald);">Mente Estoica (Respuesta Publicada)</span>
+                <span class="timeline-author" style="color: var(--accent-emerald);">XINDRO Copilot (Respuesta Publicada)</span>
                 <span class="timeline-time">${safeReplyTime}</span>
               </div>
               <div class="timeline-text">${safeReply}</div>
@@ -115,11 +115,11 @@ const AgentController = {
     if (!suggestionsContainer) return;
 
     suggestionsContainer.innerHTML = `
-      <!-- Stoic Reflection Card -->
+      <!-- Connection & Empathy Card -->
       <div class="suggestion-card active" id="card-variant-engagement" onclick="AgentController.selectVariant('engagement')">
         <div class="suggestion-header">
-          <span class="suggestion-tag engagement">🏛️ Opción 1: Reflexión Estoica</span>
-          <span style="font-size: 0.72rem; color: var(--text-dim);">Filosofía & Pregunta</span>
+          <span class="suggestion-tag engagement">🤝 Opción 1: Conexión & Empatía</span>
+          <span style="font-size: 0.72rem; color: var(--text-dim);">Cercanía & Pregunta</span>
         </div>
         <p class="suggestion-text" id="text-variant-engagement">${this.escapeHtml(replies.engagement || '')}</p>
         <div class="suggestion-actions">
@@ -132,11 +132,11 @@ const AgentController = {
         </div>
       </div>
 
-      <!-- Motivation & Discipline Card -->
+      <!-- Conversion & Sales CTA Card -->
       <div class="suggestion-card" id="card-variant-conversion" onclick="AgentController.selectVariant('conversion')">
         <div class="suggestion-header">
-          <span class="suggestion-tag conversion">⚔️ Opción 2: Impulso & Disciplina</span>
-          <span style="font-size: 0.72rem; color: var(--text-dim);">Fuerza y Carácter</span>
+          <span class="suggestion-tag conversion">🎯 Opción 2: Conversión & Venta</span>
+          <span style="font-size: 0.72rem; color: var(--text-dim);">Enfoque Comercial & CTA</span>
         </div>
         <p class="suggestion-text" id="text-variant-conversion">${this.escapeHtml(replies.conversion || '')}</p>
         <div class="suggestion-actions">
@@ -149,11 +149,11 @@ const AgentController = {
         </div>
       </div>
 
-      <!-- Community Brotherhood & Support Card -->
+      <!-- Authority & Support Solution Card -->
       <div class="suggestion-card" id="card-variant-support" onclick="AgentController.selectVariant('support')">
         <div class="suggestion-header">
-          <span class="suggestion-tag support">🤝 Opción 3: Empatía & Hermandad</span>
-          <span style="font-size: 0.72rem; color: var(--text-dim);">Apoyo & Gratitud</span>
+          <span class="suggestion-tag support">💡 Opción 3: Autoridad & Solución</span>
+          <span style="font-size: 0.72rem; color: var(--text-dim);">Resolución & Soporte</span>
         </div>
         <p class="suggestion-text" id="text-variant-support">${this.escapeHtml(replies.support || '')}</p>
         <div class="suggestion-actions">
@@ -168,7 +168,7 @@ const AgentController = {
 
       ${replies.engagement_tips ? `
         <div class="suggestion-tip">
-          💡 <strong>Estrategia de Conexión:</strong> ${this.escapeHtml(replies.engagement_tips)}
+          💡 <strong>Estrategia Comercial:</strong> ${this.escapeHtml(replies.engagement_tips)}
         </div>
       ` : ''}
     `;
@@ -492,11 +492,11 @@ const AgentController = {
     if (!container) return;
 
     container.innerHTML = `
-      <!-- Variant 1: Stoic Reflection (Reflexiva) -->
+      <!-- Variant 1: Connection & Empathy -->
       <div class="modal-suggestion-card card-reflection active" id="modal-card-engagement" onclick="AgentController.selectModalVariant('engagement')">
         <div class="modal-suggestion-header">
-          <span class="modal-suggestion-tag reflection">🏛️ Opción 1: Reflexión Estoica</span>
-          <span class="modal-suggestion-sub">Sabiduría, Citas & Pregunta</span>
+          <span class="modal-suggestion-tag reflection">🤝 Opción 1: Conexión & Empatía</span>
+          <span class="modal-suggestion-sub">Cercanía, Agradecimiento & Pregunta</span>
         </div>
         <div class="modal-suggestion-text" id="modal-text-engagement">${this.escapeHtml(replies.engagement || '')}</div>
         <div class="modal-suggestion-actions">
@@ -512,11 +512,11 @@ const AgentController = {
         </div>
       </div>
 
-      <!-- Variant 2: Motivation & Discipline (Motivacional) -->
+      <!-- Variant 2: Conversion & Sales CTA -->
       <div class="modal-suggestion-card card-motivation" id="modal-card-conversion" onclick="AgentController.selectModalVariant('conversion')">
         <div class="modal-suggestion-header">
-          <span class="modal-suggestion-tag motivation">⚔️ Opción 2: Impulso & Disciplina</span>
-          <span class="modal-suggestion-sub">Fuerza, Carácter & Cero Excusas</span>
+          <span class="modal-suggestion-tag motivation">🎯 Opción 2: Conversión & Venta</span>
+          <span class="modal-suggestion-sub">Enfoque Comercial, Producto & DM</span>
         </div>
         <div class="modal-suggestion-text" id="modal-text-conversion">${this.escapeHtml(replies.conversion || '')}</div>
         <div class="modal-suggestion-actions">
@@ -532,11 +532,11 @@ const AgentController = {
         </div>
       </div>
 
-      <!-- Variant 3: Community & Brotherhood (Comunitaria) -->
+      <!-- Variant 3: Authority & Support Solution -->
       <div class="modal-suggestion-card card-community" id="modal-card-support" onclick="AgentController.selectModalVariant('support')">
         <div class="modal-suggestion-header">
-          <span class="modal-suggestion-tag community">🤝 Opción 3: Empatía & Hermandad</span>
-          <span class="modal-suggestion-sub">Apoyo Fraternal & Gratitud</span>
+          <span class="modal-suggestion-tag community">💡 Opción 3: Autoridad & Solución</span>
+          <span class="modal-suggestion-sub">Resolución Directa, Confianza & Soporte</span>
         </div>
         <div class="modal-suggestion-text" id="modal-text-support">${this.escapeHtml(replies.support || '')}</div>
         <div class="modal-suggestion-actions">

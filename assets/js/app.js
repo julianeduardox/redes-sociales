@@ -41,10 +41,155 @@ const App = {
   async init() {
     this.bindEvents();
     this.initViewDensity();
+    await this.loadBrands();
     await this.loadSettings();
     await this.loadComments();
     this.renderTagChips();
     this.renderFewShotExamples();
+  },
+
+  // Agency & Multi-Brand Voice Management
+  async loadBrands() {
+    try {
+      const res = await this.fetchWithCsrf('api/settings.php?action=list_brands');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.brands)) {
+        const topbarSelect = document.getElementById('topbar-brand-select');
+        const settingsSelect = document.getElementById('settings-brand-voice-selector');
+        const activeId = data.active_brand_id;
+
+        const optionsHtml = data.brands.map(b => `
+          <option value="${b.id}" ${b.id == activeId ? 'selected' : ''}>
+            ${this.escapeHtml(b.brand_name)} (${this.escapeHtml(b.industry || 'General')})
+          </option>
+        `).join('');
+
+        if (topbarSelect) topbarSelect.innerHTML = optionsHtml;
+        if (settingsSelect) settingsSelect.innerHTML = optionsHtml;
+      }
+    } catch (err) {
+      console.error('Error loading brand list:', err);
+    }
+  },
+
+  async switchActiveBrand(brandId) {
+    if (!brandId) return;
+    try {
+      const res = await this.fetchWithCsrf('api/settings.php', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'set_active_brand',
+          brand_id: parseInt(brandId, 10)
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        // Sync both selectors
+        const topbarSelect = document.getElementById('topbar-brand-select');
+        const settingsSelect = document.getElementById('settings-brand-voice-selector');
+        if (topbarSelect) topbarSelect.value = brandId;
+        if (settingsSelect) settingsSelect.value = brandId;
+
+        App.showToast(`🏢 Espacio cambiado a: ${data.brand?.brand_name || 'Marca Activa'}`, 'success');
+        
+        // Reload workspace with brand context
+        await this.loadBrandVoiceDetails(brandId);
+        await this.loadComments();
+        if (typeof Analytics !== 'undefined' && Analytics.loadSummary) {
+          Analytics.loadSummary();
+        }
+      } else {
+        App.showToast(data.error || 'No se pudo cambiar de marca', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      App.showToast('Error de conexión al cambiar de marca', 'error');
+    }
+  },
+
+  openNewBrandModal() {
+    this.openModal('modal-new-brand');
+  },
+
+  async submitCreateNewBrand(e) {
+    if (e) e.preventDefault();
+    const name = document.getElementById('new-brand-name')?.value.trim();
+    const persona = document.getElementById('new-brand-persona')?.value.trim() || 'Asistente de Marca';
+    const industry = document.getElementById('new-brand-industry')?.value.trim() || 'Comercio & Creadores';
+    const language = document.getElementById('new-brand-language')?.value || 'es';
+    const tone = document.getElementById('new-brand-tone')?.value || 'commercial_sales';
+    const prompt = document.getElementById('new-brand-prompt')?.value.trim() || 'Asistente oficial de la marca.';
+
+    if (!name) {
+      App.showToast('Por favor introduce el nombre de la marca o cliente.', 'error');
+      return;
+    }
+
+    try {
+      const res = await this.fetchWithCsrf('api/settings.php', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'save_brand',
+          brand_name: name,
+          persona_name: persona,
+          industry: industry,
+          language: language,
+          tone_level: tone,
+          system_prompt: prompt
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        this.closeModal('modal-new-brand');
+        document.getElementById('new-brand-name').value = '';
+        document.getElementById('new-brand-persona').value = '';
+        document.getElementById('new-brand-industry').value = '';
+        document.getElementById('new-brand-prompt').value = '';
+
+        App.showToast(`¡Cliente "${name}" creado exitosamente! 🚀`, 'success');
+        await this.loadBrands();
+        if (data.brand_id) {
+          await this.switchActiveBrand(data.brand_id);
+        }
+      } else {
+        App.showToast(data.error || 'Error al crear la marca', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      App.showToast('Error de conexión', 'error');
+    }
+  },
+
+  async loadBrandVoiceDetails(brandId) {
+    try {
+      const res = await this.fetchWithCsrf(`api/settings.php?action=get_brand&id=${brandId}`);
+      const data = await res.json();
+      if (data.success && data.brand) {
+        const b = data.brand;
+        this.setInputValue('setting-brand-id', b.id);
+        this.setInputValue('setting-brand-name', b.brand_name);
+        this.setInputValue('setting-persona-name', b.persona_name);
+        this.setInputValue('setting-brand-industry', b.industry);
+        this.setInputValue('setting-brand-language', b.language || 'es');
+        this.setInputValue('setting-brand-tone', b.tone_level || 'friendly_engaging');
+        this.setInputValue('setting-brand-desc', b.system_prompt);
+
+        if (b.warmth_level !== undefined) this.updateSliderVal('warmth', b.warmth_level);
+        if (b.depth_level !== undefined) this.updateSliderVal('depth', b.depth_level);
+        if (b.energy_level !== undefined) this.updateSliderVal('energy', b.energy_level);
+        this.setInputValue('setting-closing-rule', b.closing_question_rule || 'always');
+        this.setInputValue('setting-emoji-style', b.emoji_style || 'moderate');
+
+        this.keyPhrases = Array.isArray(b.key_phrases) ? b.key_phrases : [];
+        this.forbiddenPhrases = Array.isArray(b.forbidden_phrases) ? b.forbidden_phrases : [];
+        this.fewShotExamples = Array.isArray(b.few_shot_examples) ? b.few_shot_examples : [];
+
+        this.renderTagChips();
+        this.renderFewShotExamples();
+      }
+    } catch (err) {
+      console.error(err);
+    }
   },
 
   initViewDensity() {
@@ -824,18 +969,18 @@ const App = {
     const authorInput = document.getElementById('playground-author');
     const commentInput = document.getElementById('playground-comment');
 
-    if (scenarioKey === 'vulnerable') {
+    if (scenarioKey === 'price_lead') {
       if (authorInput) authorInput.value = 'Carlos Ramos';
-      if (commentInput) commentInput.value = 'Me siento completamente estancado y sin rumbo últimamente, por más que intento me cuesta encontrar sentido a lo que hago.';
-    } else if (scenarioKey === 'habits') {
+      if (commentInput) commentInput.value = '¡Hola! Me interesan mucho sus productos y servicios. ¿Cuál es el precio y qué catálogo tienen disponible?';
+    } else if (scenarioKey === 'objection') {
       if (authorInput) authorInput.value = 'Lucía Morales';
-      if (commentInput) commentInput.value = '¿Cómo logran mantener la disciplina para levantarse temprano sin depender de la motivación?';
-    } else if (scenarioKey === 'gratitude') {
+      if (commentInput) commentInput.value = '¿Qué garantía ofrecen y cómo sé si funcionará de forma segura para mi empresa?';
+    } else if (scenarioKey === 'support') {
       if (authorInput) authorInput.value = 'David Silva';
-      if (commentInput) commentInput.value = 'Este post me abrió los ojos en el momento exacto. Gracias infinitas por compartir tanta sabiduría.';
-    } else if (scenarioKey === 'books') {
+      if (commentInput) commentInput.value = 'Hola, tengo una duda urgente con mi cuenta y no puedo acceder. ¿Me pueden ayudar por favor?';
+    } else if (scenarioKey === 'gratitude') {
       if (authorInput) authorInput.value = 'Elena Ortiz';
-      if (commentInput) commentInput.value = '¿Qué libro recomiendan para empezar a entender la dicotomía del control y no estresarse por todo?';
+      if (commentInput) commentInput.value = '¡Excelente servicio y atención de primera! Quedé encantada con la rapidez y la calidad del trabajo.';
     }
   },
 
@@ -864,12 +1009,14 @@ const App = {
       author_name: author,
       comment_text: comment,
       brand_name: document.getElementById('setting-brand-name')?.value,
+      persona_name: document.getElementById('setting-persona-name')?.value,
       brand_industry: document.getElementById('setting-brand-industry')?.value,
+      language: document.getElementById('setting-brand-language')?.value || 'es',
       brand_tone: document.getElementById('setting-brand-tone')?.value,
       brand_description: document.getElementById('setting-brand-desc')?.value,
       brand_warmth_level: parseInt(document.getElementById('slider-warmth')?.value, 10) || 85,
-      brand_depth_level: parseInt(document.getElementById('slider-depth')?.value, 10) || 80,
-      brand_energy_level: parseInt(document.getElementById('slider-energy')?.value, 10) || 75,
+      brand_depth_level: parseInt(document.getElementById('slider-depth')?.value, 10) || 75,
+      brand_energy_level: parseInt(document.getElementById('slider-energy')?.value, 10) || 80,
       brand_closing_question_rule: document.getElementById('setting-closing-rule')?.value || 'always',
       brand_emoji_style: document.getElementById('setting-emoji-style')?.value || 'moderate',
       brand_key_phrases: this.keyPhrases,
@@ -898,17 +1045,17 @@ const App = {
           </div>
           
           <div class="playground-variant-box" style="border-left: 3px solid var(--primary);">
-            <div class="playground-variant-title" style="color: var(--primary);">🏛️ Opción 1: Reflexión Estoica</div>
+            <div class="playground-variant-title" style="color: var(--primary);">🤝 Opción 1: Conexión & Empatía</div>
             <div>${this.escapeHtml(reps.engagement)}</div>
           </div>
 
           <div class="playground-variant-box" style="border-left: 3px solid var(--accent-cyan);">
-            <div class="playground-variant-title" style="color: var(--accent-cyan);">⚔️ Opción 2: Impulso & Disciplina</div>
+            <div class="playground-variant-title" style="color: var(--accent-cyan);">🎯 Opción 2: Conversión & Ventas / CTA</div>
             <div>${this.escapeHtml(reps.conversion)}</div>
           </div>
 
           <div class="playground-variant-box" style="border-left: 3px solid var(--accent-emerald);">
-            <div class="playground-variant-title" style="color: var(--accent-emerald);">🤝 Opción 3: Empatía & Hermandad</div>
+            <div class="playground-variant-title" style="color: var(--accent-emerald);">💡 Opción 3: Autoridad & Solución</div>
             <div>${this.escapeHtml(reps.support)}</div>
           </div>
 
@@ -930,19 +1077,29 @@ const App = {
 
   async saveBrandStudioForm(e) {
     if (e) e.preventDefault();
+    const brandId = document.getElementById('setting-brand-id')?.value;
     const payload = {
+      action: 'save_brand',
+      brand_id: brandId ? parseInt(brandId, 10) : undefined,
       brand_name: document.getElementById('setting-brand-name')?.value,
+      persona_name: document.getElementById('setting-persona-name')?.value,
       brand_industry: document.getElementById('setting-brand-industry')?.value,
+      language: document.getElementById('setting-brand-language')?.value || 'es',
       brand_tone: document.getElementById('setting-brand-tone')?.value,
-      brand_description: document.getElementById('setting-brand-desc')?.value,
+      system_prompt: document.getElementById('setting-brand-desc')?.value,
       brand_warmth_level: parseInt(document.getElementById('slider-warmth')?.value, 10) || 85,
-      brand_depth_level: parseInt(document.getElementById('slider-depth')?.value, 10) || 80,
-      brand_energy_level: parseInt(document.getElementById('slider-energy')?.value, 10) || 75,
+      brand_depth_level: parseInt(document.getElementById('slider-depth')?.value, 10) || 75,
+      brand_energy_level: parseInt(document.getElementById('slider-energy')?.value, 10) || 80,
       brand_closing_question_rule: document.getElementById('setting-closing-rule')?.value,
       brand_emoji_style: document.getElementById('setting-emoji-style')?.value,
       brand_key_phrases: this.keyPhrases,
       brand_forbidden_phrases: this.forbiddenPhrases,
-      brand_few_shot_examples: this.fewShotExamples,
+      brand_few_shot_examples: this.fewShotExamples
+    };
+
+    // Also send AI Engine settings
+    const globalPayload = {
+      action: 'save_all',
       ai_provider: document.getElementById('setting-ai-provider')?.value,
       gemini_api_key: document.getElementById('setting-gemini-key')?.value,
       openai_api_key: document.getElementById('setting-openai-key')?.value
@@ -954,8 +1111,15 @@ const App = {
         body: JSON.stringify(payload)
       });
       const res = await response.json();
+
+      await this.fetchWithCsrf('api/settings.php', {
+        method: 'POST',
+        body: JSON.stringify(globalPayload)
+      });
+
       if (res.success) {
         App.showToast('¡Identidad de marca y calibración guardadas exitosamente!', 'success');
+        await this.loadBrands();
       } else {
         App.showToast(`Error: ${res.error}`, 'error');
       }

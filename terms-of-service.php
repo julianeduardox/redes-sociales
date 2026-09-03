@@ -11,8 +11,8 @@ Security::applySecurityHeaders(false);
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Términos del Servicio | SocialBoost AI & Mente Estoica</title>
-  <meta name="description" content="Condiciones generales de uso del servicio SocialBoost AI y la integración con Meta Graph API.">
+  <title>Términos del Servicio | XINDRO AI Platform</title>
+  <meta name="description" content="Condiciones generales de uso del servicio XINDRO AI Platform y la integración con Meta Graph API.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -157,14 +157,14 @@ Security::applySecurityHeaders(false);
         <div class="legal-section">
           <h2><span class="sec-num">1.</span> Aceptación de los Términos</h2>
           <p>
-            Al acceder, registrarse o utilizar <strong>SocialBoost AI / Mente Estoica</strong> (en adelante, el "Servicio" o la "Plataforma"), usted acepta quedar vinculado legalmente por estos Términos y Condiciones de Uso, así como por nuestra <a href="privacy-policy.php" style="color: var(--accent-cyan);">Política de Privacidad</a>. Si no está de acuerdo con alguna disposición de estos términos, no debe utilizar la Plataforma.
+            Al acceder, registrarse o utilizar <strong>XINDRO AI Platform</strong> (en adelante, el "Servicio" o la "Plataforma"), usted acepta quedar vinculado legalmente por estos Términos y Condiciones de Uso, así como por nuestra <a href="privacy-policy.php" style="color: var(--accent-cyan);">Política de Privacidad</a>. Si no está de acuerdo con alguna disposición de estos términos, no debe utilizar la Plataforma.
           </p>
         </div>
 
         <div class="legal-section">
           <h2><span class="sec-num">2.</span> Descripción del Servicio y Asistencia con IA</h2>
           <p>
-            SocialBoost AI es una plataforma de software diseñada para creadores de contenido, marcas y administradores comunitarios, que facilita la moderación, categorización de intenciones, visualización de métricas de audiencia y generación asistida de respuestas para redes sociales (Meta Graph API: Facebook e Instagram) empleando modelos avanzados de Inteligencia Artificial.
+            XINDRO AI es una plataforma SaaS de gestión de comunidades multi-marca para agencias y creadores, que facilita la moderación, categorización de intenciones, visualización de métricas de audiencia y generación asistida de respuestas para redes sociales (Meta Graph API: Facebook e Instagram) empleando modelos avanzados de Inteligencia Artificial.
           </p>
         </div>
 
@@ -183,7 +183,7 @@ Security::applySecurityHeaders(false);
         <div class="legal-section">
           <h2><span class="sec-num">4.</span> Descargo de Responsabilidad sobre Contenido Generado por IA</h2>
           <div class="legal-highlight-box">
-            <p><strong>Naturaleza Asistencial de la IA:</strong> Las respuestas generadas por los motores de IA (Gemini / OpenAI / Heurística) actúan como sugerencias para asistir al creador. Si bien el sistema incorpora filtros éticos y de tono de marca, el usuario es el responsable final de la supervisión, configuración del piloto automático y publicación de las respuestas en sus canales sociales.</p>
+            <p><strong>Naturaleza Asistencial de la IA:</strong> Las respuestas generadas por los motores de IA (Gemini / OpenAI / Heurística) actúan como sugerencias para asistir al creador o agencia. Si bien el sistema incorpora filtros éticos y de tono de marca dinámico, el usuario es el responsable final de la supervisión, configuración del piloto automático y publicación de las respuestas en sus canales sociales.</p>
           </div>
         </div>
 
@@ -200,7 +200,7 @@ Security::applySecurityHeaders(false);
         <div class="legal-section">
           <h2><span class="sec-num">6.</span> Propiedad Intelectual</h2>
           <p>
-            Todos los derechos de propiedad intelectual sobre el software, diseño, logotipos, algoritmos heurísticos y código fuente pertenecen a SocialBoost AI / Mente Estoica. El usuario conserva la total propiedad y derechos sobre sus publicaciones, imágenes, marcas comerciales y contenidos subidos a sus redes sociales.
+            Todos los derechos de propiedad intelectual sobre el software, diseño, logotipos, algoritmos heurísticos y código fuente pertenecen a XINDRO AI Platform. El usuario conserva la total propiedad y derechos sobre sus publicaciones, imágenes, marcas comerciales y contenidos subidos a sus redes sociales.
           </p>
         </div>
 
@@ -217,7 +217,7 @@ Security::applySecurityHeaders(false);
             Nos reservamos el derecho de modificar estos Términos periódicamente para reflejar cambios legales o técnicos. La fecha de última actualización en la parte superior reflejará la versión vigente.
           </p>
           <div style="background: rgba(255,255,255,0.04); padding: 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); font-size: 0.88rem; color: #f1f5f9;">
-            📧 <strong>Consultas Legales y Soporte:</strong> <a href="mailto:soporte@mentestoica.app" style="color: var(--accent-cyan); text-decoration: none;">soporte@mentestoica.app</a>
+            📧 <strong>Consultas Legales y Soporte:</strong> <a href="mailto:soporte@turbogram.site" style="color: var(--accent-cyan); text-decoration: none;">soporte@turbogram.site</a>
           </div>
         </div>
       </div>
@@ -227,14 +227,14 @@ Security::applySecurityHeaders(false);
         <div class="legal-section">
           <h2><span class="sec-num">1.</span> Acceptance of Terms</h2>
           <p>
-            By accessing or using <strong>SocialBoost AI / Mente Estoica</strong> (the "Service" or "Platform"), you agree to be bound by these Terms of Service and our <a href="privacy-policy.php" style="color: var(--accent-cyan);">Privacy Policy</a>. If you do not agree to these terms, you may not use the Service.
+            By accessing or using <strong>XINDRO AI Platform</strong> (the "Service" or "Platform"), you agree to be bound by these Terms of Service and our <a href="privacy-policy.php" style="color: var(--accent-cyan);">Privacy Policy</a>. If you do not agree to these terms, you may not use the Service.
           </p>
         </div>
 
         <div class="legal-section">
           <h2><span class="sec-num">2.</span> Service Overview & AI Assistance</h2>
           <p>
-            SocialBoost AI provides intelligent community management software that assists creators and brand managers with intent categorization, Meta Graph API analytics, and automated/suggested AI replies.
+            XINDRO AI provides intelligent multi-brand community management software for agencies and creators, assisting with intent categorization, Meta Graph API analytics, and dynamic AI-powered replies.
           </p>
         </div>
 

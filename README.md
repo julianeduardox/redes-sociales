@@ -1,15 +1,16 @@
-# 🏛️ SocialBoost AI / Mente Estoica - Social Media Engagement Agent
+# ⚡ XINDRO AI Copilot - Multi-Brand Social Media Agency OS
 
-Sistema inteligente de gestión de engagement, moderación asistida con Inteligencia Artificial (Gemini / OpenAI / Motor Heurístico Stoic local), webhook en tiempo real y analítica para **Instagram & Facebook (Meta Graph API)**.
+Plataforma SaaS multi-tenant y multi-cliente (White-label para agencias y creadores) para gestión de engagement, moderación asistida con Inteligencia Artificial agnóstica (Gemini / OpenAI / Motor Heurístico Comercial local), webhooks en tiempo real y analítica para **Instagram & Facebook (Meta Graph API)**.
 
 ---
 
 ## 🚀 Características Principales
 
-- **🤖 Copiloto de Respuestas IA:** Generación en 3 variantes (Conexión/Empatía, Conversión/Valor, Sabiduría/Profundidad) calibradas con la voz de marca estoica.
-- **⚡ Modo Autopilot:** Detección de intenciones de alto valor y respuesta automatizada instantánea a comentarios prioritarios.
+- **🏢 Soporte Multi-Marca & Multi-Cliente:** Gestiona múltiples marcas, creadores o clientes desde un mismo panel con cambio en caliente instantáneo (`brand_voices`).
+- **🤖 Copiloto de IA Agnóstico:** System prompt dinámico por cliente con calibración de identidad, sliders de calidez/expertise/conversión y 3 variantes comerciales (Conexión/Empatía, Conversión/CTA, Autoridad/Solución).
+- **⚡ Modo Autopilot:** Detección de intenciones universales (Leads de precio, objeciones de ventas, soporte, consultas generales) y auto-respuesta en tiempo real.
 - **🌐 Webhooks en Tiempo Real:** Integración nativa con Meta Graph API (`/api/webhook.php`) verificada criptográficamente con HMAC-SHA256.
-- **📊 Analíticas & Insights:** Métricas de alcance, engagement rate, impresiones y comentarios destacados.
+- **📊 Analíticas & Insights:** Métricas de alcance, engagement rate, impresiones y comentarios destacados por marca o publicación.
 - **🛡️ Ciberseguridad Blindada:**
   - Protección Anti-CSRF criptográfica en todas las mutaciones.
   - Rate Limiting por IP con ventana deslizante.
@@ -37,14 +38,12 @@ Sistema inteligente de gestión de engagement, moderación asistida con Intelige
    ```
 2. **Permisos de la carpeta de datos:**
    Asegúrate de que la carpeta `data/` tenga permisos de escritura (`chmod 755` o `775`).
-3. **Primer inicio:**
+3. **Acceso al Panel:**
    Accede a `https://tudominio.com/login.php`
-   - **Email Administrador inicial:** `admin@menteestoica.com`
-   - **Contraseña:** `admin1234` *(cámbiala o crea tu propia cuenta)*.
-4. **Configuración de APIs:**
-   Ingresa a la pestaña **Ajustes** y coloca tus claves de API de Google Gemini / OpenAI y el Token de Acceso de Meta Graph API.
-
----
+   - **Usuario Tester API:** `tester@xindro.app`
+   - **Contraseña:** `TesterPassword2026!`
+4. **Configuración de Marcas & APIs:**
+   Ingresa al **Estudio de Voz de Marca** para configurar clientes, prompts y proveedores de IA (Gemini / OpenAI).
 
 ---
 
