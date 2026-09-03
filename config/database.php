@@ -181,6 +181,21 @@ class Database {
                 }
             }
 
+            // 5. Ensure password_resets table exists with indexes
+            $pdo->exec("
+                CREATE TABLE IF NOT EXISTS password_resets (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    token_hash TEXT NOT NULL,
+                    expires_at DATETIME NOT NULL,
+                    used INTEGER DEFAULT 0,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                );
+                CREATE INDEX IF NOT EXISTS idx_reset_token ON password_resets(token_hash);
+                CREATE INDEX IF NOT EXISTS idx_reset_expires ON password_resets(expires_at);
+            ");
+
         } catch (Throwable $e) {
             error_log("Multi-tenant schema migration error: " . $e->getMessage());
         }
@@ -300,6 +315,18 @@ class Database {
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         );
+
+        CREATE TABLE IF NOT EXISTS password_resets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            token_hash TEXT NOT NULL,
+            expires_at DATETIME NOT NULL,
+            used INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_reset_token ON password_resets(token_hash);
+        CREATE INDEX IF NOT EXISTS idx_reset_expires ON password_resets(expires_at);
         ";
 
         $pdo->exec($schema);

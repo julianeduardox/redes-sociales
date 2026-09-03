@@ -12,7 +12,19 @@ $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
 
 try {
     if ($method === 'GET') {
-        $action = Security::validateEnum($_GET['action'] ?? 'me', ['me'], 'me');
+        $allowedGetActions = ['me', 'validate_token'];
+        $action = Security::validateEnum($_GET['action'] ?? 'me', $allowedGetActions, 'me');
+
+        if ($action === 'validate_token') {
+            $token = $_GET['token'] ?? '';
+            $validation = Auth::validateResetToken($token);
+            if (!$validation['valid']) {
+                http_response_code(400);
+            }
+            echo json_encode($validation, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
         if ($action === 'me') {
             if (Auth::check()) {
                 $user = Auth::user();
@@ -44,7 +56,7 @@ try {
         $rawInput = file_get_contents('php://input');
         $input = json_decode($rawInput, true) ?? $_POST;
 
-        $allowedActions = ['login', 'register', 'logout'];
+        $allowedActions = ['login', 'register', 'logout', 'forgot_password', 'reset_password'];
         $action = Security::validateEnum($input['action'] ?? 'login', $allowedActions, 'login');
 
         // Enforce anti-CSRF check
@@ -67,6 +79,29 @@ try {
             $email = $input['email'] ?? '';
             $password = $input['password'] ?? '';
             $result = Auth::register($name, $email, $password);
+
+            if (!$result['success']) {
+                http_response_code(400);
+            }
+            echo json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        if ($action === 'forgot_password') {
+            $email = $input['email'] ?? '';
+            $result = Auth::requestPasswordReset($email);
+
+            if (!$result['success']) {
+                http_response_code(400);
+            }
+            echo json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        if ($action === 'reset_password') {
+            $token = $input['token'] ?? '';
+            $password = $input['password'] ?? '';
+            $result = Auth::resetPassword($token, $password);
 
             if (!$result['success']) {
                 http_response_code(400);

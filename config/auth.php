@@ -9,6 +9,7 @@
  */
 require_once __DIR__ . '/security.php';
 require_once __DIR__ . '/database.php';
+require_once __DIR__ . '/../services/MailerService.php';
 
 class Auth {
     private static ?array $cachedUser = null;
@@ -296,5 +297,151 @@ class Auth {
         }
         session_destroy();
         self::$cachedUser = null;
+    }
+
+    /**
+     * Request Password Reset Token & Dispatch Email
+     */
+    public static function requestPasswordReset(string $email): array {
+        self::initSession();
+        $email = trim(mb_strtolower($email, 'UTF-8'));
+
+        // Rate limit password reset requests (max 4 per 15 mins per IP/email)
+        Security::requireRateLimit('auth_pwd_reset_' . md5($email . '_' . Security::getClientIp()), 4, 900);
+
+        if (empty($email)) {
+            return ['success' => false, 'field' => 'email', 'error' => 'Por favor introduce tu correo electrónico.'];
+        }
+
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return ['success' => false, 'field' => 'email', 'error' => 'Por favor introduce un correo electrónico válido.'];
+        }
+
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("SELECT id, name, email FROM users WHERE email = :email LIMIT 1");
+        $stmt->execute([':email' => $email]);
+        $user = $stmt->fetch();
+
+        if ($user) {
+            // Generate high-entropy CSPRNG raw token (64 hex characters)
+            $rawToken = bin2hex(random_bytes(32));
+            // Store hashed token (SHA-256) in database
+            $tokenHash = hash('sha256', $rawToken);
+            // 30-minute expiration timestamp
+            $expiresAt = date('Y-m-d H:i:s', time() + 1800);
+
+            // Invalidate any previously active unused tokens for this user
+            $pdo->prepare("UPDATE password_resets SET used = 1 WHERE user_id = :uid AND used = 0")
+                ->execute([':uid' => $user['id']]);
+
+            // Store new reset token hash
+            $stmtIns = $pdo->prepare("
+                INSERT INTO password_resets (user_id, token_hash, expires_at, used)
+                VALUES (:uid, :hash, :expires, 0)
+            ");
+            $stmtIns->execute([
+                ':uid' => $user['id'],
+                ':hash' => $tokenHash,
+                ':expires' => $expiresAt
+            ]);
+
+            // Dispatch transactional HTML email
+            MailerService::sendPasswordResetEmail($user['email'], $user['name'], $rawToken);
+        }
+
+        // Generic timing-safe response to prevent user enumeration
+        return [
+            'success' => true,
+            'message' => 'Si el correo electrónico coincide con una cuenta registrada, hemos enviado las instrucciones para restablecer tu contraseña. Revisa tu bandeja de entrada o carpeta de spam.'
+        ];
+    }
+
+    /**
+     * Validate Password Reset Token
+     */
+    public static function validateResetToken(string $rawToken): array {
+        $rawToken = trim($rawToken);
+        if (empty($rawToken) || strlen($rawToken) < 32) {
+            return ['valid' => false, 'error' => 'El enlace de recuperación es inválido o está incompleto.'];
+        }
+
+        $tokenHash = hash('sha256', $rawToken);
+        $pdo = Database::getConnection();
+
+        $stmt = $pdo->prepare("
+            SELECT pr.id, pr.user_id, pr.expires_at, pr.used, u.name, u.email 
+            FROM password_resets pr
+            JOIN users u ON u.id = pr.user_id
+            WHERE pr.token_hash = :hash
+            ORDER BY pr.id DESC LIMIT 1
+        ");
+        $stmt->execute([':hash' => $tokenHash]);
+        $row = $stmt->fetch();
+
+        if (!$row) {
+            return ['valid' => false, 'error' => 'El enlace de recuperación es inválido o no existe.'];
+        }
+
+        if ((int)$row['used'] === 1) {
+            return ['valid' => false, 'error' => 'Este enlace de recuperación ya ha sido utilizado anteriormente.'];
+        }
+
+        if (strtotime($row['expires_at']) < time()) {
+            return ['valid' => false, 'error' => 'Este enlace de recuperación ha expirado (validez de 30 minutos). Por favor solicita uno nuevo.'];
+        }
+
+        return [
+            'valid' => true,
+            'reset_id' => (int)$row['id'],
+            'user_id' => (int)$row['user_id'],
+            'email' => htmlspecialchars($row['email'], ENT_QUOTES, 'UTF-8'),
+            'name' => htmlspecialchars($row['name'], ENT_QUOTES, 'UTF-8')
+        ];
+    }
+
+    /**
+     * Execute Password Reset with New Password
+     */
+    public static function resetPassword(string $rawToken, string $newPassword): array {
+        self::initSession();
+        $rawToken = trim($rawToken);
+        $newPassword = (string)$newPassword;
+
+        // Rate limit reset submissions by IP (max 6 per 15 mins)
+        Security::requireRateLimit('auth_reset_action_' . md5(Security::getClientIp()), 6, 900);
+
+        $validation = self::validateResetToken($rawToken);
+        if (!$validation['valid']) {
+            return ['success' => false, 'error' => $validation['error']];
+        }
+
+        if (mb_strlen($newPassword) < 8) {
+            return ['success' => false, 'field' => 'password', 'error' => 'La nueva contraseña debe tener al menos 8 caracteres para proteger tu cuenta.'];
+        }
+
+        if (mb_strlen($newPassword) > 256) {
+            return ['success' => false, 'field' => 'password', 'error' => 'La contraseña no puede exceder los 256 caracteres.'];
+        }
+
+        $userId = (int)$validation['user_id'];
+        $resetId = (int)$validation['reset_id'];
+        $newPasswordHash = self::hashPassword($newPassword);
+
+        $pdo = Database::getConnection();
+
+        // Update password hash in users table
+        $stmtUp = $pdo->prepare("UPDATE users SET password_hash = :hash WHERE id = :uid");
+        $stmtUp->execute([':hash' => $newPasswordHash, ':uid' => $userId]);
+
+        // Invalidate used reset token and any remaining tokens for this user
+        $stmtToken = $pdo->prepare("UPDATE password_resets SET used = 1 WHERE user_id = :uid");
+        $stmtToken->execute([':uid' => $userId]);
+
+        self::$cachedUser = null;
+
+        return [
+            'success' => true,
+            'message' => '¡Tu contraseña ha sido actualizada con éxito! Ya puedes iniciar sesión con tu nueva clave.'
+        ];
     }
 }

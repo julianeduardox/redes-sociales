@@ -451,6 +451,26 @@ if (Auth::check()) {
       to { transform: rotate(360deg); }
     }
 
+    .forgot-pw-link {
+      color: #a78bfa;
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: color 0.15s ease;
+    }
+
+    .forgot-pw-link:hover {
+      color: #c084fc;
+      text-decoration: underline;
+    }
+
+    .auth-label-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
     .auth-footer-note {
       margin-top: 24px;
       padding-top: 18px;
@@ -507,7 +527,7 @@ if (Auth::check()) {
       <p class="auth-subtitle" id="auth-header-subtitle">Ingresa a tu panel de gestión inteligente de redes sociales.</p>
     </div>
 
-    <div class="auth-tabs-nav" role="tablist">
+    <div class="auth-tabs-nav" id="auth-tabs-nav" role="tablist">
       <button type="button" class="auth-tab-btn active" id="tab-btn-login" onclick="AuthUI.switchTab('login')" role="tab" aria-selected="true">
         Iniciar Sesión
       </button>
@@ -541,7 +561,10 @@ if (Auth::check()) {
       </div>
 
       <div class="auth-form-group">
-        <label for="login-password">Contraseña:</label>
+        <div class="auth-label-row">
+          <label for="login-password">Contraseña:</label>
+          <a href="javascript:void(0)" onclick="AuthUI.switchTab('forgot')" class="forgot-pw-link">¿Olvidaste tu contraseña?</a>
+        </div>
         <div class="auth-input-wrapper">
           <span class="auth-input-icon">🔒</span>
           <input 
@@ -632,6 +655,41 @@ if (Auth::check()) {
       </button>
     </form>
 
+    <!-- Form 3: Forgot Password -->
+    <form id="form-forgot" style="display: none;" onsubmit="AuthUI.submitForgotPassword(event)" novalidate>
+      <div style="background: rgba(124, 58, 237, 0.08); border: 1px solid rgba(124, 58, 237, 0.22); border-radius: 12px; padding: 14px; margin-bottom: 20px; font-size: 0.82rem; color: #cbd5e1; line-height: 1.5;">
+        <span>🔐 Ingresa el correo asociado a tu cuenta y te enviaremos un enlace de un solo uso con validez de <strong>30 minutos</strong> para restablecer tu clave.</span>
+      </div>
+
+      <div class="auth-form-group">
+        <label for="forgot-email">Correo Electrónico:</label>
+        <div class="auth-input-wrapper">
+          <span class="auth-input-icon">✉️</span>
+          <input 
+            type="email" 
+            id="forgot-email" 
+            class="auth-input" 
+            placeholder="tu@correo.com" 
+            autocomplete="email" 
+            maxlength="180"
+            oninput="AuthUI.clearFieldError('forgot-email')"
+          />
+        </div>
+        <p class="field-error-msg" id="error-forgot-email"></p>
+      </div>
+
+      <button type="submit" class="btn-auth-submit" id="btn-submit-forgot">
+        <span>Enviar Enlace de Recuperación 📨</span>
+      </button>
+
+      <div style="text-align: center; margin-top: 20px;">
+        <a href="javascript:void(0)" onclick="AuthUI.switchTab('login')" class="forgot-pw-link" style="font-size: 0.84rem; display: inline-flex; align-items: center; gap: 4px;">
+          <span>←</span>
+          <span>Volver a Iniciar Sesión</span>
+        </a>
+      </div>
+    </form>
+
     <div class="auth-footer-note">
       <span>Tus datos y tokens están protegidos con cifrado de grado militar AES-256-GCM y arquitectura multi-tenant aislada.</span>
     </div>
@@ -653,28 +711,40 @@ const AuthUI = {
     this.hideAlert();
     this.clearAllFieldErrors();
 
+    const tabsNav = document.getElementById('auth-tabs-nav');
     const btnLogin = document.getElementById('tab-btn-login');
     const btnReg = document.getElementById('tab-btn-register');
     const formLogin = document.getElementById('form-login');
     const formReg = document.getElementById('form-register');
+    const formForgot = document.getElementById('form-forgot');
     const subtitle = document.getElementById('auth-header-subtitle');
 
     if (tab === 'login') {
+      tabsNav.style.display = 'flex';
       btnLogin.classList.add('active');
       btnLogin.setAttribute('aria-selected', 'true');
       btnReg.classList.remove('active');
       btnReg.setAttribute('aria-selected', 'false');
       formLogin.style.display = 'block';
       formReg.style.display = 'none';
+      formForgot.style.display = 'none';
       subtitle.textContent = 'Ingresa a tu panel de gestión inteligente de redes sociales.';
-    } else {
+    } else if (tab === 'register') {
+      tabsNav.style.display = 'flex';
       btnReg.classList.add('active');
       btnReg.setAttribute('aria-selected', 'true');
       btnLogin.classList.remove('active');
       btnLogin.setAttribute('aria-selected', 'false');
       formReg.style.display = 'block';
       formLogin.style.display = 'none';
+      formForgot.style.display = 'none';
       subtitle.textContent = 'Crea tu espacio de trabajo y conecta tus redes en segundos.';
+    } else if (tab === 'forgot') {
+      tabsNav.style.display = 'none';
+      formLogin.style.display = 'none';
+      formReg.style.display = 'none';
+      formForgot.style.display = 'block';
+      subtitle.textContent = 'Recupera el acceso a tu cuenta mediante un enlace temporal seguro.';
     }
   },
 
@@ -727,7 +797,8 @@ const AuthUI = {
       'login-password': 'error-login-password',
       'reg-name': 'error-reg-name',
       'reg-email': 'error-reg-email',
-      'reg-password': 'error-reg-password'
+      'reg-password': 'error-reg-password',
+      'forgot-email': 'error-forgot-email'
     };
     const errEl = document.getElementById(errorMap[inputId]);
     if (errEl) {
@@ -737,7 +808,7 @@ const AuthUI = {
   },
 
   clearAllFieldErrors() {
-    ['login-email', 'login-password', 'reg-name', 'reg-email', 'reg-password'].forEach(id => {
+    ['login-email', 'login-password', 'reg-name', 'reg-email', 'reg-password', 'forgot-email'].forEach(id => {
       this.clearFieldError(id);
     });
   },
@@ -942,8 +1013,76 @@ const AuthUI = {
       btn.disabled = false;
       btn.innerHTML = '<span>Crear mi Cuenta Gratis 🚀</span>';
     }
+  },
+
+  async submitForgotPassword(e) {
+    e.preventDefault();
+    this.hideAlert();
+    this.clearAllFieldErrors();
+
+    const emailInput = document.getElementById('forgot-email');
+    const email = emailInput.value.trim();
+    const btn = document.getElementById('btn-submit-forgot');
+
+    if (!email) {
+      this.setFieldError('forgot-email', 'error-forgot-email', 'Por favor ingresa tu correo electrónico.');
+      return;
+    }
+
+    if (!this.isValidEmail(email)) {
+      this.setFieldError('forgot-email', 'error-forgot-email', 'Por favor introduce un formato de correo válido.');
+      return;
+    }
+
+    // Loader state
+    btn.disabled = true;
+    btn.innerHTML = '<span class="btn-spinner"></span><span>Enviando enlace seguro...</span>';
+
+    try {
+      const response = await fetch('api/auth.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': this.getCsrfToken()
+        },
+        body: JSON.stringify({
+          action: 'forgot_password',
+          email: email
+        })
+      });
+
+      const res = await response.json();
+
+      if (res.success) {
+        this.showAlert(res.message, 'success');
+        emailInput.value = '';
+        btn.disabled = false;
+        btn.innerHTML = '<span>Enlace Enviado ✔</span>';
+      } else {
+        if (res.field === 'email') {
+          this.setFieldError('forgot-email', 'error-forgot-email', res.error);
+        } else {
+          this.showAlert(res.error || 'No se pudo procesar la solicitud.');
+        }
+        btn.disabled = false;
+        btn.innerHTML = '<span>Enviar Enlace de Recuperación 📨</span>';
+      }
+    } catch (err) {
+      console.error(err);
+      this.showAlert('Error de conexión con el servidor.');
+      btn.disabled = false;
+      btn.innerHTML = '<span>Enviar Enlace de Recuperación 📨</span>';
+    }
   }
 };
+
+// Check if URL has tab=forgot parameter
+window.addEventListener('DOMContentLoaded', () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('tab') === 'forgot') {
+    AuthUI.switchTab('forgot');
+  }
+});
 </script>
 
 </body>
