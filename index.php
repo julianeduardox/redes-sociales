@@ -109,12 +109,21 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
 
     /* Vibrant Cosmic Starry Night Footer Background */
     .starry-footer-bg {
+      background-color: #07090e !important;
       background: radial-gradient(circle at 50% 0%, rgba(139, 92, 246, 0.35) 0%, rgba(15, 23, 42, 0.98) 70%),
-                  linear-gradient(180deg, #0f172a 0%, #07090e 100%);
+                  linear-gradient(180deg, #0f172a 0%, #07090e 100%) !important;
       position: relative;
+      color: #cbd5e1;
     }
 
     .starry-overlay {
+      position: relative;
+    }
+
+    .starry-overlay::before {
+      content: '';
+      position: absolute;
+      inset: 0;
       background-image: radial-gradient(2px 2px at 20px 30px, #ffffff, rgba(0,0,0,0)),
                         radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.7), rgba(0,0,0,0)),
                         radial-gradient(1.5px 1.5px at 90px 40px, #ffffff, rgba(0,0,0,0)),
@@ -126,6 +135,14 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
                         radial-gradient(1.5px 1.5px at 500px 90px, #ffffff, rgba(0,0,0,0));
       background-repeat: repeat;
       background-size: 550px 300px;
+      pointer-events: none;
+      opacity: 0.75;
+      z-index: 1;
+    }
+
+    .starry-footer-bg > * {
+      position: relative;
+      z-index: 2;
     }
 
     .gradient-text {
@@ -1168,11 +1185,11 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
   <!-- ========================================================================= -->
   <!-- 11. FOOTER PROFESIONAL CON MARCA DE AGUA COMPLETA Y LLAMATIVA -->
   <!-- ========================================================================= -->
-  <footer class="starry-footer-bg starry-overlay pt-14 sm:pt-16 pb-12 text-slate-300 text-sm overflow-hidden relative">
+  <footer class="starry-footer-bg starry-overlay pt-14 sm:pt-16 pb-12 text-slate-200 text-sm overflow-hidden relative border-t border-slate-800/80">
     
     <!-- Giant Responsive Watermark: Uses the EXACT same typography (Syne 900 / gamma-wordmark) as the Logo -->
     <div class="w-full max-w-full overflow-hidden flex justify-center items-center px-4 my-6 sm:my-8 select-none pointer-events-none">
-      <div class="gamma-wordmark text-[clamp(2.8rem,13vw,11.5rem)] font-black tracking-tight leading-none text-center uppercase bg-clip-text text-transparent bg-gradient-to-r from-violet-300/80 via-purple-300/60 to-cyan-300/50 drop-shadow-md select-none">
+      <div class="gamma-wordmark text-[clamp(2.8rem,13vw,11.5rem)] font-black tracking-tight leading-none text-center uppercase bg-clip-text text-transparent bg-gradient-to-r from-violet-400/40 via-purple-400/30 to-cyan-400/25 drop-shadow-md select-none">
         XINDRO
       </div>
     </div>
@@ -1189,10 +1206,10 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
             </div>
             <span class="text-lg font-black tracking-tight text-white gamma-wordmark">XINDRO<span class="text-brand-400">.</span></span>
           </div>
-          <p data-i18n="foot_brand_desc" class="text-xs text-slate-400 leading-relaxed mb-4">
+          <p data-i18n="foot_brand_desc" class="text-xs text-slate-300 leading-relaxed mb-4">
             El sistema operativo de IA para creadores y agencias de redes sociales. Respuestas en tiempo real, Smart Timing y API oficial.
           </p>
-          <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/90 border border-slate-700 text-xs text-emerald-400 font-semibold mb-4">
+          <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-700 text-xs text-emerald-400 font-semibold mb-4">
             <span class="w-2 h-2 rounded-full bg-emerald-400 live-dot"></span>
             <span data-i18n="foot_status_pill">Meta API 100% Operativa</span>
           </div>
@@ -1206,72 +1223,71 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
 
         <!-- Col 2: Producto -->
         <div>
-          <h4 data-i18n="foot_c2_t" class="text-xs font-bold text-white uppercase tracking-wider mb-4">Producto</h4>
+          <h4 data-i18n="foot_c2_t" class="text-xs font-extrabold text-white uppercase tracking-wider mb-4">Producto</h4>
           <ul class="space-y-2.5 text-xs text-slate-300 font-medium">
-            <li><a href="#precios" data-i18n="foot_c2_1" class="hover:text-white transition-colors">Precios</a></li>
-            <li><a href="#simulador" data-i18n="foot_c2_2" class="hover:text-white transition-colors">Inspiración</a></li>
-            <li><a href="#por-que-xindro" data-i18n="nav_why" class="hover:text-white transition-colors">¿Por qué Xindro?</a></li>
-            <li><a href="#calculadora-roi" data-i18n="nav_roi" class="hover:text-white transition-colors">Calculadora</a></li>
-            <li><a href="#funciones" data-i18n="nav_products" class="hover:text-white transition-colors">Funciones</a></li>
+            <li><a href="#precios" data-i18n="foot_c2_1" class="hover:text-white hover:underline transition-colors">Precios</a></li>
+            <li><a href="#simulador" data-i18n="foot_c2_2" class="hover:text-white hover:underline transition-colors">Inspiración</a></li>
+            <li><a href="#por-que-xindro" data-i18n="nav_why" class="hover:text-white hover:underline transition-colors">¿Por qué Xindro?</a></li>
+            <li><a href="#calculadora-roi" data-i18n="nav_roi" class="hover:text-white hover:underline transition-colors">Calculadora</a></li>
+            <li><a href="#funciones" data-i18n="nav_products" class="hover:text-white hover:underline transition-colors">Funciones</a></li>
           </ul>
         </div>
 
         <!-- Col 3: Empresa -->
         <div>
-          <h4 data-i18n="foot_c3_t" class="text-xs font-bold text-white uppercase tracking-wider mb-4">Empresa</h4>
+          <h4 data-i18n="foot_c3_t" class="text-xs font-extrabold text-white uppercase tracking-wider mb-4">Empresa</h4>
           <ul class="space-y-2.5 text-xs text-slate-300 font-medium">
-            <li><a href="#por-que-xindro" data-i18n="foot_c3_1" class="hover:text-white transition-colors">Acerca de</a></li>
-            <li><a href="login.php" data-i18n="foot_c3_2" class="hover:text-white transition-colors">Carreras</a></li>
-            <li><a href="login.php" data-i18n="foot_c3_3" class="hover:text-white transition-colors">Equipo</a></li>
-            <li><a href="#faq" data-i18n="nav_faq" class="hover:text-white transition-colors">Preguntas Frecuentes</a></li>
-            <li><a href="privacy-policy.php" data-i18n="foot_c3_7" class="hover:text-white transition-colors">Seguridad</a></li>
+            <li><a href="#por-que-xindro" data-i18n="foot_c3_1" class="hover:text-white hover:underline transition-colors">Acerca de</a></li>
+            <li><a href="login.php" data-i18n="foot_c3_2" class="hover:text-white hover:underline transition-colors">Carreras</a></li>
+            <li><a href="login.php" data-i18n="foot_c3_3" class="hover:text-white hover:underline transition-colors">Equipo</a></li>
+            <li><a href="#faq" data-i18n="nav_faq" class="hover:text-white hover:underline transition-colors">Preguntas Frecuentes</a></li>
+            <li><a href="privacy-policy.php" data-i18n="foot_c3_7" class="hover:text-white hover:underline transition-colors">Seguridad</a></li>
           </ul>
         </div>
 
         <!-- Col 4: Redes sociales -->
         <div>
-          <h4 data-i18n="foot_c4_t" class="text-xs font-bold text-white uppercase tracking-wider mb-4">Redes sociales</h4>
+          <h4 data-i18n="foot_c4_t" class="text-xs font-extrabold text-white uppercase tracking-wider mb-4">Redes sociales</h4>
           <ul class="space-y-2.5 text-xs text-slate-300 font-medium">
-            <li><a href="https://instagram.com" target="_blank" rel="noopener" class="hover:text-white transition-colors">Instagram</a></li>
-            <li><a href="https://linkedin.com" target="_blank" rel="noopener" class="hover:text-white transition-colors">LinkedIn</a></li>
-            <li><a href="https://tiktok.com" target="_blank" rel="noopener" class="hover:text-white transition-colors">TikTok</a></li>
-            <li><a href="https://x.com" target="_blank" rel="noopener" class="hover:text-white transition-colors">X (Twitter)</a></li>
-            <li><a href="https://youtube.com" target="_blank" rel="noopener" class="hover:text-white transition-colors">YouTube</a></li>
+            <li><a href="https://instagram.com" target="_blank" rel="noopener" class="hover:text-white hover:underline transition-colors">Instagram</a></li>
+            <li><a href="https://linkedin.com" target="_blank" rel="noopener" class="hover:text-white hover:underline transition-colors">LinkedIn</a></li>
+            <li><a href="https://tiktok.com" target="_blank" rel="noopener" class="hover:text-white hover:underline transition-colors">TikTok</a></li>
+            <li><a href="https://x.com" target="_blank" rel="noopener" class="hover:text-white hover:underline transition-colors">X (Twitter)</a></li>
+            <li><a href="https://youtube.com" target="_blank" rel="noopener" class="hover:text-white hover:underline transition-colors">YouTube</a></li>
           </ul>
         </div>
 
         <!-- Col 5: Información legal -->
         <div>
-          <h4 data-i18n="foot_c5_t" class="text-xs font-bold text-white uppercase tracking-wider mb-4">Información legal</h4>
+          <h4 data-i18n="foot_c5_t" class="text-xs font-extrabold text-white uppercase tracking-wider mb-4">Información legal</h4>
           <ul class="space-y-2.5 text-xs text-slate-300 font-medium">
-            <li><a href="terms-of-service.php" class="hover:text-white transition-colors">Acceptable Use Policy</a></li>
-            <li><a href="privacy-policy.php" class="hover:text-white transition-colors">Cookie Notice</a></li>
-            <li><a href="javascript:void(0)" onclick="CookieConsent.openSettings()" data-i18n="cookie_btn_pref" class="hover:text-white transition-colors text-brand-300 font-semibold">Preferencias de cookies</a></li>
-            <li><a href="privacy-policy.php" class="hover:text-white transition-colors">Privacy Policy</a></li>
-            <li><a href="data-deletion.php" class="hover:text-white transition-colors">Data Deletion (Meta)</a></li>
-            <li><a href="terms-of-service.php" class="hover:text-white transition-colors">Terms of Service</a></li>
+            <li><a href="terms-of-service.php" class="hover:text-white hover:underline transition-colors">Acceptable Use Policy</a></li>
+            <li><a href="privacy-policy.php" class="hover:text-white hover:underline transition-colors">Cookie Notice</a></li>
+            <li><a href="javascript:void(0)" onclick="CookieConsent.openSettings()" data-i18n="cookie_btn_pref" class="hover:text-white hover:underline transition-colors text-brand-300 font-semibold">Preferencias de cookies</a></li>
+            <li><a href="privacy-policy.php" class="hover:text-white hover:underline transition-colors">Privacy Policy</a></li>
+            <li><a href="data-deletion.php" class="hover:text-white hover:underline transition-colors">Data Deletion (Meta)</a></li>
+            <li><a href="terms-of-service.php" class="hover:text-white hover:underline transition-colors">Terms of Service</a></li>
           </ul>
         </div>
 
       </div>
 
       <!-- Bottom Bar -->
-      <div class="border-t border-slate-800/80 pt-6 sm:pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
+      <div class="border-t border-slate-800/80 pt-6 sm:pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-300">
         <div class="flex items-center gap-2 text-center sm:text-left">
           <span class="font-bold text-white">XINDRO</span>
           <span>•</span>
           <span>© <?= date('Y') ?> Xindro Tech, Inc. <span data-i18n="foot_rights">Todos los derechos reservados.</span></span>
         </div>
         <div class="flex items-center gap-4">
-          <span class="flex items-center gap-1.5 text-emerald-400">
+          <span class="flex items-center gap-1.5 text-emerald-400 font-medium">
             <span class="w-2 h-2 rounded-full bg-emerald-400 live-dot"></span>
             Meta Graph API Verified
           </span>
-          <a href="javascript:void(0)" onclick="CookieConsent.openSettings()" data-i18n="cookie_btn_pref" class="text-slate-400 hover:text-white underline">Ajustes de Cookies</a>
+          <a href="javascript:void(0)" onclick="CookieConsent.openSettings()" data-i18n="cookie_btn_pref" class="text-slate-300 hover:text-white underline">Ajustes de Cookies</a>
         </div>
       </div>
 
-    </div>
   </footer>
 
   <!-- ========================================================================= -->
