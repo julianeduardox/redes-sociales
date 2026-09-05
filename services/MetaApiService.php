@@ -294,7 +294,7 @@ class MetaApiService {
 
         // 1. Auto-discover and refresh all Pages & Instagram accounts from Meta /me/accounts
         if (!empty($defaultToken)) {
-            $meAccountsUrl = self::BASE_URL . '/me/accounts?fields=id,name,access_token,category,picture{data{url}},instagram_business_account{id,username,name,profile_picture_url}&limit=100&access_token=' . urlencode($defaultToken);
+            $meAccountsUrl = self::BASE_URL . '/me/accounts?fields=id,name,access_token,category,picture,instagram_business_account{id,username,name,profile_picture_url}&limit=100&access_token=' . urlencode($defaultToken);
             $discovered = self::makeGetRequest($meAccountsUrl);
 
             $pagesList = [];
@@ -304,7 +304,7 @@ class MetaApiService {
                 $errMsg = $discovered['error']['message'] ?? '';
                 // If #100 or nonexisting field (accounts), the token itself is a Page Access Token!
                 if ($errCode == 100 || str_contains($errMsg, 'accounts')) {
-                    $pageMeUrl = self::BASE_URL . '/me?fields=id,name,category,picture{data{url}},instagram_business_account{id,username,name,profile_picture_url}&access_token=' . urlencode($defaultToken);
+                    $pageMeUrl = self::BASE_URL . '/me?fields=id,name,category,picture,instagram_business_account{id,username,name,profile_picture_url}&access_token=' . urlencode($defaultToken);
                     $pageMeData = self::makeGetRequest($pageMeUrl);
                     if (!empty($pageMeData['id'])) {
                         $pageMeData['access_token'] = $defaultToken;
