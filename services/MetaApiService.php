@@ -100,6 +100,16 @@ class MetaApiService {
         $accountsData = self::makeGetRequest($accountsUrl);
         $detectedPages = [];
 
+        if (isset($accountsData['error']) && (($accountsData['error']['code'] ?? 0) == 100 || str_contains($accountsData['error']['message'] ?? '', 'accounts'))) {
+            // If it is a Page Access Token, query /me directly
+            $pageMeUrl = self::BASE_URL . '/me?fields=id,name,category,instagram_business_account{id,username,name,profile_picture_url}&access_token=' . urlencode($accessToken);
+            $pageMeData = self::makeGetRequest($pageMeUrl);
+            if (!empty($pageMeData['id'])) {
+                $pageMeData['access_token'] = $accessToken;
+                $accountsData = ['data' => [$pageMeData]];
+            }
+        }
+
         if (isset($accountsData['data']) && is_array($accountsData['data'])) {
             foreach ($accountsData['data'] as $page) {
                 $igAccount = $page['instagram_business_account'] ?? null;
@@ -277,93 +287,111 @@ class MetaApiService {
         $accountDiagnostics = [];
         $errors = [];
 
+        // 0. Clean up any leftover demo / mock accounts from initial seeding
+        $pdo->prepare("DELETE FROM accounts WHERE user_id = :uid AND (page_id LIKE 'page_stoic_%' OR page_id LIKE 'page_user_%' OR page_id LIKE 'mock_%' OR page_id LIKE 'fb_%' OR page_id LIKE 'ig_%')")->execute([':uid' => $uid]);
+
         // 1. Auto-discover and refresh all Pages & Instagram accounts from Meta /me/accounts
         if (!empty($defaultToken)) {
             $meAccountsUrl = self::BASE_URL . '/me/accounts?fields=id,name,access_token,category,instagram_business_account{id,username,name,profile_picture_url}&access_token=' . urlencode($defaultToken);
             $discovered = self::makeGetRequest($meAccountsUrl);
 
+            $pagesList = [];
+
             if (isset($discovered['error'])) {
-                $errMsg = $discovered['error']['message'] ?? 'Error al consultar /me/accounts en Meta';
-                $errors[] = "Meta Graph API: " . $errMsg;
+                $errCode = $discovered['error']['code'] ?? 0;
+                $errMsg = $discovered['error']['message'] ?? '';
+                // If #100 or nonexisting field (accounts), the token itself is a Page Access Token!
+                if ($errCode == 100 || str_contains($errMsg, 'accounts')) {
+                    $pageMeUrl = self::BASE_URL . '/me?fields=id,name,category,instagram_business_account{id,username,name,profile_picture_url}&access_token=' . urlencode($defaultToken);
+                    $pageMeData = self::makeGetRequest($pageMeUrl);
+                    if (!empty($pageMeData['id'])) {
+                        $pageMeData['access_token'] = $defaultToken;
+                        $pagesList = [$pageMeData];
+                    }
+                } else {
+                    $errors[] = "Meta Graph API: " . $errMsg;
+                }
             } elseif (!empty($discovered['data']) && is_array($discovered['data'])) {
-                foreach ($discovered['data'] as $page) {
-                    $pid = $page['id'];
-                    $pname = $page['name'];
-                    $ptok = !empty($page['access_token']) ? $page['access_token'] : $defaultToken;
-                    $ig = $page['instagram_business_account'] ?? null;
+                $pagesList = $discovered['data'];
+            }
 
-                    // A. Upsert Facebook Page Account
-                    $checkFb = $pdo->prepare("SELECT id, brand_voice_id FROM accounts WHERE user_id = :uid AND page_id = :pid AND platform = 'facebook' LIMIT 1");
-                    $checkFb->execute([':uid' => $uid, ':pid' => $pid]);
-                    $existingFb = $checkFb->fetch();
+            foreach ($pagesList as $page) {
+                $pid = $page['id'];
+                $pname = $page['name'];
+                $ptok = !empty($page['access_token']) ? $page['access_token'] : $defaultToken;
+                $ig = $page['instagram_business_account'] ?? null;
 
-                    if ($existingFb) {
+                // A. Upsert Facebook Page Account
+                $checkFb = $pdo->prepare("SELECT id, brand_voice_id FROM accounts WHERE user_id = :uid AND page_id = :pid AND platform = 'facebook' LIMIT 1");
+                $checkFb->execute([':uid' => $uid, ':pid' => $pid]);
+                $existingFb = $checkFb->fetch();
+
+                if ($existingFb) {
+                    $pdo->prepare("
+                        UPDATE accounts 
+                        SET account_name = :name, access_token = :token, is_active = 1
+                        WHERE id = :id
+                    ")->execute([
+                        ':name' => $pname,
+                        ':token' => $ptok,
+                        ':id' => $existingFb['id']
+                    ]);
+                } else {
+                    $pdo->prepare("
+                        INSERT INTO accounts (user_id, brand_voice_id, platform, account_name, account_handle, page_id, avatar_url, access_token, is_active)
+                        VALUES (:uid, :bvid, 'facebook', :name, :handle, :pid, :avatar, :token, 1)
+                    ")->execute([
+                        ':uid' => $uid,
+                        ':bvid' => $defaultBrandVoiceId,
+                        ':name' => $pname,
+                        ':handle' => 'fb_' . $pid,
+                        ':pid' => $pid,
+                        ':avatar' => 'https://ui-avatars.com/api/?name=' . urlencode($pname) . '&background=1877f2&color=fff',
+                        ':token' => $ptok
+                    ]);
+                }
+
+                // B. Upsert Instagram Business Account if linked to this Page
+                if (!empty($ig) && !empty($ig['id'])) {
+                    $igId = $ig['id'];
+                    $igHandle = !empty($ig['username']) ? '@' . $ig['username'] : '@ig_' . $igId;
+                    $igName = $ig['name'] ?? (!empty($ig['username']) ? '@' . $ig['username'] : $pname);
+                    $igAvatar = $ig['profile_picture_url'] ?? ('https://ui-avatars.com/api/?name=' . urlencode($igName) . '&background=e1306c&color=fff');
+
+                    $checkIg = $pdo->prepare("SELECT id FROM accounts WHERE user_id = :uid AND (page_id = :ig_id OR account_handle = :handle) AND platform = 'instagram' LIMIT 1");
+                    $checkIg->execute([':uid' => $uid, ':ig_id' => $igId, ':handle' => $igHandle]);
+                    $existingIg = $checkIg->fetch();
+
+                    if ($existingIg) {
                         $pdo->prepare("
                             UPDATE accounts 
-                            SET account_name = :name, access_token = :token, is_active = 1
+                            SET account_name = :name, account_handle = :handle, page_id = :ig_id, avatar_url = :avatar, access_token = :token, is_active = 1
                             WHERE id = :id
                         ")->execute([
-                            ':name' => $pname,
+                            ':name' => $igName,
+                            ':handle' => $igHandle,
+                            ':ig_id' => $igId,
+                            ':avatar' => $igAvatar,
                             ':token' => $ptok,
-                            ':id' => $existingFb['id']
+                            ':id' => $existingIg['id']
                         ]);
                     } else {
                         $pdo->prepare("
                             INSERT INTO accounts (user_id, brand_voice_id, platform, account_name, account_handle, page_id, avatar_url, access_token, is_active)
-                            VALUES (:uid, :bvid, 'facebook', :name, :handle, :pid, :avatar, :token, 1)
+                            VALUES (:uid, :bvid, 'instagram', :name, :handle, :ig_id, :avatar, :token, 1)
                         ")->execute([
                             ':uid' => $uid,
                             ':bvid' => $defaultBrandVoiceId,
-                            ':name' => $pname,
-                            ':handle' => 'fb_' . $pid,
-                            ':pid' => $pid,
-                            ':avatar' => 'https://ui-avatars.com/api/?name=' . urlencode($pname) . '&background=1877f2&color=fff',
+                            ':name' => $igName,
+                            ':handle' => $igHandle,
+                            ':ig_id' => $igId,
+                            ':avatar' => $igAvatar,
                             ':token' => $ptok
                         ]);
                     }
 
-                    // B. Upsert Instagram Business Account if linked to this Page
-                    if (!empty($ig) && !empty($ig['id'])) {
-                        $igId = $ig['id'];
-                        $igHandle = !empty($ig['username']) ? '@' . $ig['username'] : '@ig_' . $igId;
-                        $igName = $ig['name'] ?? (!empty($ig['username']) ? '@' . $ig['username'] : $pname);
-                        $igAvatar = $ig['profile_picture_url'] ?? ('https://ui-avatars.com/api/?name=' . urlencode($igName) . '&background=e1306c&color=fff');
-
-                        $checkIg = $pdo->prepare("SELECT id FROM accounts WHERE user_id = :uid AND (page_id = :ig_id OR account_handle = :handle) AND platform = 'instagram' LIMIT 1");
-                        $checkIg->execute([':uid' => $uid, ':ig_id' => $igId, ':handle' => $igHandle]);
-                        $existingIg = $checkIg->fetch();
-
-                        if ($existingIg) {
-                            $pdo->prepare("
-                                UPDATE accounts 
-                                SET account_name = :name, account_handle = :handle, page_id = :ig_id, avatar_url = :avatar, access_token = :token, is_active = 1
-                                WHERE id = :id
-                            ")->execute([
-                                ':name' => $igName,
-                                ':handle' => $igHandle,
-                                ':ig_id' => $igId,
-                                ':avatar' => $igAvatar,
-                                ':token' => $ptok,
-                                ':id' => $existingIg['id']
-                            ]);
-                        } else {
-                            $pdo->prepare("
-                                INSERT INTO accounts (user_id, brand_voice_id, platform, account_name, account_handle, page_id, avatar_url, access_token, is_active)
-                                VALUES (:uid, :bvid, 'instagram', :name, :handle, :ig_id, :avatar, :token, 1)
-                            ")->execute([
-                                ':uid' => $uid,
-                                ':bvid' => $defaultBrandVoiceId,
-                                ':name' => $igName,
-                                ':handle' => $igHandle,
-                                ':ig_id' => $igId,
-                                ':avatar' => $igAvatar,
-                                ':token' => $ptok
-                            ]);
-                        }
-
-                        // Also save in settings for primary fallback
-                        Settings::set('meta_instagram_account_id', $igId, $uid);
-                    }
+                    // Also save in settings for primary fallback
+                    Settings::set('meta_instagram_account_id', $igId, $uid);
                 }
             }
         }
@@ -397,13 +425,14 @@ class MetaApiService {
         foreach ($accounts as $acc) {
             $accId = (int)$acc['id'];
             $platform = $acc['platform'] ?? 'facebook';
-            $pageId = $acc['page_id'] ?? '';
+            $pageId = trim($acc['page_id'] ?? '');
             $token = !empty($acc['access_token']) ? $acc['access_token'] : $defaultToken;
             $accName = $acc['account_name'] ?? 'Cuenta ' . $accId;
             $accHandle = $acc['account_handle'] ?? '';
             $brandVoiceId = !empty($acc['brand_voice_id']) ? (int)$acc['brand_voice_id'] : $defaultBrandVoiceId;
 
-            if (empty($token) || empty($pageId)) continue;
+            // Skip accounts with mock / non-numeric IDs
+            if (empty($token) || empty($pageId) || !is_numeric($pageId)) continue;
             $syncedAccountsCount++;
 
             $accPostsFound = 0;
@@ -560,16 +589,45 @@ class MetaApiService {
                 }
             } else {
                 // Fetch Facebook Page Posts
+                $fbFields = 'id,message,story,created_time,full_picture,permalink_url,shares';
                 $pagePostsUrl = self::BASE_URL . '/' . urlencode($pageId) . '/posts?' . http_build_query([
-                    'fields' => 'id,message,story,created_time,full_picture,permalink_url,shares,likes.summary(true),comments.summary(true)',
+                    'fields' => $fbFields,
                     'limit' => '25',
                     'access_token' => $token
                 ]);
                 $feedData = self::makeGetRequest($pagePostsUrl);
 
+                // Fallback to /published_posts or /feed if /posts returned an error
                 if (isset($feedData['error'])) {
-                    $accError = $feedData['error']['message'] ?? 'Error al leer publicaciones de la Página de Facebook';
-                    $errors[] = "Facebook ({$accName}): " . $accError;
+                    $feedUrlFallback = self::BASE_URL . '/' . urlencode($pageId) . '/published_posts?' . http_build_query([
+                        'fields' => $fbFields,
+                        'limit' => '25',
+                        'access_token' => $token
+                    ]);
+                    $feedDataFallback = self::makeGetRequest($feedUrlFallback);
+                    if (!isset($feedDataFallback['error']) && !empty($feedDataFallback['data'])) {
+                        $feedData = $feedDataFallback;
+                    } else {
+                        $feedUrlFallback2 = self::BASE_URL . '/' . urlencode($pageId) . '/feed?' . http_build_query([
+                            'fields' => $fbFields,
+                            'limit' => '25',
+                            'access_token' => $token
+                        ]);
+                        $feedDataFallback2 = self::makeGetRequest($feedUrlFallback2);
+                        if (!isset($feedDataFallback2['error']) && !empty($feedDataFallback2['data'])) {
+                            $feedData = $feedDataFallback2;
+                        }
+                    }
+                }
+
+                if (isset($feedData['error'])) {
+                    $errCode = $feedData['error']['code'] ?? 0;
+                    $errSub = $feedData['error']['message'] ?? 'Error al leer publicaciones de la Página';
+                    if ($errCode == 10 || str_contains($errSub, 'pages_read_engagement')) {
+                        $errors[] = "Facebook ({$accName}): Requiere permiso 'pages_read_engagement' en Meta.";
+                    } else {
+                        $errors[] = "Facebook ({$accName}): " . $errSub;
+                    }
                 } elseif (!empty($feedData['data']) && is_array($feedData['data'])) {
                     $accPostsFound = count($feedData['data']);
                     $totalPostsFoundOnMeta += $accPostsFound;

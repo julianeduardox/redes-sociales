@@ -44,19 +44,16 @@ $requestedScopes = $_GET['scopes'] ?? '';
 if (!empty($requestedScopes)) {
     $scopes = array_filter(array_map('trim', explode(',', $requestedScopes)));
 } else {
-    // Core active scopes (Pages, comments, replies & linked Instagram accounts)
+    // Core active scopes for Facebook Pages, Instagram Business, Comments Moderation & Insights
     $scopes = [
         'pages_show_list',
         'pages_read_engagement',
         'pages_manage_posts',
-        'instagram_manage_comments'
+        'pages_read_user_content',
+        'instagram_basic',
+        'instagram_manage_comments',
+        'instagram_manage_insights'
     ];
-
-    // Include extended insights & basic if full mode requested or added
-    if (isset($_GET['full']) && $_GET['full'] === '1') {
-        $scopes[] = 'instagram_basic';
-        $scopes[] = 'instagram_manage_insights';
-    }
 }
 
 $authUrl = 'https://www.facebook.com/v19.0/dialog/oauth?' . http_build_query([

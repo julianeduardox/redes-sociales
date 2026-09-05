@@ -139,12 +139,12 @@ if (!empty($error)) {
                     'has_instagram' => !empty($igAccount)
                 ];
 
-                // Upsert into accounts table
-                $stmtCheck = $pdo->prepare("SELECT id FROM accounts WHERE user_id = :uid AND page_id = :pid LIMIT 1");
-                $stmtCheck->execute([':uid' => $userId, ':pid' => $pageId]);
-                $existing = $stmtCheck->fetch();
+                // 1. Upsert Facebook Page account
+                $stmtCheckFb = $pdo->prepare("SELECT id FROM accounts WHERE user_id = :uid AND page_id = :pid AND platform = 'facebook' LIMIT 1");
+                $stmtCheckFb->execute([':uid' => $userId, ':pid' => $pageId]);
+                $existingFb = $stmtCheckFb->fetch();
 
-                if ($existing) {
+                if ($existingFb) {
                     $stmtUp = $pdo->prepare("
                         UPDATE accounts 
                         SET access_token = :token, account_name = :name, avatar_url = :avatar, is_active = 1
@@ -152,26 +152,64 @@ if (!empty($error)) {
                     ");
                     $stmtUp->execute([
                         ':token' => $pageToken,
-                        ':name' => $igUsername ? "@{$igUsername}" : $pageName,
-                        ':avatar' => $igAvatar,
-                        ':id' => $existing['id']
+                        ':name' => $pageName,
+                        ':avatar' => 'https://ui-avatars.com/api/?name=' . urlencode($pageName) . '&background=1877f2&color=fff',
+                        ':id' => $existingFb['id']
                     ]);
                 } else {
                     $stmtIns = $pdo->prepare("
                         INSERT INTO accounts (user_id, platform, account_name, account_handle, page_id, avatar_url, access_token, is_active)
-                        VALUES (:uid, :platform, :name, :handle, :pid, :avatar, :token, 1)
+                        VALUES (:uid, 'facebook', :name, :handle, :pid, :avatar, :token, 1)
                     ");
                     $stmtIns->execute([
                         ':uid' => $userId,
-                        ':platform' => !empty($igAccount) ? 'instagram' : 'facebook',
                         ':name' => $pageName,
-                        ':handle' => $igUsername ? "@{$igUsername}" : 'fb_' . $pageId,
+                        ':handle' => 'fb_' . $pageId,
                         ':pid' => $pageId,
-                        ':avatar' => $igAvatar,
+                        ':avatar' => 'https://ui-avatars.com/api/?name=' . urlencode($pageName) . '&background=1877f2&color=fff',
                         ':token' => $pageToken
                     ]);
                 }
+
+                // 2. Upsert Instagram Business Account if linked to this Page
+                if (!empty($igId)) {
+                    $igDisplayName = $igAccount['name'] ?? ($igUsername ? "@{$igUsername}" : $pageName);
+                    $stmtCheckIg = $pdo->prepare("SELECT id FROM accounts WHERE user_id = :uid AND page_id = :igid AND platform = 'instagram' LIMIT 1");
+                    $stmtCheckIg->execute([':uid' => $userId, ':igid' => $igId]);
+                    $existingIg = $stmtCheckIg->fetch();
+
+                    if ($existingIg) {
+                        $stmtUpIg = $pdo->prepare("
+                            UPDATE accounts 
+                            SET access_token = :token, account_name = :name, account_handle = :handle, avatar_url = :avatar, is_active = 1
+                            WHERE id = :id
+                        ");
+                        $stmtUpIg->execute([
+                            ':token' => $pageToken,
+                            ':name' => $igDisplayName,
+                            ':handle' => $igUsername ? "@{$igUsername}" : '@ig_' . $igId,
+                            ':avatar' => $igAvatar,
+                            ':id' => $existingIg['id']
+                        ]);
+                    } else {
+                        $stmtInsIg = $pdo->prepare("
+                            INSERT INTO accounts (user_id, platform, account_name, account_handle, page_id, avatar_url, access_token, is_active)
+                            VALUES (:uid, 'instagram', :name, :handle, :igid, :avatar, :token, 1)
+                        ");
+                        $stmtInsIg->execute([
+                            ':uid' => $userId,
+                            ':name' => $igDisplayName,
+                            ':handle' => $igUsername ? "@{$igUsername}" : '@ig_' . $igId,
+                            ':igid' => $igId,
+                            ':avatar' => $igAvatar,
+                            ':token' => $pageToken
+                        ]);
+                    }
+                }
             }
+
+            // Remove any leftover demo/mock accounts from earlier seeds
+            $pdo->prepare("DELETE FROM accounts WHERE user_id = :uid AND (page_id LIKE 'page_stoic_%' OR page_id LIKE 'page_user_%' OR page_id LIKE 'mock_%')")->execute([':uid' => $userId]);
 
             // Save active credentials in settings
             if (!empty($primaryPageToken)) {
