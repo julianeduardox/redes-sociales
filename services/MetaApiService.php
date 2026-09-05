@@ -695,7 +695,8 @@ class MetaApiService {
                                 UPDATE posts 
                                 SET account_id = :acc_id, brand_voice_id = :bvid, total_likes = :likes, total_comments = :comments, 
                                     impressions = :impressions, reach = :reach, saved_count = :saved, engagement_rate = :eng_rate, 
-                                    caption = :caption, media_url = :media_url, permalink = :permalink, last_synced_at = CURRENT_TIMESTAMP
+                                    caption = :caption, media_url = :media_url, media_type = :media_type, permalink = :permalink, 
+                                    posted_at = :posted_at, last_synced_at = CURRENT_TIMESTAMP
                                 WHERE id = :id AND user_id = :uid
                             ");
                             $stmtUp->execute([
@@ -709,7 +710,9 @@ class MetaApiService {
                                 ':eng_rate' => $engagementRate,
                                 ':caption' => $caption,
                                 ':media_url' => $mediaImg,
+                                ':media_type' => $mediaType,
                                 ':permalink' => $permalink,
+                                ':posted_at' => $postedAt,
                                 ':id' => $postId,
                                 ':uid' => $uid
                             ]);
@@ -795,49 +798,76 @@ class MetaApiService {
                     }
                 }
             } else {
-                // Fetch Facebook Page Posts with valid Graph API v19+ fields
-                $fbFields = 'id,message,story,created_time,full_picture,permalink_url,shares,attachments{media,type,target{id}},reactions.summary(true).limit(1),likes.summary(true).limit(1),comments.summary(true).limit(1)';
-                $pagePostsUrl = self::BASE_URL . '/' . urlencode($pageId) . '/posts?' . http_build_query([
-                    'fields' => $fbFields,
-                    'limit' => '25',
-                    'access_token' => $token
-                ]);
-                $feedData = self::makeGetRequest($pagePostsUrl, 3, 1);
-
-                // Fallback to /published_posts or /feed if /posts returned an error
-                if (isset($feedData['error'])) {
-                    $feedUrlFallback = self::BASE_URL . '/' . urlencode($pageId) . '/published_posts?' . http_build_query([
+                // Fetch Facebook Page Posts from /published_posts, /feed, and /posts IN PARALLEL for 100% complete discovery
+                $fbFields = 'id,message,story,created_time,full_picture,permalink_url,shares,attachments{media,type,target{id},unshimmed_url},reactions.summary(true).limit(1),likes.summary(true).limit(1),comments.summary(true).limit(1)';
+                
+                $fbFeedQueries = [
+                    'published' => self::BASE_URL . '/' . urlencode($pageId) . '/published_posts?' . http_build_query([
                         'fields' => $fbFields,
-                        'limit' => '25',
+                        'limit' => '30',
                         'access_token' => $token
-                    ]);
-                    $feedDataFallback = self::makeGetRequest($feedUrlFallback, 2, 1);
-                    if (!isset($feedDataFallback['error']) && !empty($feedDataFallback['data'])) {
-                        $feedData = $feedDataFallback;
+                    ]),
+                    'feed' => self::BASE_URL . '/' . urlencode($pageId) . '/feed?' . http_build_query([
+                        'fields' => $fbFields,
+                        'limit' => '30',
+                        'access_token' => $token
+                    ]),
+                    'posts' => self::BASE_URL . '/' . urlencode($pageId) . '/posts?' . http_build_query([
+                        'fields' => $fbFields,
+                        'limit' => '30',
+                        'access_token' => $token
+                    ])
+                ];
+
+                $fbFeedsData = self::makeMultiGetRequests($fbFeedQueries, 3, 1);
+
+                // Merge and deduplicate all posts across published_posts, feed, and posts
+                $mergedPosts = [];
+                $fbPermissionError = null;
+
+                foreach (['published', 'feed', 'posts'] as $sourceKey) {
+                    $resData = $fbFeedsData[$sourceKey] ?? [];
+                    if (isset($resData['error'])) {
+                        $errCode = $resData['error']['code'] ?? 0;
+                        $errSub = $resData['error']['message'] ?? '';
+                        if ($errCode == 10 || str_contains($errSub, 'pages_read_engagement')) {
+                            $fbPermissionError = "Facebook ({$accName}): Requiere permiso 'pages_read_engagement' en Meta.";
+                        }
+                    } elseif (!empty($resData['data']) && is_array($resData['data'])) {
+                        foreach ($resData['data'] as $postItem) {
+                            $pId = $postItem['id'] ?? '';
+                            if (!empty($pId) && !isset($mergedPosts[$pId])) {
+                                $mergedPosts[$pId] = $postItem;
+                            }
+                        }
                     }
                 }
 
-                if (isset($feedData['error'])) {
-                    $errCode = $feedData['error']['code'] ?? 0;
-                    $errSub = $feedData['error']['message'] ?? 'Error al leer publicaciones de la Página';
-                    if ($errCode == 10 || str_contains($errSub, 'pages_read_engagement')) {
-                        $errors[] = "Facebook ({$accName}): Requiere permiso 'pages_read_engagement' en Meta.";
-                    } else {
-                        $errors[] = "Facebook ({$accName}): " . $errSub;
-                    }
-                } elseif (!empty($feedData['data']) && is_array($feedData['data'])) {
-                    $accPostsFound = count($feedData['data']);
+                if (empty($mergedPosts) && !empty($fbPermissionError)) {
+                    $errors[] = $fbPermissionError;
+                }
+
+                // Sort merged posts by created_time descending
+                $mergedPostsList = array_values($mergedPosts);
+                usort($mergedPostsList, function($a, $b) {
+                    $tA = !empty($a['created_time']) ? strtotime($a['created_time']) : 0;
+                    $tB = !empty($b['created_time']) ? strtotime($b['created_time']) : 0;
+                    return $tB <=> $tA;
+                });
+
+                if (!empty($mergedPostsList)) {
+                    $accPostsFound = count($mergedPostsList);
                     $totalPostsFoundOnMeta += $accPostsFound;
 
-                    // 1. Prepare Parallel Requests for Top 6 Posts (Insights, Comments, Photo Object Reactions)
+                    // 1. Prepare Parallel Requests for Top 8 Posts (Insights, Comments, Photo Object Reactions)
                     $multiUrls = [];
-                    $recentPosts = array_slice($feedData['data'], 0, 6);
+                    $recentPosts = array_slice($mergedPostsList, 0, 8);
                     foreach ($recentPosts as $fbPost) {
                         $pIdExt = $fbPost['id'];
                         $objId = !empty($fbPost['attachments']['data'][0]['target']['id']) ? (string)$fbPost['attachments']['data'][0]['target']['id'] : null;
 
                         $multiUrls['fb_insights_' . $pIdExt] = self::BASE_URL . '/' . urlencode($pIdExt) . '/insights?' . http_build_query([
-                            'metric' => 'post_impressions,post_impressions_unique,post_engaged_users,post_reactions_by_type_total,post_clicks',
+                            'metric' => 'post_impressions,post_impressions_unique,post_engaged_users,post_reactions_by_type_total,post_video_views,post_clicks',
                             'access_token' => $token
                         ]);
 
@@ -845,7 +875,7 @@ class MetaApiService {
                         if ($cCount > 0) {
                             $multiUrls['fb_comments_' . $pIdExt] = self::BASE_URL . '/' . urlencode($pIdExt) . '/comments?' . http_build_query([
                                 'fields' => 'id,message,from,created_time,like_count',
-                                'limit' => '15',
+                                'limit' => '20',
                                 'access_token' => $token
                             ]);
                         }
@@ -858,11 +888,33 @@ class MetaApiService {
                     // Execute ALL parallel requests at once (< 400ms)
                     $multiResponses = self::makeMultiGetRequests($multiUrls, 3, 1);
 
-                    foreach ($feedData['data'] as $fbPost) {
+                    foreach ($mergedPostsList as $fbPost) {
                         $postIdExt = $fbPost['id'];
                         $objectId = !empty($fbPost['attachments']['data'][0]['target']['id']) ? (string)$fbPost['attachments']['data'][0]['target']['id'] : null;
                         $message = $fbPost['message'] ?? ($fbPost['story'] ?? 'Publicación de Página de Facebook');
-                        $fullPic = $fbPost['full_picture'] ?? 'https://images.unsplash.com/photo-1552346154-21d32810aba3?w=480&h=320&auto=format&fit=crop&q=75';
+                        
+                        // Smart picture resolution
+                        $fullPic = $fbPost['full_picture'] ?? null;
+                        if (empty($fullPic) && !empty($fbPost['attachments']['data'][0]['media']['image']['src'])) {
+                            $fullPic = $fbPost['attachments']['data'][0]['media']['image']['src'];
+                        }
+                        if (empty($fullPic) && !empty($fbPost['attachments']['data'][0]['unshimmed_url'])) {
+                            $fullPic = $fbPost['attachments']['data'][0]['unshimmed_url'];
+                        }
+                        if (empty($fullPic)) {
+                            $fullPic = 'https://images.unsplash.com/photo-1552346154-21d32810aba3?w=480&h=320&auto=format&fit=crop&q=75';
+                        }
+
+                        $attachType = strtolower($fbPost['attachments']['data'][0]['type'] ?? '');
+                        $mediaType = 'status';
+                        if (str_contains($attachType, 'video') || str_contains($attachType, 'reel')) {
+                            $mediaType = 'video';
+                        } elseif (str_contains($attachType, 'photo') || str_contains($attachType, 'image') || !empty($fbPost['full_picture'])) {
+                            $mediaType = 'image';
+                        } elseif (str_contains($attachType, 'album')) {
+                            $mediaType = 'carousel';
+                        }
+
                         $permalink = $fbPost['permalink_url'] ?? '';
 
                         // Multi-layer Likes & Reactions Extraction
@@ -919,6 +971,8 @@ class MetaApiService {
                                     $engagedUsers = max($engagedUsers, $val);
                                 } elseif ($name === 'post_reactions_by_type_total') {
                                     $likes = max($likes, $val);
+                                } elseif ($name === 'post_video_views') {
+                                    $impressions = max($impressions, $val);
                                 }
                             }
                         }
@@ -955,7 +1009,8 @@ class MetaApiService {
                                 UPDATE posts 
                                 SET account_id = :acc_id, brand_voice_id = :bvid, total_likes = :likes, total_comments = :comments, 
                                     total_shares = :shares, impressions = :impressions, reach = :reach, engagement_rate = :eng_rate, 
-                                    caption = :caption, media_url = :media_url, permalink = :permalink, last_synced_at = CURRENT_TIMESTAMP
+                                    caption = :caption, media_url = :media_url, media_type = :media_type, permalink = :permalink, 
+                                    posted_at = :posted_at, last_synced_at = CURRENT_TIMESTAMP
                                 WHERE id = :id AND user_id = :uid
                             ");
                             $stmtUp->execute([
@@ -969,7 +1024,9 @@ class MetaApiService {
                                 ':eng_rate' => $engagementRate,
                                 ':caption' => $message,
                                 ':media_url' => $fullPic,
+                                ':media_type' => $mediaType,
                                 ':permalink' => $permalink,
+                                ':posted_at' => $postedAt,
                                 ':id' => $postId,
                                 ':uid' => $uid
                             ]);
@@ -981,7 +1038,7 @@ class MetaApiService {
                                     impressions, reach, saved_count, engagement_rate, posted_at, last_synced_at
                                 ) VALUES (
                                     :uid, :acc_id, :bvid, 'facebook', :ext_id, :caption, :media_url, 
-                                    'status', :permalink, :likes, :comments, :shares, 
+                                    :media_type, :permalink, :likes, :comments, :shares, 
                                     :impressions, :reach, 0, :eng_rate, :posted_at, CURRENT_TIMESTAMP
                                 )
                             ");
@@ -992,6 +1049,7 @@ class MetaApiService {
                                 ':ext_id' => $postIdExt,
                                 ':caption' => $message,
                                 ':media_url' => $fullPic,
+                                ':media_type' => $mediaType,
                                 ':permalink' => $permalink,
                                 ':likes' => $likes,
                                 ':comments' => $commentsCount,
