@@ -661,8 +661,8 @@ const App = {
     const urgentPill = document.getElementById('count-pill-urgent');
     const scorePill = document.getElementById('count-pill-highlighted');
 
-    if (leadsPill) leadsPill.textContent = `${counts.leads_count || 0} Consejos`;
-    if (urgentPill) urgentPill.textContent = `${counts.urgent_count || 0} Apoyo`;
+    if (leadsPill) leadsPill.textContent = `${counts.leads_count || 0} Leads`;
+    if (urgentPill) urgentPill.textContent = `${counts.urgent_count || 0} Soporte`;
     if (scorePill) scorePill.textContent = `${counts.highlighted_count || 0} Destacados`;
 
     // Sidebar badges

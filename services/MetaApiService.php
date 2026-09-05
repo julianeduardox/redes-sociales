@@ -160,16 +160,12 @@ class MetaApiService {
     }
 
     /**
-     * Fetch Live Media Insights for an Instagram Post
+     * Fetch Live Media Insights for an Instagram Post or Reel (Graph API v19/v20)
      */
-    public static function fetchMediaInsights(string $mediaId, string $accessToken): array {
-        if (empty($accessToken) || empty($mediaId) || str_starts_with($mediaId, 'ig_post_')) {
+    public static function fetchMediaInsights(string $mediaId, string $accessToken, string $mediaType = 'image'): array {
+        if (empty($accessToken) || empty($mediaId) || str_starts_with($mediaId, 'ig_post_') || str_starts_with($mediaId, 'mock_')) {
             return [];
         }
-
-        // Available metrics for Instagram posts: impressions, reach, saved, total_interactions
-        $url = self::BASE_URL . '/' . urlencode($mediaId) . '/insights?metric=impressions,reach,saved,total_interactions&access_token=' . urlencode($accessToken);
-        $res = self::makeGetRequest($url);
 
         $metrics = [
             'impressions' => 0,
@@ -178,14 +174,91 @@ class MetaApiService {
             'total_interactions' => 0
         ];
 
+        $isReelOrVideo = in_array(strtolower($mediaType), ['video', 'reel', 'reels', 'clips'], true);
+        $metricNames = $isReelOrVideo ? 'reach,saved,total_interactions,plays' : 'reach,saved,total_interactions,impressions';
+
+        $url = self::BASE_URL . '/' . urlencode($mediaId) . '/insights?' . http_build_query([
+            'metric' => $metricNames,
+            'access_token' => $accessToken
+        ]);
+        $res = self::makeGetRequest($url);
+
+        // Fallback if specific post format rejects one metric
+        if (isset($res['error'])) {
+            $fallbackUrl = self::BASE_URL . '/' . urlencode($mediaId) . '/insights?' . http_build_query([
+                'metric' => 'reach,saved,total_interactions',
+                'access_token' => $accessToken
+            ]);
+            $res = self::makeGetRequest($fallbackUrl);
+        }
+
         if (isset($res['data']) && is_array($res['data'])) {
             foreach ($res['data'] as $item) {
                 $name = $item['name'] ?? '';
-                $val = $item['values'][0]['value'] ?? 0;
-                if (isset($metrics[$name])) {
-                    $metrics[$name] = (int)$val;
+                $val = 0;
+                if (isset($item['total_value']['value'])) {
+                    $val = (int)$item['total_value']['value'];
+                } elseif (isset($item['values'][0]['value'])) {
+                    $val = (int)$item['values'][0]['value'];
+                } elseif (isset($item['value'])) {
+                    $val = (int)$item['value'];
+                }
+
+                if ($name === 'impressions' || $name === 'plays') {
+                    $metrics['impressions'] = max($metrics['impressions'], $val);
+                } elseif ($name === 'reach') {
+                    $metrics['reach'] = $val;
                 } elseif ($name === 'saved') {
-                    $metrics['saved_count'] = (int)$val;
+                    $metrics['saved_count'] = $val;
+                } elseif ($name === 'total_interactions') {
+                    $metrics['total_interactions'] = $val;
+                }
+            }
+        }
+
+        return $metrics;
+    }
+
+    /**
+     * Fetch Live Post Insights for a Facebook Page Post (Graph API v19/v20)
+     */
+    public static function fetchFacebookPostInsights(string $postId, string $accessToken): array {
+        if (empty($accessToken) || empty($postId) || str_starts_with($postId, 'fb_post_') || str_starts_with($postId, 'mock_')) {
+            return [];
+        }
+
+        $metrics = [
+            'impressions' => 0,
+            'reach' => 0,
+            'engaged_users' => 0
+        ];
+
+        $url = self::BASE_URL . '/' . urlencode($postId) . '/insights?' . http_build_query([
+            'metric' => 'post_impressions,post_impressions_unique,post_engaged_users',
+            'access_token' => $accessToken
+        ]);
+        $res = self::makeGetRequest($url);
+
+        if (isset($res['data']) && is_array($res['data'])) {
+            foreach ($res['data'] as $item) {
+                $name = $item['name'] ?? '';
+                $val = 0;
+                if (isset($item['values'][0]['value'])) {
+                    $raw = $item['values'][0]['value'];
+                    $val = is_array($raw) ? array_sum(array_map('intval', $raw)) : (int)$raw;
+                } elseif (isset($item['total_value']['value'])) {
+                    $val = (int)$item['total_value']['value'];
+                }
+
+                if ($name === 'post_impressions') {
+                    $metrics['impressions'] = $val;
+                } elseif ($name === 'post_impressions_unique') {
+                    $metrics['reach'] = $val;
+                } elseif ($name === 'post_engaged_users') {
+                    $metrics['engaged_users'] = $val;
+                    if ($metrics['reach'] === 0) {
+                        $metrics['reach'] = $val;
+                    }
                 }
             }
         }
@@ -289,8 +362,10 @@ class MetaApiService {
         $accountDiagnostics = [];
         $errors = [];
 
-        // 0. Clean up any leftover demo / mock accounts from initial seeding
-        $pdo->prepare("DELETE FROM accounts WHERE user_id = :uid AND (page_id LIKE 'page_stoic_%' OR page_id LIKE 'page_user_%' OR page_id LIKE 'mock_%' OR page_id LIKE 'fb_%' OR page_id LIKE 'ig_%')")->execute([':uid' => $uid]);
+        // 0. Clean up any leftover demo / mock accounts and seed posts from initial seeding
+        $pdo->prepare("DELETE FROM accounts WHERE user_id = :uid AND (page_id LIKE 'page_stoic_%' OR page_id LIKE 'page_user_%' OR page_id LIKE 'mock_%' OR page_id = 'ig_10928374' OR page_id = 'fb_987654321')")->execute([':uid' => $uid]);
+        $pdo->prepare("DELETE FROM posts WHERE user_id = :uid AND (external_post_id LIKE 'ig_post_%' OR external_post_id LIKE 'fb_post_%' OR external_post_id LIKE 'ig_reel_%' OR external_post_id LIKE 'mock_%')")->execute([':uid' => $uid]);
+        $pdo->prepare("DELETE FROM comments WHERE user_id = :uid AND (external_comment_id LIKE 'cmt_stoic_%' OR external_comment_id LIKE 'cmt_user_%' OR external_comment_id LIKE 'cmt_mock_%' OR external_comment_id LIKE 'mock_%')")->execute([':uid' => $uid]);
 
         // 1. Auto-discover and refresh all Pages & Instagram accounts from Meta /me/accounts
         if (!empty($defaultToken)) {
@@ -470,11 +545,15 @@ class MetaApiService {
                         $permalink = $media['permalink'] ?? '';
                         $postedAt = !empty($media['timestamp']) ? date('Y-m-d H:i:s', strtotime($media['timestamp'])) : date('Y-m-d H:i:s');
 
-                        $insights = self::fetchMediaInsights($mediaId, $token);
-                        $impressions = $insights['impressions'] ?? max(10, $likes * 8);
-                        $reach = $insights['reach'] ?? max(8, $likes * 6);
-                        $savedCount = $insights['saved_count'] ?? (int)($likes * 0.15);
-                        $engagementRate = ($reach > 0) ? round((($likes + $commentsCount + $savedCount) / $reach) * 100, 1) : 0.0;
+                        $insights = self::fetchMediaInsights($mediaId, $token, $mediaType);
+                        $impressions = (int)($insights['impressions'] ?? 0);
+                        $reach = (int)($insights['reach'] ?? 0);
+                        if ($reach === 0 && $impressions > 0) {
+                            $reach = $impressions;
+                        }
+                        $savedCount = (int)($insights['saved_count'] ?? 0);
+                        $igInteractions = $likes + $commentsCount + $savedCount;
+                        $engagementRate = ($reach > 0) ? round(($igInteractions / $reach) * 100, 1) : (($impressions > 0) ? round(($igInteractions / $impressions) * 100, 1) : 0.0);
 
                         $checkPost = $pdo->prepare("SELECT id FROM posts WHERE external_post_id = :ext_id AND user_id = :uid LIMIT 1");
                         $checkPost->execute([':ext_id' => $mediaId, ':uid' => $uid]);
@@ -592,8 +671,8 @@ class MetaApiService {
                     }
                 }
             } else {
-                // Fetch Facebook Page Posts
-                $fbFields = 'id,message,story,created_time,full_picture,permalink_url,shares';
+                // Fetch Facebook Page Posts with accurate summary parameters
+                $fbFields = 'id,message,story,created_time,full_picture,permalink_url,shares,reactions.summary(true).limit(0),comments.summary(true).limit(0)';
                 $pagePostsUrl = self::BASE_URL . '/' . urlencode($pageId) . '/posts?' . http_build_query([
                     'fields' => $fbFields,
                     'limit' => '25',
@@ -641,14 +720,19 @@ class MetaApiService {
                         $message = $fbPost['message'] ?? ($fbPost['story'] ?? 'Publicación de Página de Facebook');
                         $fullPic = $fbPost['full_picture'] ?? 'https://images.unsplash.com/photo-1552346154-21d32810aba3?w=480&h=320&auto=format&fit=crop&q=75';
                         $permalink = $fbPost['permalink_url'] ?? '';
-                        $likes = (int)($fbPost['likes']['summary']['total_count'] ?? 0);
+                        $likes = (int)($fbPost['reactions']['summary']['total_count'] ?? ($fbPost['likes']['summary']['total_count'] ?? 0));
                         $commentsCount = (int)($fbPost['comments']['summary']['total_count'] ?? 0);
                         $shares = (int)($fbPost['shares']['count'] ?? 0);
                         $postedAt = !empty($fbPost['created_time']) ? date('Y-m-d H:i:s', strtotime($fbPost['created_time'])) : date('Y-m-d H:i:s');
 
-                        $reach = max(10, ($likes + $commentsCount) * 5);
-                        $impressions = max(15, ($likes + $commentsCount) * 7);
-                        $engagementRate = ($reach > 0) ? round((($likes + $commentsCount + $shares) / $reach) * 100, 1) : 0.0;
+                        $fbInsights = self::fetchFacebookPostInsights($postIdExt, $token);
+                        $impressions = (int)($fbInsights['impressions'] ?? 0);
+                        $reach = (int)($fbInsights['reach'] ?? 0);
+                        if ($reach === 0 && $impressions > 0) {
+                            $reach = $impressions;
+                        }
+                        $fbInteractions = $likes + $commentsCount + $shares;
+                        $engagementRate = ($reach > 0) ? round(($fbInteractions / $reach) * 100, 1) : (($impressions > 0) ? round(($fbInteractions / $impressions) * 100, 1) : 0.0);
 
                         $checkPost = $pdo->prepare("SELECT id FROM posts WHERE external_post_id = :ext_id AND user_id = :uid LIMIT 1");
                         $checkPost->execute([':ext_id' => $postIdExt, ':uid' => $uid]);

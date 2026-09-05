@@ -211,10 +211,10 @@ const AnalyticsController = {
       const safeLikes = formatNumber(p.total_likes || 0);
       const safeComments = formatNumber(p.total_comments || 0);
       const safeShares = formatNumber(p.total_shares || 0);
-      const safeReach = formatNumber(p.reach || (p.total_likes * 6));
-      const safeImpressions = formatNumber(p.impressions || (p.total_likes * 8));
-      const safeSaved = formatNumber(p.saved_count || Math.round(p.total_likes * 0.15));
-      const engRate = parseFloat(p.engagement_rate) || 15.0;
+      const safeReach = formatNumber(p.reach || 0);
+      const safeImpressions = formatNumber(p.impressions || 0);
+      const safeSaved = formatNumber(p.saved_count || 0);
+      const engRate = (typeof p.engagement_rate !== 'undefined' && p.engagement_rate !== null) ? parseFloat(p.engagement_rate).toFixed(1) : '0.0';
       const mediaType = (p.media_type || 'image').toLowerCase();
 
       let mediaIcon = '📷 Imagen';

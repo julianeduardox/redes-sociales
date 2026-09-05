@@ -50,6 +50,7 @@ try {
             JOIN posts p ON c.post_id = p.id
             LEFT JOIN accounts a ON p.account_id = a.id
             LEFT JOIN brand_voices bv ON COALESCE(p.brand_voice_id, a.brand_voice_id) = bv.id
+            LEFT JOIN replies r ON r.comment_id = c.id
             WHERE c.user_id = :user_id
         ";
         $params = [':user_id' => $userId];
@@ -117,8 +118,14 @@ try {
             FROM comments
             WHERE user_id = :user_id
         ");
-        $countStmt->execute([':user_id' => $userId]);
-        $counts = $countStmt->fetch();
+        $counts = $countStmt->fetch() ?: [];
+        $counts['total'] = (int)($counts['total'] ?? 0);
+        $counts['highlighted_count'] = (int)($counts['highlighted_count'] ?? 0);
+        $counts['leads_count'] = (int)($counts['leads_count'] ?? 0);
+        $counts['urgent_count'] = (int)($counts['urgent_count'] ?? 0);
+        $counts['pending_count'] = (int)($counts['pending_count'] ?? 0);
+        $counts['replied_count'] = (int)($counts['replied_count'] ?? 0);
+        $counts['spam_count'] = (int)($counts['spam_count'] ?? 0);
 
         echo json_encode([
             'success' => true,

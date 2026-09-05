@@ -20,28 +20,49 @@ try {
     $sortBy = Security::validateEnum($_GET['sort'] ?? 'recent', ['recent', 'reach', 'engagement', 'comments', 'likes'], 'recent');
     $drillPostId = isset($_GET['post_id']) && is_numeric($_GET['post_id']) ? (int)$_GET['post_id'] : null;
 
-    // 1. Overall Global Totals for Current User
-    $statsStmt = $pdo->prepare("
+    $accountId = isset($_GET['account_id']) && is_numeric($_GET['account_id']) && (int)$_GET['account_id'] > 0 ? (int)$_GET['account_id'] : null;
+
+    // 1. Filtered Comments Totals for Current User
+    $statsSql = "
         SELECT 
             COUNT(*) as total_comments,
-            SUM(CASE WHEN status = 'replied' THEN 1 ELSE 0 END) as replied_count,
-            SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_count,
-            SUM(CASE WHEN is_highlighted = 1 OR highlight_score >= 80 THEN 1 ELSE 0 END) as highlighted_count,
-            SUM(CASE WHEN sentiment = 'lead' OR intent LIKE 'lead_%' THEN 1 ELSE 0 END) as leads_count,
-            SUM(CASE WHEN sentiment = 'urgent' THEN 1 ELSE 0 END) as urgent_count,
-            ROUND(AVG(highlight_score), 1) as avg_engagement_score,
-            SUM(likes_count) as total_likes_on_comments
-        FROM comments
-        WHERE user_id = :uid
-    ");
-    $statsStmt->execute([':uid' => $userId]);
-    $stats = $statsStmt->fetch();
+            SUM(CASE WHEN c.status = 'replied' THEN 1 ELSE 0 END) as replied_count,
+            SUM(CASE WHEN c.status = 'pending' THEN 1 ELSE 0 END) as pending_count,
+            SUM(CASE WHEN c.is_highlighted = 1 OR c.highlight_score >= 80 THEN 1 ELSE 0 END) as highlighted_count,
+            SUM(CASE WHEN c.sentiment = 'lead' OR c.intent LIKE 'lead_%' THEN 1 ELSE 0 END) as leads_count,
+            SUM(CASE WHEN c.sentiment = 'urgent' OR c.intent = 'support' THEN 1 ELSE 0 END) as urgent_count,
+            ROUND(AVG(c.highlight_score), 1) as avg_engagement_score,
+            SUM(c.likes_count) as total_likes_on_comments
+        FROM comments c
+    ";
+    if ($accountId !== null) {
+        $statsSql .= " JOIN posts p ON c.post_id = p.id WHERE c.user_id = :uid AND p.account_id = :acc_id";
+        $statsParams = [':uid' => $userId, ':acc_id' => $accountId];
+    } else {
+        $statsSql .= " WHERE c.user_id = :uid";
+        $statsParams = [':uid' => $userId];
+    }
+    if ($platform !== 'all') {
+        $statsSql .= " AND c.platform = :platform";
+        $statsParams[':platform'] = $platform;
+    }
 
-    $repliedPercent = ($stats['total_comments'] > 0) ? round(($stats['replied_count'] / $stats['total_comments']) * 100, 1) : 0;
-    $stats['reply_rate_percent'] = $repliedPercent;
+    $statsStmt = $pdo->prepare($statsSql);
+    $statsStmt->execute($statsParams);
+    $stats = $statsStmt->fetch() ?: [];
 
-    // Global Post Aggregates for Current User (Reach, Impressions, Saved)
-    $postTotalsStmt = $pdo->prepare("
+    $stats['total_comments'] = (int)($stats['total_comments'] ?? 0);
+    $stats['replied_count'] = (int)($stats['replied_count'] ?? 0);
+    $stats['pending_count'] = (int)($stats['pending_count'] ?? 0);
+    $stats['highlighted_count'] = (int)($stats['highlighted_count'] ?? 0);
+    $stats['leads_count'] = (int)($stats['leads_count'] ?? 0);
+    $stats['urgent_count'] = (int)($stats['urgent_count'] ?? 0);
+    $stats['avg_engagement_score'] = (float)($stats['avg_engagement_score'] ?? 0.0);
+    $stats['total_likes_on_comments'] = (int)($stats['total_likes_on_comments'] ?? 0);
+    $stats['reply_rate_percent'] = ($stats['total_comments'] > 0) ? round(($stats['replied_count'] / $stats['total_comments']) * 100, 1) : 0.0;
+
+    // Filtered Post Aggregates for Current User (Reach, Impressions, Saved, Engagement Rate)
+    $postTotalsSql = "
         SELECT 
             COUNT(*) as total_posts,
             SUM(total_likes) as total_post_likes,
@@ -51,11 +72,22 @@ try {
             SUM(impressions) as total_impressions,
             SUM(saved_count) as total_saved,
             ROUND(AVG(engagement_rate), 1) as avg_engagement_rate
-        FROM posts
-        WHERE user_id = :uid
-    ");
-    $postTotalsStmt->execute([':uid' => $userId]);
-    $postTotals = $postTotalsStmt->fetch();
+        FROM posts p
+        WHERE p.user_id = :uid
+    ";
+    $postTotalsParams = [':uid' => $userId];
+    if ($accountId !== null) {
+        $postTotalsSql .= " AND p.account_id = :acc_id";
+        $postTotalsParams[':acc_id'] = $accountId;
+    }
+    if ($platform !== 'all') {
+        $postTotalsSql .= " AND p.platform = :platform";
+        $postTotalsParams[':platform'] = $platform;
+    }
+
+    $postTotalsStmt = $pdo->prepare($postTotalsSql);
+    $postTotalsStmt->execute($postTotalsParams);
+    $postTotals = $postTotalsStmt->fetch() ?: [];
 
     $stats['total_posts'] = (int)($postTotals['total_posts'] ?? 0);
     $stats['total_post_likes'] = (int)($postTotals['total_post_likes'] ?? 0);
@@ -64,14 +96,26 @@ try {
     $stats['total_saved'] = (int)($postTotals['total_saved'] ?? 0);
     $stats['avg_engagement_rate'] = (float)($postTotals['avg_engagement_rate'] ?? 0.0);
 
-    // 2. Global Sentiment Breakdown for Current User
-    $sentimentStmt = $pdo->prepare("
-        SELECT sentiment, COUNT(*) as count 
-        FROM comments 
-        WHERE user_id = :uid
-        GROUP BY sentiment
-    ");
-    $sentimentStmt->execute([':uid' => $userId]);
+    // 2. Filtered Sentiment Breakdown for Current User
+    $sentimentSql = "
+        SELECT c.sentiment, COUNT(*) as count 
+        FROM comments c
+    ";
+    if ($accountId !== null) {
+        $sentimentSql .= " JOIN posts p ON c.post_id = p.id WHERE c.user_id = :uid AND p.account_id = :acc_id";
+        $sentimentParams = [':uid' => $userId, ':acc_id' => $accountId];
+    } else {
+        $sentimentSql .= " WHERE c.user_id = :uid";
+        $sentimentParams = [':uid' => $userId];
+    }
+    if ($platform !== 'all') {
+        $sentimentSql .= " AND c.platform = :platform";
+        $sentimentParams[':platform'] = $platform;
+    }
+    $sentimentSql .= " GROUP BY c.sentiment";
+
+    $sentimentStmt = $pdo->prepare($sentimentSql);
+    $sentimentStmt->execute($sentimentParams);
     $sentimentRows = $sentimentStmt->fetchAll();
 
     $sentiments = [
@@ -114,6 +158,7 @@ try {
     elseif ($sortBy === 'engagement') $orderClause = "p.engagement_rate DESC";
     elseif ($sortBy === 'comments') $orderClause = "p.total_comments DESC";
     elseif ($sortBy === 'likes') $orderClause = "p.total_likes DESC";
+
 
     $postsSql = "
         SELECT 
