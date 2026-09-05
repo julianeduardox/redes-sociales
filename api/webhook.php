@@ -1,13 +1,12 @@
 <?php
 /**
- * Meta Webhook Listener for Facebook & Instagram Real-Time Comment Ingestion
- * Hardened with HMAC-SHA256 Signature Verification, Timing-Safe Token Check & Strict Sanitization
+ * Meta Webhook Listener for Facebook & Instagram Real-Time Event Ingestion
+ * Ultra-fast Asynchronous Queue Ingestion (< 50ms)
+ * Hardened with HMAC-SHA256 Signature Verification, Timing-Safe Token Check & Rate Limiting
  */
 require_once __DIR__ . '/../config/security.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/settings.php';
-require_once __DIR__ . '/../services/AiAgentService.php';
-require_once __DIR__ . '/../services/MetaApiService.php';
 
 Security::applySecurityHeaders(true);
 
@@ -37,8 +36,14 @@ if ($method === 'GET') {
 if ($method === 'POST') {
     $rawInput = file_get_contents('php://input');
     
-    // Rate limit webhook ingestion (120 events / minute)
-    Security::requireRateLimit('webhook_ingest', 120, 60);
+    if (empty($rawInput)) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Payload vacío'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    // Rate limit webhook ingestion (180 events / minute)
+    Security::requireRateLimit('webhook_ingest', 180, 60);
 
     // Validate Meta Signature if App Secret is configured
     $metaAppSecret = Settings::get('meta_app_secret', '');
@@ -52,92 +57,43 @@ if ($method === 'POST') {
         }
     }
 
+    // Validate JSON structure
     $data = json_decode($rawInput, true);
-
-    if (!empty($data) && isset($data['entry']) && is_array($data['entry'])) {
-        $pdo = Database::getConnection();
-        $isAutopilot = Settings::get('autopilot_enabled', '0') === '1';
-        $minAutopilotScore = Security::sanitizeInt(Settings::get('autopilot_min_score', 60), 0, 100, 60);
-
-        foreach ($data['entry'] as $entry) {
-            // Check Facebook Page changes
-            if (isset($entry['changes']) && is_array($entry['changes'])) {
-                foreach ($entry['changes'] as $change) {
-                    if (($change['field'] ?? '') === 'feed' && isset($change['value']['item']) && $change['value']['item'] === 'comment') {
-                        $val = $change['value'];
-                        if (($val['verb'] ?? '') === 'add') {
-                            $commentId = Security::sanitizeString($val['comment_id'] ?? '', 100);
-                            $message = Security::sanitizeString($val['message'] ?? '', 2000);
-                            $senderName = Security::sanitizeString($val['from']['name'] ?? 'Usuario Facebook', 80);
-                            $senderId = preg_replace('/[^0-9]/', '', $val['from']['id'] ?? '');
-                            $postId = 2; // Default to Facebook post
-
-                            if (empty($commentId) || empty($message)) {
-                                continue;
-                            }
-
-                            $entryPageId = $entry['id'] ?? '';
-                            $uStmt = $pdo->prepare("SELECT user_id FROM accounts WHERE page_id = :pid LIMIT 1");
-                            $uStmt->execute([':pid' => $entryPageId]);
-                            $uRow = $uStmt->fetch();
-                            $targetUserId = $uRow ? (int)$uRow['user_id'] : 1;
-
-                            // Analyze with AI Agent
-                            $analysis = AiAgentService::analyzeComment($message, 'Publicación de Facebook', 0, $targetUserId);
-
-                            $stmt = $pdo->prepare("
-                                INSERT INTO comments (
-                                    user_id, post_id, platform, external_comment_id, author_name, author_handle,
-                                    author_avatar, comment_text, sentiment, intent, highlight_score,
-                                    is_highlighted, highlight_reason, likes_count, status
-                                ) VALUES (
-                                    :user_id, :post_id, 'facebook', :ext_id, :author_name, :author_handle,
-                                    :author_avatar, :comment_text, :sentiment, :intent, :highlight_score,
-                                    :is_highlighted, :highlight_reason, 0, 'pending'
-                                )
-                            ");
-                            $stmt->execute([
-                                ':user_id' => $targetUserId,
-                                ':post_id' => $postId,
-                                ':ext_id' => $commentId,
-                                ':author_name' => $senderName,
-                                ':author_handle' => 'fb_' . $senderId,
-                                ':author_avatar' => 'https://ui-avatars.com/api/?name=' . urlencode($senderName) . '&background=1877f2&color=fff',
-                                ':comment_text' => $message,
-                                ':sentiment' => $analysis['sentiment'],
-                                ':intent' => $analysis['intent'],
-                                ':highlight_score' => $analysis['highlight_score'],
-                                ':is_highlighted' => $analysis['is_highlighted'],
-                                ':highlight_reason' => $analysis['highlight_reason']
-                            ]);
-                            $newDbId = (int)$pdo->lastInsertId();
-
-                            // Autopilot execution if enabled and score meets requirement
-                            if ($isAutopilot && $analysis['highlight_score'] >= $minAutopilotScore && $newDbId > 0) {
-                                $replies = AiAgentService::generateReplies($senderName, $message, 'facebook');
-                                $chosen = ($analysis['sentiment'] === 'lead') ? $replies['conversion'] : $replies['engagement'];
-                                
-                                MetaApiService::postReplyToMeta($newDbId, $chosen);
-                                
-                                $stmtRep = $pdo->prepare("
-                                    INSERT INTO replies (comment_id, reply_text, reply_type, tone_used, variant_type, is_posted_to_platform) 
-                                    VALUES (:cid, :text, 'autopilot', 'auto', 'auto', 1)
-                                ");
-                                $stmtRep->execute([':cid' => $newDbId, ':text' => $chosen]);
-                                
-                                $stmtUp = $pdo->prepare("UPDATE comments SET status = 'replied' WHERE id = :id");
-                                $stmtUp->execute([':id' => $newDbId]);
-                            }
-                        }
-                    }
-                }
-            }
-        }
+    if (!is_array($data) || empty($data['entry'])) {
+        // Still return 200 to acknowledge Meta if ping/empty event
+        http_response_code(200);
+        echo json_encode(['status' => 'EVENT_IGNORED_EMPTY'], JSON_UNESCAPED_UNICODE);
+        exit;
     }
 
-    http_response_code(200);
-    echo json_encode(['status' => 'EVENT_RECEIVED']);
-    exit;
+    try {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("
+            INSERT INTO webhook_queue (event_source, payload, signature, status, attempts, created_at)
+            VALUES ('meta', :payload, :signature, 'pending', 0, CURRENT_TIMESTAMP)
+        ");
+        $stmt->execute([
+            ':payload' => $rawInput,
+            ':signature' => $signatureHeader ?: null
+        ]);
+        $queueId = (int)$pdo->lastInsertId();
+
+        // Ultra-fast HTTP 200 response to Meta in < 30ms
+        http_response_code(200);
+        echo json_encode([
+            'status' => 'EVENT_RECEIVED',
+            'queued' => true,
+            'queue_id' => $queueId
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+
+    } catch (Throwable $e) {
+        error_log("Webhook ingestion error: " . $e->getMessage());
+        // Always respond 200 to Meta so it does not retry uncontrollably if database is temporarily locked
+        http_response_code(200);
+        echo json_encode(['status' => 'EVENT_RECEIVED_WITH_ERROR'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
 }
 
 http_response_code(405);

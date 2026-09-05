@@ -257,6 +257,22 @@ class Database {
                 self::seedInitialData($pdo, $testerId);
             }
 
+            // 8. Ensure webhook_queue table exists for high-speed async processing
+            $pdo->exec("
+                CREATE TABLE IF NOT EXISTS webhook_queue (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    event_source TEXT NOT NULL DEFAULT 'meta',
+                    payload TEXT NOT NULL,
+                    signature TEXT,
+                    status TEXT NOT NULL DEFAULT 'pending',
+                    attempts INTEGER DEFAULT 0,
+                    error_message TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    processed_at DATETIME
+                );
+                CREATE INDEX IF NOT EXISTS idx_webhook_status_created ON webhook_queue(status, created_at);
+            ");
+
         } catch (Throwable $e) {
             error_log("Multi-tenant schema migration error: " . $e->getMessage());
         }
@@ -415,6 +431,19 @@ class Database {
         );
         CREATE INDEX IF NOT EXISTS idx_reset_token ON password_resets(token_hash);
         CREATE INDEX IF NOT EXISTS idx_reset_expires ON password_resets(expires_at);
+
+        CREATE TABLE IF NOT EXISTS webhook_queue (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_source TEXT NOT NULL DEFAULT 'meta',
+            payload TEXT NOT NULL,
+            signature TEXT,
+            status TEXT NOT NULL DEFAULT 'pending',
+            attempts INTEGER DEFAULT 0,
+            error_message TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            processed_at DATETIME
+        );
+        CREATE INDEX IF NOT EXISTS idx_webhook_status_created ON webhook_queue(status, created_at);
         ";
 
         $pdo->exec($schema);
