@@ -367,6 +367,17 @@ const AgentController = {
     const score = document.getElementById('modal-score-badge');
     const reason = document.getElementById('modal-reason-banner');
     const sentiment = document.getElementById('modal-sentiment-tag');
+    const accNameBadge = document.getElementById('modal-account-name-badge');
+    const brandVoiceBadge = document.getElementById('modal-brand-voice-badge');
+
+    if (accNameBadge) {
+      const accName = comment.account_name || comment.account_handle || (comment.platform === 'facebook' ? 'Página FB' : '@cuenta_ig');
+      const icon = comment.platform === 'facebook' ? '📘' : '📸';
+      accNameBadge.textContent = `${icon} ${accName}`;
+    }
+    if (brandVoiceBadge) {
+      brandVoiceBadge.textContent = comment.brand_voice_name || 'Voz por Defecto';
+    }
 
     if (avatar) avatar.src = App.sanitizeUrl(comment.author_avatar, 'https://ui-avatars.com/api/?name=User');
     if (name) name.textContent = comment.author_name || 'Seguidor';

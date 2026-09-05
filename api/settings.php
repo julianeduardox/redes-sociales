@@ -49,6 +49,43 @@ try {
             exit;
         }
 
+        // 1.1 Action: List all connected accounts with assigned brand voice
+        if ($action === 'list_accounts') {
+            $stmtAcc = $pdo->prepare("
+                SELECT 
+                    a.id,
+                    a.user_id,
+                    a.platform,
+                    a.account_name,
+                    a.account_handle,
+                    a.page_id,
+                    a.avatar_url,
+                    a.is_active,
+                    COALESCE(a.brand_voice_id, 1) as brand_voice_id,
+                    COALESCE(bv.brand_name, 'Voz Predeterminada') as brand_voice_name,
+                    COALESCE(bv.tone_level, 'friendly_engaging') as brand_voice_tone,
+                    (SELECT COUNT(*) FROM posts WHERE account_id = a.id AND user_id = :uid) as posts_count,
+                    (SELECT COUNT(*) FROM comments c JOIN posts p ON c.post_id = p.id WHERE p.account_id = a.id AND c.user_id = :uid) as comments_count
+                FROM accounts a
+                LEFT JOIN brand_voices bv ON a.brand_voice_id = bv.id
+                WHERE a.user_id = :uid
+                ORDER BY a.platform ASC, a.id ASC
+            ");
+            $stmtAcc->execute([':uid' => $userId]);
+            $accounts = $stmtAcc->fetchAll();
+
+            $stmtBrands = $pdo->prepare("SELECT id, brand_name, persona_name, tone_level, is_default FROM brand_voices WHERE user_id = :uid ORDER BY is_default DESC, id ASC");
+            $stmtBrands->execute([':uid' => $userId]);
+            $brands = $stmtBrands->fetchAll();
+
+            echo json_encode([
+                'success' => true,
+                'accounts' => $accounts,
+                'brands' => $brands
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
         // 2. Action: Get specific brand voice
         if ($action === 'get_brand') {
             $brandId = (int)($_GET['id'] ?? ($_SESSION['active_brand_id'] ?? 0));
@@ -143,8 +180,50 @@ try {
         $rawInput = file_get_contents('php://input');
         $input = json_decode($rawInput, true) ?? $_POST;
         $action = Security::validateEnum($input['action'] ?? 'save_all', [
-            'save_all', 'save_brand', 'set_active_brand', 'delete_brand', 'sync_meta', 'test_meta', 'audit_meta'
+            'save_all', 'save_brand', 'set_active_brand', 'delete_brand', 'assign_account_brand', 'sync_meta', 'test_meta', 'audit_meta'
         ], 'save_all');
+
+        // 0. Action: Assign Brand Voice to a Connected Account (Multi-Account Routing)
+        if ($action === 'assign_account_brand') {
+            $accountId = (int)($input['account_id'] ?? 0);
+            $brandVoiceId = (int)($input['brand_voice_id'] ?? 0);
+
+            if ($accountId <= 0 || $brandVoiceId <= 0) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'account_id y brand_voice_id son requeridos.']);
+                exit;
+            }
+
+            // Verify brand voice belongs to user
+            $bvCheck = $pdo->prepare("SELECT id, brand_name FROM brand_voices WHERE id = :bvid AND user_id = :uid LIMIT 1");
+            $bvCheck->execute([':bvid' => $brandVoiceId, ':uid' => $userId]);
+            $bv = $bvCheck->fetch();
+
+            if (!$bv) {
+                http_response_code(404);
+                echo json_encode(['success' => false, 'error' => 'Voz de Marca no encontrada o no pertenece a tu cuenta.']);
+                exit;
+            }
+
+            // Update account
+            $stmtAcc = $pdo->prepare("UPDATE accounts SET brand_voice_id = :bvid WHERE id = :id AND user_id = :uid");
+            $stmtAcc->execute([':bvid' => $brandVoiceId, ':id' => $accountId, ':uid' => $userId]);
+
+            // Propagate to all posts belonging to this account
+            $stmtPosts = $pdo->prepare("UPDATE posts SET brand_voice_id = :bvid WHERE account_id = :id AND user_id = :uid");
+            $stmtPosts->execute([':bvid' => $brandVoiceId, ':id' => $accountId, ':uid' => $userId]);
+
+            CacheService::invalidateAccountMappings();
+
+            echo json_encode([
+                'success' => true,
+                'message' => "Voz de Marca '{$bv['brand_name']}' asignada correctamente a la cuenta.",
+                'account_id' => $accountId,
+                'brand_voice_id' => $brandVoiceId,
+                'brand_voice_name' => $bv['brand_name']
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            exit;
+        }
 
         // 1. Action: Switch Active Brand Voice
         if ($action === 'set_active_brand') {
@@ -325,7 +404,7 @@ try {
         }
 
         if ($action === 'sync_meta') {
-            $syncResult = MetaApiService::syncFromMeta();
+            $syncResult = MetaApiService::syncFromMeta($userId);
             echo json_encode($syncResult, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
             exit;
         }

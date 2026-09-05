@@ -12,12 +12,12 @@ Antes de someter tu aplicación en [developers.facebook.com](https://developers.
 2. **Dominio con Certificado SSL Válido (HTTPS):** Certificado TLS 1.2+ activo.
 3. **Página de Facebook vinculada a una cuenta de Instagram Profesional** (Creador o Empresa).
 4. **URLs de Políticas y Eliminación de Datos** registradas en *Configuración Básica de la App*:
-   - **Política de Privacidad:** `https://tudominio.com/privacy-policy.php`
-   - **Condiciones del Servicio:** `https://tudominio.com/terms-of-service.php`
-   - **Instrucciones de Eliminación de Datos:** `https://tudominio.com/data-deletion.php`
-   - **Callback URL de Eliminación:** `https://tudominio.com/api/data-deletion.php`
-   - **URI de Redireccionamiento OAuth:** `https://tudominio.com/callback-meta.php`
-   - **Webhook Callback URL:** `https://tudominio.com/api/webhook.php` (Token: `social_boost_secure_token_2026`)
+   - **Política de Privacidad:** `https://socialapi.turbogram.site/privacy-policy.php`
+   - **Condiciones del Servicio:** `https://socialapi.turbogram.site/terms-of-service.php`
+   - **Instrucciones de Eliminación de Datos:** `https://socialapi.turbogram.site/data-deletion.php`
+   - **Callback URL de Eliminación:** `https://socialapi.turbogram.site/api/data-deletion.php`
+   - **URI de Redireccionamiento OAuth:** `https://socialapi.turbogram.site/callback-meta.php`
+   - **Webhook Callback URL:** `https://socialapi.turbogram.site/api/webhook.php` (Token: `social_boost_secure_token_2026`)
 
 ---
 
@@ -99,8 +99,8 @@ Meta exige un video claro (formato `.mp4` o `.mov`, sin música de fondo molesta
 ## 🧪 4. Configuración de Cuentas de Prueba para Revisores de Meta
 
 En el formulario de App Review, Meta te solicitará credenciales de acceso para que su equipo pueda probar tu plataforma:
-1. **URL de Acceso de Prueba:** `https://tudominio.com/login.php`
-2. **Usuario Demo:** `meta_reviewer@tudominio.com` (o tu usuario de prueba)
+1. **URL de Acceso de Prueba:** `https://socialapi.turbogram.site/login.php`
+2. **Usuario Demo:** `meta_reviewer@turbogram.site` (o tu usuario de prueba)
 3. **Contraseña Demo:** `ReviewerMeta2026!`
 4. **Instrucciones adicionales para el Revisor:**
    > *1. Log in with the provided credentials.*  

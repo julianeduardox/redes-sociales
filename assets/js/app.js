@@ -5,12 +5,14 @@
 const App = {
   activeTab: 'inbox',
   activePlatform: 'all',
+  activeAccountId: 'all',
   activeFilter: 'all',
   activePostId: null,
   viewDensity: localStorage.getItem('preferred_view_density') || 'cards',
   searchQuery: '',
   selectedCommentId: null,
   commentsList: [],
+  connectedAccounts: [],
   currentPage: 1,
   pageSize: 6,
 
@@ -42,10 +44,149 @@ const App = {
     this.bindEvents();
     this.initViewDensity();
     try { await this.loadBrands(); } catch (e) { console.error('loadBrands error:', e); }
+    try { await this.loadConnectedAccounts(); } catch (e) { console.error('loadConnectedAccounts error:', e); }
     try { await this.loadSettings(); } catch (e) { console.error('loadSettings error:', e); }
     try { await this.loadComments(); } catch (e) { console.error('loadComments error:', e); }
     this.renderTagChips();
     this.renderFewShotExamples();
+  },
+
+  // Connected Accounts & Multi-Brand Voice Routing Manager
+  async loadConnectedAccounts() {
+    try {
+      const res = await this.fetchWithCsrf('api/settings.php?action=list_accounts');
+      const data = await res.json();
+      if (data.success) {
+        this.connectedAccounts = data.accounts || [];
+        const brands = data.brands || [];
+
+        // 1. Populate topbar account filter dropdown
+        const topbarAccountSelect = document.getElementById('topbar-account-select');
+        if (topbarAccountSelect) {
+          const currentVal = this.activeAccountId;
+          let opts = `<option value="all">🌐 Todas las Cuentas (${this.connectedAccounts.length})</option>`;
+          this.connectedAccounts.forEach(a => {
+            const icon = a.platform === 'instagram' ? '📸' : '📘';
+            const handleText = a.account_handle ? ` (${a.account_handle})` : '';
+            opts += `<option value="${a.id}" ${a.id == currentVal ? 'selected' : ''}>${icon} ${this.escapeHtml(a.account_name)}${this.escapeHtml(handleText)}</option>`;
+          });
+          topbarAccountSelect.innerHTML = opts;
+        }
+
+        // 2. Update badge count
+        const badgeCount = document.getElementById('badge-total-connected-accounts');
+        if (badgeCount) {
+          badgeCount.textContent = `${this.connectedAccounts.length} cuenta${this.connectedAccounts.length === 1 ? '' : 's'}`;
+        }
+
+        // 3. Render accounts manager cards in settings/meta
+        this.renderAccountsManager(this.connectedAccounts, brands);
+      }
+    } catch (err) {
+      console.error('Error loading connected accounts:', err);
+    }
+  },
+
+  renderAccountsManager(accounts, brands) {
+    const container = document.getElementById('connected-accounts-list');
+    if (!container) return;
+
+    if (!accounts || accounts.length === 0) {
+      container.innerHTML = `
+        <div style="padding: 24px; text-align: center; color: var(--text-dim); font-size: 0.84rem;">
+          <div style="font-size: 2rem; margin-bottom: 8px;">📱</div>
+          <strong style="color: #fff; display: block; margin-bottom: 4px;">No hay cuentas de Meta vinculadas todavía</strong>
+          <p style="margin: 0; max-width: 420px; margin: 0 auto;">
+            Haz clic en <strong>"Continuar con Facebook & Instagram"</strong> arriba para conectar automáticamente tus Páginas y perfiles.
+          </p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = accounts.map(a => {
+      const isIg = a.platform === 'instagram';
+      const icon = isIg ? '📸' : '📘';
+      const safeAvatar = this.sanitizeUrl(a.avatar_url, `https://ui-avatars.com/api/?name=${encodeURIComponent(a.account_name)}&background=${isIg ? 'e1306c' : '1877f2'}&color=fff`);
+
+      const brandOptionsHtml = brands.map(b => `
+        <option value="${b.id}" ${b.id == a.brand_voice_id ? 'selected' : ''}>
+          ${this.escapeHtml(b.brand_name)} (${this.escapeHtml(b.tone_level || 'General')})
+        </option>
+      `).join('');
+
+      return `
+        <div class="account-item-card" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 18px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 14px; min-width: 240px;">
+            <div style="position: relative;">
+              <img src="${safeAvatar}" alt="avatar" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid ${isIg ? '#e1306c' : '#1877f2'};" />
+              <span style="position: absolute; bottom: -2px; right: -2px; font-size: 0.8rem; background: #0f172a; border-radius: 50%; padding: 2px;">${icon}</span>
+            </div>
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <strong style="color: #fff; font-size: 0.95rem;">${this.escapeHtml(a.account_name)}</strong>
+                <span class="platform-badge-mini ${isIg ? 'instagram' : 'facebook'}">${isIg ? 'IG' : 'FB'}</span>
+              </div>
+              <div style="font-size: 0.8rem; color: var(--text-dim); margin-top: 2px;">
+                ${this.escapeHtml(a.account_handle || '')} • 📊 ${parseInt(a.posts_count || 0, 10)} posts • 💬 ${parseInt(a.comments_count || 0, 10)} comentarios
+              </div>
+            </div>
+          </div>
+
+          <!-- Brand Voice Selector Pill -->
+          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <label style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: var(--accent-cyan); letter-spacing: 0.04em;">
+                🎭 Voz de Marca Asignada:
+              </label>
+              <select class="account-brand-voice-select" style="background: #0f172a; border: 1px solid var(--border-active); color: #fff; padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.84rem; font-weight: 700; cursor: pointer; min-width: 220px;" onchange="App.assignAccountBrandVoice(${a.id}, this.value)">
+                ${brandOptionsHtml}
+              </select>
+            </div>
+            <span style="font-size: 0.75rem; background: rgba(16, 185, 129, 0.15); color: #34d399; font-weight: 700; padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(16, 185, 129, 0.3); align-self: flex-end; margin-bottom: 2px;">
+              🟢 Conectada
+            </span>
+          </div>
+        </div>
+      `;
+    }).join('');
+  },
+
+  async assignAccountBrandVoice(accountId, brandVoiceId) {
+    if (!accountId || !brandVoiceId) return;
+    try {
+      const res = await this.fetchWithCsrf('api/settings.php', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'assign_account_brand',
+          account_id: parseInt(accountId, 10),
+          brand_voice_id: parseInt(brandVoiceId, 10)
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        App.showToast(data.message || 'Voz de Marca asignada a la cuenta.', 'success');
+        await this.loadConnectedAccounts();
+        await this.loadComments();
+      } else {
+        App.showToast(`Error: ${data.error || 'No se pudo asignar la voz'}`, 'error');
+      }
+    } catch (err) {
+      console.error('Error assigning brand voice to account:', err);
+      App.showToast('Error de conexión al asignar voz a la cuenta.', 'error');
+    }
+  },
+
+  filterByAccount(accountId) {
+    this.activeAccountId = accountId;
+    this.currentPage = 1;
+    this.loadComments();
+    const selectedAcc = this.connectedAccounts.find(a => a.id == accountId);
+    if (selectedAcc) {
+      this.showToast(`Filtrando por cuenta: ${selectedAcc.account_name} (${selectedAcc.account_handle || ''})`, 'success');
+    } else {
+      this.showToast('Mostrando comentarios de todas las cuentas.', 'success');
+    }
   },
 
   // Agency & Multi-Brand Voice Management
@@ -390,6 +531,9 @@ const App = {
 
     try {
       let url = `api/comments.php?platform=${encodeURIComponent(this.activePlatform)}&filter=${encodeURIComponent(this.activeFilter)}&search=${encodeURIComponent(this.searchQuery)}`;
+      if (this.activeAccountId && this.activeAccountId !== 'all') {
+        url += `&account_id=${encodeURIComponent(this.activeAccountId)}`;
+      }
       if (this.activePostId) {
         url += `&post_id=${encodeURIComponent(this.activePostId)}`;
       }
@@ -520,6 +664,9 @@ const App = {
       const safePostImg = this.sanitizeUrl(c.post_media_url, 'https://images.unsplash.com/photo-1552346154-21d32810aba3?w=160&h=160&fit=crop&auto=format&q=75');
       const safeScore = parseInt(c.highlight_score, 10) || 50;
 
+      const accName = c.account_name || (c.platform === 'facebook' ? 'Página FB' : '@cuenta_ig');
+      const voiceName = c.brand_voice_name || 'Voz por Defecto';
+
       if (isCompact) {
         // Streamlined Compact Row
         return `
@@ -530,6 +677,8 @@ const App = {
                 <div class="author-name">
                   ${this.escapeHtml(c.author_name)}
                   <span class="platform-badge-mini ${c.platform === 'facebook' ? 'facebook' : 'instagram'}">${c.platform === 'instagram' ? 'IG' : 'FB'}</span>
+                  <span class="card-account-pill" title="Cuenta: ${this.escapeHtml(accName)}">📱 ${this.escapeHtml(accName)}</span>
+                  <span class="card-origin-voice-pill" title="Voz de Marca: ${this.escapeHtml(voiceName)}">🎭 ${this.escapeHtml(voiceName)}</span>
                 </div>
               </div>
               <div class="card-badges">
@@ -567,7 +716,8 @@ const App = {
               </div>
               <div class="card-origin-post-details">
                 <div class="card-origin-post-topline">
-                  <span class="card-origin-post-tag">📌 PUBLICACIÓN ORIGINAL</span>
+                  <span class="card-origin-post-tag">📱 ${this.escapeHtml(accName)}</span>
+                  <span class="card-origin-voice-pill">🎭 ${this.escapeHtml(voiceName)}</span>
                   <span class="card-origin-post-stats">👁️ ${postReach} alcance • ❤️ ${postLikes} likes • 💬 ${postComments} comentarios</span>
                 </div>
                 <div class="card-origin-post-caption" title="${this.escapeHtml(postCaptionText)}">
@@ -1465,9 +1615,14 @@ const App = {
       });
       const res = await response.json();
       if (res.success) {
-        App.showToast(res.message, 'success');
+        let toastMsg = res.message || 'Sincronización completada con éxito.';
+        if (res.data) {
+          toastMsg += ` (Cuentas: ${res.data.pages_count || 0}, Posts: ${res.data.synced_posts || 0}, Comentarios: ${res.data.synced_comments || 0})`;
+        }
+        App.showToast(toastMsg, 'success');
+        await this.loadConnectedAccounts();
         await this.loadComments();
-        if (AnalyticsController.cachedAnalyticsData) {
+        if (typeof AnalyticsController !== 'undefined' && AnalyticsController.loadAnalytics) {
           AnalyticsController.loadAnalytics();
         }
       } else {

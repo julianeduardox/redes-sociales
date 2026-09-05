@@ -205,6 +205,16 @@ try {
           <button class="platform-pill ig-active" data-platform="instagram">📸 IG</button>
           <button class="platform-pill fb-active" data-platform="facebook">📘 FB</button>
         </div>
+
+        <!-- Account Filter Selector -->
+        <div class="topbar-account-filter-wrap" title="Filtrar comentarios por cuenta conectada">
+          <div class="brand-select-pill account-select-pill">
+            <span class="brand-pill-icon">📱</span>
+            <select id="topbar-account-select" class="topbar-brand-select topbar-account-select" onchange="App.filterByAccount(this.value)">
+              <option value="all">🌐 Todas las Cuentas</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       <div class="topbar-stats">
@@ -671,6 +681,32 @@ try {
           </div>
         </div>
 
+        <!-- Connected Accounts & Brand Voice Routing Manager Card -->
+        <div class="connected-accounts-card" style="background: var(--bg-card); padding: 24px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+            <div>
+              <h4 style="font-size: 1.05rem; font-weight: 800; color: #fff; margin: 0; display: flex; align-items: center; gap: 8px;">
+                <span>📱 Cuentas Vinculadas & Asignación de Voz de Marca (Multi-Cuenta)</span>
+                <span class="badge-count-accounts" id="badge-total-connected-accounts" style="background: rgba(99, 102, 241, 0.2); color: #818cf8; font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; font-weight: 700;">0 cuentas</span>
+              </h4>
+              <p style="font-size: 0.8rem; color: var(--text-muted); margin: 4px 0 0 0;">
+                Asigna una <strong>Voz de Marca independiente</strong> a cada cuenta de Instagram o Página de Facebook vinculada. El Copiloto y Auto-responder hablarán con la voz exacta de cada cuenta.
+              </p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" class="btn-primary-action" style="padding: 8px 14px; font-size: 0.8rem; background: rgba(99,102,241,0.15); border: 1px solid var(--border-active);" onclick="App.loadConnectedAccounts()">
+                <span>🔄 Recargar Cuentas</span>
+              </button>
+            </div>
+          </div>
+
+          <div id="connected-accounts-list" class="connected-accounts-grid">
+            <div style="padding: 24px; text-align: center; color: var(--text-dim); font-size: 0.84rem;">
+              Cargando cuentas vinculadas...
+            </div>
+          </div>
+        </div>
+
         <!-- Meta App Credentials & Tokens Card -->
         <div style="background: var(--bg-card); padding: 24px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 20px;">
           <h4 style="font-size: 1rem; font-weight: 800; margin-bottom: 16px; color: var(--fb-blue);">🔑 Credenciales y Tokens de Meta</h4>
@@ -732,7 +768,7 @@ try {
           <p style="font-size: 0.84rem; color: var(--text-muted); margin-bottom: 14px;">Para que el agente reciba y responda comentarios inmediatamente cuando se publican en tus posts:</p>
 
           <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: var(--radius-sm); font-family: monospace; font-size: 0.85rem; color: #a5b4fc; margin-bottom: 8px;">
-            Callback URL: <strong>https://tudominio.com/api/webhook.php</strong>
+            Callback URL: <strong>https://socialapi.turbogram.site/api/webhook.php</strong>
           </div>
           <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: var(--radius-sm); font-family: monospace; font-size: 0.85rem; color: #34d399;">
             Verify Token: <strong>social_boost_secure_token_2026</strong>
@@ -746,14 +782,14 @@ try {
         <div style="background: var(--bg-card); padding: 24px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 20px;">
           <h4 style="font-size: 1rem; font-weight: 800; margin-bottom: 14px; color: var(--accent-cyan);">📋 URLs Oficiales para Registrar en tu Meta App Dashboard</h4>
           <p style="font-size: 0.84rem; color: var(--text-muted); margin-bottom: 16px;">
-            Copia y pega estas URLs directamente en <strong>Meta for Developers &gt; Configuración básica de la App</strong> y en la sección de <strong>Revisión de la App (App Review)</strong> cuando subas la aplicación a tu servidor con dominio:
+            Copia y pega estas URLs directamente en <strong>Meta for Developers &gt; Configuración básica de la App</strong> y en la sección de <strong>Revisión de la App (App Review)</strong>:
           </p>
 
           <div style="display: flex; flex-direction: column; gap: 10px;">
             <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
               <div style="font-size: 0.74rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; margin-bottom: 4px;">URL de la Política de Privacidad (Privacy Policy URL):</div>
               <div style="display: flex; justify-content: space-between; align-items: center;">
-                <code style="color: #a5b4fc; font-size: 0.85rem;">https://tudominio.com/privacy-policy.php</code>
+                <code style="color: #a5b4fc; font-size: 0.85rem;">https://socialapi.turbogram.site/privacy-policy.php</code>
                 <a href="privacy-policy.php" target="_blank" class="btn-primary-action" style="padding: 4px 10px; font-size: 0.72rem; text-decoration: none;">Ver Página ↗️</a>
               </div>
             </div>
@@ -761,7 +797,7 @@ try {
             <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
               <div style="font-size: 0.74rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; margin-bottom: 4px;">URL de las Condiciones del Servicio (Terms of Service URL):</div>
               <div style="display: flex; justify-content: space-between; align-items: center;">
-                <code style="color: #a5b4fc; font-size: 0.85rem;">https://tudominio.com/terms-of-service.php</code>
+                <code style="color: #a5b4fc; font-size: 0.85rem;">https://socialapi.turbogram.site/terms-of-service.php</code>
                 <a href="terms-of-service.php" target="_blank" class="btn-primary-action" style="padding: 4px 10px; font-size: 0.72rem; text-decoration: none;">Ver Página ↗️</a>
               </div>
             </div>
@@ -769,10 +805,10 @@ try {
             <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
               <div style="font-size: 0.74rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; margin-bottom: 4px;">URL de Eliminación de Datos de Usuario (Data Deletion Instructions / Callback):</div>
               <div style="display: flex; justify-content: space-between; align-items: center;">
-                <code style="color: #38bdf8; font-size: 0.85rem;">https://tudominio.com/data-deletion.php</code>
+                <code style="color: #38bdf8; font-size: 0.85rem;">https://socialapi.turbogram.site/data-deletion.php</code>
                 <a href="data-deletion.php" target="_blank" class="btn-primary-action" style="padding: 4px 10px; font-size: 0.72rem; text-decoration: none;">Ver Página ↗️</a>
               </div>
-              <small style="font-size: 0.72rem; color: var(--text-dim); margin-top: 4px; display: block;">Callback API alternativo: <code>https://tudominio.com/api/data-deletion.php</code></small>
+              <small style="font-size: 0.72rem; color: var(--text-dim); margin-top: 4px; display: block;">Callback API alternativo: <code>https://socialapi.turbogram.site/api/data-deletion.php</code></small>
             </div>
           </div>
         </div>
@@ -944,6 +980,18 @@ try {
 
         <!-- Follower Comment Context Box -->
         <div class="modal-follower-context-card">
+          <!-- Connected Account & Brand Voice Indicator Bar -->
+          <div class="modal-account-voice-bar" id="modal-account-voice-bar" style="display: flex; align-items: center; justify-content: space-between; background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.2); padding: 8px 14px; border-radius: var(--radius-sm); margin-bottom: 12px; font-size: 0.78rem;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="color: var(--text-dim);">📱 Cuenta:</span>
+              <strong id="modal-account-name-badge" style="color: #fff;">@cuenta</strong>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="color: var(--text-dim);">🎭 Voz Calibrada:</span>
+              <strong id="modal-brand-voice-badge" style="color: var(--accent-cyan);">Voz de Marca</strong>
+            </div>
+          </div>
+
           <div class="modal-follower-header">
             <div class="modal-follower-info">
               <img src="https://ui-avatars.com/api/?name=User&background=6366f1&color=fff&size=96" id="modal-author-avatar" width="44" height="44" loading="lazy" decoding="async" class="modal-follower-avatar" alt="avatar" />

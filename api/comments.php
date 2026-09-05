@@ -24,6 +24,7 @@ try {
         $filter = Security::validateEnum($_GET['filter'] ?? 'all', $allowedFilters, 'all');
         $search = Security::sanitizeString($_GET['search'] ?? '', 100);
         $postId = isset($_GET['post_id']) && is_numeric($_GET['post_id']) ? (int)$_GET['post_id'] : null;
+        $accountId = isset($_GET['account_id']) && is_numeric($_GET['account_id']) && (int)$_GET['account_id'] > 0 ? (int)$_GET['account_id'] : null;
 
         $sql = "
             SELECT 
@@ -34,12 +35,21 @@ try {
                 p.total_likes as post_likes_count,
                 p.total_comments as post_comments_count,
                 p.reach as post_reach,
+                p.account_id,
+                COALESCE(a.account_name, 'Mi Cuenta') as account_name,
+                COALESCE(a.account_handle, '') as account_handle,
+                COALESCE(a.avatar_url, '') as account_avatar,
+                COALESCE(a.platform, c.platform) as account_platform,
+                COALESCE(p.brand_voice_id, a.brand_voice_id, 1) as brand_voice_id,
+                COALESCE(bv.brand_name, 'Voz de Marca') as brand_voice_name,
+                COALESCE(bv.tone_level, 'friendly_engaging') as brand_voice_tone,
                 r.reply_text,
                 r.variant_type as reply_variant_type,
                 r.created_at as reply_created_at
             FROM comments c
             JOIN posts p ON c.post_id = p.id
-            LEFT JOIN replies r ON r.comment_id = c.id
+            LEFT JOIN accounts a ON p.account_id = a.id
+            LEFT JOIN brand_voices bv ON COALESCE(p.brand_voice_id, a.brand_voice_id) = bv.id
             WHERE c.user_id = :user_id
         ";
         $params = [':user_id' => $userId];
@@ -47,6 +57,11 @@ try {
         if ($platform !== 'all') {
             $sql .= " AND c.platform = :platform";
             $params[':platform'] = $platform;
+        }
+
+        if ($accountId !== null) {
+            $sql .= " AND p.account_id = :account_id";
+            $params[':account_id'] = $accountId;
         }
 
         if ($postId !== null && $postId > 0) {

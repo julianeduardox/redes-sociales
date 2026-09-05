@@ -818,6 +818,10 @@ class Database {
                 $tType = ($driver === 'sqlite' ? 'INTEGER DEFAULT 1' : 'INT DEFAULT 1');
                 $pdo->exec("ALTER TABLE accounts ADD COLUMN brand_voice_id {$tType}");
             }
+            try {
+                $pdo->exec("UPDATE accounts SET brand_voice_id = 1 WHERE brand_voice_id IS NULL OR brand_voice_id = 0");
+                $pdo->exec("UPDATE posts SET brand_voice_id = 1 WHERE brand_voice_id IS NULL OR brand_voice_id = 0");
+            } catch (Throwable) {}
 
             // 4. Ensure admin user
             $julianStmt = $pdo->prepare("SELECT id FROM users WHERE email = :email LIMIT 1");

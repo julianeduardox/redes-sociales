@@ -118,6 +118,9 @@ try {
     $postsSql = "
         SELECT 
             p.*,
+            COALESCE(a.account_name, 'Mi Cuenta') as account_name,
+            COALESCE(a.account_handle, '') as account_handle,
+            COALESCE(bv.brand_name, 'Voz de Marca') as brand_voice_name,
             COUNT(c.id) as local_comments_count,
             SUM(CASE WHEN c.status = 'replied' THEN 1 ELSE 0 END) as post_replied_count,
             SUM(CASE WHEN c.status = 'pending' THEN 1 ELSE 0 END) as post_pending_count,
@@ -127,10 +130,18 @@ try {
             SUM(CASE WHEN c.sentiment = 'question' THEN 1 ELSE 0 END) as post_questions_count,
             ROUND(AVG(c.highlight_score), 1) as avg_post_score
         FROM posts p
+        LEFT JOIN accounts a ON p.account_id = a.id
+        LEFT JOIN brand_voices bv ON COALESCE(p.brand_voice_id, a.brand_voice_id) = bv.id
         LEFT JOIN comments c ON c.post_id = p.id AND c.user_id = :uid
         WHERE p.user_id = :uid
     ";
     $postParams = [':uid' => $userId];
+
+    $accountId = isset($_GET['account_id']) && is_numeric($_GET['account_id']) && (int)$_GET['account_id'] > 0 ? (int)$_GET['account_id'] : null;
+    if ($accountId !== null) {
+        $postsSql .= " AND p.account_id = :acc_id";
+        $postParams[':acc_id'] = $accountId;
+    }
 
     if ($platform !== 'all') {
         $postsSql .= " AND p.platform = :platform";

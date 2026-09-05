@@ -468,10 +468,28 @@ class AiAgentService {
 
     /**
      * Resolve active Brand Voice for the current user (Accelerated by In-Memory Cache)
+     * Supports resolution by explicit brand_voice_id, account_id, active session brand, or user default.
      */
     public static function resolveActiveBrandVoice(PDO $pdo, array $runtimeOverrides = []): array {
         $userId = (class_exists('Auth') && Auth::check()) ? Auth::id() : 1;
-        $activeBrandId = $runtimeOverrides['brand_voice_id'] ?? ($_SESSION['active_brand_id'] ?? null);
+        $activeBrandId = $runtimeOverrides['brand_voice_id'] ?? null;
+
+        // If account_id was provided and no explicit brand_voice_id, deduce from accounts table
+        if (empty($activeBrandId) && !empty($runtimeOverrides['account_id'])) {
+            try {
+                $stmtAcc = $pdo->prepare("SELECT brand_voice_id FROM accounts WHERE id = :acc_id AND user_id = :uid LIMIT 1");
+                $stmtAcc->execute([':acc_id' => (int)$runtimeOverrides['account_id'], ':uid' => $userId]);
+                $accBv = $stmtAcc->fetchColumn();
+                if (!empty($accBv)) {
+                    $activeBrandId = (int)$accBv;
+                }
+            } catch (Throwable) {}
+        }
+
+        if (empty($activeBrandId)) {
+            $activeBrandId = $_SESSION['active_brand_id'] ?? null;
+        }
+
         return CacheService::getBrandVoice($userId, $activeBrandId ? (int)$activeBrandId : null, $pdo);
     }
 

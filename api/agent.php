@@ -71,15 +71,18 @@ try {
     if ($action === 'generate_replies') {
         $commentId = Security::sanitizeInt($input['comment_id'] ?? 0, 1, 10000000, 0);
         $overrideTone = Security::sanitizeString($input['tone'] ?? '', 60);
+        $commentBrandVoiceId = null;
 
         if ($commentId > 0) {
             $stmt = $pdo->prepare("
-                SELECT c.*, p.caption as post_caption 
+                SELECT c.*, p.caption as post_caption, p.account_id,
+                       COALESCE(p.brand_voice_id, a.brand_voice_id, 1) as effective_brand_voice_id
                 FROM comments c 
                 JOIN posts p ON c.post_id = p.id 
-                WHERE c.id = :id LIMIT 1
+                LEFT JOIN accounts a ON p.account_id = a.id
+                WHERE c.id = :id AND c.user_id = :uid LIMIT 1
             ");
-            $stmt->execute([':id' => $commentId]);
+            $stmt->execute([':id' => $commentId, ':uid' => $userId]);
             $comment = $stmt->fetch();
 
             if (!$comment) {
@@ -92,11 +95,15 @@ try {
             $commentText = $comment['comment_text'];
             $platform = $comment['platform'];
             $postCaption = $comment['post_caption'];
+            $commentBrandVoiceId = (int)$comment['effective_brand_voice_id'];
         } else {
             $authorName = Security::sanitizeString($input['author_name'] ?? 'Usuario', 80);
             $commentText = Security::sanitizeString($input['comment_text'] ?? '', 1500);
             $platform = Security::validateEnum($input['platform'] ?? 'instagram', ['instagram', 'facebook'], 'instagram');
             $postCaption = Security::sanitizeString($input['post_caption'] ?? '', 1500);
+            if (isset($input['brand_voice_id']) && (int)$input['brand_voice_id'] > 0) {
+                $commentBrandVoiceId = (int)$input['brand_voice_id'];
+            }
         }
 
         if (empty($commentText)) {
@@ -105,10 +112,16 @@ try {
             exit;
         }
 
-        $replies = AiAgentService::generateReplies($authorName, $commentText, $platform, $postCaption, $overrideTone);
+        $runtimeOverrides = [];
+        if ($commentBrandVoiceId) {
+            $runtimeOverrides['brand_voice_id'] = $commentBrandVoiceId;
+        }
+
+        $replies = AiAgentService::generateReplies($authorName, $commentText, $platform, $postCaption, $overrideTone, $runtimeOverrides);
 
         echo json_encode([
             'success' => true,
+            'brand_voice_id' => $commentBrandVoiceId,
             'replies' => $replies
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
         exit;
@@ -134,9 +147,11 @@ try {
 
         // Fetch all pending comments for user (any score), ordered with priority
         $stmt = $pdo->prepare("
-            SELECT c.*, p.caption as post_caption 
+            SELECT c.*, p.caption as post_caption, p.account_id,
+                   COALESCE(p.brand_voice_id, a.brand_voice_id, 1) as effective_brand_voice_id
             FROM comments c 
             JOIN posts p ON c.post_id = p.id 
+            LEFT JOIN accounts a ON p.account_id = a.id
             WHERE c.user_id = :user_id AND c.status = 'pending'
             ORDER BY c.highlight_score DESC, c.id DESC 
             LIMIT 25
@@ -157,11 +172,12 @@ try {
                 $stmtUp = $pdo->prepare("
                     UPDATE comments 
                     SET status = 'spam', sentiment = 'spam', highlight_reason = :reason 
-                    WHERE id = :id
+                    WHERE id = :id AND user_id = :uid
                 ");
                 $stmtUp->execute([
                     ':reason' => $suitability['reason'],
-                    ':id' => $c['id']
+                    ':id' => $c['id'],
+                    ':uid' => $userId
                 ]);
 
                 $spamCount++;
@@ -180,11 +196,12 @@ try {
                 $stmtUp = $pdo->prepare("
                     UPDATE comments 
                     SET status = 'ignored', highlight_reason = :reason 
-                    WHERE id = :id
+                    WHERE id = :id AND user_id = :uid
                 ");
                 $stmtUp->execute([
                     ':reason' => $suitability['reason'],
-                    ':id' => $c['id']
+                    ':id' => $c['id'],
+                    ':uid' => $userId
                 ]);
 
                 $ignoredCount++;
@@ -198,8 +215,9 @@ try {
                 continue;
             }
 
-            // Legitimate comment in Spanish (of any score) -> Generate and Post AI Reply
-            $replies = AiAgentService::generateReplies($c['author_name'], $c['comment_text'], $c['platform'], $c['post_caption']);
+            // Legitimate comment in Spanish (of any score) -> Generate and Post AI Reply with account's assigned brand voice!
+            $brandVoiceId = (int)($c['effective_brand_voice_id'] ?? 1);
+            $replies = AiAgentService::generateReplies($c['author_name'], $c['comment_text'], $c['platform'], $c['post_caption'], '', ['brand_voice_id' => $brandVoiceId]);
             
             // Select best variant
             $chosenVariant = 'engagement';
@@ -224,8 +242,8 @@ try {
             ]);
 
             // Update status
-            $stmtUp = $pdo->prepare("UPDATE comments SET status = 'replied' WHERE id = :id");
-            $stmtUp->execute([':id' => $c['id']]);
+            $stmtUp = $pdo->prepare("UPDATE comments SET status = 'replied' WHERE id = :id AND user_id = :uid");
+            $stmtUp->execute([':id' => $c['id'], ':uid' => $userId]);
 
             $repliedCount++;
             $processed[] = [
