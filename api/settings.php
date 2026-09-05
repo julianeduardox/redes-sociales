@@ -190,7 +190,7 @@ try {
         $rawInput = file_get_contents('php://input');
         $input = json_decode($rawInput, true) ?? $_POST;
         $action = Security::validateEnum($input['action'] ?? 'save_all', [
-            'save_all', 'save_brand', 'set_active_brand', 'delete_brand', 'assign_account_brand', 'sync_meta', 'test_meta', 'audit_meta'
+            'save_all', 'save_brand', 'set_active_brand', 'delete_brand', 'assign_account_brand', 'disconnect_account', 'sync_meta', 'test_meta', 'audit_meta'
         ], 'save_all');
 
         // 0. Action: Assign Brand Voice to a Connected Account (Multi-Account Routing)
