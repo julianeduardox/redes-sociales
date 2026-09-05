@@ -106,9 +106,35 @@ if (!empty($error)) {
         $accountsData = json_decode($resAcc, true);
         $pages = $accountsData['data'] ?? [];
 
-        if (empty($pages)) {
+        if (isset($accountsData['error'])) {
+            $errMessage = $accountsData['error']['message'] ?? 'Error desconocido';
+            $errCode = $accountsData['error']['code'] ?? 0;
+            $status = 'error';
+            $message = "Meta Graph API devolvió un error (#{$errCode}): {$errMessage}";
+        } elseif (empty($pages)) {
+            // Check granted vs declined permissions in Meta
+            $permUrl = "https://graph.facebook.com/v19.0/me/permissions?access_token=" . urlencode($longLivedUserToken);
+            $ch = curl_init($permUrl);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+            $resPerm = curl_exec($ch);
+            curl_close($ch);
+            $permData = json_decode($resPerm, true);
+            $declined = [];
+            if (!empty($permData['data'])) {
+                foreach ($permData['data'] as $p) {
+                    if (($p['status'] ?? '') === 'declined') {
+                        $declined[] = $p['permission'];
+                    }
+                }
+            }
             $status = 'warning';
-            $message = 'Te autenticaste con Meta, pero no se encontraron Páginas de Facebook administradas por tu cuenta de usuario. Asegúrate de crear una Página de Facebook y vincular tu cuenta de Instagram Profesional.';
+            if (!empty($declined)) {
+                $message = "No se detectaron Páginas porque se denegaron los siguientes permisos en Facebook: " . implode(', ', $declined) . ". Por favor vuelve a conectar y asegúrate de autorizar todos los permisos solicitados.";
+            } else {
+                $message = "Te autenticaste con Meta, pero no se seleccionó ninguna Página en la ventana de Facebook Login o no eres administrador de ellas. Asegúrate de marcar las casillas de tus Páginas e Instagram Profesional al conectar.";
+            }
         } else {
             $pdo = Database::getConnection();
             $primaryPageToken = '';
