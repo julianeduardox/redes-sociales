@@ -12,9 +12,9 @@ require_once __DIR__ . '/services/CacheService.php';
 require_once __DIR__ . '/services/MetaApiService.php';
 
 Security::applySecurityHeaders(false);
-Auth::requireAuth(false);
+Auth::initSession();
 
-$userId = Auth::id();
+$userId = Auth::id() ?: ($_SESSION['meta_oauth_user_id'] ?? ($_SESSION['user_id'] ?? 1));
 $error = $_GET['error'] ?? '';
 $errorReason = $_GET['error_reason'] ?? '';
 $errorDesc = $_GET['error_description'] ?? '';
