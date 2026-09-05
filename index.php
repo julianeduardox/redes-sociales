@@ -292,6 +292,16 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
     .live-dot {
       animation: pulse-dot 2s infinite ease-in-out;
     }
+
+    .sim-context-box {
+      background: linear-gradient(135deg, rgba(245, 243, 255, 0.8) 0%, rgba(238, 242, 255, 0.6) 100%);
+      border: 1px solid rgba(196, 181, 253, 0.7);
+    }
+
+    .step-number-badge {
+      background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%);
+      box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);
+    }
   </style>
 </head>
 <body class="antialiased selection:bg-brand-500 selection:text-white">
@@ -770,41 +780,44 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
         
         <!-- Step 1 -->
-        <div class="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-8 shadow-sm hover:shadow-elevated-card transition-all text-center flex flex-col items-center">
-          <div class="w-12 h-12 rounded-full step-number-badge text-white flex items-center justify-center font-black text-lg mb-5">
-            1
+        <div class="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-8 shadow-sm hover:shadow-elevated-card transition-all text-center flex flex-col items-center group">
+          <div class="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 border border-blue-200/70 flex items-center justify-center text-3xl mb-5 relative group-hover:scale-110 transition-transform">
+            <span>🔗</span>
+            <span class="absolute -top-2 -right-2 w-7 h-7 rounded-full step-number-badge text-white text-xs font-black flex items-center justify-center shadow-md">1</span>
           </div>
           <h3 data-i18n="step1_t" class="text-base sm:text-lg font-bold text-midnight mb-2">
-            Conecta tus cuentas oficiales
+            1. Conecta tus Cuentas
           </h3>
           <p data-i18n="step1_d" class="text-xs sm:text-sm text-slate-600 leading-relaxed">
-            Vincula tu cuenta de Instagram o Página de Facebook mediante Meta OAuth oficial de forma 100% segura y con un solo clic.
+            Inicia sesión con Meta OAuth oficial de forma segura. Selecciona las cuentas de Instagram y Facebook que deseas gestionar con permisos autorizados.
           </p>
         </div>
 
         <!-- Step 2 -->
-        <div class="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-8 shadow-sm hover:shadow-elevated-card transition-all text-center flex flex-col items-center">
-          <div class="w-12 h-12 rounded-full step-number-badge text-white flex items-center justify-center font-black text-lg mb-5">
-            2
+        <div class="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-8 shadow-sm hover:shadow-elevated-card transition-all text-center flex flex-col items-center group">
+          <div class="w-16 h-16 rounded-2xl bg-purple-50 text-purple-600 border border-purple-200/70 flex items-center justify-center text-3xl mb-5 relative group-hover:scale-110 transition-transform">
+            <span>🎭</span>
+            <span class="absolute -top-2 -right-2 w-7 h-7 rounded-full step-number-badge text-white text-xs font-black flex items-center justify-center shadow-md">2</span>
           </div>
           <h3 data-i18n="step2_t" class="text-base sm:text-lg font-bold text-midnight mb-2">
-            Define tu voz y contexto de negocio
+            2. Configura tu Voz y Datos
           </h3>
           <p data-i18n="step2_d" class="text-xs sm:text-sm text-slate-600 leading-relaxed">
-            Elige el tono de tu marca (Mentor, Cercano, Comercial) y añade los datos de tus productos para que la IA responda siempre con fundamento.
+            Define los datos de tu negocio (productos, precios, FAQs) y calibra el tono de comunicación: empático, mentor o comercial de alto valor.
           </p>
         </div>
 
         <!-- Step 3 -->
-        <div class="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-8 shadow-sm hover:shadow-elevated-card transition-all text-center flex flex-col items-center">
-          <div class="w-12 h-12 rounded-full step-number-badge text-white flex items-center justify-center font-black text-lg mb-5">
-            3
+        <div class="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-8 shadow-sm hover:shadow-elevated-card transition-all text-center flex flex-col items-center group">
+          <div class="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-200/70 flex items-center justify-center text-3xl mb-5 relative group-hover:scale-110 transition-transform">
+            <span>🚀</span>
+            <span class="absolute -top-2 -right-2 w-7 h-7 rounded-full step-number-badge text-white text-xs font-black flex items-center justify-center shadow-md">3</span>
           </div>
           <h3 data-i18n="step3_t" class="text-base sm:text-lg font-bold text-midnight mb-2">
-            Revisa y publica con Copilot
+            3. Revisa y Publica con Copilot
           </h3>
           <p data-i18n="step3_d" class="text-xs sm:text-sm text-slate-600 leading-relaxed">
-            Recibe sugerencias de respuesta inteligentes ante cada comentario recibido y apruébalas en 1 clic en la ventana de oro del algoritmo.
+            Recibe sugerencias instantáneas fundamentadas en tus datos. Aprueba con 1 clic o deja que el piloto automático trabaje por ti con total seguridad.
           </p>
         </div>
 
@@ -1708,18 +1721,35 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
     // 1. CALCULATOR ENGINE
     const Calculator = {
       update() {
-        const comments = parseInt(document.getElementById('calc-comments-range').value, 10);
-        const accounts = parseInt(document.getElementById('calc-accounts-range').value, 10);
+        const commentsInput = document.getElementById('calc-comments-range');
+        const accountsInput = document.getElementById('calc-accounts-range');
+        const commentsVal = document.getElementById('calc-comments-val');
+        const accountsVal = document.getElementById('calc-accounts-val');
+        const resHours = document.getElementById('calc-res-hours');
+        const resLeads = document.getElementById('calc-res-leads');
 
-        document.getElementById('calc-comments-val').textContent = comments.toLocaleString() + ' comentarios';
-        document.getElementById('calc-accounts-val').textContent = accounts + (accounts === 1 ? ' cuenta' : ' cuentas');
+        if (!commentsInput || !accountsInput) return;
 
-        const totalMinutes = (comments * accounts * 0.75);
-        const hoursSaved = Math.round(totalMinutes / 60);
-        const leadsDetected = Math.round((comments * accounts) * 0.024);
+        const comments = parseInt(commentsInput.value, 10) || 5000;
+        const accounts = parseInt(accountsInput.value, 10) || 2;
+        const lang = I18n.current || 'es';
 
-        document.getElementById('calc-res-hours').textContent = `+${hoursSaved} hrs`;
-        document.getElementById('calc-res-leads').textContent = `+${leadsDetected.toLocaleString()}`;
+        const commentsFormatted = comments.toLocaleString();
+        const commentsUnit = lang === 'en' ? 'comments' : (lang === 'pt' ? 'comentários' : 'comentarios');
+        const accountsUnit = accounts === 1
+          ? (lang === 'en' ? 'account' : (lang === 'pt' ? 'conta' : 'cuenta'))
+          : (lang === 'en' ? 'accounts' : (lang === 'pt' ? 'contas' : 'cuentas'));
+
+        if (commentsVal) commentsVal.textContent = `${commentsFormatted} ${commentsUnit}`;
+        if (accountsVal) accountsVal.textContent = `${accounts} ${accountsUnit}`;
+
+        // 45s manual vs 5s copilot = 40s saved per comment -> (comments * 40 / 3600) hours
+        const hoursSaved = Math.max(1, Math.round((comments * 40) / 3600));
+        // ~2.4% inquiries have commercial intention
+        const leads = Math.max(1, Math.round(comments * 0.024));
+
+        if (resHours) resHours.textContent = `+${hoursSaved} hrs`;
+        if (resLeads) resLeads.textContent = `+${leads}`;
       }
     };
 
@@ -1732,12 +1762,29 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
 
         const isCurrentlyHidden = ans.classList.contains('hidden');
 
-        // Close all other accordion items
         for (let i = 1; i <= 6; i++) {
-          const a =    // 3. DICCIONARIO MULTI-IDIOMA (ES / EN / PT)
+          const a = document.getElementById('faq-ans-' + i);
+          const ic = document.getElementById('faq-icon-' + i);
+          if (a) a.classList.add('hidden');
+          if (ic) {
+            ic.textContent = '+';
+            ic.style.transform = 'rotate(0deg)';
+          }
+        }
+
+        if (isCurrentlyHidden) {
+          ans.classList.remove('hidden');
+          if (icon) {
+            icon.textContent = '−';
+            icon.style.transform = 'rotate(180deg)';
+          }
+        }
+      }
+    };
+
+    // 3. DICCIONARIO MULTI-IDIOMA (ES / EN / PT)
     const I18n = {
       current: '<?= $initialLang ?>',
-
       dict: {
         es: {
           page_title: "XINDRO — El Sistema Operativo de IA para Creadores de Contenido",
@@ -1953,7 +2000,6 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           cookie_cat3_d: "Recuerdan tus preferencias de idioma (Español, Inglés, Portugués), tono predeterminado y configuraciones del simulador.",
           modal_pref_save: "Guardar Mis Preferencias"
         },
-
         en: {
           page_title: "XINDRO — The AI Operating System for Content Creators",
           page_desc: "Turn Instagram and Facebook comments into conversations that grow your business with contextual AI.",
@@ -2168,7 +2214,6 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           cookie_cat3_d: "Remember your language preferences (Spanish, English, Portuguese), default tone, and simulator presets.",
           modal_pref_save: "Save My Preferences"
         },
-
         pt: {
           page_title: "XINDRO — O Sistema Operacional de IA para Criadores de Conteúdo",
           page_desc: "Converta comentários do Instagram e Facebook em conversas que fazem seu negócio crescer com IA contextualizada.",
@@ -2380,11 +2425,10 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           cookie_cat2_t: "Cookies de Desempenho & Análise",
           cookie_cat2_d: "Permitem medir a velocidade de resposta da IA e otimizar a experiência dos criadores.",
           cookie_cat3_t: "Cookies de Personalização & Idioma",
-          cookie_cat3_d: "Lembram suas preferências de idioma (Espanhol, Inglés, Português), tom padrão e configurações do simulador.",
+          cookie_cat3_d: "Lembram suas preferências de idioma (Espanhol, Inglés, Portugués), tom padrão e configurações do simulador.",
           modal_pref_save: "Salvar Minhas Preferências"
         }
       },
-
       init() {
         const saved = localStorage.getItem('xindro_lang');
         if (saved && this.dict[saved]) {
@@ -2395,10 +2439,8 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           else if (userLang.startsWith('en')) this.current = 'en';
           else this.current = 'es';
         }
-
         this.apply(this.current);
       },
-
       setLanguage(lang) {
         if (!this.dict[lang]) return;
         this.current = lang;
@@ -2406,16 +2448,12 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         this.apply(lang);
         this.hideLangMenu();
       },
-
       apply(lang) {
         const d = this.dict[lang];
         if (!d) return;
-
         document.documentElement.lang = lang;
-
         const labels = { es: 'Español', en: 'English', pt: 'Português' };
         document.getElementById('current-lang-label').textContent = labels[lang] || 'Español';
-
         ['es', 'en', 'pt'].forEach(l => {
           const chk = document.getElementById('check-' + l);
           if (chk) {
@@ -2423,43 +2461,34 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
             else chk.classList.add('hidden');
           }
         });
-
         document.querySelectorAll('[data-i18n]').forEach(el => {
           const key = el.getAttribute('data-i18n');
-          if (d[key] !== undefined) {
-            el.innerHTML = d[key];
-          }
+          if (d[key] !== undefined) el.innerHTML = d[key];
         });
-
         if (d.page_title) document.title = d.page_title;
         const metaDesc = document.getElementById('meta-page-desc');
         if (metaDesc && d.page_desc) metaDesc.setAttribute('content', d.page_desc);
-
         const sampleComment = document.getElementById('hero-sample-comment');
         const sampleReply = document.getElementById('hero-sample-reply');
         if (sampleComment && d.hero_comment_sample) sampleComment.textContent = `"${d.hero_comment_sample}"`;
         if (sampleReply && d.hero_reply_sample) sampleReply.textContent = `"${d.hero_reply_sample}"`;
+        if (typeof Calculator !== 'undefined' && Calculator.update) {
+          Calculator.update();
+        }
       },
-
       toggleLangMenu() {
         const menu = document.getElementById('lang-dropdown-menu');
         if (menu) menu.classList.toggle('hidden');
       },
-
       hideLangMenu() {
         const menu = document.getElementById('lang-dropdown-menu');
         if (menu) menu.classList.add('hidden');
       }
     };
-
     document.addEventListener('click', (e) => {
       const wrapper = document.getElementById('lang-dropdown-wrapper');
-      if (wrapper && !wrapper.contains(e.target)) {
-        I18n.hideLangMenu();
-      }
+      if (wrapper && !wrapper.contains(e.target)) I18n.hideLangMenu();
     });
-
-    // 4. COOKIE CONSENT MANAGER
     const CookieConsent = {
       init() {
         const consent = localStorage.getItem('xindro_cookie_consent');
@@ -2468,7 +2497,6 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           if (modal) modal.classList.remove('hidden');
         }
       },
-
       acceptAll() {
         localStorage.setItem('xindro_cookie_consent', JSON.stringify({
           essential: true,
@@ -2478,7 +2506,6 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         }));
         this.hideModal();
       },
-
       rejectNonEssential() {
         localStorage.setItem('xindro_cookie_consent', JSON.stringify({
           essential: true,
@@ -2488,22 +2515,18 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         }));
         this.hideModal();
       },
-
       hideModal() {
         const modal = document.getElementById('cookie-consent-modal');
         if (modal) modal.classList.add('hidden');
       },
-
       openSettings() {
         const settingsModal = document.getElementById('cookie-settings-modal');
         if (settingsModal) settingsModal.classList.remove('hidden');
       },
-
       closeSettings() {
         const settingsModal = document.getElementById('cookie-settings-modal');
         if (settingsModal) settingsModal.classList.add('hidden');
       },
-
       saveCustom() {
         const analytics = document.getElementById('chk-analytics-cookies')?.checked;
         const personalization = document.getElementById('chk-personalization-cookies')?.checked;
@@ -2517,8 +2540,6 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         this.hideModal();
       }
     };
-
-    // 5. SIMULATOR ENGINE (100% Grounded in "Academia Stoic Pro" business context)
     const Simulator = {
       presets: {
         es: {
@@ -2537,94 +2558,106 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           3: { text: "Qual é o preço do curso e o que está incluído?", tone: "growth", closing: "always" }
         }
       },
-
       loadPreset(num) {
         const lang = I18n.current || 'es';
-        const langPresets = this.presets[lang] || this.presets['es'];
-        const p = langPresets[num];
+        const p = this.presets[lang]?.[num] || this.presets['es'][num];
         if (!p) return;
-        document.getElementById('sim-input-text').value = p.text;
-        document.getElementById('sim-tone').value = p.tone;
-        document.getElementById('sim-closing').value = p.closing;
+        const input = document.getElementById('sim-input-text');
+        const tone = document.getElementById('sim-tone');
+        const closing = document.getElementById('sim-closing');
+        if (input) input.value = p.text;
+        if (tone) tone.value = p.tone;
+        if (closing) closing.value = p.closing;
         this.generate();
       },
-
       generate() {
-        const text = document.getElementById('sim-input-text').value.trim();
-        const tone = document.getElementById('sim-tone').value;
-        const closing = document.getElementById('sim-closing').value;
+        const inputEl = document.getElementById('sim-input-text');
+        const toneEl = document.getElementById('sim-tone');
+        const closingEl = document.getElementById('sim-closing');
         const btn = document.getElementById('sim-btn-generate');
         const outputText = document.getElementById('sim-output-text');
         const badgeIntent = document.getElementById('sim-badge-intent');
         const badgeScore = document.getElementById('sim-badge-score');
         const badgeAutopilot = document.getElementById('sim-badge-autopilot');
+        
+        if (!inputEl) return;
+        const text = inputEl.value.trim();
+        const tone = toneEl ? toneEl.value : 'mentor';
+        const closing = closingEl ? closingEl.value : 'always';
         const lang = I18n.current || 'es';
 
         if (!text) return;
 
-        btn.disabled = true;
-        btn.innerHTML = '<span>Generando respuesta con IA...</span>';
+        if (btn) {
+          btn.disabled = true;
+          btn.innerHTML = '<span>Generando respuesta con IA...</span>';
+        }
 
         setTimeout(() => {
           let reply = '';
           let intent = 'Interés / Comunidad';
           let score = 92;
           let autopilotText = '✔ Apto para Autopilot en Instagram y Facebook';
-
-          const textLower = text.toLowerCase();
+          const cleanText = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
           if (lang === 'en') {
-            const isCourseQA = textLower.includes('recorded') || textLower.includes('access') || textLower.includes('lesson') || textLower.includes('curriculum') || textLower.includes('how long');
-            const isDichotomy = textLower.includes('dichotomy') || textLower.includes('control') || textLower.includes('stoic') || textLower.includes('marcus');
-            const isPrice = textLower.includes('price') || textLower.includes('cost') || textLower.includes('how much') || textLower.includes('buy') || textLower.includes('payment');
+            const isPrice = cleanText.includes('price') || cleanText.includes('cost') || cleanText.includes('how much') || cleanText.includes('buy') || cleanText.includes('pay') || cleanText.includes('card') || cleanText.includes('purchase') || cleanText.includes('where') || cleanText.includes('link') || cleanText.includes('bio') || cleanText.includes('enroll') || cleanText.includes('invest');
+            const isCourseQA = cleanText.includes('record') || cleanText.includes('access') || cleanText.includes('lesson') || cleanText.includes('class') || cleanText.includes('course') || cleanText.includes('curricul') || cleanText.includes('how long') || cleanText.includes('lifetime') || cleanText.includes('hour') || cleanText.includes('schedule') || cleanText.includes('format') || cleanText.includes('module');
+            const isDichotomy = cleanText.includes('dichotom') || cleanText.includes('control') || cleanText.includes('stoic') || cleanText.includes('marcus') || cleanText.includes('seneca') || cleanText.includes('stress') || cleanText.includes('anxiet') || cleanText.includes('habit') || cleanText.includes('mindset') || cleanText.includes('procrastin') || cleanText.includes('focus') || cleanText.includes('discipline');
 
-            if (isCourseQA) {
-              intent = 'Lead: Course Structure & Access 📚';
-              score = 96;
-              autopilotText = '✔ Verified & Grounded for Autopilot';
+            if (isPrice) {
+              intent = 'Commercial Lead: Pricing & Enrollment 💎';
+              score = 98;
+              autopilotText = '✔ Verified & Grounded for Autopilot (149 € facts)';
               reply = tone === 'mentor'
-                ? "Hello! The program includes lifetime access to all recorded lessons (over 40 hours of practical training) and our private community so you can advance with discipline at your own pace. Full syllabus and direct registration are available in our bio link. Any specific questions on the modules? 🏛️"
+                ? "The investment in the course is 149 € (one-time payment), including lifetime access to all 40+ hours of recorded lessons, practical exercises, and our private community. You can enroll directly through our bio link. Any questions before getting started? 🏛️"
                 : (tone === 'empathy'
-                  ? "Hi there! Yes, the course includes lifetime access to all recorded lessons (over 40 hours) and the private community, allowing you to learn with complete flexibility at your own pace. You can find full details and enrollment in our bio link. Would you like to review the syllabus? 🤝"
-                  : "Hey! Absolutely, you get instant lifetime access to over 40 hours of high-impact recorded lessons and our private community. Check out all details and register directly via our bio link. Ready to level up? 🚀");
+                  ? "Hi! The course is 149 € (one-time payment) for full lifetime access to over 40 hours of recorded classes and the private community. You can check all details and sign up directly via our bio link. Would you like to review the syllabus? 🤝"
+                  : "Hey! The course is 149 € in a single payment with instant lifetime access to 40+ hours of training and the private community. Direct registration is open via our bio link. Ready to level up? 🚀");
+            } else if (isCourseQA) {
+              intent = 'Lead: Course Structure & Lifetime Access 📚';
+              score = 96;
+              autopilotText = '✔ Verified & Grounded for Autopilot (40h recorded lessons)';
+              reply = tone === 'mentor'
+                ? "Hello! The program includes lifetime access to all recorded lessons (over 40 hours of practical training) and our private community, allowing you to advance with discipline at your own pace. Complete syllabus and registration are available in our bio link. Do you have any specific questions about the modules? 🏛️"
+                : (tone === 'empathy'
+                  ? "Hi! Yes, the course includes lifetime access to 40+ hours of recorded classes and the private community so you can study with total flexibility. Complete details and registration are available via our bio link. Would you like to review the syllabus? 🤝"
+                  : "Hey! Absolutely, you get instant lifetime access to over 40 hours of recorded lessons and the private community to learn at your pace. Check details and sign up directly through our bio link. Ready to get started? 🚀");
             } else if (isDichotomy) {
-              intent = 'Stoic Philosophy & Mentorship 🧠';
+              intent = 'Stoic Philosophy & Mindset Mentoring 🧠';
               score = 92;
-              autopilotText = '✔ Verified & Grounded for Autopilot';
+              autopilotText = '✔ Verified & Grounded for Autopilot (Stoic frameworks)';
               reply = tone === 'mentor'
                 ? "The dichotomy of control is about focusing 100% of your energy on what is within your power (your decisions, effort, and attitude) and letting go of external outcomes. When facing friction ask: 'Is this under my direct control?'. Where would you like to apply it today? 🏛️"
                 : (tone === 'empathy'
                   ? "Hello! Applying the dichotomy of control starts by separating what you can directly influence from what you cannot. Focus your energy on your response and let go of anxiety over external factors. What challenge are you navigating this week? 🤝"
                   : "Great question! The dichotomy of control is the ultimate mental clarity tool: execute ruthlessly on your own actions and ignore external noise. Check our bio link for practical mindset frameworks. What habit are you building today? 🚀");
-            } else if (isPrice) {
-              intent = 'Commercial Lead: Pricing 💎';
-              score = 98;
-              autopilotText = '✔ Verified & Grounded for Autopilot';
-              reply = tone === 'mentor'
-                ? "The investment is 149 € (one-time payment), including lifetime access to 40+ hours of recorded lessons, practical resources, and our private community. Full details and enrollment are in our bio link. Any questions on the program? 🏛️"
-                : (tone === 'empathy'
-                  ? "Hi! The course is 149 € (one-time payment) for lifetime access to over 40 hours of recorded classes and the private community. You can check all details and enroll directly via our bio link. Would you like to review the syllabus? 🤝"
-                  : "Hey! The course is 149 € (one-time payment) with instant lifetime access to 40+ hours of training and the private community. Direct enrollment is available in our bio link. Ready to level up? 🚀");
-            } else if (textLower.includes('procrastinat') || textLower.includes('fear') || textLower.includes('advice') || textLower.includes('start')) {
-              intent = 'Mentorship & Growth 🧠';
-              score = 95;
-              autopilotText = '✔ Verified & Grounded for Autopilot';
-              reply = "Fear of failure only fades when you take action before your mind starts doubting. Break your goal into one 5-minute task today. Perfection doesn't exist; daily progress does. What small step will you take in the next 10 minutes? 👇";
             } else {
               intent = 'Connection & Community ⚡';
               score = 90;
               autopilotText = '✔ Verified & Grounded for Autopilot';
-              reply = "Exactly. When you master your mind and apply wisdom in your daily routine, external obstacles lose their power. Thank you for being part of this community. Which habit helped you most this week? 🏛️";
+              reply = tone === 'mentor'
+                ? "Hello! At Academia Stoic Pro we focus on building solid habits and mental clarity through our 40-hour recorded course with lifetime access (149 €). Check out our bio link for all details. How can we support your goals today? 🏛️"
+                : "Hi! Welcome to Academia Stoic Pro. We offer a comprehensive mindset and habits program with 40+ hours of recorded lessons and lifetime access. Feel free to check our bio link or ask us anything! 🤝";
             }
           } else if (lang === 'pt') {
-            const isCourseQA = textLower.includes('gravada') || textLower.includes('acesso') || textLower.includes('aula') || textLower.includes('tempo') || textLower.includes('cronograma');
-            const isDichotomy = textLower.includes('dicotomia') || textLower.includes('controle') || textLower.includes('estoic') || textLower.includes('marco aurelio');
-            const isPrice = textLower.includes('preço') || textLower.includes('custo') || textLower.includes('quanto') || textLower.includes('comprar') || textLower.includes('valor');
+            const isPrice = cleanText.includes('prec') || cleanText.includes('cust') || cleanText.includes('quant') || cleanText.includes('compr') || cleanText.includes('pag') || cleanText.includes('valor') || cleanText.includes('cart') || cleanText.includes('onde') || cleanText.includes('link') || cleanText.includes('bio') || cleanText.includes('inscric') || cleanText.includes('invest');
+            const isCourseQA = cleanText.includes('gravad') || cleanText.includes('acess') || cleanText.includes('aula') || cleanText.includes('curs') || cleanText.includes('temp') || cleanText.includes('durac') || cleanText.includes('cronogram') || cleanText.includes('vitalici') || cleanText.includes('hora') || cleanText.includes('modul');
+            const isDichotomy = cleanText.includes('dicotom') || cleanText.includes('control') || cleanText.includes('estoic') || cleanText.includes('marco') || cleanText.includes('seneca') || cleanText.includes('estress') || cleanText.includes('ansied') || cleanText.includes('procrastin') || cleanText.includes('habit') || cleanText.includes('mentoria') || cleanText.includes('foco') || cleanText.includes('disciplin');
 
-            if (isCourseQA) {
-              intent = 'Lead: Estrutura do Curso 📚';
+            if (isPrice) {
+              intent = 'Lead de Alta Conversão: Preço e Inscrição 💎';
+              score = 98;
+              autopilotText = '✔ Resposta Verificada Apta para Autopilot (149 €)';
+              reply = tone === 'mentor'
+                ? "O investimento no curso é de 149 € em pagamento único, incluindo acesso vitalício a mais de 40 horas de aulas gravadas e à comunidade privada. Você encontra o cronograma e inscrição direta no link da nossa biografia. Alguma dúvida sobre o programa? 🏛️"
+                : (tone === 'empathy'
+                  ? "Olá! O valor é de 149 € (pagamento único) com acesso vitalício a mais de 40 horas de aulas gravadas e à comunidade privada. Todas as informações e inscrições estão no link da nossa biografia. Gostaria de saber mais sobre o conteúdo? 🤝"
+                  : "Olá! O curso custa 149 € em pagamento único com acesso vitalício imediato a mais de 40 horas de conteúdo e comunidade privada. Inscrições abertas no link da nossa bio. Pronto para começar? 🚀");
+            } else if (isCourseQA) {
+              intent = 'Lead: Estrutura do Curso e Acesso 📚';
               score = 96;
-              autopilotText = '✔ Resposta Verificada Apta para Autopilot';
+              autopilotText = '✔ Resposta Verificada Apta para Autopilot (40h gravadas)';
               reply = tone === 'mentor'
                 ? "Olá! O programa inclui acesso vitalício a todas as aulas gravadas (mais de 40 horas de conteúdo prático) e à nossa comunidade privada, para você avançar com disciplina no seu próprio ritmo. Você pode consultar o cronograma e se inscrever no link da nossa biografia. Alguma dúvida sobre os módulos? 🏛️"
                 : (tone === 'empathy'
@@ -2639,33 +2672,30 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
                 : (tone === 'empathy'
                   ? "Olá! Aplicar a dicotomia do controle começa por separar o que você pode influenciar diretamente daquilo que não pode. Foque sua energia na sua resposta e solte a ansiedade sobre o incontrolável. Que desafio você está enfrentando esta semana? 🤝"
                   : "Excelente pergunta! A dicotomia do controle é a chave para o foco: aja com intensidade máxima nas suas ações e elimine o ruído do que você não controla. No link da nossa bio compartilhamos recursos práticos sobre mentalidade. Qual hábito você quer fortalecer hoje? 🚀");
-            } else if (isPrice) {
-              intent = 'Lead de Alta Conversão: Preço 💎';
-              score = 98;
-              autopilotText = '✔ Resposta Verificada Apta para Autopilot';
-              reply = tone === 'mentor'
-                ? "O investimento no curso é de 149 € em pagamento único, incluindo acesso vitalício a mais de 40 horas de aulas gravadas e à comunidade privada. Você encontra o cronograma e inscrição direta no link da nossa biografia. Alguma dúvida sobre o programa? 🏛️"
-                : (tone === 'empathy'
-                  ? "Olá! O valor é de 149 € (pagamento único) com acesso vitalício a mais de 40 horas de aulas gravadas e à comunidade privada. Todas as informações e inscrições estão no link da nossa biografia. Gostaria de saber mais sobre o conteúdo? 🤝"
-                  : "Olá! O curso custa 149 € em pagamento único com acesso vitalício imediato a mais de 40 horas de conteúdo e comunidade privada. Inscrições abertas no link da nossa bio. Pronto para começar? 🚀");
-            } else if (textLower.includes('procrastin') || textLower.includes('medo') || textLower.includes('conselho') || textLower.includes('começar')) {
-              intent = 'Pergunta de Mentoria & Valor 🧠';
-              score = 95;
-              autopilotText = '✔ Resposta Verificada Apta para Autopilot';
-              reply = "O medo do fracasso só desaparece quando você age antes que a mente comece a duvidar. Divida sua meta em uma ação de 5 minutos para hoje. Perfeição não existe; progresso diário sim. Qual pequena tarefa você fará nos próximos 10 minutos? 👇";
             } else {
-              intent = 'Conexão & Retenção ⚡';
+              intent = 'Conexão & Comunidade ⚡';
               score = 90;
               autopilotText = '✔ Resposta Verificada Apta para Autopilot';
-              reply = "Exatamente. Quando você domina sua mente e aplica sabedoria na rotina, os obstáculos externos perdem a força. Obrigado por fazer parte da comunidade. Qual princípio mais te ajudou esta semana? 🏛️";
+              reply = tone === 'mentor'
+                ? "Olá! Na Academia Stoic Pro focamos no desenvolvimento de hábitos e clareza mental através do nosso curso de 40h com acesso vitalício. Você pode conferir os detalhes no link da nossa biografia. Como podemos te apoiar hoje? 🏛️"
+                : "Olá! Bem-vindo à Academia Stoic Pro. Nosso curso inclui 40h de aulas gravadas com acesso vitalício e comunidade exclusiva. Confira o link da nossa bio para saber mais! 🤝";
             }
           } else {
-            // Spanish (Default)
-            const isCourseQA = textLower.includes('grabada') || textLower.includes('grabadas') || textLower.includes('clases grabadas') || textLower.includes('acceso') || textLower.includes('tiempo tengo') || textLower.includes('cuanto tiempo') || textLower.includes('cuánto tiempo') || textLower.includes('duracion') || textLower.includes('duración') || textLower.includes('temario');
-            const isDichotomy = textLower.includes('dicotomia') || textLower.includes('dicotomía') || textLower.includes('control') || textLower.includes('estoic') || textLower.includes('marco aurelio') || textLower.includes('epicteto') || textLower.includes('seneca') || textLower.includes('séneca');
-            const isPrice = textLower.includes('precio') || textLower.includes('costo') || textLower.includes('cuanto vale') || textLower.includes('cuánto vale') || textLower.includes('cuanto cuesta') || textLower.includes('cuánto cuesta') || textLower.includes('como comprar') || textLower.includes('pago');
+            // Spanish (Default) - Fully typo-tolerant matching for words like 'pagvo', 'comom', 'presio', 'cuanto vale', etc.
+            const isPrice = cleanText.includes('pag') || cleanText.includes('preci') || cleanText.includes('presi') || cleanText.includes('cost') || cleanText.includes('cuest') || cleanText.includes('cuant') || cleanText.includes('invers') || cleanText.includes('compr') || cleanText.includes('tarjet') || cleanText.includes('metod') || cleanText.includes('adquir') || cleanText.includes('donde') || cleanText.includes('link') || cleanText.includes('bio') || cleanText.includes('enlace') || cleanText.includes('val') || cleanText.includes('inscrib') || cleanText.includes('matricul');
+            const isCourseQA = cleanText.includes('grab') || cleanText.includes('acces') || cleanText.includes('clase') || cleanText.includes('curs') || cleanText.includes('tiemp') || cleanText.includes('durac') || cleanText.includes('leccion') || cleanText.includes('modul') || cleanText.includes('temari') || cleanText.includes('vitalici') || cleanText.includes('horari') || cleanText.includes('contenid') || cleanText.includes('incluy') || cleanText.includes('hora');
+            const isDichotomy = cleanText.includes('dicotom') || cleanText.includes('control') || cleanText.includes('estoic') || cleanText.includes('seneca') || cleanText.includes('marco') || cleanText.includes('epictet') || cleanText.includes('estres') || cleanText.includes('ansied') || cleanText.includes('procrastin') || cleanText.includes('mied') || cleanText.includes('motiv') || cleanText.includes('habit') || cleanText.includes('filosof') || cleanText.includes('disciplin') || cleanText.includes('mente');
 
-            if (isCourseQA) {
+            if (isPrice) {
+              intent = 'Oportunidad Comercial / Precio y Pago 💎';
+              score = 98;
+              autopilotText = '✔ Apto para Autopilot (Respuesta fundamentada: 149 €)';
+              reply = tone === 'mentor'
+                ? "La inversión en el curso es de 149 € en pago único, e incluye acceso vitalicio a las 40 horas de clases grabadas, materiales prácticos y acceso a la comunidad privada. Puedes inscribirte y abonar directamente en el enlace de nuestra biografía. ¿Tienes alguna pregunta puntual sobre los módulos? 🏛️"
+                : (tone === 'empathy'
+                  ? "¡Hola! El precio del curso es de 149 € (pago único) con acceso vitalicio completo a las más de 40 horas de clases grabadas y la comunidad privada. Puedes inscribirte con tarjeta o tu método preferido en el enlace de nuestra biografía. ¿Te gustaría conocer el temario detallado? 🤝"
+                  : "¡Hola! El curso tiene un precio de 149 € en pago único con acceso vitalicio inmediato a las 40 horas de formación y la comunidad privada. Puedes inscribirte directamente desde el enlace de nuestra biografía. ¿Listo para dar el siguiente paso? 🚀");
+            } else if (isCourseQA) {
               intent = 'Lead Calificado • Modalidad del Curso 📚';
               score = 96;
               autopilotText = '✔ Apto para Autopilot (Respuesta fundamentada en datos de negocio)';
@@ -2683,58 +2713,13 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
                 : (tone === 'empathy'
                   ? "¡Hola! Aplicar la dicotomía del control comienza por reconocer qué parte de una situación está en tus manos y cuál no. Ante el estrés, enfócate con calma en tu propia respuesta y deja ir la angustia por lo incontrolable. ¿Hay algún reto puntual que estés enfrentando esta semana? 🤝"
                   : "¡Excelente pregunta! La dicotomía del control es la herramienta clave para mantener el foco: actúa con máxima intensidad en lo que depende de ti y elimina el ruido de lo que no puedes controlar. En el enlace de nuestra bio compartimos recursos prácticos sobre mentalidad y productividad. ¿Qué hábito quieres fortalecer hoy? 🚀");
-            } else if (isPrice) {
-              intent = 'Oportunidad Comercial / Precio del Curso 💎';
-              score = 98;
-              autopilotText = '✔ Apto para Autopilot (Respuesta comercial fundamentada: 149 €)';
-              reply = tone === 'mentor'
-                ? "La inversión en el curso es de 149 € en pago único, e incluye acceso vitalicio a las 40 horas de clases grabadas, materiales prácticos y acceso a la comunidad privada. Puedes ver el temario e inscribirte directamente en el enlace de nuestra biografía. ¿Tienes alguna pregunta sobre los módulos? 🏛️"
-                : (tone === 'empathy'
-                  ? "¡Hola! El precio del curso es de 149 € (pago único) con acceso vitalicio completo a las más de 40 horas de clases grabadas y la comunidad privada. Tienes la información completa e inscripción en el enlace de nuestra biografía. ¿Te gustaría conocer el temario? 🤝"
-                  : "¡Hola! El curso tiene un precio de 149 € en pago único con acceso vitalicio inmediato a las 40 horas de formación y la comunidad privada. Puedes inscribirte directamente desde el enlace de nuestra biografía. ¿Listo para comenzar? 🚀");
-            } else if (textLower.includes('procrastino') || textLower.includes('miedo') || textLower.includes('consejo') || textLower.includes('empezar')) {
-              intent = 'Pregunta de Mentoría / Alto Valor 🧠';
-              score = 95;
-              autopilotText = '✔ Apto para Autopilot (Consejo accionable fundamentado)';
-              reply = "El miedo al fracaso solo desaparece cuando actúas antes de que la mente empiece a dudar. Divide tu meta en una sola acción de 5 minutos para hoy. La perfección no existe, el progreso diario sí. ¿Qué pequeña tarea harás en los próximos 10 minutos? 👇";
             } else {
-              intent = 'Conexión & Retención ⚡';
+              intent = 'Conexión & Comunidad ⚡';
               score = 90;
               autopilotText = '✔ Apto para Autopilot (Comunidad y fidelización)';
-              reply = "Exactamente. Cuando dominas tu mente y aplicas la sabiduría en tu rutina, los problemas externos pierden todo su poder. Gracias por ser parte de esta comunidad. ¿Qué principio estoico te ha servido más esta semana? 🏛️";
-            }
-          }
-
-          if (closing === 'never') {
-            reply = reply.replace(/\¿[^\?]+\?\s*(👇|✨|🔥|🚀|📩|🤝|🏛️|📚)?$/i, '').replace(/\?[^\?]+\?\s*(👇|✨|🔥|🚀|📩|🤝|🏛️|📚)?$/i, '');
-          }
-
-          badgeIntent.textContent = '🎯 ' + intent;
-          badgeScore.textContent = score + '/100';
-          outputText.textContent = `"${reply}"`;
-
-          if (badgeAutopilot) {
-            badgeAutopilot.innerHTML = `<span>✔</span> ${autopilotText}`;
-            badgeAutopilot.className = 'flex items-center gap-1.5 text-emerald-600 font-semibold text-[11px] sm:text-xs';
-          }
-
-          btn.disabled = false;
-          btn.innerHTML = `<span>${I18n.dict[lang]?.sim_btn_gen || 'Generar Respuesta con IA'}</span><span>⚡</span>`;
-        }, 300);
-      },
-
-      copyResponse() {
-        const text = document.getElementById('sim-output-text').textContent.replace(/^"|"$/g, '');
-        navigator.clipboard.writeText(text).then(() => {
-          const btn = document.getElementById('sim-btn-copy');
-          btn.innerHTML = '<span class="text-emerald-600 font-bold">✔ Copied!</span>';
-          setTimeout(() => {
-            const lang = I18n.current || 'es';
-            btn.innerHTML = `<span>${I18n.dict[lang]?.sim_btn_copy || '📋 Copiar'}</span>`;
-          }, 2000);
-        });
-      }
-    };e ha servido más esta semana? 🏛️";
+              reply = tone === 'mentor'
+                ? "¡Hola! En Academia Stoic Pro nos enfocamos en el desarrollo de hábitos sólidos y disciplina diaria a través de nuestro curso de 40 horas grabadas con acceso vitalicio (149 €). Puedes consultar el temario e inscribirte en el enlace de nuestra biografía. ¿En qué objetivo te gustaría que te apoyemos hoy? 🏛️"
+                : "¡Hola! Con mucho gusto te ayudamos. En Academia Stoic Pro contamos con el programa completo de hábitos y mentalidad estoica (40h grabadas, acceso vitalicio y comunidad). Tienes toda la información en el enlace de nuestra biografía. ¿Tienes alguna duda puntual? 🤝";
             }
           }
 
@@ -2775,6 +2760,5 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
       Calculator.update();
     });
   </script>
-
 </body>
 </html>
