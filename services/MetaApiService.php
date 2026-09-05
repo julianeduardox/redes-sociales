@@ -177,22 +177,30 @@ class MetaApiService {
 
         $isReelOrVideo = in_array(strtolower($mediaType), ['video', 'reel', 'reels', 'clips'], true);
 
-        // Fast, direct candidate query
-        $primarySet = $isReelOrVideo ? 'views,plays,reach,saved,total_interactions' : 'impressions,reach,saved,total_interactions';
+        // Fast, direct candidate query (support both legacy impressions and v20+ views)
+        $primarySet = $isReelOrVideo ? 'views,plays,reach,saved,total_interactions' : 'views,impressions,reach,saved,total_interactions';
         $url = self::BASE_URL . '/' . urlencode($mediaId) . '/insights?' . http_build_query([
             'metric' => $primarySet,
             'access_token' => $accessToken
         ]);
         $res = self::makeGetRequest($url, 3);
 
-        // One single fallback if primary set failed (e.g. carousel vs image)
+        // Fallbacks for different media types (carousel, album, single image)
         if (isset($res['error']) || empty($res['data'])) {
-            $fallbackSet = 'reach,saved,total_interactions';
+            $fallbackSet = 'impressions,reach,saved,total_interactions';
             $urlFallback = self::BASE_URL . '/' . urlencode($mediaId) . '/insights?' . http_build_query([
                 'metric' => $fallbackSet,
                 'access_token' => $accessToken
             ]);
             $res = self::makeGetRequest($urlFallback, 3);
+            if (isset($res['error']) || empty($res['data'])) {
+                $fallbackSet2 = 'reach,saved,total_interactions';
+                $urlFallback2 = self::BASE_URL . '/' . urlencode($mediaId) . '/insights?' . http_build_query([
+                    'metric' => $fallbackSet2,
+                    'access_token' => $accessToken
+                ]);
+                $res = self::makeGetRequest($urlFallback2, 3);
+            }
         }
 
         if (isset($res['data']) && is_array($res['data'])) {
@@ -225,6 +233,16 @@ class MetaApiService {
             }
         }
 
+        if ($metrics['impressions'] === 0 && $metrics['reach'] > 0) {
+            $metrics['impressions'] = $metrics['reach'];
+        }
+        if ($metrics['views'] === 0 && $metrics['impressions'] > 0) {
+            $metrics['views'] = $metrics['impressions'];
+        }
+        if ($metrics['reach'] === 0 && $metrics['impressions'] > 0) {
+            $metrics['reach'] = $metrics['impressions'];
+        }
+
         return $metrics;
     }
 
@@ -244,17 +262,17 @@ class MetaApiService {
             'reactions_total' => 0
         ];
 
-        // 1. Guaranteed valid metrics in Meta Graph API v19+
-        $primaryMetric = 'post_impressions,post_impressions_unique,post_engaged_users,post_clicks';
+        // 1. Comprehensive metrics query on main post ID
+        $primaryMetric = 'post_impressions,post_impressions_unique,post_engaged_users,post_reactions_by_type_total,post_clicks';
         $url = self::BASE_URL . '/' . urlencode($postId) . '/insights?' . http_build_query([
             'metric' => $primaryMetric,
             'access_token' => $accessToken
         ]);
         $res = self::makeGetRequest($url, 3);
 
-        // 2. Fast single fallback if primary metric set was not supported
+        // 2. Fallback if primary metric set was not supported
         if (isset($res['error']) || empty($res['data'])) {
-            $fallbackMetric = 'post_impressions,post_impressions_unique';
+            $fallbackMetric = 'post_impressions,post_impressions_unique,post_engaged_users';
             $targetId = (!empty($objectId) && is_numeric($objectId)) ? $objectId : $postId;
             $urlFallback = self::BASE_URL . '/' . urlencode($targetId) . '/insights?' . http_build_query([
                 'metric' => $fallbackMetric,
@@ -285,14 +303,22 @@ class MetaApiService {
                     $metrics['reach'] = max($metrics['reach'], $val);
                 } elseif ($name === 'post_engaged_users') {
                     $metrics['engaged_users'] = max($metrics['engaged_users'], $val);
+                } elseif ($name === 'post_reactions_by_type_total') {
+                    $metrics['reactions_total'] = max($metrics['reactions_total'], $val);
                 }
             }
 
             if ($metrics['reach'] === 0 && $metrics['impressions'] > 0) {
                 $metrics['reach'] = $metrics['impressions'];
             }
-            if ($metrics['reach'] === 0 && $metrics['engaged_users'] > 0) {
+            if ($metrics['reach'] < $metrics['engaged_users']) {
                 $metrics['reach'] = $metrics['engaged_users'];
+            }
+            if ($metrics['impressions'] < $metrics['reach']) {
+                $metrics['impressions'] = $metrics['reach'];
+            }
+            if ($metrics['views'] < $metrics['impressions']) {
+                $metrics['views'] = $metrics['impressions'];
             }
         }
 
@@ -585,9 +611,21 @@ class MetaApiService {
                         $insights = self::fetchMediaInsights($mediaId, $token, $mediaType);
                         $impressions = (int)($insights['impressions'] ?? 0);
                         $reach = (int)($insights['reach'] ?? 0);
+                        $views = (int)($insights['views'] ?? 0);
+
+                        if ($impressions === 0 && $views > 0) {
+                            $impressions = $views;
+                        }
+                        if ($impressions === 0 && $reach > 0) {
+                            $impressions = $reach;
+                        }
                         if ($reach === 0 && $impressions > 0) {
                             $reach = $impressions;
                         }
+                        if ($impressions > 0 && $reach > $impressions) {
+                            $impressions = $reach;
+                        }
+
                         $savedCount = (int)($insights['saved_count'] ?? 0);
                         $igInteractions = $likes + $commentsCount + $savedCount;
                         $engagementRate = ($reach > 0) ? round(($igInteractions / $reach) * 100, 1) : (($impressions > 0) ? round(($igInteractions / $impressions) * 100, 1) : 0.0);
@@ -709,7 +747,7 @@ class MetaApiService {
                 }
             } else {
                 // Fetch Facebook Page Posts with valid Graph API v19+ fields
-                $fbFields = 'id,message,story,created_time,full_picture,permalink_url,shares,attachments{media,type,target{id}},reactions.summary(true).limit(1),comments.summary(true).limit(1)';
+                $fbFields = 'id,message,story,created_time,full_picture,permalink_url,shares,attachments{media,type,target{id}},reactions.summary(true).limit(0),likes.summary(true).limit(0),comments.summary(true).limit(0)';
                 $pagePostsUrl = self::BASE_URL . '/' . urlencode($pageId) . '/posts?' . http_build_query([
                     'fields' => $fbFields,
                     'limit' => '15',
@@ -767,8 +805,14 @@ class MetaApiService {
                         if (isset($fbPost['reactions']['summary']['total_count'])) {
                             $likes = (int)$fbPost['reactions']['summary']['total_count'];
                         }
+                        if (isset($fbPost['likes']['summary']['total_count'])) {
+                            $likes = max($likes, (int)$fbPost['likes']['summary']['total_count']);
+                        }
                         if ($likes === 0 && !empty($fbPost['reactions']['data']) && is_array($fbPost['reactions']['data'])) {
                             $likes = count($fbPost['reactions']['data']);
+                        }
+                        if ($likes === 0 && !empty($fbPost['likes']['data']) && is_array($fbPost['likes']['data'])) {
+                            $likes = count($fbPost['likes']['data']);
                         }
 
                         $commentsCount = (int)($fbPost['comments']['summary']['total_count'] ?? (is_array($fbPost['comments']['data'] ?? null) ? count($fbPost['comments']['data']) : 0));
@@ -779,6 +823,22 @@ class MetaApiService {
                         $fbInsights = self::fetchFacebookPostInsights($postIdExt, $token, $objectId);
                         $impressions = (int)($fbInsights['impressions'] ?? 0);
                         $reach = (int)($fbInsights['reach'] ?? 0);
+                        $reactionsTotal = (int)($fbInsights['reactions_total'] ?? 0);
+                        if ($reactionsTotal > 0) {
+                            $likes = max($likes, $reactionsTotal);
+                        }
+
+                        // If object_id exists and likes is still 0, query object directly for reactions
+                        if ($likes === 0 && !empty($objectId) && is_numeric($objectId) && $objectId !== $postIdExt) {
+                            $objUrl = self::BASE_URL . '/' . urlencode($objectId) . '?fields=reactions.summary(true).limit(0),likes.summary(true).limit(0)&access_token=' . urlencode($token);
+                            $objData = self::makeGetRequest($objUrl, 3);
+                            if (isset($objData['reactions']['summary']['total_count'])) {
+                                $likes = max($likes, (int)$objData['reactions']['summary']['total_count']);
+                            }
+                            if (isset($objData['likes']['summary']['total_count'])) {
+                                $likes = max($likes, (int)$objData['likes']['summary']['total_count']);
+                            }
+                        }
 
                         $fbInteractions = $likes + $commentsCount + $shares;
 
