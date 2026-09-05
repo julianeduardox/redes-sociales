@@ -1190,11 +1190,11 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         <!-- Q3 -->
         <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
           <button type="button" onclick="Faq.toggle(3)" class="w-full p-4 sm:p-6 text-left flex items-center justify-between gap-4 font-bold text-xs sm:text-base text-midnight hover:text-brand-600 transition-colors">
-            <span data-i18n="faq_q3">¿Cómo puedo integrar la API en mis propias herramientas o software?</span>
+            <span data-i18n="faq_q3">¿Puedo conectar varias cuentas al mismo tiempo?</span>
             <span id="faq-icon-3" class="text-lg font-bold text-slate-400 transition-transform">+</span>
           </button>
           <div id="faq-ans-3" class="hidden px-4 sm:px-6 pb-5 sm:pb-6 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-4" data-i18n="faq_a3">
-            Nuestra API RESTful recibe peticiones POST en formato JSON y devuelve las respuestas contextualizadas en menos de 180ms. Puedes enviar comentarios desde cualquier backend en Python, Node.js, PHP o cURL usando tu API Token privado.
+            Sí, puedes conectar y gestionar múltiples cuentas de Instagram y Páginas de Facebook de forma centralizada.
           </div>
         </div>
 
@@ -1205,7 +1205,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
             <span id="faq-icon-4" class="text-lg font-bold text-slate-400 transition-transform">+</span>
           </button>
           <div id="faq-ans-4" class="hidden px-4 sm:px-6 pb-5 sm:pb-6 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-4" data-i18n="faq_a4">
-            Sí. El plan Creador Starter es 100% gratuito e incluye hasta 100 respuestas al mes y el asistente Copilot para que puedas probar el impacto en tu comunidad antes de decidir actualizar.
+            Sí. El plan Inicial es 100% gratuito e incluye hasta 50 respuestas de prueba al mes y el asistente Copilot para que puedas probar el impacto en tu comunidad antes de decidir actualizar.
           </div>
         </div>
 
@@ -1475,9 +1475,26 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         const icon = document.getElementById('faq-icon-' + id);
         if (!ans) return;
 
-        if (isHidden) {
+        const isCurrentlyHidden = ans.classList.contains('hidden');
+
+        // Close all other accordion items
+        for (let i = 1; i <= 6; i++) {
+          const a = document.getElementById('faq-ans-' + i);
+          const ic = document.getElementById('faq-icon-' + i);
+          if (a) a.classList.add('hidden');
+          if (ic) {
+            ic.textContent = '+';
+            ic.style.transform = 'rotate(0deg)';
+          }
+        }
+
+        // Toggle selected item
+        if (isCurrentlyHidden) {
           ans.classList.remove('hidden');
-          if (icon) { icon.textContent = '−'; icon.style.transform = 'rotate(180deg)'; }
+          if (icon) {
+            icon.textContent = '−';
+            icon.style.transform = 'rotate(180deg)';
+          }
         }
       }
     };
