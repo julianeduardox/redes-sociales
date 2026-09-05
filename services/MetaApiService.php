@@ -238,7 +238,10 @@ class MetaApiService {
     /**
      * Fetch Live Post Insights for a Facebook Page Post (Graph API v19/v20/v21)
      */
-    public static function fetchFacebookPostInsights(string $postId, string $accessToken): array {
+    /**
+     * Fetch Live Post Insights for a Facebook Post, Video or Photo (Graph API v18/v19/v20/v21)
+     */
+    public static function fetchFacebookPostInsights(string $postId, string $accessToken, ?string $objectId = null): array {
         if (empty($accessToken) || empty($postId) || str_starts_with($postId, 'fb_post_') || str_starts_with($postId, 'mock_')) {
             return [];
         }
@@ -247,50 +250,104 @@ class MetaApiService {
             'views' => 0,
             'impressions' => 0,
             'reach' => 0,
-            'engaged_users' => 0
+            'engaged_users' => 0,
+            'reactions_total' => 0
         ];
 
+        // Sequence of metric set attempts to maximize compatibility with Graph API versions
         $candidateSets = [
+            'post_impressions,post_impressions_unique,post_impressions_viral,post_impressions_viral_unique,post_impressions_organic,post_impressions_organic_unique,post_engaged_users,post_reactions_by_type_total,post_clicks,post_video_views',
+            'post_impressions,post_impressions_unique,post_impressions_viral,post_impressions_viral_unique,post_engaged_users,post_reactions_by_type_total',
+            'post_impressions,post_impressions_unique,post_engaged_users,post_reactions_by_type_total,post_video_views',
             'post_impressions,post_impressions_unique,post_engaged_users,post_clicks',
             'post_impressions,post_impressions_unique,post_engaged_users',
             'post_impressions,post_engaged_users',
-            'post_impressions'
+            'post_impressions',
+            'post_video_views,post_video_views_unique'
         ];
 
+        // List of candidate node IDs to query insights from
+        $nodeIds = [$postId];
+        if (str_contains($postId, '_')) {
+            $parts = explode('_', $postId, 2);
+            if (!empty($parts[1]) && is_numeric($parts[1])) {
+                $nodeIds[] = $parts[1]; // Try the numeric post ID alone
+            }
+        }
+        if (!empty($objectId) && is_numeric($objectId) && !in_array($objectId, $nodeIds, true)) {
+            $nodeIds[] = $objectId; // Try the underlying photo / video object ID
+        }
+
         $res = null;
-        foreach ($candidateSets as $metricSet) {
-            $url = self::BASE_URL . '/' . urlencode($postId) . '/insights?' . http_build_query([
-                'metric' => $metricSet,
-                'access_token' => $accessToken
-            ]);
-            $res = self::makeGetRequest($url);
-            if (!isset($res['error']) && !empty($res['data'])) {
-                break;
+        foreach ($nodeIds as $targetNodeId) {
+            foreach ($candidateSets as $metricSet) {
+                $url = self::BASE_URL . '/' . urlencode($targetNodeId) . '/insights?' . http_build_query([
+                    'metric' => $metricSet,
+                    'access_token' => $accessToken
+                ]);
+                $res = self::makeGetRequest($url);
+                if (!isset($res['error']) && !empty($res['data'])) {
+                    break 2;
+                }
             }
         }
 
         if (isset($res['data']) && is_array($res['data'])) {
+            $organicImpressions = 0;
+            $viralImpressions = 0;
+            $organicReach = 0;
+            $viralReach = 0;
+            $videoViews = 0;
+
             foreach ($res['data'] as $item) {
                 $name = $item['name'] ?? '';
                 $val = 0;
                 if (isset($item['values'][0]['value'])) {
                     $raw = $item['values'][0]['value'];
-                    $val = is_array($raw) ? array_sum(array_map('intval', $raw)) : (int)$raw;
+                    if (is_array($raw)) {
+                        $val = array_sum(array_map('intval', $raw));
+                    } else {
+                        $val = (int)$raw;
+                    }
                 } elseif (isset($item['total_value']['value'])) {
                     $val = (int)$item['total_value']['value'];
                 }
 
                 if ($name === 'post_impressions') {
-                    $metrics['impressions'] = $val;
+                    $metrics['impressions'] = max($metrics['impressions'], $val);
                     $metrics['views'] = max($metrics['views'], $val);
                 } elseif ($name === 'post_impressions_unique') {
-                    $metrics['reach'] = $val;
+                    $metrics['reach'] = max($metrics['reach'], $val);
+                } elseif ($name === 'post_impressions_organic') {
+                    $organicImpressions = $val;
+                } elseif ($name === 'post_impressions_viral') {
+                    $viralImpressions = $val;
+                } elseif ($name === 'post_impressions_organic_unique') {
+                    $organicReach = $val;
+                } elseif ($name === 'post_impressions_viral_unique') {
+                    $viralReach = $val;
                 } elseif ($name === 'post_engaged_users') {
-                    $metrics['engaged_users'] = $val;
-                    if ($metrics['reach'] === 0 && $val > 0) {
-                        $metrics['reach'] = $val;
-                    }
+                    $metrics['engaged_users'] = max($metrics['engaged_users'], $val);
+                } elseif ($name === 'post_reactions_by_type_total') {
+                    $metrics['reactions_total'] = max($metrics['reactions_total'], $val);
+                } elseif ($name === 'post_video_views' || $name === 'post_video_views_unique') {
+                    $videoViews = max($videoViews, $val);
+                    $metrics['views'] = max($metrics['views'], $val);
                 }
+            }
+
+            if ($viralImpressions > 0 || $organicImpressions > 0) {
+                $metrics['impressions'] = max($metrics['impressions'], $organicImpressions + $viralImpressions);
+                $metrics['views'] = max($metrics['views'], $metrics['impressions'], $videoViews);
+            }
+            if ($viralReach > 0 || $organicReach > 0) {
+                $metrics['reach'] = max($metrics['reach'], $organicReach + $viralReach);
+            }
+            if ($metrics['reach'] === 0 && $metrics['impressions'] > 0) {
+                $metrics['reach'] = $metrics['impressions'];
+            }
+            if ($metrics['reach'] === 0 && $metrics['engaged_users'] > 0) {
+                $metrics['reach'] = $metrics['engaged_users'];
             }
         }
 
@@ -703,8 +760,8 @@ class MetaApiService {
                     }
                 }
             } else {
-                // Fetch Facebook Page Posts with accurate summary parameters
-                $fbFields = 'id,message,story,created_time,full_picture,permalink_url,shares,reactions.summary(true).limit(0),comments.summary(true).limit(0)';
+                // Fetch Facebook Page Posts with accurate summary parameters (limit=1 for proper summary counts)
+                $fbFields = 'id,message,story,created_time,full_picture,permalink_url,shares,status_type,object_id,reactions.summary(true).limit(1),likes.summary(true).limit(1),comments.summary(true).limit(1)';
                 $pagePostsUrl = self::BASE_URL . '/' . urlencode($pageId) . '/posts?' . http_build_query([
                     'fields' => $fbFields,
                     'limit' => '25',
@@ -749,22 +806,64 @@ class MetaApiService {
 
                     foreach ($feedData['data'] as $fbPost) {
                         $postIdExt = $fbPost['id'];
+                        $objectId = !empty($fbPost['object_id']) ? (string)$fbPost['object_id'] : null;
                         $message = $fbPost['message'] ?? ($fbPost['story'] ?? 'Publicación de Página de Facebook');
                         $fullPic = $fbPost['full_picture'] ?? 'https://images.unsplash.com/photo-1552346154-21d32810aba3?w=480&h=320&auto=format&fit=crop&q=75';
                         $permalink = $fbPost['permalink_url'] ?? '';
-                        $likes = (int)($fbPost['reactions']['summary']['total_count'] ?? ($fbPost['likes']['summary']['total_count'] ?? 0));
-                        $commentsCount = (int)($fbPost['comments']['summary']['total_count'] ?? 0);
+
+                        // Multi-layer Likes & Reactions Extraction
+                        $likes = 0;
+                        if (isset($fbPost['reactions']['summary']['total_count'])) {
+                            $likes = (int)$fbPost['reactions']['summary']['total_count'];
+                        }
+                        if ($likes === 0 && isset($fbPost['likes']['summary']['total_count'])) {
+                            $likes = (int)$fbPost['likes']['summary']['total_count'];
+                        }
+                        if ($likes === 0 && !empty($fbPost['reactions']['data']) && is_array($fbPost['reactions']['data'])) {
+                            $likes = count($fbPost['reactions']['data']);
+                        }
+                        if ($likes === 0 && !empty($fbPost['likes']['data']) && is_array($fbPost['likes']['data'])) {
+                            $likes = count($fbPost['likes']['data']);
+                        }
+
+                        $commentsCount = (int)($fbPost['comments']['summary']['total_count'] ?? (is_array($fbPost['comments']['data'] ?? null) ? count($fbPost['comments']['data']) : 0));
                         $shares = (int)($fbPost['shares']['count'] ?? 0);
                         $postedAt = !empty($fbPost['created_time']) ? date('Y-m-d H:i:s', strtotime($fbPost['created_time'])) : date('Y-m-d H:i:s');
 
-                        $fbInsights = self::fetchFacebookPostInsights($postIdExt, $token);
+                        // Query Facebook Insights with fallback to numeric ID & object_id
+                        $fbInsights = self::fetchFacebookPostInsights($postIdExt, $token, $objectId);
                         $impressions = (int)($fbInsights['impressions'] ?? 0);
                         $reach = (int)($fbInsights['reach'] ?? 0);
+                        $reactionsTotal = (int)($fbInsights['reactions_total'] ?? 0);
+                        if ($reactionsTotal > 0 && $likes === 0) {
+                            $likes = $reactionsTotal;
+                        }
+
+                        // If object_id exists and likes is still 0, query object directly for reactions
+                        if ($likes === 0 && !empty($objectId)) {
+                            $objUrl = self::BASE_URL . '/' . urlencode($objectId) . '?fields=reactions.summary(true).limit(1),likes.summary(true).limit(1)&access_token=' . urlencode($token);
+                            $objData = self::makeGetRequest($objUrl);
+                            if (isset($objData['reactions']['summary']['total_count'])) {
+                                $likes = (int)$objData['reactions']['summary']['total_count'];
+                            } elseif (isset($objData['likes']['summary']['total_count'])) {
+                                $likes = (int)$objData['likes']['summary']['total_count'];
+                            }
+                        }
+
+                        $fbInteractions = $likes + $commentsCount + $shares;
+
+                        // Ensure logical reach & views consistency when viral shares or interactions exist
                         if ($reach === 0 && $impressions > 0) {
                             $reach = $impressions;
                         }
-                        $fbInteractions = $likes + $commentsCount + $shares;
-                        $engagementRate = ($reach > 0) ? round(($fbInteractions / $reach) * 100, 1) : (($impressions > 0) ? round(($fbInteractions / $impressions) * 100, 1) : 0.0);
+                        if ($fbInteractions > 0 && $reach < $fbInteractions) {
+                            $reach = max($reach, $fbInteractions);
+                        }
+                        if ($reach > 0 && $impressions < $reach) {
+                            $impressions = $reach;
+                        }
+
+                        $engagementRate = ($reach > 0) ? min(100.0, round(($fbInteractions / $reach) * 100, 1)) : 0.0;
 
                         $checkPost = $pdo->prepare("SELECT id FROM posts WHERE external_post_id = :ext_id AND user_id = :uid LIMIT 1");
                         $checkPost->execute([':ext_id' => $postIdExt, ':uid' => $uid]);
