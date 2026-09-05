@@ -49,7 +49,6 @@ if (!empty($requestedScopes)) {
         'pages_show_list',
         'pages_read_engagement',
         'pages_manage_posts',
-        'pages_read_user_content',
         'instagram_basic',
         'instagram_manage_comments',
         'instagram_manage_insights'
