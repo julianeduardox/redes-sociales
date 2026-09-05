@@ -7,6 +7,7 @@ require_once __DIR__ . '/../config/security.php';
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/settings.php';
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../services/CacheService.php';
 require_once __DIR__ . '/../services/MetaApiService.php';
 require_once __DIR__ . '/../services/AiAgentService.php';
 
@@ -271,6 +272,9 @@ try {
             Settings::set('brand_tone', $toneLevel);
             Settings::set('brand_description', $systemPrompt);
 
+            // Invalidate Brand Voice cache
+            CacheService::invalidateBrandVoice($userId);
+
             echo json_encode([
                 'success' => true,
                 'message' => 'Voz de Marca guardada correctamente.',
@@ -293,6 +297,9 @@ try {
 
             $stmtDel = $pdo->prepare("DELETE FROM brand_voices WHERE id = :id AND user_id = :uid");
             $stmtDel->execute([':id' => $brandId, ':uid' => $userId]);
+
+            // Invalidate Brand Voice cache
+            CacheService::invalidateBrandVoice($userId);
 
             // If active was deleted, reset to first
             if (($_SESSION['active_brand_id'] ?? 0) === $brandId) {

@@ -1,7 +1,7 @@
 <?php
 /**
- * Política de Privacidad & Cookies / Privacy & Cookie Policy
- * XINDRO — Cumplimiento oficial para Meta Graph API, App Review, GDPR/RGPD, CCPA y LGPD Brasil.
+ * Política de Privacidad, Tratamiento de Datos & Cookies / Privacy & Cookie Policy
+ * XINDRO — Blindaje Jurídico Global (RGPD / GDPR, LOPD-GDD, EU AI Act, CCPA/CPRA, LGPD Brasil y Meta Graph API).
  */
 require_once __DIR__ . '/config/security.php';
 Security::applySecurityHeaders(false);
@@ -11,15 +11,15 @@ Security::applySecurityHeaders(false);
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Política de Privacidad y Cookies | XINDRO</title>
-  <meta name="description" content="Política de Privacidad, Tratamiento de Datos y Uso de Cookies para la plataforma XINDRO y la integración con Meta Graph API.">
+  <title>Política de Privacidad, IA y Cookies | XINDRO AI Platform</title>
+  <meta name="description" content="Política de Privacidad Integral, Tratamiento de Datos con Inteligencia Artificial, Cumplimiento RGPD/CCPA y Uso de Cookies de XINDRO.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=Syne:wght@700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/style.css?v=<?= time() ?>">
   <style>
     .legal-container {
-      max-width: 960px;
+      max-width: 980px;
       margin: 0 auto;
       padding: 40px 24px 80px;
       font-family: 'Plus Jakarta Sans', sans-serif;
@@ -99,39 +99,47 @@ Security::applySecurityHeaders(false);
       font-size: 0.94rem;
       line-height: 1.8;
       color: #cbd5e1;
-      margin-bottom: 12px;
+      margin-bottom: 14px;
     }
     .legal-section ul {
       padding-left: 24px;
-      margin-bottom: 16px;
-    }
-    .legal-highlight-box {
-      background: rgba(124, 58, 237, 0.1);
-      border: 1px solid rgba(139, 92, 246, 0.3);
-      border-left: 4px solid #7c3aed;
-      border-radius: 12px;
-      padding: 18px 22px;
-      margin: 20px 0;
-    }
-    .legal-highlight-box p {
-      margin-bottom: 0;
-      color: #e2e8f0;
+      margin-bottom: 18px;
     }
     .cookie-table {
       width: 100%;
       border-collapse: collapse;
-      margin: 16px 0 24px;
-      font-size: 0.85rem;
+      margin: 20px 0;
+      font-size: 0.88rem;
+      background: rgba(0, 0, 0, 0.25);
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid #1f2937;
     }
     .cookie-table th, .cookie-table td {
-      border: 1px solid #334155;
-      padding: 10px 14px;
+      padding: 14px 18px;
       text-align: left;
+      border-bottom: 1px solid #1f2937;
     }
     .cookie-table th {
-      background: rgba(255, 255, 255, 0.04);
-      color: #f8fafc;
+      background: rgba(124, 58, 237, 0.15);
+      color: #e0e7ff;
       font-weight: 700;
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .legal-highlight-box {
+      background: rgba(124, 58, 237, 0.08);
+      border: 1px solid rgba(124, 58, 237, 0.3);
+      border-left: 4px solid #7c3aed;
+      border-radius: 12px;
+      padding: 18px 22px;
+      margin: 22px 0;
+    }
+    .legal-highlight-box p {
+      margin-bottom: 0;
+      color: #e0e7ff;
+      font-size: 0.92rem;
     }
     .back-nav {
       display: inline-flex;
@@ -142,11 +150,10 @@ Security::applySecurityHeaders(false);
       font-size: 0.88rem;
       font-weight: 600;
       margin-bottom: 24px;
-      transition: all 0.2s;
+      transition: color 0.2s;
     }
     .back-nav:hover {
       color: #fff;
-      transform: translateX(-4px);
     }
   </style>
 </head>
@@ -160,8 +167,8 @@ Security::applySecurityHeaders(false);
     <div class="legal-card">
       <div class="legal-header">
         <div>
-          <h1 class="legal-title" id="page-title">Política de Privacidad y Cookies</h1>
-          <div class="legal-updated" id="page-updated">Última actualización: Septiembre de 2026 • Versión 3.0 (Cumplimiento Meta Graph API, RGPD, CCPA y LGPD)</div>
+          <h1 class="legal-title" id="page-title">Política de Privacidad, IA y Cookies</h1>
+          <div class="legal-updated" id="page-updated">Última actualización: Septiembre de 2026 • Versión 4.0 (Cumplimiento RGPD, CCPA, LGPD, EU AI Act & Meta Graph API)</div>
         </div>
 
         <div class="lang-switcher">
@@ -176,22 +183,59 @@ Security::applySecurityHeaders(false);
       <!-- ================================================================= -->
       <div id="content-es">
         <div class="legal-section">
-          <h2><span class="sec-num">1.</span> Identidad y Responsable del Tratamiento</h2>
+          <h2><span class="sec-num">1.</span> Responsable del Tratamiento y Delegado de Protección de Datos</h2>
           <p>
-            Bienvenido a <strong>XINDRO</strong> (propiedad de <em>Xindro Tech, Inc.</em>, en adelante "la Plataforma" o "nosotros"). Nos comprometemos a garantizar la máxima confidencialidad, seguridad e integridad en el tratamiento de los datos personales de nuestros usuarios, creadores digitales y visitantes, en estricto cumplimiento del Reglamento General de Protección de Datos (RGPD / GDPR de la UE), la Ley de Privacidad del Consumidor de California (CCPA) y los Términos de la Plataforma de Desarrolladores de Meta.
+            <strong>XINDRO</strong> (en adelante "la Plataforma" o "nosotros") asume la responsabilidad como Responsable del Tratamiento de los datos personales recopilados a través de nuestro sitio web y servicios SaaS. Garantizamos el estricto cumplimiento del Reglamento General de Protección de Datos de la Unión Europea (RGPD / GDPR 2016/679), la Ley Orgánica 3/2018 (LOPD-GDD), la Ley de Privacidad del Consumidor de California (CCPA/CPRA) y la Lei Geral de Proteção de Dados de Brasil (LGPD).
+          </p>
+          <p>
+            Para cualquier solicitud de privacidad o ejercicio de derechos, contacte a nuestro Delegado de Protección de Datos (DPO) en: <a href="mailto:privacy@xindro.app" style="color: #818cf8; text-decoration: underline; font-weight: 700;">privacy@xindro.app</a>.
           </p>
         </div>
 
         <div class="legal-section">
-          <h2><span class="sec-num">2.</span> Política de Cookies y Tecnologías de Rastreo</h2>
+          <h2><span class="sec-num">2.</span> Tratamiento de Datos mediante Modelos de Inteligencia Artificial</h2>
           <p>
-            Utilizamos cookies propias y de terceros con el fin de garantizar el funcionamiento técnico de la plataforma, permitir el inicio de sesión seguro, medir el rendimiento de nuestros endpoints de inteligencia artificial y recordar tus preferencias (como el idioma seleccionado).
+            En cumplimiento del <strong>Reglamento de Inteligencia Artificial de la UE (EU AI Act 2024/1689)</strong>, informamos con total transparencia cómo procesamos los datos mediante IA:
           </p>
+          <ul>
+            <li><strong>Datos Analizados por la IA:</strong> Texto de comentarios públicos en publicaciones de Facebook e Instagram, nombres de usuario públicos (*handles*) y contexto de las publicaciones vinculadas.</li>
+            <li><strong>Finalidad Exclusiva:</strong> Clasificación de intención comercial (identificación de preguntas sobre precios, soporte o felicitaciones), cálculo de sentimiento y redacción asistida de respuestas adaptadas al tono de marca del cliente.</li>
+            <li><strong>Compromiso de No Entrenamiento:</strong> <strong>NO utilizamos los datos privados, comentarios ni prompts de nuestros clientes para entrenar o reentrenar modelos públicos de terceros</strong> (Google Gemini u OpenAI). Las llamadas a las APIs de IA se ejecutan bajo acuerdos de cero retención para entrenamiento (*Zero Data Retention Agreements*).</li>
+          </ul>
+        </div>
 
+        <div class="legal-section">
+          <h2><span class="sec-num">3.</span> Bases Jurídicas del Tratamiento (Art. 6 RGPD)</h2>
+          <p>El tratamiento de sus datos se fundamenta en:</p>
+          <ul>
+            <li><strong>Ejecución de Contrato (Art. 6.1.b RGPD):</strong> Necesario para prestar los servicios de moderación y respuesta de redes sociales solicitados.</li>
+            <li><strong>Consentimiento Explícito (Art. 6.1.a RGPD):</strong> Para la activación de cookies no esenciales y el enlace voluntario de cuentas de Meta.</li>
+            <li><strong>Interés Legítimo (Art. 6.1.f RGPD):</strong> Para garantizar la ciberseguridad, prevención de ataques de fuerza bruta y mitigación de spam.</li>
+          </ul>
+        </div>
+
+        <div class="legal-section">
+          <h2><span class="sec-num">4.</span> Transferencias Internacionales y Subprocesadores</h2>
+          <p>
+            Para proveer el Servicio, transferimos fragmentos de texto procesados a los siguientes subprocesadores ubicados en Estados Unidos, todos certificados bajo el <strong>EU-U.S. Data Privacy Framework (DPF)</strong> y Cláusulas Contractuales Tipo (SCC):
+          </p>
+          <ul>
+            <li><strong>Google LLC / Google Cloud Platform (EE.UU.):</strong> Proveedor del motor LLM Google Gemini.</li>
+            <li><strong>OpenAI LLC (EE.UU.):</strong> Proveedor del motor LLM GPT-4o-mini.</li>
+            <li><strong>Meta Platforms, Inc. / Meta Platforms Ireland Ltd. (EE.UU. / Irlanda):</strong> Ingesta y publicación mediante Meta Graph API.</li>
+          </ul>
+        </div>
+
+        <div class="legal-section">
+          <h2><span class="sec-num">5.</span> Política de Cookies y Tecnologías de Rastreo</h2>
+          <p>
+            Utilizamos cookies técnicas necesarias y cookies opcionales conforme a las directrices de la AEPD y el Comité Europeo de Protección de Datos (CEPD):
+          </p>
           <table class="cookie-table">
             <thead>
               <tr>
-                <th>Categoría</th>
+                <th>Nombre</th>
+                <th>Tipo</th>
                 <th>Finalidad</th>
                 <th>Duración</th>
                 <th>Estado</th>
@@ -199,49 +243,54 @@ Security::applySecurityHeaders(false);
             </thead>
             <tbody>
               <tr>
-                <td><strong>Técnicas / Esenciales</strong></td>
-                <td>Mantener la sesión autenticada, tokens anti-CSRF y protección contra ataques.</td>
-                <td>Sesión / 30 días</td>
-                <td><span style="color:#34d399; font-weight:bold;">Obligatorias</span></td>
+                <td><code>PHPSESSID</code> / <code>csrf_token</code></td>
+                <td>Técnica (Esencial)</td>
+                <td>Gestión de sesión segura y protección contra ataques CSRF.</td>
+                <td>Sesión</td>
+                <td><span style="color:#34d399; font-weight:bold;">Obligatoria</span></td>
               </tr>
               <tr>
-                <td><strong>Analítica & Rendimiento</strong></td>
-                <td>Medir latencia de respuesta de la IA, estabilidad de la API y patrones anónimos de uso.</td>
-                <td>12 meses</td>
-                <td><span style="color:#a78bfa; font-weight:bold;">Opcional (Configurable)</span></td>
+                <td><code>rate_limit_*</code></td>
+                <td>Seguridad (Esencial)</td>
+                <td>Mitigación de ataques de denegación de servicio y wallet drain.</td>
+                <td>1 a 60 min</td>
+                <td><span style="color:#34d399; font-weight:bold;">Obligatoria</span></td>
               </tr>
               <tr>
-                <td><strong>Personalización</strong></td>
-                <td>Recordar el idioma elegido (ES/EN/PT), tonos del simulador y preferencias guardadas.</td>
+                <td><code>cookie_consent</code></td>
+                <td>Funcional</td>
+                <td>Almacenar las preferencias de cookies elegidas por el usuario.</td>
                 <td>12 meses</td>
-                <td><span style="color:#a78bfa; font-weight:bold;">Opcional (Configurable)</span></td>
+                <td><span style="color:#34d399; font-weight:bold;">Obligatoria</span></td>
+              </tr>
+              <tr>
+                <td><code>sb_lang</code> / <code>active_brand</code></td>
+                <td>Personalización</td>
+                <td>Recordar el idioma seleccionado (ES/EN/PT) y la marca activa.</td>
+                <td>12 meses</td>
+                <td><span style="color:#a78bfa; font-weight:bold;">Opcional</span></td>
               </tr>
             </tbody>
           </table>
-
-          <div class="legal-highlight-box">
-            <p>
-              💡 Puedes modificar tus preferencias de cookies en cualquier momento haciendo clic en el enlace <strong>"Preferencias de cookies"</strong> ubicado en el pie de página de nuestro sitio web.
-            </p>
-          </div>
         </div>
 
         <div class="legal-section">
-          <h2><span class="sec-num">3.</span> Integración con Meta Graph API (Facebook e Instagram)</h2>
+          <h2><span class="sec-num">6.</span> Derechos ARCO-POL (Acceso, Rectificación, Supresión y Olvido)</h2>
           <p>
-            Nuestra plataforma se integra de manera oficial con la API Graph de Meta bajo estrictos protocolos de consentimiento granular:
+            Usted puede ejercer en cualquier momento sus derechos de <strong>Acceso, Rectificación, Cancelación, Oposición, Portabilidad, Limitación y Supresión</strong> enviando un correo a <a href="mailto:privacy@xindro.app" style="color: #818cf8; text-decoration: underline;">privacy@xindro.app</a> indicando su solicitud.
           </p>
-          <ul>
-            <li><strong>Permisos Solicitados:</strong> <code>pages_show_list</code>, <code>pages_read_engagement</code>, <code>pages_manage_posts</code>, <code>instagram_basic</code>, <code>instagram_manage_comments</code>.</li>
-            <li><strong>Uso Exclusivo:</strong> Los tokens de acceso se almacenan cifrados con AES-256-GCM y se usan únicamente para sincronizar comentarios, calcular horarios de publicación y emitir respuestas bajo las directrices del creador.</li>
-            <li><strong>No Venta de Datos:</strong> Nunca vendemos, transferimos ni compartimos datos obtenidos de Meta con terceros anunciantes ni intermediarios.</li>
-          </ul>
+          <p>
+            Para la eliminación específica de datos de Meta, consulte nuestras <a href="data-deletion.php" style="color: #818cf8; text-decoration: underline; font-weight: 700;">Instrucciones Oficiales de Eliminación de Datos (Meta)</a>.
+          </p>
         </div>
 
         <div class="legal-section">
-          <h2><span class="sec-num">4.</span> Eliminación y Retención de Datos</h2>
+          <h2><span class="sec-num">7.</span> Capítulo Específico CCPA/CPRA (California) & LGPD (Brasil)</h2>
+          <div class="legal-highlight-box">
+            <p><strong>DO NOT SELL OR SHARE MY PERSONAL INFORMATION:</strong> XINDRO no vende ni comparte información personal de los usuarios con corredores de datos (*data brokers*) ni con fines de publicidad conductual cruzada.</p>
+          </div>
           <p>
-            Cualquier usuario puede solicitar la eliminación total e inmediata de sus datos y tokens en nuestro endpoint verificado: <a href="data-deletion.php" style="color:#818cf8; text-decoration:underline;">Mecanismo de Eliminación de Datos (Meta)</a>.
+            Los residentes de California y Brasil gozan de los derechos reconocidos en la CCPA y la LGPD, incluyendo el derecho a conocer las categorías de datos recolectados, derecho a la eliminación y derecho a no ser discriminados por el ejercicio de sus derechos de privacidad.
           </p>
         </div>
       </div>
@@ -251,66 +300,36 @@ Security::applySecurityHeaders(false);
       <!-- ================================================================= -->
       <div id="content-en" style="display:none;">
         <div class="legal-section">
-          <h2><span class="sec-num">1.</span> Identity & Data Controller</h2>
+          <h2><span class="sec-num">1.</span> Data Controller & Privacy Officer</h2>
           <p>
-            Welcome to <strong>XINDRO</strong> (operated by <em>Xindro Tech, Inc.</em>, hereinafter "the Platform" or "we"). We are firmly committed to ensuring the confidentiality, security, and integrity of the personal data of our users, creators, and visitors in strict compliance with the EU General Data Protection Regulation (GDPR), the California Consumer Privacy Act (CCPA), and Meta Developer Platform Terms.
+            <strong>XINDRO</strong> operates as the Data Controller under the EU General Data Protection Regulation (GDPR 2016/679), California Consumer Privacy Act (CCPA/CPRA), and Brazilian LGPD. You may reach our Data Protection Officer at: <a href="mailto:privacy@xindro.app" style="color: #818cf8; text-decoration: underline; font-weight: 700;">privacy@xindro.app</a>.
           </p>
         </div>
 
         <div class="legal-section">
-          <h2><span class="sec-num">2.</span> Cookie Policy & Tracking Technologies</h2>
+          <h2><span class="sec-num">2.</span> Artificial Intelligence Data Processing & EU AI Act</h2>
           <p>
-            We use first-party and third-party cookies to provide core security functionality, secure session authentication, measure AI latency and endpoint performance, and store your user preferences (such as selected language).
-          </p>
-
-          <table class="cookie-table">
-            <thead>
-              <tr>
-                <th>Category</th>
-                <th>Purpose</th>
-                <th>Duration</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><strong>Essential / Security</strong></td>
-                <td>Session management, CSRF attack prevention, and brute force defenses.</td>
-                <td>Session / 30 days</td>
-                <td><span style="color:#34d399; font-weight:bold;">Strictly Required</span></td>
-              </tr>
-              <tr>
-                <td><strong>Analytics & Performance</strong></td>
-                <td>Measure AI generation speed, API uptime, and anonymous usage trends.</td>
-                <td>12 months</td>
-                <td><span style="color:#a78bfa; font-weight:bold;">Optional (Configurable)</span></td>
-              </tr>
-              <tr>
-                <td><strong>Personalization</strong></td>
-                <td>Store preferred language (ES/EN/PT), tone settings, and simulator states.</td>
-                <td>12 months</td>
-                <td><span style="color:#a78bfa; font-weight:bold;">Optional (Configurable)</span></td>
-              </tr>
-            </tbody>
-          </table>
-
-          <div class="legal-highlight-box">
-            <p>
-              💡 You can change your cookie preferences at any time by clicking the <strong>"Cookie Preferences"</strong> link in the footer of our website.
-            </p>
-          </div>
-        </div>
-
-        <div class="legal-section">
-          <h2><span class="sec-num">3.</span> Meta Graph API Integration (Instagram & Facebook)</h2>
-          <p>
-            Our service connects to Meta Graph API following strict granular authorization:
+            In accordance with <strong>EU AI Act Regulation 2024/1689</strong>:
           </p>
           <ul>
-            <li><strong>Requested Scopes:</strong> <code>pages_show_list</code>, <code>pages_read_engagement</code>, <code>pages_manage_posts</code>, <code>instagram_basic</code>, <code>instagram_manage_comments</code>.</li>
-            <li><strong>Data Usage:</strong> Tokens are encrypted using AES-256-GCM. We only process incoming comments and schedule creator posts according to your configured brand guidelines.</li>
-            <li><strong>Zero Data Selling:</strong> We never sell or broker Meta data to third parties.</li>
+            <li><strong>Processed Data:</strong> Public social media comments, user handles, and publication context.</li>
+            <li><strong>Purpose:</strong> Commercial intent classification, sentiment scoring, and assistive copilot generation.</li>
+            <li><strong>Zero Training Policy:</strong> We do <strong>NOT</strong> use customer data or social comments to train public generative foundation models.</li>
           </ul>
+        </div>
+
+        <div class="legal-section">
+          <h2><span class="sec-num">3.</span> International Transfers & Subprocessors</h2>
+          <p>
+            Data transfers to third-party AI sub-processors located in the US (Google Cloud LLC, OpenAI LLC, Meta Platforms Inc.) occur strictly under the <strong>EU-U.S. Data Privacy Framework (DPF)</strong> and Standard Contractual Clauses (SCCs).
+          </p>
+        </div>
+
+        <div class="legal-section">
+          <h2><span class="sec-num">4.</span> Meta Data Deletion Instructions</h2>
+          <p>
+            To purge all data ingested via Meta Graph API, visit our automated <a href="data-deletion.php" style="color: #818cf8; text-decoration: underline; font-weight: 700;">Meta User Data Deletion Instructions & Callback</a>.
+          </p>
         </div>
       </div>
 
@@ -319,54 +338,23 @@ Security::applySecurityHeaders(false);
       <!-- ================================================================= -->
       <div id="content-pt" style="display:none;">
         <div class="legal-section">
-          <h2><span class="sec-num">1.</span> Identidade e Controlador de Dados</h2>
+          <h2><span class="sec-num">1.</span> Controlador de Dados e Conformidade LGPD</h2>
           <p>
-            Bem-vindo ao <strong>XINDRO</strong> (operado por <em>Xindro Tech, Inc.</em>). Estamos comprometidos com a privacidade, segurança e integridade no tratamento dos dados pessoais de criadores e visitantes, em conformidade com a Lei Geral de Proteção de Dados (LGPD Brasil), o RGPD da União Europeia e os Termos de Desenvolvedores da Meta.
+            A <strong>XINDRO</strong> atua em total conformidade com a Lei Geral de Proteção de Dados (LGPD - Lei nº 13.709/2018) e o RGPD da União Europeia. Contato do DPO: <a href="mailto:privacy@xindro.app" style="color: #818cf8; text-decoration: underline; font-weight: 700;">privacy@xindro.app</a>.
           </p>
         </div>
 
         <div class="legal-section">
-          <h2><span class="sec-num">2.</span> Política de Cookies e Tecnologias de Rastreamento</h2>
+          <h2><span class="sec-num">2.</span> Processamento de IA e Não Utilização para Treinamento</h2>
           <p>
-            Utilizamos cookies para garantir a segurança da plataforma, autenticar sessões, medir a estabilidade da IA e lembrar o idioma preferido do usuário.
+            Os comentários públicos são processados exclusivamente para fins de atendimento e classificação. <strong>Não utilizamos os dados de clientes para treinar modelos públicos de IA</strong>.
           </p>
-
-          <table class="cookie-table">
-            <thead>
-              <tr>
-                <th>Categoria</th>
-                <th>Finalidade</th>
-                <th>Duração</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><strong>Essenciais / Segurança</strong></td>
-                <td>Sessão segura, tokens anti-CSRF e proteção contra ataques.</td>
-                <td>Sessão / 30 dias</td>
-                <td><span style="color:#34d399; font-weight:bold;">Obrigatórios</span></td>
-              </tr>
-              <tr>
-                <td><strong>Desempenho & Análise</strong></td>
-                <td>Monitorar latência da IA e estabilidade da API de forma anônima.</td>
-                <td>12 meses</td>
-                <td><span style="color:#a78bfa; font-weight:bold;">Opcional</span></td>
-              </tr>
-              <tr>
-                <td><strong>Personalização</strong></td>
-                <td>Lembrar idioma (ES/EN/PT) e configurações do simulador.</td>
-                <td>12 meses</td>
-                <td><span style="color:#a78bfa; font-weight:bold;">Opcional</span></td>
-              </tr>
-            </tbody>
-          </table>
         </div>
 
         <div class="legal-section">
-          <h2><span class="sec-num">3.</span> Integração com a Meta Graph API</h2>
+          <h2><span class="sec-num">3.</span> Exclusão de Dados da Meta</h2>
           <p>
-            Todos os tokens do Facebook e Instagram são armazenados com criptografia AES-256-GCM e utilizados exclusivamente para automação autorizada pelo criador.
+            Para solicitar a exclusão de dados da Meta, acesse nossas <a href="data-deletion.php" style="color: #818cf8; text-decoration: underline; font-weight: 700;">Instruções de Exclusão de Dados</a>.
           </p>
         </div>
       </div>
@@ -376,13 +364,27 @@ Security::applySecurityHeaders(false);
 
   <script>
     function setLanguage(lang) {
-      document.getElementById('content-es').style.display = lang === 'es' ? 'block' : 'none';
-      document.getElementById('content-en').style.display = lang === 'en' ? 'block' : 'none';
-      document.getElementById('content-pt').style.display = lang === 'pt' ? 'block' : 'none';
+      document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('content-es').style.display = 'none';
+      document.getElementById('content-en').style.display = 'none';
+      document.getElementById('content-pt').style.display = 'none';
 
-      document.getElementById('btn-es').className = 'lang-btn' + (lang === 'es' ? ' active' : '');
-      document.getElementById('btn-en').className = 'lang-btn' + (lang === 'en' ? ' active' : '');
-      document.getElementById('btn-pt').className = 'lang-btn' + (lang === 'pt' ? ' active' : '');
+      if (lang === 'es') {
+        document.getElementById('btn-es').classList.add('active');
+        document.getElementById('content-es').style.display = 'block';
+        document.getElementById('page-title').textContent = 'Política de Privacidad, IA y Cookies';
+        document.getElementById('page-updated').textContent = 'Última actualización: Septiembre de 2026 • Versión 4.0 (Cumplimiento RGPD, CCPA, LGPD, EU AI Act & Meta Graph API)';
+      } else if (lang === 'en') {
+        document.getElementById('btn-en').classList.add('active');
+        document.getElementById('content-en').style.display = 'block';
+        document.getElementById('page-title').textContent = 'Privacy Policy, AI Processing & Cookies';
+        document.getElementById('page-updated').textContent = 'Last Updated: September 2026 • Version 4.0 (GDPR, CCPA, LGPD, EU AI Act & Meta Graph API Compliant)';
+      } else if (lang === 'pt') {
+        document.getElementById('btn-pt').classList.add('active');
+        document.getElementById('content-pt').style.display = 'block';
+        document.getElementById('page-title').textContent = 'Política de Privacidade, IA e Cookies';
+        document.getElementById('page-updated').textContent = 'Última atualização: Setembro de 2026 • Versão 4.0 (Conformidade com RGPD, LGPD e Leis de IA)';
+      }
     }
   </script>
 

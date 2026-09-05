@@ -1,9 +1,10 @@
 <?php
 /**
- * Settings Helper Service (Multi-Tenant & Per-User Isolated)
+ * Settings Helper Service (Multi-Tenant & Per-User Isolated with In-Memory Cache)
  */
 require_once __DIR__ . '/database.php';
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/../services/CacheService.php';
 
 class Settings {
     private static function resolveUserId(?int $userId = null): int {
@@ -16,40 +17,44 @@ class Settings {
         return 1;
     }
 
+    /**
+     * Get a setting value (Served from L1/L2/L3 in-memory cache)
+     */
     public static function get(string $key, $default = null, ?int $userId = null) {
         $uid = self::resolveUserId($userId);
-        $pdo = Database::getConnection();
-        $stmt = $pdo->prepare("SELECT value FROM settings WHERE user_id = :uid AND key = :key LIMIT 1");
-        $stmt->execute([':uid' => $uid, ':key' => $key]);
-        $row = $stmt->fetch();
-        return $row !== false ? $row['value'] : $default;
+        $settings = CacheService::getUserSettings($uid);
+        return array_key_exists($key, $settings) ? $settings[$key] : $default;
     }
 
+    /**
+     * Get all settings dictionary for a user (Served from in-memory cache)
+     */
     public static function getAll(?int $userId = null): array {
         $uid = self::resolveUserId($userId);
-        $pdo = Database::getConnection();
-        $stmt = $pdo->prepare("SELECT key, value FROM settings WHERE user_id = :uid");
-        $stmt->execute([':uid' => $uid]);
-        $settings = [];
-        while ($row = $stmt->fetch()) {
-            $settings[$row['key']] = $row['value'];
-        }
+        $settings = CacheService::getUserSettings($uid);
+        unset($settings['_cache_key']);
         return $settings;
     }
 
+    /**
+     * Persist setting and invalidate cache
+     */
     public static function set(string $key, string $value, ?int $userId = null): void {
         $uid = self::resolveUserId($userId);
         $pdo = Database::getConnection();
-        $stmt = $pdo->prepare("INSERT OR REPLACE INTO settings (user_id, key, value) VALUES (:uid, :key, :value)");
-        $stmt->execute([':uid' => $uid, ':key' => $key, ':value' => $value]);
+        Database::upsertSetting($pdo, $uid, $key, $value);
+        CacheService::invalidateUserSettings($uid);
     }
 
+    /**
+     * Persist multiple settings and invalidate cache
+     */
     public static function setMultiple(array $data, ?int $userId = null): void {
         $uid = self::resolveUserId($userId);
         $pdo = Database::getConnection();
-        $stmt = $pdo->prepare("INSERT OR REPLACE INTO settings (user_id, key, value) VALUES (:uid, :key, :value)");
         foreach ($data as $k => $v) {
-            $stmt->execute([':uid' => $uid, ':key' => $k, ':value' => (string)$v]);
+            Database::upsertSetting($pdo, $uid, $k, (string)$v);
         }
+        CacheService::invalidateUserSettings($uid);
     }
 }

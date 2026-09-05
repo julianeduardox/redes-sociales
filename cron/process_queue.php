@@ -33,6 +33,7 @@ if (!$isCli) {
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/settings.php';
 require_once __DIR__ . '/../config/security.php';
+require_once __DIR__ . '/../services/CacheService.php';
 require_once __DIR__ . '/../services/AiAgentService.php';
 require_once __DIR__ . '/../services/MetaApiService.php';
 
@@ -122,16 +123,8 @@ foreach ($queueItems as $item) {
         foreach ($payload['entry'] as $entry) {
             $entryPageId = Security::sanitizeString($entry['id'] ?? '', 100);
 
-            // Determine target user from accounts table
-            $targetUserId = 1;
-            if (!empty($entryPageId)) {
-                $uStmt = $pdo->prepare("SELECT user_id FROM accounts WHERE page_id = :pid LIMIT 1");
-                $uStmt->execute([':pid' => $entryPageId]);
-                $uRow = $uStmt->fetch();
-                if ($uRow) {
-                    $targetUserId = (int)$uRow['user_id'];
-                }
-            }
+            // Determine target user from accounts table (Cached in memory)
+            $targetUserId = CacheService::getUserIdByPageId($entryPageId, $pdo);
 
             $isAutopilot = Settings::get('autopilot_enabled', '0', $targetUserId) === '1';
             $minAutopilotScore = Security::sanitizeInt(Settings::get('autopilot_min_score', 60, $targetUserId), 0, 100, 60);

@@ -650,6 +650,10 @@ if (Auth::check()) {
         <p class="field-error-msg" id="error-reg-password"></p>
       </div>
 
+      <div style="font-size: 0.76rem; color: #94a3b8; line-height: 1.5; margin-bottom: 18px; text-align: center;">
+        Al registrarte, confirmas que has leído y aceptas nuestros <a href="terms-of-service.php" target="_blank" style="color: #818cf8; text-decoration: underline; font-weight: 600;">Términos del Servicio</a> y nuestra <a href="privacy-policy.php" target="_blank" style="color: #818cf8; text-decoration: underline; font-weight: 600;">Política de Privacidad e IA</a>.
+      </div>
+
       <button type="submit" class="btn-auth-submit" id="btn-submit-register">
         <span>Crear mi Cuenta Gratis 🚀</span>
       </button>

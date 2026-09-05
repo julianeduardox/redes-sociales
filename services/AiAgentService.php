@@ -11,6 +11,7 @@
  */
 require_once __DIR__ . '/../config/settings.php';
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/CacheService.php';
 
 class AiAgentService {
 
@@ -466,45 +467,12 @@ class AiAgentService {
     }
 
     /**
-     * Resolve active Brand Voice for the current user
+     * Resolve active Brand Voice for the current user (Accelerated by In-Memory Cache)
      */
     public static function resolveActiveBrandVoice(PDO $pdo, array $runtimeOverrides = []): array {
-        $userId = Auth::id() ?: 1;
+        $userId = (class_exists('Auth') && Auth::check()) ? Auth::id() : 1;
         $activeBrandId = $runtimeOverrides['brand_voice_id'] ?? ($_SESSION['active_brand_id'] ?? null);
-
-        if ($activeBrandId) {
-            $stmt = $pdo->prepare("SELECT * FROM brand_voices WHERE id = :id AND user_id = :uid LIMIT 1");
-            $stmt->execute([':id' => $activeBrandId, ':uid' => $userId]);
-            $row = $stmt->fetch();
-            if ($row) return $row;
-        }
-
-        // Fallback to default brand voice
-        $stmtDef = $pdo->prepare("SELECT * FROM brand_voices WHERE user_id = :uid AND is_default = 1 LIMIT 1");
-        $stmtDef->execute([':uid' => $userId]);
-        $rowDef = $stmtDef->fetch();
-        if ($rowDef) return $rowDef;
-
-        // Fallback to first brand voice
-        $stmtFirst = $pdo->prepare("SELECT * FROM brand_voices WHERE user_id = :uid ORDER BY id ASC LIMIT 1");
-        $stmtFirst->execute([':uid' => $userId]);
-        $rowFirst = $stmtFirst->fetch();
-        if ($rowFirst) return $rowFirst;
-
-        // Fallback array if no records
-        return [
-            'brand_name' => 'Xindro Studio',
-            'persona_name' => 'Alex — Asistente de Marca',
-            'industry' => 'Comercio & Creadores',
-            'tone_level' => 'friendly_engaging',
-            'language' => 'es',
-            'system_prompt' => 'Eres el asistente oficial de la marca. Responde con calidez y claridad profesional.',
-            'warmth_level' => 85,
-            'depth_level' => 75,
-            'energy_level' => 80,
-            'closing_question_rule' => 'always',
-            'emoji_style' => 'moderate'
-        ];
+        return CacheService::getBrandVoice($userId, $activeBrandId ? (int)$activeBrandId : null, $pdo);
     }
 
     /**

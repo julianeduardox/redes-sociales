@@ -48,4 +48,7 @@ desktop.ini
 *.tmp
 *.bak
 *.swp
+*.cache
+data/cache/
+!data/cache/.gitkeep
 *~
