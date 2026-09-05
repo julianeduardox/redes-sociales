@@ -216,6 +216,7 @@ const AnalyticsController = {
 
     container.innerHTML = posts.map(p => {
       const safeImg = App.sanitizeUrl(p.media_url, 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=480&h=320&fit=crop&auto=format&q=75');
+      const safeCaption = App.escapeHtml(p.caption || (p.platform === 'instagram' ? 'Publicación de Instagram' : 'Publicación de Facebook'));
       const rawLikes = parseInt(p.total_likes, 10) || 0;
       const rawComments = parseInt(p.total_comments, 10) || 0;
       const rawShares = parseInt(p.total_shares, 10) || 0;
