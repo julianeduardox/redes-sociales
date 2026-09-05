@@ -315,16 +315,17 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
       </a>
 
       <!-- Desktop Navigation Links with generous spacing -->
-      <nav class="hidden lg:flex items-center gap-1 xl:gap-2.5 text-[13px] xl:text-sm font-semibold text-slate-600">
-        <a href="#funciones" data-i18n="nav_products" class="px-3 py-2 rounded-xl whitespace-nowrap hover:text-brand-600 hover:bg-slate-100/70 transition-colors">Productos</a>
-        <a href="#por-que-xindro" data-i18n="nav_why" class="px-3 py-2 rounded-xl whitespace-nowrap hover:text-brand-600 hover:bg-slate-100/70 transition-colors">¿Por qué Xindro?</a>
-        <a href="#simulador" data-i18n="nav_simulator" class="px-3 py-2 rounded-xl whitespace-nowrap hover:text-brand-600 hover:bg-slate-100/70 transition-colors flex items-center gap-1.5">
+      <nav class="hidden lg:flex items-center gap-1 xl:gap-2 text-[13px] xl:text-sm font-semibold text-slate-600">
+        <a href="#funciones" data-i18n="nav_products" class="px-2.5 py-2 rounded-xl whitespace-nowrap hover:text-brand-600 hover:bg-slate-100/70 transition-colors">Funciones</a>
+        <a href="#como-empezar" data-i18n="nav_steps" class="px-2.5 py-2 rounded-xl whitespace-nowrap hover:text-brand-600 hover:bg-slate-100/70 transition-colors">Cómo empezar</a>
+        <a href="#simulador" data-i18n="nav_simulator" class="px-2.5 py-2 rounded-xl whitespace-nowrap hover:text-brand-600 hover:bg-slate-100/70 transition-colors flex items-center gap-1.5">
           <span>Simulador</span>
           <span class="inline-block w-2 h-2 rounded-full bg-brand-500 live-dot"></span>
         </a>
-        <a href="#calculadora-roi" data-i18n="nav_roi" class="px-3 py-2 rounded-xl whitespace-nowrap hover:text-brand-600 hover:bg-slate-100/70 transition-colors">Calculadora</a>
-        <a href="#precios" data-i18n="nav_pricing" class="px-3 py-2 rounded-xl whitespace-nowrap hover:text-brand-600 hover:bg-slate-100/70 transition-colors">Precios</a>
-        <a href="#faq" data-i18n="nav_faq" class="px-3 py-2 rounded-xl whitespace-nowrap hover:text-brand-600 hover:bg-slate-100/70 transition-colors">FAQ</a>
+        <a href="#calculadora-roi" data-i18n="nav_roi" class="px-2.5 py-2 rounded-xl whitespace-nowrap hover:text-brand-600 hover:bg-slate-100/70 transition-colors">Calculadora</a>
+        <a href="#por-que-xindro" data-i18n="nav_why" class="px-2.5 py-2 rounded-xl whitespace-nowrap hover:text-brand-600 hover:bg-slate-100/70 transition-colors">¿Por qué Xindro?</a>
+        <a href="#precios" data-i18n="nav_pricing" class="px-2.5 py-2 rounded-xl whitespace-nowrap hover:text-brand-600 hover:bg-slate-100/70 transition-colors">Precios</a>
+        <a href="#faq" data-i18n="nav_faq" class="px-2.5 py-2 rounded-xl whitespace-nowrap hover:text-brand-600 hover:bg-slate-100/70 transition-colors">FAQ</a>
       </nav>
 
       <!-- Right Controls: Language Selector & Auth CTAs & Mobile Toggle -->
@@ -387,22 +388,26 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
     <div id="mobile-nav-drawer" class="lg:hidden hidden bg-white/95 backdrop-blur-2xl border-b border-slate-200 shadow-2xl px-6 py-6 transition-all">
       <div class="flex flex-col space-y-3 font-semibold text-slate-700 text-sm">
         <a href="#funciones" onclick="MobileNav.close()" data-i18n="nav_products" class="p-2.5 rounded-xl hover:bg-brand-50 hover:text-brand-700 transition-colors flex items-center justify-between">
-          <span>📦 Productos</span>
+          <span>⚡ Funciones y Beneficios</span>
           <span class="text-slate-400">→</span>
         </a>
-        <a href="#por-que-xindro" onclick="MobileNav.close()" data-i18n="nav_why" class="p-2.5 rounded-xl hover:bg-brand-50 hover:text-brand-700 transition-colors flex items-center justify-between">
-          <span>🛡️ ¿Por qué Xindro?</span>
+        <a href="#como-empezar" onclick="MobileNav.close()" data-i18n="nav_steps" class="p-2.5 rounded-xl hover:bg-brand-50 hover:text-brand-700 transition-colors flex items-center justify-between">
+          <span>🚀 Cómo empezar en 3 pasos</span>
           <span class="text-slate-400">→</span>
         </a>
         <a href="#simulador" onclick="MobileNav.close()" data-i18n="nav_simulator" class="p-2.5 rounded-xl hover:bg-brand-50 hover:text-brand-700 transition-colors flex items-center justify-between">
           <span class="flex items-center gap-2">
-            <span>⚡ Simulador en Vivo</span>
+            <span>✨ Simulador en Vivo</span>
             <span class="w-2 h-2 rounded-full bg-brand-500 live-dot"></span>
           </span>
           <span class="text-slate-400">→</span>
         </a>
         <a href="#calculadora-roi" onclick="MobileNav.close()" data-i18n="nav_roi" class="p-2.5 rounded-xl hover:bg-brand-50 hover:text-brand-700 transition-colors flex items-center justify-between">
-          <span>🧮 Calculadora de Impacto</span>
+          <span>🧮 Calculadora de Ahorro</span>
+          <span class="text-slate-400">→</span>
+        </a>
+        <a href="#por-que-xindro" onclick="MobileNav.close()" data-i18n="nav_why" class="p-2.5 rounded-xl hover:bg-brand-50 hover:text-brand-700 transition-colors flex items-center justify-between">
+          <span>🛡️ ¿Por qué Xindro?</span>
           <span class="text-slate-400">→</span>
         </a>
         <a href="#precios" onclick="MobileNav.close()" data-i18n="nav_pricing" class="p-2.5 rounded-xl hover:bg-brand-50 hover:text-brand-700 transition-colors flex items-center justify-between">
@@ -433,9 +438,9 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
   </header>
 
   <!-- ========================================================================= -->
-  <!-- 2. HERO SECTION MULTILINGÜE -->
+  <!-- 2. HERO SECTION CON PROMESA CONCRETA + DEMO VISUAL DEL FLUJO -->
   <!-- ========================================================================= -->
-  <section class="relative pt-32 pb-14 md:pt-44 md:pb-24 hero-mesh-bg overflow-hidden border-b border-slate-100">
+  <section class="relative pt-32 pb-14 md:pt-44 md:pb-20 hero-mesh-bg overflow-hidden border-b border-slate-100">
     
     <div class="absolute top-20 left-1/2 -translate-x-1/2 w-[650px] h-[350px] bg-brand-400/10 blur-[120px] rounded-full pointer-events-none -z-10"></div>
     
@@ -447,7 +452,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75"></span>
           <span class="relative inline-flex rounded-full h-2 w-2 bg-brand-500"></span>
         </span>
-        <span data-i18n="hero_badge">El sistema operativo de IA para creadores de contenido</span>
+        <span data-i18n="hero_badge">El sistema operativo de IA para creadores de contenido y marcas</span>
       </div>
 
       <!-- Main Headline (H1) -->
@@ -467,13 +472,13 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           <span data-i18n="hero_cta_sim">Probar una respuesta gratis</span>
           <span class="text-lg">✨</span>
         </a>
-        <a href="#por-que-xindro" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3.5 sm:px-8 sm:py-4 rounded-xl text-sm sm:text-base font-bold text-slate-700 bg-white border border-slate-200 hover:border-brand-300 hover:bg-slate-50 hover:text-brand-700 shadow-sm secondary-btn">
-          <span data-i18n="hero_cta_calc">Ver cómo funciona</span>
-          <span>💡</span>
+        <a href="#funciones" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3.5 sm:px-8 sm:py-4 rounded-xl text-sm sm:text-base font-bold text-slate-700 bg-white border border-slate-200 hover:border-brand-300 hover:bg-slate-50 hover:text-brand-700 shadow-sm secondary-btn">
+          <span data-i18n="hero_cta_calc">Qué puedes hacer</span>
+          <span>⚡</span>
         </a>
       </div>
 
-      <!-- Live Interactive Visual Hero Card -->
+      <!-- Live Interactive Visual Hero Card: Flow: Comentario -> Intención -> Sugerencia -> Aprobación -->
       <div class="relative max-w-4xl mx-auto rounded-2xl sm:rounded-3xl bg-white border border-slate-200/90 shadow-elevated-card p-4 sm:p-6 md:p-8 text-left">
         
         <div class="flex flex-wrap items-center justify-between border-b border-slate-100 pb-4 mb-5 sm:mb-6 gap-2">
@@ -481,11 +486,11 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
             <div class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-red-400"></div>
             <div class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-amber-400"></div>
             <div class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-emerald-400"></div>
-            <span class="text-[11px] sm:text-xs font-semibold text-slate-400 ml-1 sm:ml-2" data-i18n="hero_card_title">XINDRO Live Copilot — Flujo en Tiempo Real</span>
+            <span class="text-[11px] sm:text-xs font-semibold text-slate-400 ml-1 sm:ml-2" data-i18n="hero_card_title">Flujo en Tiempo Real: Comentario ➔ Detección de Intención ➔ Sugerencia ➔ Aprobación Humana</span>
           </div>
           <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] sm:text-xs font-bold">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 live-dot"></span>
-            <span data-i18n="hero_card_status">Meta Webhook Activo</span>
+            <span data-i18n="hero_card_status">Meta Graph API Oficial</span>
           </div>
         </div>
 
@@ -499,15 +504,15 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
                 <div class="text-xs font-bold text-slate-800">@alejandro.creator</div>
                 <div class="text-[10px] text-slate-500" data-i18n="hero_card_time">Instagram • Hace 2 seg</div>
               </div>
-              <span class="ml-auto text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded bg-brand-50 text-brand-700 border border-brand-200/60">
-                Score: 96/100
+              <span class="ml-auto text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded bg-brand-50 text-brand-700 border border-brand-200/60" title="Prioridad Comercial basada en consulta de compra">
+                Prioridad: 96/100
               </span>
             </div>
             <p id="hero-sample-comment" class="text-xs sm:text-[13px] text-slate-700 leading-relaxed font-medium">
               "Llevo semanas intentando ser constante en mis redes pero me quedo sin ideas y pierdo motivación. ¿Cómo estructuran su rutina diaria?"
             </p>
             <div class="mt-3 pt-2.5 border-t border-slate-200/60 flex items-center justify-between text-[10px] sm:text-[11px] text-slate-500 font-semibold">
-              <span data-i18n="hero_card_intent">🎯 Intención: <strong class="text-brand-600">Pregunta Clave</strong></span>
+              <span data-i18n="hero_card_intent">🎯 Intención: <strong class="text-brand-600">Pregunta de Mentoría</strong></span>
               <span class="text-emerald-600 font-bold">⚡ 142ms</span>
             </div>
           </div>
@@ -517,17 +522,17 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
             <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-brand-50 border border-brand-200 flex items-center justify-center font-bold text-xs sm:text-sm shadow-sm">
               ⚡
             </div>
-            <span class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-1" data-i18n="hero_card_calibrated">IA Calibrada</span>
+            <span class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-1" data-i18n="hero_card_calibrated">Voz Calibrada</span>
           </div>
 
           <!-- Generated AI Reply -->
           <div class="md:col-span-5 bg-gradient-to-br from-brand-50/70 to-indigo-50/50 rounded-xl sm:rounded-2xl p-4 border border-brand-200/80">
             <div class="flex items-center gap-2 mb-2">
               <span class="text-xs font-bold text-brand-800 flex items-center gap-1.5">
-                <span data-i18n="hero_card_bot_reply">🤖 Respuesta con Voz de Marca</span>
+                <span data-i18n="hero_card_bot_reply">🤖 Sugerencia con Voz de Marca</span>
               </span>
               <span class="ml-auto text-[9px] sm:text-[10px] font-bold text-brand-700 bg-brand-100/70 px-2 py-0.5 rounded-full" data-i18n="hero_card_tone">
-                Mentor Empático
+                Mentor Sabio
               </span>
             </div>
             <p id="hero-sample-reply" class="text-xs sm:text-[13px] text-brand-950 leading-relaxed font-medium">
@@ -535,7 +540,9 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
             </p>
             <div class="mt-3 pt-2 border-t border-brand-200/50 flex items-center justify-between text-[10px] sm:text-[11px]">
               <span class="text-brand-700 font-semibold" data-i18n="hero_card_retention">🚀 Retención: <strong class="text-brand-900">+380%</strong></span>
-              <span class="text-emerald-600 font-bold" data-i18n="hero_card_ready">✔ Listo para postear</span>
+              <span class="text-emerald-600 font-bold flex items-center gap-1" data-i18n="hero_card_ready">
+                <span>✔</span> 1-Clic Aprobar
+              </span>
             </div>
           </div>
 
@@ -547,55 +554,55 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
   </section>
 
   <!-- ========================================================================= -->
-  <!-- 3. MARQUEE INFINITO DE TECNOLOGÍAS & ECOSISTEMA -->
+  <!-- 3. MARQUEE CLARO & ENFOCADO EN CONFIANZA Y BENEFICIOS -->
   <!-- ========================================================================= -->
-  <section class="py-6 sm:py-7 bg-slate-900 border-b border-slate-800 overflow-hidden text-white">
-    <div class="max-w-7xl mx-auto px-4 mb-3 text-center">
-      <p data-i18n="marquee_title" class="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-[0.2em] sm:tracking-[0.25em] text-slate-400">
-        Integrado con la Infraestructura Oficial de Redes Sociales e Inteligencia Artificial
+  <section class="py-5 sm:py-6 bg-slate-900 border-b border-slate-800 overflow-hidden text-white">
+    <div class="max-w-7xl mx-auto px-4 mb-2.5 text-center">
+      <p data-i18n="marquee_title" class="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-400">
+        Infraestructura Oficial, Seguridad y Control Total
       </p>
     </div>
 
     <div class="relative overflow-hidden w-full select-none">
-      <div class="animate-marquee items-center gap-8 sm:gap-12 font-mono text-[11px] sm:text-xs font-bold text-slate-300">
+      <div class="animate-marquee items-center gap-6 sm:gap-10 font-sans text-[11px] sm:text-xs font-bold text-slate-300">
         
         <span class="flex items-center gap-2 shrink-0 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
-          <span class="text-purple-400">📸</span> Meta Graph API (Instagram & Facebook)
+          <span class="text-purple-400">📸</span> Meta Graph API Oficial (Instagram & Facebook)
         </span>
         <span class="flex items-center gap-2 shrink-0 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
-          <span class="text-indigo-400">🌐</span> OpenRouter AI Hub (100+ Models)
+          <span class="text-emerald-400">🛡️</span> 100% Control Humano con Modo Copilot
         </span>
         <span class="flex items-center gap-2 shrink-0 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
-          <span class="text-emerald-400">🧠</span> Claude 3.5 Sonnet & DeepSeek V3
+          <span class="text-indigo-400">🏢</span> Separación y Aislamiento Total de Marcas
         </span>
         <span class="flex items-center gap-2 shrink-0 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
-          <span class="text-amber-400">🔒</span> HMAC-SHA256 Cryptographic Webhooks
+          <span class="text-amber-400">⚡</span> Respuestas en la Ventana de Oro del Algoritmo
         </span>
         <span class="flex items-center gap-2 shrink-0 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
-          <span class="text-indigo-400">🏢</span> Multi-Tenant SQLite Database Isolation
+          <span class="text-cyan-400">🔒</span> Conexión Cifrada y Segura de Extremo a Extremo
         </span>
         <span class="flex items-center gap-2 shrink-0 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
-          <span class="text-cyan-400">🛡️</span> GDPR / CCPA / LGPD Compliant
+          <span class="text-emerald-400">🎯</span> Detección Automática de Consultas Comerciales
         </span>
         
-        <!-- Duplicate for loop -->
+        <!-- Loop duplicate -->
         <span class="flex items-center gap-2 shrink-0 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
-          <span class="text-purple-400">📸</span> Meta Graph API (Instagram & Facebook)
+          <span class="text-purple-400">📸</span> Meta Graph API Oficial (Instagram & Facebook)
         </span>
         <span class="flex items-center gap-2 shrink-0 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
-          <span class="text-indigo-400">🌐</span> OpenRouter AI Hub (100+ Models)
+          <span class="text-emerald-400">🛡️</span> 100% Control Humano con Modo Copilot
         </span>
         <span class="flex items-center gap-2 shrink-0 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
-          <span class="text-emerald-400">🧠</span> Claude 3.5 Sonnet & DeepSeek V3
+          <span class="text-indigo-400">🏢</span> Separación y Aislamiento Total de Marcas
         </span>
         <span class="flex items-center gap-2 shrink-0 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
-          <span class="text-amber-400">🔒</span> HMAC-SHA256 Cryptographic Webhooks
+          <span class="text-amber-400">⚡</span> Respuestas en la Ventana de Oro del Algoritmo
         </span>
         <span class="flex items-center gap-2 shrink-0 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
-          <span class="text-indigo-400">🏢</span> Multi-Tenant SQLite Database Isolation
+          <span class="text-cyan-400">🔒</span> Conexión Cifrada y Segura de Extremo a Extremo
         </span>
         <span class="flex items-center gap-2 shrink-0 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
-          <span class="text-cyan-400">🛡️</span> GDPR / CCPA / LGPD Compliant
+          <span class="text-emerald-400">🎯</span> Detección Automática de Consultas Comerciales
         </span>
 
       </div>
@@ -603,12 +610,376 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
   </section>
 
   <!-- ========================================================================= -->
-  <!-- 4. SOCIAL PROOF & MÉTRICAS DE IMPACTO -->
+  <!-- 4. QUÉ PUEDES HACER CON XINDRO (MATRIZ DE FUNCIONES Y BENEFICIOS) -->
   <!-- ========================================================================= -->
-  <section class="py-10 sm:py-12 bg-slatecard border-b border-slate-200/80">
+  <section id="funciones" class="py-16 sm:py-24 bg-white border-b border-slate-100">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-3xl mx-auto mb-12 sm:mb-16">
+        <span data-i18n="feat_badge" class="text-xs font-extrabold uppercase tracking-wider text-brand-600 bg-brand-50 px-3.5 py-1 rounded-full border border-brand-200">
+          Funciones y Beneficios Claros
+        </span>
+        <h2 data-i18n="feat_h2" class="text-2xl sm:text-4xl md:text-5xl font-extrabold text-midnight tracking-tight mt-3 mb-3 sm:mb-4">
+          Qué puedes hacer con XINDRO
+        </h2>
+        <p data-i18n="feat_sub" class="text-sm sm:text-lg text-slate-600 font-normal">
+          Todo lo que necesitas para centralizar tus redes sociales, responder a tus seguidores con precisión y convertir comentarios en ventas.
+        </p>
+      </div>
+
+      <!-- Feature-Benefit Grid (5 Key Pillars) -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+        
+        <!-- Card 1: Comentarios de Instagram y Facebook en un solo panel -->
+        <div class="feature-matrix-card rounded-2xl bg-slatecard border border-slate-200/90 p-6 sm:p-7 flex flex-col justify-between hover:border-brand-300 hover:shadow-elevated-card">
+          <div>
+            <div class="w-12 h-12 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center text-2xl font-bold mb-4">
+              💬
+            </div>
+            <h3 data-i18n="feat1_t" class="text-base sm:text-lg font-bold text-midnight mb-2">
+              Comentarios de Instagram y Facebook en un panel
+            </h3>
+            <p data-i18n="feat1_d" class="text-xs sm:text-sm text-slate-600 leading-relaxed mb-4">
+              <strong class="text-slate-800">Beneficio:</strong> Revisa y responde todas tus conversaciones en un solo lugar sin cambiar de cuenta constantemente ni perder mensajes importantes.
+            </p>
+          </div>
+          <div class="pt-3 border-t border-slate-200 flex items-center justify-between text-[11px] font-bold text-brand-700">
+            <span data-i18n="feat1_status">✔ Meta Graph API Oficial Activa</span>
+            <span class="text-slate-400">IG & FB</span>
+          </div>
+        </div>
+
+        <!-- Card 2: Identificación de consultas comerciales -->
+        <div class="feature-matrix-card rounded-2xl bg-slatecard border border-slate-200/90 p-6 sm:p-7 flex flex-col justify-between hover:border-brand-300 hover:shadow-elevated-card">
+          <div>
+            <div class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-2xl font-bold mb-4">
+              🎯
+            </div>
+            <h3 data-i18n="feat2_t" class="text-base sm:text-lg font-bold text-midnight mb-2">
+              Identificación de consultas comerciales
+            </h3>
+            <p data-i18n="feat2_d" class="text-xs sm:text-sm text-slate-600 leading-relaxed mb-4">
+              <strong class="text-slate-800">Beneficio:</strong> Encuentra de inmediato a quienes preguntan por precios, disponibilidad o servicios para cerrar ventas antes de que se enfríe el interés.
+            </p>
+          </div>
+          <div class="pt-3 border-t border-slate-200 flex items-center justify-between text-[11px] font-bold text-emerald-700">
+            <span data-i18n="feat2_status">✔ Detección de Leads en &lt;180ms</span>
+            <span class="text-slate-400">Score de Intención</span>
+          </div>
+        </div>
+
+        <!-- Card 3: Sugerencias con voz de marca -->
+        <div class="feature-matrix-card rounded-2xl bg-slatecard border border-slate-200/90 p-6 sm:p-7 flex flex-col justify-between hover:border-brand-300 hover:shadow-elevated-card">
+          <div>
+            <div class="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center text-2xl font-bold mb-4">
+              🧠
+            </div>
+            <h3 data-i18n="feat3_t" class="text-base sm:text-lg font-bold text-midnight mb-2">
+              Sugerencias con voz de marca calibrada
+            </h3>
+            <p data-i18n="feat3_d" class="text-xs sm:text-sm text-slate-600 leading-relaxed mb-4">
+              <strong class="text-slate-800">Beneficio:</strong> Dedica hasta un 80% menos de tiempo a redactar respuestas repetitivas manteniendo el estilo, calidez y vocabulario exacto de tu marca.
+            </p>
+          </div>
+          <div class="pt-3 border-t border-slate-200 flex items-center justify-between text-[11px] font-bold text-blue-700">
+            <span data-i18n="feat3_status">✔ Calibrador Multi-Tono & Anti-Alucinación</span>
+            <span class="text-slate-400">Cero Fluff</span>
+          </div>
+        </div>
+
+        <!-- Card 4: Revisión antes de publicar (Modo Copilot) -->
+        <div class="feature-matrix-card rounded-2xl bg-slatecard border border-slate-200/90 p-6 sm:p-7 flex flex-col justify-between hover:border-brand-300 hover:shadow-elevated-card">
+          <div>
+            <div class="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center text-2xl font-bold mb-4">
+              🛡️
+            </div>
+            <h3 data-i18n="feat4_t" class="text-base sm:text-lg font-bold text-midnight mb-2">
+              Revisión antes de publicar (Modo Copilot)
+            </h3>
+            <p data-i18n="feat4_d" class="text-xs sm:text-sm text-slate-600 leading-relaxed mb-4">
+              <strong class="text-slate-800">Beneficio:</strong> Mantén control humano total sobre lo que dice tu marca. Revisa, edita o aprueba las sugerencias con 1 solo clic antes de que se envíen.
+            </p>
+          </div>
+          <div class="pt-3 border-t border-slate-200 flex items-center justify-between text-[11px] font-bold text-amber-700">
+            <span data-i18n="feat4_status">✔ 100% Supervisión Humana Garantizada</span>
+            <span class="text-slate-400">1-Clic</span>
+          </div>
+        </div>
+
+        <!-- Card 5: Gestión por marca y multi-cliente -->
+        <div class="feature-matrix-card rounded-2xl bg-slatecard border border-slate-200/90 p-6 sm:p-7 flex flex-col justify-between hover:border-brand-300 hover:shadow-elevated-card">
+          <div>
+            <div class="w-12 h-12 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-2xl font-bold mb-4">
+              🏢
+            </div>
+            <h3 data-i18n="feat5_t" class="text-base sm:text-lg font-bold text-midnight mb-2">
+              Gestión por marca y multi-cliente
+            </h3>
+            <p data-i18n="feat5_d" class="text-xs sm:text-sm text-slate-600 leading-relaxed mb-4">
+              <strong class="text-slate-800">Beneficio:</strong> Organiza y aísla el trabajo de distintos clientes o proyectos con perfiles de tono, catálogos y accesos totalmente independientes.
+            </p>
+          </div>
+          <div class="pt-3 border-t border-slate-200 flex items-center justify-between text-[11px] font-bold text-indigo-700">
+            <span data-i18n="feat5_status">✔ Disponible en Plan Agencia</span>
+            <span class="text-slate-400">Aislamiento Total</span>
+          </div>
+        </div>
+
+        <!-- Card 6: Smart Timing Predictivo -->
+        <div class="feature-matrix-card rounded-2xl bg-slatecard border border-slate-200/90 p-6 sm:p-7 flex flex-col justify-between hover:border-brand-300 hover:shadow-elevated-card">
+          <div>
+            <div class="w-12 h-12 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center text-2xl font-bold mb-4">
+              ⏰
+            </div>
+            <h3 data-i18n="feat6_t" class="text-base sm:text-lg font-bold text-midnight mb-2">
+              Smart Timing de Publicación
+            </h3>
+            <p data-i18n="feat6_d" class="text-xs sm:text-sm text-slate-600 leading-relaxed mb-4">
+              <strong class="text-slate-800">Beneficio:</strong> Descubre los picos exactos de actividad y guardados de tu audiencia para publicar cuando el algoritmo te dará el máximo alcance orgánico.
+            </p>
+          </div>
+          <div class="pt-3 border-t border-slate-200 flex items-center justify-between text-[11px] font-bold text-rose-700">
+            <span data-i18n="feat6_status">✔ Algoritmo Predictivo de Audiencia</span>
+            <span class="text-slate-400">+142% Alcance</span>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ========================================================================= -->
+  <!-- 5. CÓMO EMPEZAR EN TRES PASOS -->
+  <!-- ========================================================================= -->
+  <section id="como-empezar" class="py-16 sm:py-24 bg-slatecard border-b border-slate-200/80">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-3xl mx-auto mb-12 sm:mb-16">
+        <span data-i18n="steps_badge" class="text-xs font-extrabold uppercase tracking-wider text-brand-600 bg-brand-50 px-3.5 py-1 rounded-full border border-brand-200">
+          Sin Complicaciones
+        </span>
+        <h2 data-i18n="steps_h2" class="text-2xl sm:text-4xl md:text-5xl font-extrabold text-midnight tracking-tight mt-3 mb-3">
+          Cómo empezar en 3 sencillos pasos
+        </h2>
+        <p data-i18n="steps_sub" class="text-sm sm:text-lg text-slate-600 font-normal">
+          Configuración rápida en menos de 2 minutos. Sin instalaciones complejas ni contraseñas.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+        
+        <!-- Step 1 -->
+        <div class="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-8 shadow-sm hover:shadow-elevated-card transition-all text-center flex flex-col items-center">
+          <div class="w-12 h-12 rounded-full step-number-badge text-white flex items-center justify-center font-black text-lg mb-5">
+            1
+          </div>
+          <h3 data-i18n="step1_t" class="text-base sm:text-lg font-bold text-midnight mb-2">
+            Conecta tus cuentas oficiales
+          </h3>
+          <p data-i18n="step1_d" class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+            Vincula tu cuenta de Instagram o Página de Facebook mediante Meta OAuth oficial de forma 100% segura y con un solo clic.
+          </p>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-8 shadow-sm hover:shadow-elevated-card transition-all text-center flex flex-col items-center">
+          <div class="w-12 h-12 rounded-full step-number-badge text-white flex items-center justify-center font-black text-lg mb-5">
+            2
+          </div>
+          <h3 data-i18n="step2_t" class="text-base sm:text-lg font-bold text-midnight mb-2">
+            Define tu voz y contexto de negocio
+          </h3>
+          <p data-i18n="step2_d" class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+            Elige el tono de tu marca (Mentor, Cercano, Comercial) y añade los datos de tus productos para que la IA responda siempre con fundamento.
+          </p>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-8 shadow-sm hover:shadow-elevated-card transition-all text-center flex flex-col items-center">
+          <div class="w-12 h-12 rounded-full step-number-badge text-white flex items-center justify-center font-black text-lg mb-5">
+            3
+          </div>
+          <h3 data-i18n="step3_t" class="text-base sm:text-lg font-bold text-midnight mb-2">
+            Revisa y publica con Copilot
+          </h3>
+          <p data-i18n="step3_d" class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+            Recibe sugerencias de respuesta inteligentes ante cada comentario recibido y apruébalas en 1 clic en la ventana de oro del algoritmo.
+          </p>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ========================================================================= -->
+  <!-- 6. EL SIMULADOR INTERACTIVO CON CONTEXTO DE NEGOCIO GROUNDED -->
+  <!-- ========================================================================= -->
+  <section id="simulador" class="py-16 sm:py-24 bg-white border-b border-slate-200/80">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-2xl mx-auto mb-10 sm:mb-12">
+        <span data-i18n="sim_badge" class="text-xs font-extrabold uppercase tracking-wider text-brand-600 bg-brand-50 px-3.5 py-1 rounded-full border border-brand-200">
+          Playground en Vivo
+        </span>
+        <h2 data-i18n="sim_h2" class="text-2xl sm:text-4xl font-extrabold text-midnight tracking-tight mt-3 mb-2 sm:mb-3">
+          Prueba el Motor de XINDRO en Tiempo Real
+        </h2>
+        <p data-i18n="sim_sub" class="text-xs sm:text-base text-slate-600 font-normal">
+          Observa cómo la IA utiliza los datos de un negocio de ejemplo para responder con veracidad, tono humano y cero alucinaciones.
+        </p>
+      </div>
+
+      <div class="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 shadow-elevated-card overflow-hidden">
+        
+        <div class="bg-slate-900 text-white px-5 sm:px-6 py-3.5 sm:py-4 flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center gap-2 sm:gap-2.5">
+            <span class="text-brand-400 font-bold text-base sm:text-lg">⚡</span>
+            <span class="text-xs sm:text-sm font-bold tracking-tight">XINDRO Interactive Simulator v2.0</span>
+          </div>
+          <div class="flex items-center gap-2 text-[10px] sm:text-xs font-mono text-slate-400">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 live-dot"></span>
+            <span data-i18n="sim_engine_status">Motor Anti-Alucinación Anclado a Datos Reales</span>
+          </div>
+        </div>
+
+        <div class="p-5 sm:p-8">
+          
+          <!-- Explicit Sample Business Context Card -->
+          <div class="sim-context-box rounded-xl p-3.5 sm:p-4 mb-5 text-xs text-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div class="flex items-start gap-2.5">
+              <span class="text-lg">💼</span>
+              <div>
+                <div class="font-bold text-slate-900 flex items-center gap-2">
+                  <span data-i18n="sim_ctx_title">Negocio de Ejemplo: "Academia Stoic Pro"</span>
+                  <span class="px-2 py-0.5 rounded-full bg-brand-100 text-brand-800 text-[10px] font-bold">Contexto Activo</span>
+                </div>
+                <div class="text-[11px] text-slate-600 mt-0.5" data-i18n="sim_ctx_desc">
+                  <strong>Producto:</strong> Curso de Hábitos y Mentalidad (40h de clases grabadas, acceso vitalicio, comunidad privada). <strong>Precio:</strong> 149 € (pago único con enlace en bio).
+                </div>
+              </div>
+            </div>
+            <div class="text-[10px] font-semibold text-brand-700 bg-white/80 px-2.5 py-1 rounded-lg border border-brand-200 shrink-0">
+              🛡️ Respuestas 100% Fundamentadas
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-5 sm:mb-6">
+            
+            <div>
+              <label data-i18n="sim_lbl_tone" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 sm:mb-2">
+                1. Tono de Marca:
+              </label>
+              <select id="sim-tone" class="sim-select-custom w-full bg-slatecard border border-slate-300 rounded-xl px-3.5 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold text-slate-800 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all cursor-pointer shadow-sm">
+                <option value="mentor" selected data-i18n="sim_opt_mentor">🏛️ Estoico / Mentor Sabio</option>
+                <option value="empathy" data-i18n="sim_opt_empathy">🤝 Cercano & Empático</option>
+                <option value="growth" data-i18n="sim_opt_growth">🔥 Dinámico & Venta de Alto Valor</option>
+              </select>
+            </div>
+
+            <div>
+              <label data-i18n="sim_lbl_plat" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 sm:mb-2">
+                2. Plataforma:
+              </label>
+              <select id="sim-platform" class="sim-select-custom w-full bg-slatecard border border-slate-300 rounded-xl px-3.5 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold text-slate-800 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all cursor-pointer shadow-sm">
+                <option value="instagram">📸 Instagram</option>
+                <option value="facebook">📘 Facebook</option>
+                <option value="tiktok">🎵 TikTok</option>
+              </select>
+            </div>
+
+            <div>
+              <label data-i18n="sim_lbl_close" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 sm:mb-2">
+                3. Pregunta al Final:
+              </label>
+              <select id="sim-closing" class="sim-select-custom w-full bg-slatecard border border-slate-300 rounded-xl px-3.5 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold text-slate-800 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all cursor-pointer shadow-sm">
+                <option value="always" selected data-i18n="sim_opt_always">Siempre incluir pregunta</option>
+                <option value="relevant" data-i18n="sim_opt_rel">Solo cuando sea relevante</option>
+                <option value="never" data-i18n="sim_opt_never">Sin pregunta final</option>
+              </select>
+            </div>
+
+          </div>
+
+          <div class="mb-5 sm:mb-6">
+            <label data-i18n="sim_lbl_comment" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+              Comentario de tu seguidor a simular:
+            </label>
+            <div class="relative">
+              <textarea id="sim-input-text" rows="3" class="w-full bg-slatecard border border-slate-300 rounded-xl p-3.5 sm:p-4 text-xs sm:text-sm font-medium text-slate-800 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all resize-none" placeholder="Escribe un comentario...">¿El curso incluye clases grabadas y cuánto tiempo tengo acceso?</textarea>
+            </div>
+          </div>
+
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 mb-6 sm:mb-8">
+            <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <span data-i18n="sim_presets_title" class="text-xs font-bold text-slate-500 mr-1">Probar ejemplos:</span>
+              <button type="button" onclick="Simulator.loadPreset(1)" data-i18n="sim_preset_1" class="preset-pill-btn text-[11px] sm:text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-brand-50 hover:text-brand-700 border border-slate-200/80">
+                📚 "¿Clases grabadas y acceso?"
+              </button>
+              <button type="button" onclick="Simulator.loadPreset(2)" data-i18n="sim_preset_2" class="preset-pill-btn text-[11px] sm:text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-brand-50 hover:text-brand-700 border border-slate-200/80">
+                🏛️ "Dicotomía del control"
+              </button>
+              <button type="button" onclick="Simulator.loadPreset(3)" data-i18n="sim_preset_3" class="preset-pill-btn text-[11px] sm:text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-brand-50 hover:text-brand-700 border border-slate-200/80">
+                💎 "¿Precio del curso?"
+              </button>
+            </div>
+
+            <button type="button" id="sim-btn-generate" onclick="Simulator.generate()" class="w-full sm:w-auto px-6 py-3.5 rounded-xl text-xs sm:text-sm font-bold text-white gradient-button flex items-center justify-center gap-2 shadow-glow-sm shimmer-btn">
+              <span data-i18n="sim_btn_gen">Generar Respuesta con IA</span>
+              <span>⚡</span>
+            </button>
+          </div>
+
+          <div id="sim-output-card" class="rounded-2xl bg-slate-50 border border-slate-200/90 p-4 sm:p-6 transition-all duration-300">
+            
+            <div class="flex flex-wrap items-center justify-between gap-2.5 border-b border-slate-200/80 pb-3 mb-3 sm:mb-4">
+              <div class="flex flex-wrap items-center gap-2">
+                <span data-i18n="sim_res_title" class="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">Resultado Generado</span>
+                <span id="sim-badge-intent" class="text-[10px] sm:text-[11px] font-bold px-2.5 py-0.5 rounded bg-brand-100 text-brand-800 border border-brand-200">
+                  🎯 Intención: Lead Calificado • Modalidad del Curso
+                </span>
+              </div>
+              <div class="flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-3 text-[11px] sm:text-xs font-semibold text-slate-500 ml-auto sm:ml-0">
+                <span class="flex items-center gap-1">
+                  <span data-i18n="sim_score_label">Prioridad Comercial:</span> 
+                  <strong id="sim-badge-score" class="text-brand-600 font-bold">96/100</strong>
+                  <span class="text-[10px] text-slate-400 font-normal" data-i18n="sim_score_explain">(Consulta de Compra)</span>
+                </span>
+                <span class="text-emerald-600 font-bold">⚡ 120ms</span>
+              </div>
+            </div>
+
+            <p id="sim-output-text" class="text-xs sm:text-base text-slate-800 font-medium leading-relaxed mb-4">
+              "¡Hola! Sí, el curso incluye acceso vitalicio a todas las clases grabadas (más de 40 horas de formación práctica) para que estudies con total flexibilidad a tu propio ritmo. Tienes el temario completo e inscripción directa en el enlace de nuestra biografía. ¿Tienes alguna duda puntual sobre el programa? 🏛️"
+            </p>
+
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-200/60 text-xs text-slate-500">
+              <span id="sim-badge-autopilot" data-i18n="sim_autopilot_ok" class="flex items-center gap-1.5 text-emerald-600 font-semibold text-[11px] sm:text-xs">
+                <span>✔</span> Respuesta verificada y fundamentada en los datos del negocio (Sin alucinaciones)
+              </span>
+              <button type="button" onclick="Simulator.copyResponse()" id="sim-btn-copy" class="copy-btn-action text-xs font-bold text-brand-600 hover:text-brand-800 flex items-center gap-1 ml-auto">
+                <span data-i18n="sim_btn_copy">📋 Copiar</span>
+              </button>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ========================================================================= -->
+  <!-- 7. SOCIAL PROOF & CALCULADORA INTERACTIVA DE AHORRO & ROI -->
+  <!-- ========================================================================= -->
+  <section id="calculadora-roi" class="py-16 sm:py-24 bg-gradient-to-b from-slatecard to-white border-b border-slate-200/80">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
       
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 md:gap-8 text-center divide-x-0 md:divide-x divide-slate-200/80">
+      <!-- Metrics Bar -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 md:gap-8 text-center divide-x-0 md:divide-x divide-slate-200/80 mb-14 sm:mb-18 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
         
         <div class="p-2 sm:p-3 min-w-0">
           <div class="text-2xl sm:text-3xl md:text-4xl font-black text-midnight tracking-tight mb-1">
@@ -648,21 +1019,116 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
 
       </div>
 
+      <div class="text-center max-w-2xl mx-auto mb-10 sm:mb-14">
+        <span data-i18n="calc_badge" class="text-xs font-extrabold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-3.5 py-1 rounded-full border border-emerald-200">
+          Calculadora de Impacto
+        </span>
+        <h2 data-i18n="calc_h2" class="text-2xl sm:text-4xl font-extrabold text-midnight tracking-tight mt-3 mb-2 sm:mb-3">
+          ¿Cuánto tiempo y clientes potenciales ganas con Xindro?
+        </h2>
+        <p data-i18n="calc_sub" class="text-xs sm:text-base text-slate-600 font-normal">
+          Ajusta tu volumen mensual y descubre el ahorro real y la retención generada.
+        </p>
+      </div>
+
+      <div class="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 shadow-elevated-card p-5 sm:p-8 md:p-10">
+        
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-center">
+          
+          <!-- Sliders -->
+          <div class="lg:col-span-6 space-y-5 sm:space-y-6">
+            
+            <div>
+              <div class="flex justify-between items-center mb-2 gap-2">
+                <label data-i18n="calc_lbl_comments" class="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  Comentarios recibidos al mes:
+                </label>
+                <span id="calc-comments-val" class="text-xs sm:text-sm font-black text-brand-600 bg-brand-50 px-2.5 py-0.5 rounded-lg border border-brand-200 whitespace-nowrap">
+                  5,000 comentarios
+                </span>
+              </div>
+              <input type="range" id="calc-comments-range" min="500" max="50000" step="500" value="5000" oninput="Calculator.update()" class="w-full accent-brand-600 cursor-pointer h-2 bg-slate-200 rounded-lg" />
+              <div class="flex justify-between text-[10px] text-slate-400 font-bold mt-1">
+                <span>500</span>
+                <span>25,000</span>
+                <span>50,000+</span>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between items-center mb-2 gap-2">
+                <label data-i18n="calc_lbl_accounts" class="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  Cuentas de Instagram / Facebook:
+                </label>
+                <span id="calc-accounts-val" class="text-xs sm:text-sm font-black text-brand-600 bg-brand-50 px-2.5 py-0.5 rounded-lg border border-brand-200 whitespace-nowrap">
+                  2 cuentas
+                </span>
+              </div>
+              <input type="range" id="calc-accounts-range" min="1" max="10" step="1" value="2" oninput="Calculator.update()" class="w-full accent-brand-600 cursor-pointer h-2 bg-slate-200 rounded-lg" />
+              <div class="flex justify-between text-[10px] text-slate-400 font-bold mt-1">
+                <span>1 cuenta</span>
+                <span>5 cuentas</span>
+                <span>10 cuentas</span>
+              </div>
+            </div>
+
+            <div class="text-[11px] text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-200" data-i18n="calc_assumptions">
+              ℹ️ <strong>Supuestos del cálculo:</strong> 45 segundos de redacción manual por comentario vs. 5 segundos con Copilot IA, y 2.4% promedio de consultas con intención comercial.
+            </div>
+
+          </div>
+
+          <!-- Results -->
+          <div class="lg:col-span-6 bg-gradient-to-br from-slate-900 to-slate-950 text-white rounded-2xl p-5 sm:p-7 shadow-xl border border-slate-800">
+            <div class="text-xs font-bold uppercase tracking-wider text-brand-400 mb-4" data-i18n="calc_res_title">
+              Impacto Estimado Mensual
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 sm:gap-4 mb-5 sm:mb-6">
+              
+              <div class="bg-slate-900/90 p-3 sm:p-4 rounded-xl border border-slate-800 min-w-0">
+                <div class="text-lg sm:text-2xl md:text-3xl font-black text-emerald-400 mb-0.5 tracking-tight" id="calc-res-hours">
+                  +38 hrs
+                </div>
+                <div class="text-[9.5px] sm:text-[11px] font-semibold text-slate-400 uppercase leading-tight break-words tracking-normal sm:tracking-wider" data-i18n="calc_res_h_label">
+                  Tiempo Manual Ahorrado
+                </div>
+              </div>
+
+              <div class="bg-slate-900/90 p-3 sm:p-4 rounded-xl border border-slate-800 min-w-0">
+                <div class="text-lg sm:text-2xl md:text-3xl font-black text-brand-400 mb-0.5 tracking-tight" id="calc-res-leads">
+                  +120
+                </div>
+                <div class="text-[9.5px] sm:text-[11px] font-semibold text-slate-400 uppercase leading-tight break-words tracking-normal sm:tracking-wider" data-i18n="calc_res_l_label">
+                  Leads / Preguntas Clave
+                </div>
+              </div>
+
+            </div>
+
+            <div class="text-[11px] sm:text-xs text-slate-300 leading-relaxed border-t border-slate-800 pt-3">
+              <span class="text-emerald-400 font-bold">✔ 99.4%</span> <span data-i18n="calc_res_footer">de respuestas entregadas en la ventana de oro del algoritmo sin agotamiento humano.</span>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
     </div>
   </section>
 
   <!-- ========================================================================= -->
-  <!-- 5. ¿POR QUÉ ELEGIR XINDRO? (6 Razones de Valor Real) -->
+  <!-- 8. ¿POR QUÉ ELEGIR XINDRO? (6 Pilares Diferenciales) -->
   <!-- ========================================================================= -->
-  <section id="por-que-xindro" class="py-16 sm:py-24 bg-white border-b border-slate-100 relative">
-    <div id="funciones" class="absolute -top-20"></div>
+  <section id="por-que-xindro" class="py-16 sm:py-24 bg-white border-b border-slate-100">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       
       <div class="text-center max-w-3xl mx-auto mb-12 sm:mb-16">
         <span data-i18n="why_badge" class="text-xs font-extrabold uppercase tracking-wider text-brand-600 bg-brand-50 px-3.5 py-1 rounded-full border border-brand-200">
           Diferenciales Reales
         </span>
-        <h2 data-i18n="why_h2" class="text-2xl sm:text-4xl md:text-5xl font-extrabold text-midnight tracking-tight mt-3 sm:mt-4 mb-3 sm:mb-4">
+        <h2 data-i18n="why_h2" class="text-2xl sm:text-4xl md:text-5xl font-extrabold text-midnight tracking-tight mt-3 mb-3 sm:mb-4">
           ¿Por qué los creadores y agencias eligen Xindro?
         </h2>
         <p data-i18n="why_sub" class="text-sm sm:text-lg text-slate-600 font-normal">
@@ -682,7 +1148,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
               Respuestas en Tiempo Real (&lt;180ms)
             </h3>
             <p data-i18n="why_p1_d" class="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              El algoritmo de Meta premia a las cuentas que interactúan en los primeros 15 minutos. Nuestro motor heurístico responde casi al instante.
+              El algoritmo de Meta premia a las cuentas que interactúan en los primeros 15 minutos. Nuestro motor responde casi al instante.
             </p>
           </div>
           <div class="mt-4 pt-3 border-t border-slate-200 text-xs font-bold text-brand-700" data-i18n="why_p1_tag">
@@ -769,7 +1235,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
               💰
             </div>
             <h3 data-i18n="why_p6_t" class="text-base sm:text-lg font-bold text-midnight mb-2">
-              Ahorra +35 Horas de Trabajo al Mes
+              Ahorra +15 Horas de Trabajo al Mes
             </h3>
             <p data-i18n="why_p6_d" class="text-xs sm:text-sm text-slate-600 leading-relaxed">
               Elimina el trabajo repetitivo de responder dudas frecuentes y aprovecha ese tiempo para crear contenido que mueva tu negocio.
@@ -786,245 +1252,9 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
   </section>
 
   <!-- ========================================================================= -->
-  <!-- 6. CALCULADORA INTERACTIVA DE AHORRO & ROI -->
+  <!-- 9. PRECIOS & PLANES TRANSPARENTES EN EUROS -->
   <!-- ========================================================================= -->
-  <section id="calculadora-roi" class="py-16 sm:py-24 bg-gradient-to-b from-slatecard to-white border-b border-slate-200/80">
-    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-      
-      <div class="text-center max-w-2xl mx-auto mb-10 sm:mb-14">
-        <span data-i18n="calc_badge" class="text-xs font-extrabold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-3.5 py-1 rounded-full border border-emerald-200">
-          Calculadora de Impacto
-        </span>
-        <h2 data-i18n="calc_h2" class="text-2xl sm:text-4xl font-extrabold text-midnight tracking-tight mt-3 mb-2 sm:mb-3">
-          ¿Cuánto tiempo y alcance ganas con Xindro?
-        </h2>
-        <p data-i18n="calc_sub" class="text-xs sm:text-base text-slate-600 font-normal">
-          Ajusta el volumen de comentarios mensuales y descubre el impacto real en tu comunidad.
-        </p>
-      </div>
-
-      <div class="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 shadow-elevated-card p-5 sm:p-8 md:p-10">
-        
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-center">
-          
-          <!-- Sliders -->
-          <div class="lg:col-span-6 space-y-5 sm:space-y-6">
-            
-            <div>
-              <div class="flex justify-between items-center mb-2 gap-2">
-                <label data-i18n="calc_lbl_comments" class="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Comentarios recibidos al mes:
-                </label>
-                <span id="calc-comments-val" class="text-xs sm:text-sm font-black text-brand-600 bg-brand-50 px-2.5 py-0.5 rounded-lg border border-brand-200 whitespace-nowrap">
-                  5,000 comentarios
-                </span>
-              </div>
-              <input type="range" id="calc-comments-range" min="500" max="50000" step="500" value="5000" oninput="Calculator.update()" class="w-full accent-brand-600 cursor-pointer h-2 bg-slate-200 rounded-lg" />
-              <div class="flex justify-between text-[10px] text-slate-400 font-bold mt-1">
-                <span>500</span>
-                <span>25,000</span>
-                <span>50,000+</span>
-              </div>
-            </div>
-
-            <div>
-              <div class="flex justify-between items-center mb-2 gap-2">
-                <label data-i18n="calc_lbl_accounts" class="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Cuentas de Instagram / Facebook:
-                </label>
-                <span id="calc-accounts-val" class="text-xs sm:text-sm font-black text-brand-600 bg-brand-50 px-2.5 py-0.5 rounded-lg border border-brand-200 whitespace-nowrap">
-                  2 cuentas
-                </span>
-              </div>
-              <input type="range" id="calc-accounts-range" min="1" max="10" step="1" value="2" oninput="Calculator.update()" class="w-full accent-brand-600 cursor-pointer h-2 bg-slate-200 rounded-lg" />
-              <div class="flex justify-between text-[10px] text-slate-400 font-bold mt-1">
-                <span>1 cuenta</span>
-                <span>5 cuentas</span>
-                <span>10 cuentas</span>
-              </div>
-            </div>
-
-          </div>
-
-          <!-- Results -->
-          <div class="lg:col-span-6 bg-gradient-to-br from-slate-900 to-slate-950 text-white rounded-2xl p-5 sm:p-7 shadow-xl border border-slate-800">
-            <div class="text-xs font-bold uppercase tracking-wider text-brand-400 mb-4" data-i18n="calc_res_title">
-              Impacto Estimado Mensual
-            </div>
-
-            <div class="grid grid-cols-2 gap-3 sm:gap-4 mb-5 sm:mb-6">
-              
-              <div class="bg-slate-900/90 p-3 sm:p-4 rounded-xl border border-slate-800 min-w-0">
-                <div class="text-lg sm:text-2xl md:text-3xl font-black text-emerald-400 mb-0.5 tracking-tight" id="calc-res-hours">
-                  +38 hrs
-                </div>
-                <div class="text-[9.5px] sm:text-[11px] font-semibold text-slate-400 uppercase leading-tight break-words tracking-normal sm:tracking-wider" data-i18n="calc_res_h_label">
-                  Tiempo Manual Ahorrado
-                </div>
-              </div>
-
-              <div class="bg-slate-900/90 p-3 sm:p-4 rounded-xl border border-slate-800 min-w-0">
-                <div class="text-lg sm:text-2xl md:text-3xl font-black text-brand-400 mb-0.5 tracking-tight" id="calc-res-leads">
-                  +120
-                </div>
-                <div class="text-[9.5px] sm:text-[11px] font-semibold text-slate-400 uppercase leading-tight break-words tracking-normal sm:tracking-wider" data-i18n="calc_res_l_label">
-                  Leads / Preguntas Clave
-                </div>
-              </div>
-
-            </div>
-
-            <div class="text-[11px] sm:text-xs text-slate-300 leading-relaxed border-t border-slate-800 pt-3">
-              <span class="text-emerald-400 font-bold">✔ 99.4%</span> <span data-i18n="calc_res_footer">de respuestas entregadas en la ventana de oro del algoritmo sin agotamiento humano.</span>
-            </div>
-          </div>
-
-        </div>
-
-      </div>
-
-    </div>
-  </section>
-
-  <!-- ========================================================================= -->
-  <!-- 7. EL SIMULADOR INTERACTIVO -->
-  <!-- ========================================================================= -->
-  <section id="simulador" class="py-16 sm:py-24 bg-white border-b border-slate-200/80">
-    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-      
-      <div class="text-center max-w-2xl mx-auto mb-10 sm:mb-12">
-        <span data-i18n="sim_badge" class="text-xs font-extrabold uppercase tracking-wider text-brand-600 bg-brand-50 px-3.5 py-1 rounded-full border border-brand-200">
-          Playground en Vivo
-        </span>
-        <h2 data-i18n="sim_h2" class="text-2xl sm:text-4xl font-extrabold text-midnight tracking-tight mt-3 mb-2 sm:mb-3">
-          Prueba el Motor de XINDRO en Tiempo Real
-        </h2>
-        <p data-i18n="sim_sub" class="text-xs sm:text-base text-slate-600 font-normal">
-          Selecciona un tono, escribe cualquier comentario de tu comunidad y observa cómo la IA genera respuestas hipercontextualizadas.
-        </p>
-      </div>
-
-      <div class="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 shadow-elevated-card overflow-hidden">
-        
-        <div class="bg-slate-900 text-white px-5 sm:px-6 py-3.5 sm:py-4 flex flex-wrap items-center justify-between gap-3">
-          <div class="flex items-center gap-2 sm:gap-2.5">
-            <span class="text-brand-400 font-bold text-base sm:text-lg">⚡</span>
-            <span class="text-xs sm:text-sm font-bold tracking-tight">XINDRO Interactive Simulator v2.0</span>
-          </div>
-          <div class="flex items-center gap-2 text-[10px] sm:text-xs font-mono text-slate-400">
-            <span class="w-2 h-2 rounded-full bg-emerald-400 live-dot"></span>
-            <span>Zero-Latency Heuristic + OpenRouter LLM Hub</span>
-          </div>
-        </div>
-
-        <div class="p-5 sm:p-8">
-          
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-5 sm:mb-6">
-            
-            <div>
-              <label data-i18n="sim_lbl_tone" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 sm:mb-2">
-                1. Tono de Marca:
-              </label>
-              <select id="sim-tone" class="sim-select-custom w-full bg-slatecard border border-slate-300 rounded-xl px-3.5 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold text-slate-800 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all cursor-pointer shadow-sm">
-                <option value="mentor" data-i18n="sim_opt_mentor">🏛️ Estoico / Mentor Sabio</option>
-                <option value="empathy" selected data-i18n="sim_opt_empathy">🤝 Cercano & Empático</option>
-                <option value="growth" data-i18n="sim_opt_growth">🔥 Dinámico & Venta de Alto Valor</option>
-              </select>
-            </div>
-
-            <div>
-              <label data-i18n="sim_lbl_plat" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 sm:mb-2">
-                2. Plataforma:
-              </label>
-              <select id="sim-platform" class="sim-select-custom w-full bg-slatecard border border-slate-300 rounded-xl px-3.5 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold text-slate-800 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all cursor-pointer shadow-sm">
-                <option value="instagram">📸 Instagram</option>
-                <option value="facebook">📘 Facebook</option>
-                <option value="tiktok">🎵 TikTok</option>
-              </select>
-            </div>
-
-            <div>
-              <label data-i18n="sim_lbl_close" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 sm:mb-2">
-                3. Pregunta al Final:
-              </label>
-              <select id="sim-closing" class="sim-select-custom w-full bg-slatecard border border-slate-300 rounded-xl px-3.5 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold text-slate-800 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all cursor-pointer shadow-sm">
-                <option value="always" selected data-i18n="sim_opt_always">Siempre incluir pregunta</option>
-                <option value="relevant" data-i18n="sim_opt_rel">Solo cuando sea relevante</option>
-                <option value="never" data-i18n="sim_opt_never">Sin pregunta final</option>
-              </select>
-            </div>
-
-          </div>
-
-          <div class="mb-5 sm:mb-6">
-            <label data-i18n="sim_lbl_comment" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-              Comentario de tu seguidor a simular:
-            </label>
-            <div class="relative">
-              <textarea id="sim-input-text" rows="3" class="w-full bg-slatecard border border-slate-300 rounded-xl p-3.5 sm:p-4 text-xs sm:text-sm font-medium text-slate-800 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all resize-none" placeholder="Escribe un comentario...">Me encanta tu contenido pero siempre procrastino mis proyectos importantes por miedo al fracaso. ¿Qué consejo me das para empezar hoy mismo?</textarea>
-            </div>
-          </div>
-
-          <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 mb-6 sm:mb-8">
-            <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
-              <span data-i18n="sim_presets_title" class="text-xs font-bold text-slate-500 mr-1">Rápidos:</span>
-              <button type="button" onclick="Simulator.loadPreset(1)" data-i18n="sim_preset_1" class="preset-pill-btn text-[11px] sm:text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-brand-50 hover:text-brand-700 border border-slate-200/80">
-                💡 "¿Precio del curso?"
-              </button>
-              <button type="button" onclick="Simulator.loadPreset(2)" data-i18n="sim_preset_2" class="preset-pill-btn text-[11px] sm:text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-brand-50 hover:text-brand-700 border border-slate-200/80">
-                🔥 "Gran reflexión"
-              </button>
-            </div>
-
-            <button type="button" id="sim-btn-generate" onclick="Simulator.generate()" class="w-full sm:w-auto px-6 py-3.5 rounded-xl text-xs sm:text-sm font-bold text-white gradient-button flex items-center justify-center gap-2 shadow-glow-sm shimmer-btn">
-              <span data-i18n="sim_btn_gen">Generar Respuesta con IA</span>
-              <span>⚡</span>
-            </button>
-          </div>
-
-          <div id="sim-output-card" class="rounded-2xl bg-slate-50 border border-slate-200/90 p-4 sm:p-6 transition-all duration-300">
-            
-            <div class="flex flex-wrap items-center justify-between gap-2.5 border-b border-slate-200/80 pb-3 mb-3 sm:mb-4">
-              <div class="flex flex-wrap items-center gap-2">
-                <span data-i18n="sim_res_title" class="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">Resultado Generado</span>
-                <span id="sim-badge-intent" class="text-[10px] sm:text-[11px] font-bold px-2.5 py-0.5 rounded bg-brand-100 text-brand-800 border border-brand-200">
-                  🎯 Intención: Consejo / Crecimiento
-                </span>
-              </div>
-              <div class="flex items-center gap-2 sm:gap-3 text-[11px] sm:text-xs font-semibold text-slate-500 ml-auto sm:ml-0">
-                <span>Prioridad Comercial: <strong id="sim-badge-score" class="text-brand-600 font-bold">96/100</strong></span>
-                <span class="text-emerald-600 font-bold">⚡ 120ms</span>
-              </div>
-            </div>
-
-            <p id="sim-output-text" class="text-xs sm:text-base text-slate-800 font-medium leading-relaxed mb-4">
-              "El miedo al fracaso solo desaparece cuando actúas antes de que la mente empiece a dudar. Divide tu meta en una sola acción de 5 minutos para hoy. La perfección no existe, el progreso diario sí. ¿Qué pequeña tarea harás en los próximos 10 minutos? 👇"
-            </p>
-
-            <div class="flex items-center justify-between pt-3 border-t border-slate-200/60 text-xs text-slate-500">
-              <span id="sim-badge-autopilot" data-i18n="sim_autopilot_ok" class="flex items-center gap-1.5 text-emerald-600 font-semibold text-[11px] sm:text-xs">
-                <span>✔</span> Apto para Autopilot en Instagram y Facebook
-              </span>
-              <button type="button" onclick="Simulator.copyResponse()" id="sim-btn-copy" class="copy-btn-action text-xs font-bold text-brand-600 hover:text-brand-800 flex items-center gap-1">
-                <span data-i18n="sim_btn_copy">📋 Copiar</span>
-              </button>
-            </div>
-
-          </div>
-
-        </div>
-
-      </div>
-
-    </div>
-  </section>
-
-
-
-  <!-- ========================================================================= -->
-  <!-- 9. PRECIOS & PLANES -->
-  <!-- ========================================================================= -->
-  <section id="precios" class="py-16 sm:py-24 bg-white border-b border-slate-100">
+  <section id="precios" class="py-16 sm:py-24 bg-slatecard border-b border-slate-200/80">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       
       <div class="text-center max-w-2xl mx-auto mb-12 sm:mb-16">
@@ -1039,10 +1269,10 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         </p>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6 items-stretch">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6 items-stretch mb-8">
         
         <!-- Plan 1: Inicial (Gratis) -->
-        <div class="rounded-2xl sm:rounded-3xl bg-slatecard border border-slate-200 p-5 sm:p-6 flex flex-col justify-between hover:shadow-subtle-card hover:border-slate-300 transition-all">
+        <div class="rounded-2xl sm:rounded-3xl bg-white border border-slate-200 p-5 sm:p-6 flex flex-col justify-between hover:shadow-subtle-card hover:border-slate-300 transition-all">
           <div>
             <div class="text-xs font-extrabold text-slate-500 uppercase tracking-wider mb-1">Entrada</div>
             <h3 data-i18n="plan1_t" class="text-base sm:text-lg font-bold text-midnight mb-1">Plan Inicial</h3>
@@ -1054,8 +1284,8 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
             <ul class="space-y-2.5 text-xs text-slate-600 font-medium mb-6">
               <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan1_f1">1 cuenta conectada (IG o FB)</span></li>
               <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan1_f2">50 respuestas / tokens al mes</span></li>
-              <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan1_f3">Asistente Copilot con revisión</span></li>
-              <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan1_f4">Infraestructura oficial de Meta</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan1_f3">1 perfil de voz de marca</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan1_f4">Asistente Copilot con revisión</span></li>
               <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan1_f5">Soporte estándar</span></li>
             </ul>
           </div>
@@ -1065,7 +1295,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         </div>
 
         <!-- Plan 2: Creador (Económico) -->
-        <div class="rounded-2xl sm:rounded-3xl bg-slatecard border border-slate-200 p-5 sm:p-6 flex flex-col justify-between hover:shadow-subtle-card hover:border-brand-300 transition-all">
+        <div class="rounded-2xl sm:rounded-3xl bg-white border border-slate-200 p-5 sm:p-6 flex flex-col justify-between hover:shadow-subtle-card hover:border-brand-300 transition-all">
           <div>
             <div class="text-xs font-extrabold text-brand-600 uppercase tracking-wider mb-1">Económico</div>
             <h3 data-i18n="plan2_t" class="text-base sm:text-lg font-bold text-midnight mb-1">Plan Creador</h3>
@@ -1077,10 +1307,9 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
             <ul class="space-y-2.5 text-xs text-slate-600 font-medium mb-6">
               <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan2_f1">2 canales (Instagram y Facebook)</span></li>
               <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan2_f2">500 respuestas / tokens al mes</span></li>
-              <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan2_f3">Automatización activa en canales clave</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan2_f3">1 perfil de voz de marca avanzado</span></li>
               <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan2_f4">Ventana de oro del algoritmo</span></li>
-              <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan2_f5">Configuración de tono base de IA</span></li>
-              <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan2_f6">Soporte prioritario por email</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan2_f5">Soporte prioritario por email</span></li>
             </ul>
           </div>
           <a href="login.php" data-i18n="plan2_btn" class="w-full py-2.5 sm:py-3 rounded-xl text-center text-xs sm:text-sm font-bold text-brand-700 bg-brand-50 border border-brand-200 hover:bg-brand-100 transition-colors shadow-sm">
@@ -1104,11 +1333,10 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
             <ul class="space-y-2.5 text-xs text-slate-700 font-medium mb-6">
               <li class="flex items-start gap-2"><span class="text-brand-600 font-bold">✔</span> <span data-i18n="plan3_f1">Hasta 5 cuentas conectadas</span></li>
               <li class="flex items-start gap-2"><span class="text-brand-600 font-bold">✔</span> <span data-i18n="plan3_f2">2.500 respuestas / tokens al mes</span></li>
-              <li class="flex items-start gap-2"><span class="text-brand-600 font-bold">✔</span> <span data-i18n="plan3_f3">Detección avanzada de leads y compra</span></li>
-              <li class="flex items-start gap-2"><span class="text-brand-600 font-bold">✔</span> <span data-i18n="plan3_f4">Smart Timing para horarios óptimos</span></li>
-              <li class="flex items-start gap-2"><span class="text-brand-600 font-bold">✔</span> <span data-i18n="plan3_f5">Prioridad en latencia de API</span></li>
-              <li class="flex items-start gap-2"><span class="text-brand-600 font-bold">✔</span> <span data-i18n="plan3_f6">Calibrador de Voz de Marca multi-tono</span></li>
-              <li class="flex items-start gap-2"><span class="text-brand-600 font-bold">✔</span> <span data-i18n="plan3_f7">Soporte prioritario 24/7</span></li>
+              <li class="flex items-start gap-2"><span class="text-brand-600 font-bold">✔</span> <span data-i18n="plan3_f3">Hasta 3 perfiles de marca</span></li>
+              <li class="flex items-start gap-2"><span class="text-brand-600 font-bold">✔</span> <span data-i18n="plan3_f4">Detección avanzada de leads</span></li>
+              <li class="flex items-start gap-2"><span class="text-brand-600 font-bold">✔</span> <span data-i18n="plan3_f5">Smart Timing para horarios óptimos</span></li>
+              <li class="flex items-start gap-2"><span class="text-brand-600 font-bold">✔</span> <span data-i18n="plan3_f6">Soporte prioritario 24/7</span></li>
             </ul>
           </div>
           <a href="login.php" data-i18n="plan3_btn" class="w-full py-2.5 sm:py-3 rounded-xl text-center text-xs sm:text-sm font-bold text-white gradient-button shadow-glow-sm shimmer-btn">
@@ -1117,7 +1345,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         </div>
 
         <!-- Plan 4: Agencia -->
-        <div class="rounded-2xl sm:rounded-3xl bg-slatecard border border-slate-200 p-5 sm:p-6 flex flex-col justify-between hover:shadow-subtle-card hover:border-slate-300 transition-all">
+        <div class="rounded-2xl sm:rounded-3xl bg-white border border-slate-200 p-5 sm:p-6 flex flex-col justify-between hover:shadow-subtle-card hover:border-slate-300 transition-all">
           <div>
             <div class="text-xs font-extrabold text-slate-500 uppercase tracking-wider mb-1">Escala</div>
             <h3 data-i18n="plan4_t" class="text-base sm:text-lg font-bold text-midnight mb-1">Plan Agencia</h3>
@@ -1129,10 +1357,9 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
             <ul class="space-y-2.5 text-xs text-slate-600 font-medium mb-6">
               <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan4_f1">Hasta 20 cuentas conectadas</span></li>
               <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan4_f2">10.000 respuestas / tokens al mes</span></li>
-              <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan4_f3">Multi-cliente con voces independientes</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan4_f3">Hasta 20 marcas independientes</span></li>
               <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan4_f4">Aislamiento total de marcas y datos</span></li>
-              <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan4_f5">Máxima velocidad y exportación</span></li>
-              <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan4_f6">Acceso para equipos y soporte dedicado</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan4_f5">Soporte dedicado & Onboarding</span></li>
             </ul>
           </div>
           <a href="login.php" data-i18n="plan4_btn" class="w-full py-2.5 sm:py-3 rounded-xl text-center text-xs sm:text-sm font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition-colors shadow-sm">
@@ -1142,13 +1369,26 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
 
       </div>
 
+      <!-- Token Limit Clarity Box -->
+      <div class="rounded-2xl bg-white border border-slate-200 p-5 sm:p-6 text-xs text-slate-700 max-w-4xl mx-auto shadow-sm">
+        <div class="flex items-start gap-3">
+          <span class="text-xl">💡</span>
+          <div>
+            <h4 class="font-bold text-slate-900 mb-1" data-i18n="price_faq_box_title">¿Qué ocurre al alcanzar el límite de tokens mensuales de tu plan?</h4>
+            <p class="text-slate-600 leading-relaxed" data-i18n="price_faq_box_desc">
+              Tu panel de comentarios sigue <strong>100% operativo</strong> para responder y gestionar tu comunidad de forma manual. Si deseas continuar usando las sugerencias automáticas de IA, puedes añadir recargas de tokens o mejorar tu plan en 1 solo clic sin interrupción de servicio ni cargos ocultos.
+            </p>
+          </div>
+        </div>
+      </div>
+
     </div>
   </section>
 
   <!-- ========================================================================= -->
   <!-- 10. PREGUNTAS FRECUENTES (FAQ Acordeón Interactivo) -->
   <!-- ========================================================================= -->
-  <section id="faq" class="py-16 sm:py-24 bg-slatecard border-b border-slate-200/80">
+  <section id="faq" class="py-16 sm:py-24 bg-white border-b border-slate-200/80">
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
       
       <div class="text-center max-w-2xl mx-auto mb-10 sm:mb-14">
@@ -1159,14 +1399,14 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           Preguntas Frecuentes
         </h2>
         <p data-i18n="faq_sub" class="text-xs sm:text-base text-slate-600 font-normal">
-          Todo lo que necesitas saber antes de empezar a automatizar tu comunidad.
+          Todo lo que necesitas saber antes de empezar a automatizar tu comunidad con total confianza.
         </p>
       </div>
 
       <div class="space-y-3 sm:space-y-4">
         
         <!-- Q1 -->
-        <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
+        <div class="bg-slatecard rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
           <button type="button" onclick="Faq.toggle(1)" class="w-full p-4 sm:p-6 text-left flex items-center justify-between gap-4 font-bold text-xs sm:text-base text-midnight hover:text-brand-600 transition-colors">
             <span data-i18n="faq_q1">¿Es seguro para mi cuenta de Instagram o Facebook?</span>
             <span id="faq-icon-1" class="text-lg font-bold text-slate-400 transition-transform">+</span>
@@ -1177,35 +1417,35 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         </div>
 
         <!-- Q2 -->
-        <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
+        <div class="bg-slatecard rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
           <button type="button" onclick="Faq.toggle(2)" class="w-full p-4 sm:p-6 text-left flex items-center justify-between gap-4 font-bold text-xs sm:text-base text-midnight hover:text-brand-600 transition-colors">
-            <span data-i18n="faq_q2">¿La IA puede responder cosas fuera de lugar o inventar información?</span>
+            <span data-i18n="faq_q2">¿La IA puede inventar información o hacer afirmaciones no realizadas?</span>
             <span id="faq-icon-2" class="text-lg font-bold text-slate-400 transition-transform">+</span>
           </button>
           <div id="faq-ans-2" class="hidden px-4 sm:px-6 pb-5 sm:pb-6 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-4" data-i18n="faq_a2">
-            El sistema incorpora estrictos filtros anti-alucinación: nunca inventa ofertas, cupos falsos ni afirma haber enviado mensajes no realizados. Si una consulta requiere datos internos no disponibles, la IA orienta amablemente hacia el enlace oficial de la bio o solicita aclaraciones. Además, cuentas con el <strong>Modo Copilot</strong> para revisar y aprobar sugerencias antes de que se publiquen, garantizando control y veracidad absoluta.
+            No. La IA responde anclada estrictamente a la información de tu negocio, catálogo de productos y lineamientos que configures en tu panel. Si una consulta requiere datos internos no registrados (como números de pedido o reembolsos personalizados), el sistema lo reconoce y orienta amablemente hacia el enlace oficial de la bio o mensaje privado. Además, con el <strong>Modo Copilot</strong> cuentas con aprobación humana en 1 clic antes de publicar cada sugerencia.
           </div>
         </div>
 
         <!-- Q3 -->
-        <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
+        <div class="bg-slatecard rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
           <button type="button" onclick="Faq.toggle(3)" class="w-full p-4 sm:p-6 text-left flex items-center justify-between gap-4 font-bold text-xs sm:text-base text-midnight hover:text-brand-600 transition-colors">
-            <span data-i18n="faq_q3">¿Puedo conectar varias cuentas al mismo tiempo?</span>
+            <span data-i18n="faq_q3">¿Cuál es la diferencia entre cuenta conectada, marca y cliente?</span>
             <span id="faq-icon-3" class="text-lg font-bold text-slate-400 transition-transform">+</span>
           </button>
           <div id="faq-ans-3" class="hidden px-4 sm:px-6 pb-5 sm:pb-6 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-4" data-i18n="faq_a3">
-            Sí, puedes conectar y gestionar múltiples cuentas de Instagram y Páginas de Facebook de forma centralizada.
+            Una <strong>cuenta conectada</strong> es un canal individual de Instagram o Página de Facebook. Una <strong>marca</strong> es la configuración de tono, catálogo y contexto de negocio. En el <strong>Plan Agencia</strong>, puedes gestionar hasta 20 marcas o clientes de forma totalmente aislada, cada una con su propia voz, productos y reportes.
           </div>
         </div>
 
         <!-- Q4 -->
-        <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
+        <div class="bg-slatecard rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
           <button type="button" onclick="Faq.toggle(4)" class="w-full p-4 sm:p-6 text-left flex items-center justify-between gap-4 font-bold text-xs sm:text-base text-midnight hover:text-brand-600 transition-colors">
             <span data-i18n="faq_q4">¿Puedo empezar gratis sin ingresar tarjeta de crédito?</span>
             <span id="faq-icon-4" class="text-lg font-bold text-slate-400 transition-transform">+</span>
           </button>
           <div id="faq-ans-4" class="hidden px-4 sm:px-6 pb-5 sm:pb-6 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-4" data-i18n="faq_a4">
-            Sí. El plan Inicial es 100% gratuito e incluye hasta 50 respuestas de prueba al mes y el asistente Copilot para que puedas probar el impacto en tu comunidad antes de decidir actualizar.
+            Sí. El plan Inicial es 100% gratuito e incluye hasta 50 respuestas de prueba al mes y el asistente Copilot para que puedas comprobar el impacto en tu comunidad antes de decidir actualizar.
           </div>
         </div>
 
@@ -1215,11 +1455,30 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
   </section>
 
   <!-- ========================================================================= -->
-  <!-- 11. FOOTER PROFESIONAL CON MARCA DE AGUA COMPLETA Y LLAMATIVA -->
+  <!-- 11. FINAL CTA BANNER -->
+  <!-- ========================================================================= -->
+  <section class="py-14 sm:py-20 bg-gradient-to-br from-brand-600 via-indigo-600 to-purple-800 text-white text-center relative overflow-hidden">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 relative z-10">
+      <h2 class="text-2xl sm:text-4xl md:text-5xl font-extrabold mb-4 tracking-tight" data-i18n="final_cta_h2">
+        Empieza a transformar tus comentarios en clientes hoy mismo
+      </h2>
+      <p class="text-sm sm:text-lg text-brand-100 mb-8 max-w-2xl mx-auto font-normal" data-i18n="final_cta_sub">
+        Únete a creadores y agencias que ahorran más de 15 horas al mes y no pierden ni una sola oportunidad de venta.
+      </p>
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
+        <a href="login.php" class="w-full sm:w-auto px-8 py-4 rounded-xl text-sm sm:text-base font-bold text-brand-900 bg-white hover:bg-slate-100 shadow-xl transition-all shimmer-btn">
+          <span data-i18n="final_cta_btn">Comenzar Gratis (Sin Tarjeta)</span> →
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================================= -->
+  <!-- 12. FOOTER PROFESIONAL CON MARCA DE AGUA COMPLETA Y ENLACES LIMPIOS -->
   <!-- ========================================================================= -->
   <footer class="starry-footer-bg starry-overlay pt-14 sm:pt-16 pb-12 text-slate-200 text-sm overflow-hidden relative border-t border-slate-800/80">
     
-    <!-- Giant Responsive Watermark: Uses the EXACT same typography (Syne 900 / gamma-wordmark) as the Logo -->
+    <!-- Giant Responsive Watermark -->
     <div class="w-full max-w-full overflow-hidden flex justify-center items-center px-4 my-6 sm:my-8 select-none pointer-events-none">
       <div class="gamma-wordmark text-[clamp(2.8rem,13vw,11.5rem)] font-black tracking-tight leading-none text-center uppercase bg-clip-text text-transparent bg-gradient-to-r from-violet-400/40 via-purple-400/30 to-cyan-400/25 drop-shadow-md select-none">
         XINDRO
@@ -1239,7 +1498,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
             <span class="text-lg font-black tracking-tight text-white gamma-wordmark">XINDRO<span class="text-brand-400">.</span></span>
           </div>
           <p data-i18n="foot_brand_desc" class="text-xs text-slate-300 leading-relaxed mb-4">
-            El sistema operativo de IA para creadores y agencias de redes sociales. Respuestas en tiempo real, Smart Timing y API oficial.
+            El sistema operativo de IA para creadores y agencias de redes sociales. Respuestas en tiempo real, Smart Timing y API oficial de Meta.
           </p>
           <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-700 text-xs text-emerald-400 font-semibold mb-4">
             <span class="w-2 h-2 rounded-full bg-emerald-400 live-dot"></span>
@@ -1257,11 +1516,11 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         <div>
           <h4 data-i18n="foot_c2_t" class="text-xs font-extrabold text-white uppercase tracking-wider mb-4">Producto</h4>
           <ul class="space-y-2.5 text-xs text-slate-300 font-medium">
-            <li><a href="#precios" data-i18n="foot_c2_1" class="hover:text-white hover:underline transition-colors">Precios</a></li>
-            <li><a href="#simulador" data-i18n="foot_c2_2" class="hover:text-white hover:underline transition-colors">Inspiración</a></li>
-            <li><a href="#por-que-xindro" data-i18n="nav_why" class="hover:text-white hover:underline transition-colors">¿Por qué Xindro?</a></li>
-            <li><a href="#calculadora-roi" data-i18n="nav_roi" class="hover:text-white hover:underline transition-colors">Calculadora</a></li>
-            <li><a href="#funciones" data-i18n="nav_products" class="hover:text-white hover:underline transition-colors">Funciones</a></li>
+            <li><a href="#funciones" data-i18n="nav_products" class="hover:text-white hover:underline transition-colors">Funciones y Beneficios</a></li>
+            <li><a href="#como-empezar" data-i18n="nav_steps" class="hover:text-white hover:underline transition-colors">Cómo empezar</a></li>
+            <li><a href="#simulador" data-i18n="foot_c2_2" class="hover:text-white hover:underline transition-colors">Simulador en Vivo</a></li>
+            <li><a href="#calculadora-roi" data-i18n="nav_roi" class="hover:text-white hover:underline transition-colors">Calculadora de Ahorro</a></li>
+            <li><a href="#precios" data-i18n="foot_c2_1" class="hover:text-white hover:underline transition-colors">Precios y Planes</a></li>
           </ul>
         </div>
 
@@ -1269,11 +1528,10 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         <div>
           <h4 data-i18n="foot_c3_t" class="text-xs font-extrabold text-white uppercase tracking-wider mb-4">Empresa</h4>
           <ul class="space-y-2.5 text-xs text-slate-300 font-medium">
-            <li><a href="#por-que-xindro" data-i18n="foot_c3_1" class="hover:text-white hover:underline transition-colors">Acerca de</a></li>
-            <li><a href="login.php" data-i18n="foot_c3_2" class="hover:text-white hover:underline transition-colors">Carreras</a></li>
-            <li><a href="login.php" data-i18n="foot_c3_3" class="hover:text-white hover:underline transition-colors">Equipo</a></li>
+            <li><a href="#por-que-xindro" data-i18n="foot_c3_1" class="hover:text-white hover:underline transition-colors">¿Por qué Xindro?</a></li>
             <li><a href="#faq" data-i18n="nav_faq" class="hover:text-white hover:underline transition-colors">Preguntas Frecuentes</a></li>
-            <li><a href="privacy-policy.php" data-i18n="foot_c3_7" class="hover:text-white hover:underline transition-colors">Seguridad</a></li>
+            <li><a href="privacy-policy.php" data-i18n="foot_c3_7" class="hover:text-white hover:underline transition-colors">Seguridad y Privacidad</a></li>
+            <li><a href="data-deletion.php" class="hover:text-white hover:underline transition-colors">Eliminación de Datos (Meta)</a></li>
           </ul>
         </div>
 
@@ -1281,11 +1539,10 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         <div>
           <h4 data-i18n="foot_c4_t" class="text-xs font-extrabold text-white uppercase tracking-wider mb-4">Redes sociales</h4>
           <ul class="space-y-2.5 text-xs text-slate-300 font-medium">
-            <li><a href="https://instagram.com" target="_blank" rel="noopener" class="hover:text-white hover:underline transition-colors">Instagram</a></li>
-            <li><a href="https://linkedin.com" target="_blank" rel="noopener" class="hover:text-white hover:underline transition-colors">LinkedIn</a></li>
-            <li><a href="https://tiktok.com" target="_blank" rel="noopener" class="hover:text-white hover:underline transition-colors">TikTok</a></li>
-            <li><a href="https://x.com" target="_blank" rel="noopener" class="hover:text-white hover:underline transition-colors">X (Twitter)</a></li>
-            <li><a href="https://youtube.com" target="_blank" rel="noopener" class="hover:text-white hover:underline transition-colors">YouTube</a></li>
+            <li><a href="https://instagram.com" target="_blank" rel="noopener noreferrer" class="hover:text-white hover:underline transition-colors">Instagram</a></li>
+            <li><a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" class="hover:text-white hover:underline transition-colors">LinkedIn</a></li>
+            <li><a href="https://tiktok.com" target="_blank" rel="noopener noreferrer" class="hover:text-white hover:underline transition-colors">TikTok</a></li>
+            <li><a href="https://x.com" target="_blank" rel="noopener noreferrer" class="hover:text-white hover:underline transition-colors">X (Twitter)</a></li>
           </ul>
         </div>
 
@@ -1293,12 +1550,10 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         <div>
           <h4 data-i18n="foot_c5_t" class="text-xs font-extrabold text-white uppercase tracking-wider mb-4">Información legal</h4>
           <ul class="space-y-2.5 text-xs text-slate-300 font-medium">
-            <li><a href="terms-of-service.php" class="hover:text-white hover:underline transition-colors">Acceptable Use Policy</a></li>
-            <li><a href="privacy-policy.php" class="hover:text-white hover:underline transition-colors">Cookie Notice</a></li>
+            <li><a href="terms-of-service.php" class="hover:text-white hover:underline transition-colors">Términos de Servicio</a></li>
+            <li><a href="privacy-policy.php" class="hover:text-white hover:underline transition-colors">Política de Privacidad</a></li>
             <li><a href="javascript:void(0)" onclick="CookieConsent.openSettings()" data-i18n="cookie_btn_pref" class="hover:text-white hover:underline transition-colors text-brand-300 font-semibold">Preferencias de cookies</a></li>
-            <li><a href="privacy-policy.php" class="hover:text-white hover:underline transition-colors">Privacy Policy</a></li>
-            <li><a href="data-deletion.php" class="hover:text-white hover:underline transition-colors">Data Deletion (Meta)</a></li>
-            <li><a href="terms-of-service.php" class="hover:text-white hover:underline transition-colors">Terms of Service</a></li>
+            <li><a href="data-deletion.php" class="hover:text-white hover:underline transition-colors">Instrucciones de Eliminación</a></li>
           </ul>
         </div>
 
@@ -1479,27 +1734,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
 
         // Close all other accordion items
         for (let i = 1; i <= 6; i++) {
-          const a = document.getElementById('faq-ans-' + i);
-          const ic = document.getElementById('faq-icon-' + i);
-          if (a) a.classList.add('hidden');
-          if (ic) {
-            ic.textContent = '+';
-            ic.style.transform = 'rotate(0deg)';
-          }
-        }
-
-        // Toggle selected item
-        if (isCurrentlyHidden) {
-          ans.classList.remove('hidden');
-          if (icon) {
-            icon.textContent = '−';
-            icon.style.transform = 'rotate(180deg)';
-          }
-        }
-      }
-    };
-
-    // 3. DICCIONARIO MULTI-IDIOMA (ES / EN / PT)
+          const a =    // 3. DICCIONARIO MULTI-IDIOMA (ES / EN / PT)
     const I18n = {
       current: '<?= $initialLang ?>',
 
@@ -1507,7 +1742,8 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         es: {
           page_title: "XINDRO — El Sistema Operativo de IA para Creadores de Contenido",
           page_desc: "Convierte los comentarios de Instagram y Facebook en conversaciones que hacen crecer tu negocio con IA contextualizada.",
-          nav_products: "Productos",
+          nav_products: "Funciones",
+          nav_steps: "Cómo empezar",
           nav_why: "¿Por qué Xindro?",
           nav_simulator: "Simulador",
           nav_roi: "Calculadora",
@@ -1516,24 +1752,54 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           nav_login: "Iniciar sesión",
           nav_cta: "Comienza gratis",
           nav_dashboard: "Ir a mi Panel",
-          hero_badge: "El sistema operativo de IA para creadores de contenido",
+          hero_badge: "El sistema operativo de IA para creadores de contenido y marcas",
           hero_h1_p1: "Convierte los comentarios de Instagram y Facebook",
           hero_h1_p2: "en conversaciones que hacen crecer tu negocio.",
           hero_sub: "Reúne tus comentarios, identifica consultas de compra y prepara respuestas con el estilo de tu marca. Revisa las sugerencias antes de publicar y dedica más tiempo a crear y atender oportunidades.",
           hero_cta_sim: "Probar una respuesta gratis",
-          hero_cta_calc: "Ver cómo funciona",
-          hero_card_title: "XINDRO Live Copilot — Flujo en Tiempo Real",
-          hero_card_status: "Meta Webhook Activo",
+          hero_cta_calc: "Qué puedes hacer",
+          hero_card_title: "Flujo en Tiempo Real: Comentario ➔ Detección de Intención ➔ Sugerencia ➔ Aprobación Humana",
+          hero_card_status: "Meta Graph API Oficial",
           hero_card_time: "Instagram • Hace 2 seg",
-          hero_card_intent: "🎯 Intención: <strong class=\"text-brand-600\">Pregunta Clave</strong>",
-          hero_card_calibrated: "IA Calibrada",
-          hero_card_bot_reply: "🤖 Respuesta con Voz de Marca",
+          hero_card_intent: "🎯 Intención: <strong class=\"text-brand-600\">Pregunta de Mentoría</strong>",
+          hero_card_calibrated: "Voz Calibrada",
+          hero_card_bot_reply: "🤖 Sugerencia con Voz de Marca",
           hero_card_tone: "Mentor Empático",
           hero_card_retention: "🚀 Retención: <strong class=\"text-brand-900\">+380%</strong>",
           hero_card_ready: "✔ Listo para postear",
           hero_comment_sample: "Llevo semanas intentando ser constante en mis redes pero me quedo sin ideas y pierdo motivación. ¿Cómo estructuran su rutina diaria?",
           hero_reply_sample: "Alejandro, la clave no es la motivación que va y viene, sino los sistemas. Bloquea 45 min cada mañana antes de revisar el móvil. La disciplina diaria supera a la inspiración esporádica. ¿Qué es lo primero que harás mañana al despertar? 👇",
           marquee_title: "Integrado con la Infraestructura Oficial de Redes Sociales e Inteligencia Artificial",
+          feat_badge: "Capacidades de la Plataforma",
+          feat_h2: "¿Qué puedes hacer con XINDRO?",
+          feat_sub: "Un ecosistema integral diseñado para creadores y marcas que buscan monetizar su comunidad sin perder autenticidad ni control.",
+          feat1_t: "1. Bandeja Unificada Multicanal",
+          feat1_d: "Centraliza todas las interacciones de Instagram y Facebook en una sola bandeja en tiempo real sin cambiar de pestaña.",
+          feat1_status: "✔ Meta Graph API Oficial Activa",
+          feat2_t: "2. Detección Inteligente de Intención",
+          feat2_d: "Identifica al instante dudas de compra, preguntas filosóficas, felicitaciones o reclamos para priorizar lo que genera ingresos.",
+          feat2_status: "✔ Detección de Leads en <180ms",
+          feat3_t: "3. Voz de Marca Calibrada",
+          feat3_d: "Entrena a la IA con los datos de tu negocio (cursos, precios, políticas) y ajusta el tono para respuestas 100% auténticas.",
+          feat3_status: "✔ Calibrador Multi-Tono & Anti-Alucinación",
+          feat4_t: "4. Modo Copilot con Revisión Humana",
+          feat4_d: "Tú tienes el control total. Revisa, edita con un clic o aprueba sugerencias antes de que se publiquen en tus redes.",
+          feat4_status: "✔ 100% Control y Seguridad de Marca",
+          feat5_t: "5. Aislamiento Total Multi-Marca",
+          feat5_d: "Gestiona múltiples marcas o clientes con bases de conocimiento independientes y aislamiento criptográfico de datos.",
+          feat5_status: "✔ Privacidad Multi-Cliente Garantizada",
+          feat6_t: "6. Smart Timing & Métricas de Impacto",
+          feat6_d: "Publica e interactúa en la ventana de oro de mayor alcance orgánico y monitorea leads generados en tiempo real.",
+          feat6_status: "✔ Optimización de Algoritmo Meta",
+          steps_badge: "Paso a Paso",
+          steps_h2: "Cómo empezar en 3 sencillos pasos",
+          steps_sub: "Sin configuraciones técnicas complejas. Conecta tus redes y empieza a responder en minutos.",
+          step1_t: "1. Conecta tus Cuentas",
+          step1_d: "Inicia sesión con Meta OAuth oficial de forma segura. Selecciona las cuentas de Instagram y Facebook que deseas gestionar con permisos autorizados.",
+          step2_t: "2. Configura tu Voz y Datos",
+          step2_d: "Define los datos de tu negocio (productos, precios, FAQs) y calibra el tono de comunicación: empático, mentor o comercial de alto valor.",
+          step3_t: "3. Revisa y Publica con Copilot",
+          step3_d: "Recibe sugerencias instantáneas fundamentadas en tus datos. Aprueba con 1 clic o deja que el piloto automático trabaje por ti con total seguridad.",
           stat_1: "Tiempo Manual Ahorrado",
           stat_2: "Control y Aprobación Humana",
           stat_3: "Oportunidades de Compra Perdidas",
@@ -1568,9 +1834,13 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           calc_res_h_label: "Tiempo Manual Ahorrado",
           calc_res_l_label: "Leads / Preguntas Clave",
           calc_res_footer: "de respuestas entregadas en la ventana de oro del algoritmo sin agotamiento humano.",
+          calc_assumptions: "* Estimación basada en un promedio de 45 segundos por respuesta manual y un 2.4% de tasa de consultas con alta intención comercial detectadas por la IA.",
           sim_badge: "Playground en Vivo",
           sim_h2: "Prueba el Motor de XINDRO en Tiempo Real",
           sim_sub: "Selecciona un tono, escribe cualquier comentario de tu comunidad y observa cómo la IA genera respuestas hipercontextualizadas.",
+          sim_ctx_title: "Negocio de Ejemplo: \"Academia Stoic Pro\"",
+          sim_ctx_desc: "<strong>Producto:</strong> Curso de Hábitos y Mentalidad (40h de clases grabadas, acceso vitalicio, comunidad privada). <strong>Precio:</strong> 149 € (pago único con enlace en bio).",
+          sim_engine_status: "🛡️ Respuestas 100% Fundamentadas",
           sim_lbl_tone: "1. Tono de Marca:",
           sim_opt_mentor: "🏛️ Estoico / Mentor Sabio",
           sim_opt_empathy: "🤝 Cercano & Empático",
@@ -1581,11 +1851,14 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           sim_opt_rel: "Solo cuando sea relevante",
           sim_opt_never: "Sin pregunta final",
           sim_lbl_comment: "Comentario de tu seguidor a simular:",
-          sim_presets_title: "Rápidos:",
-          sim_preset_1: "💡 \"¿El curso incluye clases grabadas?\"",
+          sim_presets_title: "Probar ejemplos:",
+          sim_preset_1: "📚 \"¿Clases grabadas y acceso?\"",
           sim_preset_2: "🏛️ \"Dicotomía del control\"",
+          sim_preset_3: "💎 \"¿Precio del curso?\"",
           sim_btn_gen: "Generar Respuesta con IA",
           sim_res_title: "Resultado Generado",
+          sim_score_label: "Prioridad Comercial:",
+          sim_score_explain: "(Consulta de Compra)",
           sim_autopilot_ok: "✔ Apto para Autopilot en Instagram y Facebook",
           sim_btn_copy: "📋 Copiar",
           price_badge: "Planes Transparentes",
@@ -1632,6 +1905,8 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           plan4_f5: "Máxima velocidad y exportación",
           plan4_f6: "Acceso para equipos y soporte dedicado",
           plan4_btn: "Acceso para Agencias",
+          price_faq_box_title: "💡 ¿Cómo funcionan los tokens y respuestas mensuales?",
+          price_faq_box_desc: "Cada respuesta generada y aprobada equivale a <strong>1 token / respuesta</strong>. Si alcanzas el límite mensual de tu plan, el sistema te notificará para ampliar tu cupo o cambiar de plan; nunca te cobraremos cargos sorpresa ni bloquearemos tus cuentas.",
           faq_badge: "Respuestas Claras",
           faq_h2: "Preguntas Frecuentes",
           faq_sub: "Todo lo que necesitas saber antes de empezar a automatizar tu comunidad.",
@@ -1643,6 +1918,9 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           faq_a3: "Sí, puedes conectar y gestionar múltiples cuentas de Instagram y Páginas de Facebook de forma centralizada.",
           faq_q4: "¿Puedo empezar gratis sin ingresar tarjeta de crédito?",
           faq_a4: "Sí. El plan Inicial es 100% gratuito e incluye hasta 50 respuestas de prueba al mes y el asistente Copilot para que puedas probar el impacto en tu comunidad antes de decidir actualizar.",
+          final_cta_h2: "¿Listo para transformar tus comentarios en oportunidades reales?",
+          final_cta_sub: "Únete a los creadores y negocios que ya ahorran horas cada semana y maximizan sus ventas con XINDRO.",
+          final_cta_btn: "Crear Cuenta Gratis Ahora",
           foot_brand_desc: "El sistema operativo de IA para creadores y agencias de redes sociales. Respuestas en tiempo real, Smart Timing y sincronización oficial.",
           foot_status_pill: "Meta API 100% Operativa",
           foot_c2_t: "Producto",
@@ -1679,7 +1957,8 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         en: {
           page_title: "XINDRO — The AI Operating System for Content Creators",
           page_desc: "Turn Instagram and Facebook comments into conversations that grow your business with contextual AI.",
-          nav_products: "Products",
+          nav_products: "Features",
+          nav_steps: "How it works",
           nav_why: "Why Xindro?",
           nav_simulator: "Simulator",
           nav_roi: "Calculator",
@@ -1688,24 +1967,54 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           nav_login: "Log in",
           nav_cta: "Get started free",
           nav_dashboard: "Go to Dashboard",
-          hero_badge: "The AI operating system for content creators",
+          hero_badge: "The AI operating system for content creators and brands",
           hero_h1_p1: "Turn Instagram and Facebook comments",
           hero_h1_p2: "into conversations that grow your business.",
           hero_sub: "Consolidate your comments, identify purchase inquiries, and draft replies tailored to your brand voice. Review suggestions before publishing and spend more time creating and closing deals.",
           hero_cta_sim: "Try a free AI reply",
-          hero_cta_calc: "See how it works",
-          hero_card_title: "XINDRO Live Copilot — Real-Time Flow",
-          hero_card_status: "Meta Webhook Active",
+          hero_cta_calc: "What you can do",
+          hero_card_title: "Real-Time Flow: Comment ➔ Intent Detection ➔ Suggestion ➔ Human Review",
+          hero_card_status: "Official Meta Graph API",
           hero_card_time: "Instagram • 2s ago",
-          hero_card_intent: "🎯 Intent: <strong class=\"text-brand-600\">High-Value Question</strong>",
-          hero_card_calibrated: "Calibrated AI",
-          hero_card_bot_reply: "🤖 Brand Voice Reply",
+          hero_card_intent: "🎯 Intent: <strong class=\"text-brand-600\">Mentorship Question</strong>",
+          hero_card_calibrated: "Calibrated Voice",
+          hero_card_bot_reply: "🤖 Brand Voice Suggestion",
           hero_card_tone: "Empathetic Mentor",
           hero_card_retention: "🚀 Retention: <strong class=\"text-brand-900\">+380%</strong>",
           hero_card_ready: "✔ Ready to post",
           hero_comment_sample: "I've been trying to stay consistent on social media for weeks but I run out of ideas and lose motivation. How do you structure your daily routine?",
           hero_reply_sample: "Alejandro, the key isn't motivation that comes and goes, but systems. Block 45 min every morning before checking your phone. Daily discipline beats sporadic inspiration. What is the first thing you will do tomorrow when you wake up? 👇",
           marquee_title: "Integrated with Official Social Media & AI Infrastructure",
+          feat_badge: "Platform Capabilities",
+          feat_h2: "What can you do with XINDRO?",
+          feat_sub: "A complete AI operating system built for creators and brands who want to monetize their audience without losing authenticity or human control.",
+          feat1_t: "1. Unified Multi-Channel Inbox",
+          feat1_d: "Consolidate all Instagram and Facebook interactions in a single real-time inbox without switching tabs.",
+          feat1_status: "✔ Official Meta Graph API Active",
+          feat2_t: "2. Smart Intent Detection",
+          feat2_d: "Instantly categorize purchase inquiries, philosophical questions, praises, or complaints to prioritize revenue-generating conversations.",
+          feat2_status: "✔ Lead Detection in <180ms",
+          feat3_t: "3. Calibrated Brand Voice",
+          feat3_d: "Train the AI with your real business facts (products, pricing, policies) and tune tone of voice for 100% authentic answers.",
+          feat3_status: "✔ Multi-Tone & Anti-Hallucination Guardrails",
+          feat4_t: "4. Copilot Mode with Human Review",
+          feat4_d: "You stay in full control. Review, edit with one click, or approve suggestions before they get published to your social feeds.",
+          feat4_status: "✔ 100% Brand Safety & Review Control",
+          feat5_t: "5. Total Multi-Brand Isolation",
+          feat5_d: "Manage multiple brands or client accounts with isolated knowledge bases and cryptographic data separation.",
+          feat5_status: "✔ Multi-Tenant Privacy Guaranteed",
+          feat6_t: "6. Smart Timing & Impact Metrics",
+          feat6_d: "Post and engage during peak organic reach windows and track generated sales leads in real time.",
+          feat6_status: "✔ Meta Algorithm Optimization",
+          steps_badge: "Step by Step",
+          steps_h2: "How to get started in 3 easy steps",
+          steps_sub: "No complex tech setup required. Connect your social channels and start replying in minutes.",
+          step1_t: "1. Connect Your Accounts",
+          step1_d: "Securely sign in via official Meta OAuth. Choose the Instagram and Facebook Pages you want to manage with verified permissions.",
+          step2_t: "2. Configure Voice & Business Facts",
+          step2_d: "Input your core business knowledge (products, pricing, FAQs) and calibrate your desired communication tone: mentor, friendly, or high-ticket sales.",
+          step3_t: "3. Review & Post with Copilot",
+          step3_d: "Receive instant AI drafts grounded in your real business facts. Approve with 1 click or let autopilot engage safely on your behalf.",
           stat_1: "Manual Time Saved",
           stat_2: "Human Review & Control",
           stat_3: "Lost Purchase Opportunities",
@@ -1740,9 +2049,13 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           calc_res_h_label: "Manual Hours Saved",
           calc_res_l_label: "Qualified Leads / Questions",
           calc_res_footer: "of replies delivered in the golden algorithm window without human burnout.",
+          calc_assumptions: "* Estimate based on an average of 45 seconds per manual reply and a 2.4% rate of high commercial intent questions detected by AI.",
           sim_badge: "Live Playground",
           sim_h2: "Test the XINDRO Engine in Real Time",
           sim_sub: "Select a tone, type any comment from your community, and watch the AI craft hyper-contextualized responses.",
+          sim_ctx_title: "Sample Business: \"Academia Stoic Pro\"",
+          sim_ctx_desc: "<strong>Product:</strong> Mindset & Habits Course (40h recorded lessons, lifetime access, private community). <strong>Price:</strong> 149 € (one-time payment via bio link).",
+          sim_engine_status: "🛡️ 100% Grounded Responses",
           sim_lbl_tone: "1. Brand Tone:",
           sim_opt_mentor: "🏛️ Stoic / Wise Mentor",
           sim_opt_empathy: "🤝 Friendly & Empathetic",
@@ -1754,10 +2067,13 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           sim_opt_never: "No closing question",
           sim_lbl_comment: "Follower comment to simulate:",
           sim_presets_title: "Quick presets:",
-          sim_preset_1: "💡 \"Does the course include recorded classes?\"",
+          sim_preset_1: "📚 \"Recorded classes & access?\"",
           sim_preset_2: "🏛️ \"Dichotomy of control\"",
+          sim_preset_3: "💎 \"Course price?\"",
           sim_btn_gen: "Generate AI Response",
           sim_res_title: "Result Generated",
+          sim_score_label: "Commercial Priority:",
+          sim_score_explain: "(Purchase Inquiry)",
           sim_autopilot_ok: "✔ Eligible for Autopilot on Instagram and Facebook",
           sim_btn_copy: "📋 Copy",
           price_badge: "Transparent Pricing",
@@ -1804,6 +2120,8 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           plan4_f5: "Maximum speed & PDF/Excel reporting",
           plan4_f6: "Team access & 24/7 dedicated support",
           plan4_btn: "Agency Access",
+          price_faq_box_title: "💡 How do monthly tokens and replies work?",
+          price_faq_box_desc: "Each generated and approved reply equals <strong>1 token / reply</strong>. If you reach your monthly limit, Xindro notifies you so you can easily upgrade or add tokens—we never charge surprise overages or restrict your accounts.",
           faq_badge: "Clear Answers",
           faq_h2: "Frequently Asked Questions",
           faq_sub: "Everything you need to know before automating your community.",
@@ -1815,6 +2133,9 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           faq_a3: "Yes, you can manage multiple Instagram accounts and Facebook Pages from a single centralized dashboard.",
           faq_q4: "Can I start for free without a credit card?",
           faq_a4: "Yes! The Starter plan is 100% free with up to 50 trial replies per month and the Copilot assistant included so you can test the impact on your community.",
+          final_cta_h2: "Ready to turn your social comments into real business growth?",
+          final_cta_sub: "Join creators and businesses who save hours every week and maximize sales with XINDRO.",
+          final_cta_btn: "Create Free Account Now",
           foot_brand_desc: "The AI operating system for creators and social media agencies. Real-time replies, Smart Timing, and official synchronization.",
           foot_status_pill: "Meta API 100% Operational",
           foot_c2_t: "Product",
@@ -1851,7 +2172,8 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         pt: {
           page_title: "XINDRO — O Sistema Operacional de IA para Criadores de Conteúdo",
           page_desc: "Converta comentários do Instagram e Facebook em conversas que fazem seu negócio crescer com IA contextualizada.",
-          nav_products: "Produtos",
+          nav_products: "Recursos",
+          nav_steps: "Como começar",
           nav_why: "Por que a Xindro?",
           nav_simulator: "Simulador",
           nav_roi: "Calculadora",
@@ -1860,24 +2182,54 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           nav_login: "Entrar",
           nav_cta: "Comece grátis",
           nav_dashboard: "Ir ao Painel",
-          hero_badge: "O sistema operacional de IA para criadores de conteúdo",
+          hero_badge: "O sistema operacional de IA para criadores de conteúdo e marcas",
           hero_h1_p1: "Converta comentários do Instagram e Facebook",
           hero_h1_p2: "em conversas que fazem seu negócio crescer.",
           hero_sub: "Reúna seus comentários, identifique dúvidas de compra e prepare respostas no estilo da sua marca. Revise as sugestões antes de publicar e dedique mais tempo a criar e atender oportunidades.",
           hero_cta_sim: "Testar uma resposta grátis",
-          hero_cta_calc: "Ver como funciona",
-          hero_card_title: "XINDRO Live Copilot — Fluxo em Tempo Real",
-          hero_card_status: "Meta Webhook Ativo",
+          hero_cta_calc: "O que você pode fazer",
+          hero_card_title: "Fluxo em Tempo Real: Comentário ➔ Detecção de Intenção ➔ Sugestão ➔ Aprovação Humana",
+          hero_card_status: "Meta Graph API Oficial",
           hero_card_time: "Instagram • Há 2 seg",
-          hero_card_intent: "🎯 Intenção: <strong class=\"text-brand-600\">Pergunta Clave</strong>",
-          hero_card_calibrated: "IA Calibrada",
-          hero_card_bot_reply: "🤖 Resposta com Tom de Marca",
+          hero_card_intent: "🎯 Intenção: <strong class=\"text-brand-600\">Pergunta de Mentoria</strong>",
+          hero_card_calibrated: "Voz Calibrada",
+          hero_card_bot_reply: "🤖 Sugestão com Tom de Marca",
           hero_card_tone: "Mentor Empático",
           hero_card_retention: "🚀 Retenção: <strong class=\"text-brand-900\">+380%</strong>",
           hero_card_ready: "✔ Pronto para postar",
           hero_comment_sample: "Estou há semanas tentando ter consistência nas redes, mas fico sem ideias e perco a motivação. Como vocês estruturam a rotina diária?",
           hero_reply_sample: "Alejandro, o segredo não é a motivação que vai e vem, mas os sistemas. Bloqueie 45 min toda manhã antes de olhar o celular. A disciplina diária supera a inspiração passageira. Qual é a primeira coisa que você fará amanhã ao acordar? 👇",
           marquee_title: "Integrado com a Infraestrutura Oficial de Redes Sociais e Inteligência Artificial",
+          feat_badge: "Recursos da Plataforma",
+          feat_h2: "O que você pode fazer com o XINDRO?",
+          feat_sub: "Um ecossistema completo desenvolvido para criadores e marcas que desejam monetizar sua comunidade com autenticidade e controle.",
+          feat1_t: "1. Caixa de Entrada Unificada Multicanal",
+          feat1_d: "Centralize todas as interações do Instagram e Facebook em um único painel em tempo real sem trocar de abas.",
+          feat1_status: "✔ Meta Graph API Oficial Ativa",
+          feat2_t: "2. Detecção Inteligente de Intenção",
+          feat2_d: "Identifique na hora dúvidas de compra, perguntas conceituais, elogios ou suporte para priorizar o que gera receita.",
+          feat2_status: "✔ Detecção de Leads em <180ms",
+          feat3_t: "3. Tom de Marca Calibrado",
+          feat3_d: "Treine a IA com os dados reais do seu negócio (cursos, preços, políticas) e ajuste o tom para respostas 100% autênticas.",
+          feat3_status: "✔ Calibrador Multi-Tom & Anti-Alucinação",
+          feat4_t: "4. Modo Copilot com Revisão Humana",
+          feat4_d: "Você no controle total. Revise, edite com um clique ou aprove sugestões antes de serem publicadas nas suas redes.",
+          feat4_status: "✔ 100% de Controle e Segurança de Marca",
+          feat5_t: "5. Isolamento Total Multi-Marca",
+          feat5_d: "Gerencie múltiplas marcas ou clientes com bases de conhecimento independentes e isolamento criptográfico de dados.",
+          feat5_status: "✔ Privacidade Multi-Cliente Garantizada",
+          feat6_t: "6. Smart Timing & Métricas de Impacto",
+          feat6_d: "Interaja nos horários de maior alcance orgânico e acompanhe oportunidades de vendas identificadas em tempo real.",
+          feat6_status: "✔ Otimização de Algoritmo Meta",
+          steps_badge: "Passo a Passo",
+          steps_h2: "Como começar em 3 passos simples",
+          steps_sub: "Sem configurações complexas. Conecte suas redes e comece a responder em minutos.",
+          step1_t: "1. Conecte suas Contas",
+          step1_d: "Faça login com Meta OAuth oficial com segurança. Selecione as contas do Instagram e Facebook que deseja gerenciar com permissões autorizadas.",
+          step2_t: "2. Configure sua Voz e Dados",
+          step2_d: "Defina os dados do seu negócio (produtos, preços, FAQs) e calibre o tom de comunicação: mentor, empático ou focado em conversão.",
+          step3_t: "3. Revise e Publique com Copilot",
+          step3_d: "Receba sugestões instantâneas baseadas nos dados do seu negócio. Aprove com 1 clique ou deixe o piloto automático agir com segurança.",
           stat_1: "Tempo Manual Economizado",
           stat_2: "Controle e Aprovação Humana",
           stat_3: "Oportunidades de Venda Perdidas",
@@ -1912,9 +2264,13 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           calc_res_h_label: "Horas Manuais Economizadas",
           calc_res_l_label: "Leads / Perguntas Qualificadas",
           calc_res_footer: "das respostas entregues na janela de ouro do algoritmo sem exaustão humana.",
+          calc_assumptions: "* Estimativa baseada em uma média de 45 segundos por resposta manual e 2,4% de taxa de perguntas com alta intenção comercial detectadas pela IA.",
           sim_badge: "Playground ao Vivo",
           sim_h2: "Teste o Motor do XINDRO em Tempo Real",
           sim_sub: "Selecione um tom, digite qualquer comentário da sua comunidade e veja a IA gerar respostas hipercontextualizadas.",
+          sim_ctx_title: "Negócio de Exemplo: \"Academia Stoic Pro\"",
+          sim_ctx_desc: "<strong>Produto:</strong> Curso de Hábitos e Mentalidade (40h de aulas gravadas, acesso vitalício, comunidade privada). <strong>Preço:</strong> 149 € (pagamento único no link da bio).",
+          sim_engine_status: "🛡️ Respostas 100% Fundamentadas",
           sim_lbl_tone: "1. Tom de Marca:",
           sim_opt_mentor: "🏛️ Estoico / Mentor Sábio",
           sim_opt_empathy: "🤝 Acolhedor & Empático",
@@ -1925,11 +2281,14 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           sim_opt_rel: "Apenas quando relevante",
           sim_opt_never: "Sem pergunta final",
           sim_lbl_comment: "Comentario do seguidor para simular:",
-          sim_presets_title: "Rápidos:",
-          sim_preset_1: "💡 \"O curso inclui aulas gravadas?\"",
+          sim_presets_title: "Provar exemplos:",
+          sim_preset_1: "📚 \"Aulas gravadas e acesso?\"",
           sim_preset_2: "🏛️ \"Dicotomia do controle\"",
+          sim_preset_3: "💎 \"Preço do curso?\"",
           sim_btn_gen: "Gerar Resposta com IA",
           sim_res_title: "Resultado Gerado",
+          sim_score_label: "Prioridade Comercial:",
+          sim_score_explain: "(Dúvida de Compra)",
           sim_autopilot_ok: "✔ Apto para Autopilot no Instagram e Facebook",
           sim_btn_copy: "📋 Copiar",
           price_badge: "Planos Transparentes",
@@ -1976,6 +2335,8 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           plan4_f5: "Velocidade máxima e exportação de relatórios",
           plan4_f6: "Acesso para equipes e suporte dedicado",
           plan4_btn: "Acesso para Agências",
+          price_faq_box_title: "💡 Como funcionam os tokens e respostas mensais?",
+          price_faq_box_desc: "Cada resposta gerada e aprovada equivale a <strong>1 token / resposta</strong>. Se você atingir o limite mensal do seu plano, o sistema notificará você para expandir seu limite; nunca cobraremos taxas surpresa.",
           faq_badge: "Respostas Claras",
           faq_h2: "Perguntas Frequentes",
           faq_sub: "Tudo o que você precisa saber antes de automatizar sua comunidade.",
@@ -1987,6 +2348,9 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           faq_a3: "Sim, você pode conectar e gerenciar várias contas do Instagram e Páginas do Facebook de forma centralizada.",
           faq_q4: "Posso começar grátis sem cartão de crédito?",
           faq_a4: "Sim! O plano Inicial é 100% gratuito com até 50 respostas de teste por mês e o assistente Copilot incluído para você testar o impacto na sua comunidade.",
+          final_cta_h2: "Pronto para transformar comentários em oportunidades reais?",
+          final_cta_sub: "Junte-se a criadores e marcas que já economizam horas toda semana e aceleram vendas com a XINDRO.",
+          final_cta_btn: "Criar Conta Grátis Agora",
           foot_brand_desc: "O sistema operacional de IA para criadores e agências de redes sociais. Respostas em tempo real, Smart Timing e sincronização oficial.",
           foot_status_pill: "Meta API 100% Operacional",
           foot_c2_t: "Produto",
@@ -2154,20 +2518,23 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
       }
     };
 
-    // 5. SIMULATOR ENGINE
+    // 5. SIMULATOR ENGINE (100% Grounded in "Academia Stoic Pro" business context)
     const Simulator = {
       presets: {
         es: {
           1: { text: "¿El curso incluye clases grabadas y cuánto tiempo tengo acceso?", tone: "empathy", closing: "always" },
-          2: { text: "¿Cómo puedo aplicar la dicotomía del control cuando siento estrés o sobrecarga en mis proyectos?", tone: "mentor", closing: "relevant" }
+          2: { text: "¿Cómo puedo aplicar la dicotomía del control cuando siento estrés o sobrecarga en mis proyectos?", tone: "mentor", closing: "relevant" },
+          3: { text: "¿Cuál es el precio del curso y qué incluye?", tone: "growth", closing: "always" }
         },
         en: {
           1: { text: "Does the course include recorded lessons and how long do I have access?", tone: "empathy", closing: "always" },
-          2: { text: "How can I apply the dichotomy of control when I feel stressed or overwhelmed?", tone: "mentor", closing: "relevant" }
+          2: { text: "How can I apply the dichotomy of control when I feel stressed or overwhelmed?", tone: "mentor", closing: "relevant" },
+          3: { text: "What is the price of the course and what does it include?", tone: "growth", closing: "always" }
         },
         pt: {
           1: { text: "O curso inclui aulas gravadas e por quanto tempo tenho acesso?", tone: "empathy", closing: "always" },
-          2: { text: "Como posso aplicar a dicotomia do controle quando sinto estresse ou sobrecarga?", tone: "mentor", closing: "relevant" }
+          2: { text: "Como posso aplicar a dicotomia do controle quando sinto estresse ou sobrecarga?", tone: "mentor", closing: "relevant" },
+          3: { text: "Qual é o preço do curso e o que está incluído?", tone: "growth", closing: "always" }
         }
       },
 
@@ -2209,17 +2576,17 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           if (lang === 'en') {
             const isCourseQA = textLower.includes('recorded') || textLower.includes('access') || textLower.includes('lesson') || textLower.includes('curriculum') || textLower.includes('how long');
             const isDichotomy = textLower.includes('dichotomy') || textLower.includes('control') || textLower.includes('stoic') || textLower.includes('marcus');
-            const isPrice = textLower.includes('price') || textLower.includes('cost') || textLower.includes('how much') || textLower.includes('buy');
+            const isPrice = textLower.includes('price') || textLower.includes('cost') || textLower.includes('how much') || textLower.includes('buy') || textLower.includes('payment');
 
             if (isCourseQA) {
-              intent = 'Qualified Lead • Course Structure 📚';
+              intent = 'Lead: Course Structure & Access 📚';
               score = 96;
               autopilotText = '✔ Verified & Grounded for Autopilot';
               reply = tone === 'mentor'
-                ? "Hello! The program is structured for you to advance with discipline at your own pace. It includes full, flexible access to all recorded lessons, practical materials, and continuous updates. You can check the syllabus and register via our bio link. Any specific questions on the modules? 🏛️"
+                ? "Hello! The program includes lifetime access to all recorded lessons (over 40 hours of practical training) and our private community so you can advance with discipline at your own pace. Full syllabus and direct registration are available in our bio link. Any specific questions on the modules? 🏛️"
                 : (tone === 'empathy'
-                  ? "Hi there! Yes, the course includes full access to recorded lessons so you can learn at your own pace with ongoing access and bonus resources. You will find all details and enrollment in our bio link or feel free to DM us. Would you like to review the syllabus? 🤝"
-                  : "Hey! Absolutely, you get full flexible access to all high-impact recorded sessions and continuous resources. You can view the full curriculum and register directly via our bio link or send us a DM. Ready to level up? 🚀");
+                  ? "Hi there! Yes, the course includes lifetime access to all recorded lessons (over 40 hours) and the private community, allowing you to learn with complete flexibility at your own pace. You can find full details and enrollment in our bio link. Would you like to review the syllabus? 🤝"
+                  : "Hey! Absolutely, you get instant lifetime access to over 40 hours of high-impact recorded lessons and our private community. Check out all details and register directly via our bio link. Ready to level up? 🚀");
             } else if (isDichotomy) {
               intent = 'Stoic Philosophy & Mentorship 🧠';
               score = 92;
@@ -2230,19 +2597,21 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
                   ? "Hello! Applying the dichotomy of control starts by separating what you can directly influence from what you cannot. Focus your energy on your response and let go of anxiety over external factors. What challenge are you navigating this week? 🤝"
                   : "Great question! The dichotomy of control is the ultimate mental clarity tool: execute ruthlessly on your own actions and ignore external noise. Check our bio link for practical mindset frameworks. What habit are you building today? 🚀");
             } else if (isPrice) {
-              intent = 'Commercial Lead 💎';
-              score = 96;
+              intent = 'Commercial Lead: Pricing 💎';
+              score = 98;
               autopilotText = '✔ Verified & Grounded for Autopilot';
               reply = tone === 'mentor'
-                ? "True value lies in execution and structured systems. You can review our full program curriculum, pricing tiers, and enrollment directly in our bio link. What key objective are you looking to achieve this month? 🏛️"
-                : "Hi! We have tailored packages designed for different growth stages. You can explore all details in our bio link or shoot us a DM for personalized guidance. What are your main goals? 🤝";
+                ? "The investment is 149 € (one-time payment), including lifetime access to 40+ hours of recorded lessons, practical resources, and our private community. Full details and enrollment are in our bio link. Any questions on the program? 🏛️"
+                : (tone === 'empathy'
+                  ? "Hi! The course is 149 € (one-time payment) for lifetime access to over 40 hours of recorded classes and the private community. You can check all details and enroll directly via our bio link. Would you like to review the syllabus? 🤝"
+                  : "Hey! The course is 149 € (one-time payment) with instant lifetime access to 40+ hours of training and the private community. Direct enrollment is available in our bio link. Ready to level up? 🚀");
             } else if (textLower.includes('procrastinat') || textLower.includes('fear') || textLower.includes('advice') || textLower.includes('start')) {
               intent = 'Mentorship & Growth 🧠';
               score = 95;
               autopilotText = '✔ Verified & Grounded for Autopilot';
               reply = "Fear of failure only fades when you take action before your mind starts doubting. Break your goal into one 5-minute task today. Perfection doesn't exist; daily progress does. What small step will you take in the next 10 minutes? 👇";
             } else {
-              intent = 'Connection & Retention ⚡';
+              intent = 'Connection & Community ⚡';
               score = 90;
               autopilotText = '✔ Verified & Grounded for Autopilot';
               reply = "Exactly. When you master your mind and apply wisdom in your daily routine, external obstacles lose their power. Thank you for being part of this community. Which habit helped you most this week? 🏛️";
@@ -2250,17 +2619,17 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           } else if (lang === 'pt') {
             const isCourseQA = textLower.includes('gravada') || textLower.includes('acesso') || textLower.includes('aula') || textLower.includes('tempo') || textLower.includes('cronograma');
             const isDichotomy = textLower.includes('dicotomia') || textLower.includes('controle') || textLower.includes('estoic') || textLower.includes('marco aurelio');
-            const isPrice = textLower.includes('preço') || textLower.includes('custo') || textLower.includes('quanto') || textLower.includes('comprar');
+            const isPrice = textLower.includes('preço') || textLower.includes('custo') || textLower.includes('quanto') || textLower.includes('comprar') || textLower.includes('valor');
 
             if (isCourseQA) {
-              intent = 'Lead Qualificado • Estrutura do Curso 📚';
+              intent = 'Lead: Estrutura do Curso 📚';
               score = 96;
               autopilotText = '✔ Resposta Verificada Apta para Autopilot';
               reply = tone === 'mentor'
-                ? "Olá! O programa foi desenhado para que você avance com disciplina no seu próprio ritmo. Inclui acesso completo a todas as aulas gravadas, materiais práticos e atualizações contínuas. Você pode conferir o cronograma no link da nossa bio. Alguma dúvida sobre os módulos? 🏛️"
+                ? "Olá! O programa inclui acesso vitalício a todas as aulas gravadas (mais de 40 horas de conteúdo prático) e à nossa comunidade privada, para você avançar com disciplina no seu próprio ritmo. Você pode consultar o cronograma e se inscrever no link da nossa biografia. Alguma dúvida sobre os módulos? 🏛️"
                 : (tone === 'empathy'
-                  ? "Olá! Sim, o curso inclui acesso total às aulas gravadas para você estudar no seu tempo, com acesso contínuo e material de apoio. Você encontra todas as informações e inscrições no link da nossa biografia. Gostaria de saber mais sobre o conteúdo? 🤝"
-                  : "Olá! Com certeza, você tem acesso flexível e contínuo a todas as aulas gravadas e materiais práticos. Todos os detalhes e inscrições estão no link da nossa bio ou envie-nos uma mensagem privada. Pronto para começar? 🚀");
+                  ? "Olá! Sim, o curso inclui acesso vitalício a mais de 40 horas de aulas gravadas e à comunidade privada para você estudar com total flexibilidade no seu tempo. Todos os detalhes e inscrições estão no link da nossa biografia. Gostaria de saber mais sobre o conteúdo? 🤝"
+                  : "Olá! Com certeza, você tem acesso vitalício imediato a mais de 40 horas de aulas gravadas e à comunidade privada. Confira os detalhes e faça sua inscrição no link da nossa bio. Pronto para começar? 🚀");
             } else if (isDichotomy) {
               intent = 'Filosofia Estoica & Mentoria 🧠';
               score = 92;
@@ -2271,12 +2640,14 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
                   ? "Olá! Aplicar a dicotomia do controle começa por separar o que você pode influenciar diretamente daquilo que não pode. Foque sua energia na sua resposta e solte a ansiedade sobre o incontrolável. Que desafio você está enfrentando esta semana? 🤝"
                   : "Excelente pergunta! A dicotomia do controle é a chave para o foco: aja com intensidade máxima nas suas ações e elimine o ruído do que você não controla. No link da nossa bio compartilhamos recursos práticos sobre mentalidade. Qual hábito você quer fortalecer hoje? 🚀");
             } else if (isPrice) {
-              intent = 'Lead de Alta Conversão 💎';
-              score = 96;
+              intent = 'Lead de Alta Conversão: Preço 💎';
+              score = 98;
               autopilotText = '✔ Resposta Verificada Apta para Autopilot';
               reply = tone === 'mentor'
-                ? "O valor real está na transformação e na disciplina diária. Você pode consultar o cronograma completo, planos e metodologia no link da nossa biografia. Qual objetivo principal você quer alcançar este mês? 🏛️"
-                : "Olá! Com certeza, temos opções adaptadas aos seus objetivos. Você pode conferir todos os detalhes e planos no link da nossa biografia ou nos enviar um DM para uma orientação personalizada. 🤝";
+                ? "O investimento no curso é de 149 € em pagamento único, incluindo acesso vitalício a mais de 40 horas de aulas gravadas e à comunidade privada. Você encontra o cronograma e inscrição direta no link da nossa biografia. Alguma dúvida sobre o programa? 🏛️"
+                : (tone === 'empathy'
+                  ? "Olá! O valor é de 149 € (pagamento único) com acesso vitalício a mais de 40 horas de aulas gravadas e à comunidade privada. Todas as informações e inscrições estão no link da nossa biografia. Gostaria de saber mais sobre o conteúdo? 🤝"
+                  : "Olá! O curso custa 149 € em pagamento único com acesso vitalício imediato a mais de 40 horas de conteúdo e comunidade privada. Inscrições abertas no link da nossa bio. Pronto para começar? 🚀");
             } else if (textLower.includes('procrastin') || textLower.includes('medo') || textLower.includes('conselho') || textLower.includes('começar')) {
               intent = 'Pergunta de Mentoria & Valor 🧠';
               score = 95;
@@ -2292,35 +2663,35 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
             // Spanish (Default)
             const isCourseQA = textLower.includes('grabada') || textLower.includes('grabadas') || textLower.includes('clases grabadas') || textLower.includes('acceso') || textLower.includes('tiempo tengo') || textLower.includes('cuanto tiempo') || textLower.includes('cuánto tiempo') || textLower.includes('duracion') || textLower.includes('duración') || textLower.includes('temario');
             const isDichotomy = textLower.includes('dicotomia') || textLower.includes('dicotomía') || textLower.includes('control') || textLower.includes('estoic') || textLower.includes('marco aurelio') || textLower.includes('epicteto') || textLower.includes('seneca') || textLower.includes('séneca');
-            const isPrice = textLower.includes('precio') || textLower.includes('costo') || textLower.includes('cuanto vale') || textLower.includes('cuánto vale') || textLower.includes('cuanto cuesta') || textLower.includes('cuánto cuesta') || textLower.includes('como comprar');
+            const isPrice = textLower.includes('precio') || textLower.includes('costo') || textLower.includes('cuanto vale') || textLower.includes('cuánto vale') || textLower.includes('cuanto cuesta') || textLower.includes('cuánto cuesta') || textLower.includes('como comprar') || textLower.includes('pago');
 
             if (isCourseQA) {
               intent = 'Lead Calificado • Modalidad del Curso 📚';
               score = 96;
-              autopilotText = '✔ Apto para Autopilot (Respuesta verificada sobre modalidad del curso)';
+              autopilotText = '✔ Apto para Autopilot (Respuesta fundamentada en datos de negocio)';
               reply = tone === 'mentor'
-                ? "¡Hola! El programa está diseñado para que avances con disciplina a tu propio ritmo. Incluye acceso completo y flexible a todas las clases grabadas, materiales prácticos y actualizaciones continuas. Puedes consultar el temario y registrarte en el enlace de nuestra biografía. ¿Tienes alguna duda puntual sobre los módulos? 🏛️"
+                ? "¡Hola! El programa incluye acceso vitalicio a todas las clases grabadas (más de 40 horas de formación práctica) y a nuestra comunidad privada, para que avances con disciplina a tu propio ritmo. Tienes el temario completo e inscripción directa en el enlace de nuestra biografía. ¿Tienes alguna duda puntual sobre el programa? 🏛️"
                 : (tone === 'empathy'
-                  ? "¡Hola! Sí, el curso incluye acceso total a las clases grabadas para que aprendas a tu propio ritmo con acceso continuo y material de apoyo. Encontrarás el contenido completo y los detalles de inscripción en el enlace de nuestra biografía o puedes escribirnos por DM si deseas orientación. ¿Te gustaría conocer el temario? 🤝"
-                  : "¡Hola! Efectivamente, dispones de acceso flexible y continuo a todas las clases grabadas y recursos prácticos. Tienes los detalles del temario e inscripción directa en el enlace de nuestra bio, o puedes enviarnos un DM para resolver cualquier duda. ¿Listo para dar el salto? 🚀");
+                  ? "¡Hola! Sí, el curso incluye acceso vitalicio a todas las clases grabadas (más de 40 horas) y a la comunidad privada para que aprendas con total flexibilidad a tu propio ritmo. Encontrarás los detalles completos e inscripción directa en el enlace de nuestra biografía. ¿Te gustaría conocer el temario? 🤝"
+                  : "¡Hola! Efectivamente, tienes acceso vitalicio e inmediato a más de 40 horas de clases grabadas y a la comunidad privada para formarte a tu propio ritmo. Tienes todos los detalles y registro en el enlace de nuestra biografía. ¿Listo para dar el siguiente paso? 🚀");
             } else if (isDichotomy) {
               intent = 'Consulta Conceptual & Mentoría Estoica 🧠';
               score = 92;
               autopilotText = '✔ Apto para Autopilot (Respuesta conceptual verificada y fundamentada)';
               reply = tone === 'mentor'
-                ? "La dicotomía del control consiste en enfocar el 100% de nuestra energía en lo que sí depende de nosotros (nuestras decisiones, acciones y actitud) y soltar con serenidad lo externo. Ante cualquier problema pregúntate: '¿Está bajo mi control directo?'. Si lo está, actúa con determinación; si no, canaliza tu energía en tu propia respuesta y suelta lo demás. ¿En qué situación buscas aplicarlo hoy? 🏛️"
+                ? "La dicotomía del control consiste en enfocar el 100% de nuestra energía en lo que sí depende de nosotros (nuestras decisiones, acciones y actitud) y soltar con serenidad lo externo. Ante cualquier sobrecarga pregúntate: '¿Está bajo mi control directo?'. Si lo está, actúa con determinación; si no, canaliza tu energía en tu propia respuesta y suelta lo demás. ¿En qué situación buscas aplicarlo hoy? 🏛️"
                 : (tone === 'empathy'
-                  ? "¡Hola! Aplicar la dicotomía del control comienza por reconocer qué parte de una situación está en tus manos y cuál no. Enfócate con calma en tu propia respuesta y deja ir la angustia por lo incontrolable. ¿Hay algún reto puntual que estés enfrentando esta semana? 🤝"
-                  : "¡Excelente pregunta! La dicotomía del control es la herramienta clave para mantener el foco: actúa con máxima intensidad en tus acciones y no pierdas energía en lo que no puedes cambiar. En el enlace de nuestra bio compartimos recursos prácticos sobre mentalidad. ¿Qué hábito quieres fortalecer hoy? 🚀");
+                  ? "¡Hola! Aplicar la dicotomía del control comienza por reconocer qué parte de una situación está en tus manos y cuál no. Ante el estrés, enfócate con calma en tu propia respuesta y deja ir la angustia por lo incontrolable. ¿Hay algún reto puntual que estés enfrentando esta semana? 🤝"
+                  : "¡Excelente pregunta! La dicotomía del control es la herramienta clave para mantener el foco: actúa con máxima intensidad en lo que depende de ti y elimina el ruido de lo que no puedes controlar. En el enlace de nuestra bio compartimos recursos prácticos sobre mentalidad y productividad. ¿Qué hábito quieres fortalecer hoy? 🚀");
             } else if (isPrice) {
-              intent = 'Oportunidad Comercial / Lead 💎';
-              score = 96;
-              autopilotText = '✔ Apto para Autopilot (Respuesta comercial directa con enlace oficial)';
+              intent = 'Oportunidad Comercial / Precio del Curso 💎';
+              score = 98;
+              autopilotText = '✔ Apto para Autopilot (Respuesta comercial fundamentada: 149 €)';
               reply = tone === 'mentor'
-                ? "El verdadero valor reside en la transformación y la disciplina diaria. Puedes consultar toda la información de inversión, modalidades y metodología en el enlace de nuestra biografía. ¿Qué meta principal buscas alcanzar este mes? 🏛️"
+                ? "La inversión en el curso es de 149 € en pago único, e incluye acceso vitalicio a las 40 horas de clases grabadas, materiales prácticos y acceso a la comunidad privada. Puedes ver el temario e inscribirte directamente en el enlace de nuestra biografía. ¿Tienes alguna pregunta sobre los módulos? 🏛️"
                 : (tone === 'empathy'
-                  ? "¡Hola! Con mucho gusto te compartimos los detalles. Manejamos planes adaptados a lo que necesitas. Puedes ver toda la información en el enlace de nuestra biografía o escribirnos por DM si prefieres orientación personalizada. ¿Qué dudas tienes sobre el programa? 🤝"
-                  : "¡Hola! Puedes consultar la información oficial de planes y registro directamente en el enlace de nuestra bio, o escribirnos por DM si deseas una recomendación adaptada a tus metas. ¿Listo para dar el siguiente paso? 🚀");
+                  ? "¡Hola! El precio del curso es de 149 € (pago único) con acceso vitalicio completo a las más de 40 horas de clases grabadas y la comunidad privada. Tienes la información completa e inscripción en el enlace de nuestra biografía. ¿Te gustaría conocer el temario? 🤝"
+                  : "¡Hola! El curso tiene un precio de 149 € en pago único con acceso vitalicio inmediato a las 40 horas de formación y la comunidad privada. Puedes inscribirte directamente desde el enlace de nuestra biografía. ¿Listo para comenzar? 🚀");
             } else if (textLower.includes('procrastino') || textLower.includes('miedo') || textLower.includes('consejo') || textLower.includes('empezar')) {
               intent = 'Pregunta de Mentoría / Alto Valor 🧠';
               score = 95;
@@ -2331,6 +2702,39 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
               score = 90;
               autopilotText = '✔ Apto para Autopilot (Comunidad y fidelización)';
               reply = "Exactamente. Cuando dominas tu mente y aplicas la sabiduría en tu rutina, los problemas externos pierden todo su poder. Gracias por ser parte de esta comunidad. ¿Qué principio estoico te ha servido más esta semana? 🏛️";
+            }
+          }
+
+          if (closing === 'never') {
+            reply = reply.replace(/\¿[^\?]+\?\s*(👇|✨|🔥|🚀|📩|🤝|🏛️|📚)?$/i, '').replace(/\?[^\?]+\?\s*(👇|✨|🔥|🚀|📩|🤝|🏛️|📚)?$/i, '');
+          }
+
+          badgeIntent.textContent = '🎯 ' + intent;
+          badgeScore.textContent = score + '/100';
+          outputText.textContent = `"${reply}"`;
+
+          if (badgeAutopilot) {
+            badgeAutopilot.innerHTML = `<span>✔</span> ${autopilotText}`;
+            badgeAutopilot.className = 'flex items-center gap-1.5 text-emerald-600 font-semibold text-[11px] sm:text-xs';
+          }
+
+          btn.disabled = false;
+          btn.innerHTML = `<span>${I18n.dict[lang]?.sim_btn_gen || 'Generar Respuesta con IA'}</span><span>⚡</span>`;
+        }, 300);
+      },
+
+      copyResponse() {
+        const text = document.getElementById('sim-output-text').textContent.replace(/^"|"$/g, '');
+        navigator.clipboard.writeText(text).then(() => {
+          const btn = document.getElementById('sim-btn-copy');
+          btn.innerHTML = '<span class="text-emerald-600 font-bold">✔ Copied!</span>';
+          setTimeout(() => {
+            const lang = I18n.current || 'es';
+            btn.innerHTML = `<span>${I18n.dict[lang]?.sim_btn_copy || '📋 Copiar'}</span>`;
+          }, 2000);
+        });
+      }
+    };e ha servido más esta semana? 🏛️";
             }
           }
 

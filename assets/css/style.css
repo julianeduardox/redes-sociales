@@ -4771,6 +4771,25 @@ details.advanced-dev-details[open] summary {
   border-bottom: 1px solid var(--border-subtle);
 }
 
+/* Feature-Benefit Matrix & Grounded Simulator Styles */
+.feature-matrix-card {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.feature-matrix-card:hover {
+  transform: translateY(-3px);
+}
+
+.sim-context-box {
+  background: linear-gradient(135deg, rgba(245, 243, 255, 0.8) 0%, rgba(238, 242, 255, 0.6) 100%);
+  border: 1px solid rgba(196, 181, 253, 0.7);
+}
+
+.step-number-badge {
+  background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%);
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);
+}
+
+
 
 
 
