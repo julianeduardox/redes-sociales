@@ -178,21 +178,21 @@ class MetaApiService {
         $isReelOrVideo = in_array(strtolower($mediaType), ['video', 'reel', 'reels', 'clips'], true);
 
         // Fast, direct candidate query
-        $primarySet = $isReelOrVideo ? 'views,plays,reach,saved,total_interactions' : 'views,impressions,reach,saved,total_interactions';
+        $primarySet = $isReelOrVideo ? 'views,plays,reach,saved,total_interactions' : 'impressions,reach,saved,total_interactions';
         $url = self::BASE_URL . '/' . urlencode($mediaId) . '/insights?' . http_build_query([
             'metric' => $primarySet,
             'access_token' => $accessToken
         ]);
-        $res = self::makeGetRequest($url);
+        $res = self::makeGetRequest($url, 3);
 
-        // One single fallback if primary set failed (e.g. older API version or photo vs carousel)
+        // One single fallback if primary set failed (e.g. carousel vs image)
         if (isset($res['error']) || empty($res['data'])) {
             $fallbackSet = 'reach,saved,total_interactions';
             $urlFallback = self::BASE_URL . '/' . urlencode($mediaId) . '/insights?' . http_build_query([
                 'metric' => $fallbackSet,
                 'access_token' => $accessToken
             ]);
-            $res = self::makeGetRequest($urlFallback);
+            $res = self::makeGetRequest($urlFallback, 3);
         }
 
         if (isset($res['data']) && is_array($res['data'])) {
@@ -244,32 +244,26 @@ class MetaApiService {
             'reactions_total' => 0
         ];
 
-        // 1. Primary comprehensive query on the main post ID
-        $primaryMetric = 'post_impressions,post_impressions_unique,post_impressions_viral_unique,post_engaged_users,post_reactions_by_type_total,post_video_views';
+        // 1. Guaranteed valid metrics in Meta Graph API v19+
+        $primaryMetric = 'post_impressions,post_impressions_unique,post_engaged_users,post_clicks';
         $url = self::BASE_URL . '/' . urlencode($postId) . '/insights?' . http_build_query([
             'metric' => $primaryMetric,
             'access_token' => $accessToken
         ]);
-        $res = self::makeGetRequest($url);
+        $res = self::makeGetRequest($url, 3);
 
         // 2. Fast single fallback if primary metric set was not supported
         if (isset($res['error']) || empty($res['data'])) {
-            $fallbackMetric = 'post_impressions,post_impressions_unique,post_engaged_users';
+            $fallbackMetric = 'post_impressions,post_impressions_unique';
             $targetId = (!empty($objectId) && is_numeric($objectId)) ? $objectId : $postId;
             $urlFallback = self::BASE_URL . '/' . urlencode($targetId) . '/insights?' . http_build_query([
                 'metric' => $fallbackMetric,
                 'access_token' => $accessToken
             ]);
-            $res = self::makeGetRequest($urlFallback);
+            $res = self::makeGetRequest($urlFallback, 3);
         }
 
         if (isset($res['data']) && is_array($res['data'])) {
-            $organicImpressions = 0;
-            $viralImpressions = 0;
-            $organicReach = 0;
-            $viralReach = 0;
-            $videoViews = 0;
-
             foreach ($res['data'] as $item) {
                 $name = $item['name'] ?? '';
                 $val = 0;
@@ -289,31 +283,11 @@ class MetaApiService {
                     $metrics['views'] = max($metrics['views'], $val);
                 } elseif ($name === 'post_impressions_unique') {
                     $metrics['reach'] = max($metrics['reach'], $val);
-                } elseif ($name === 'post_impressions_organic') {
-                    $organicImpressions = $val;
-                } elseif ($name === 'post_impressions_viral') {
-                    $viralImpressions = $val;
-                } elseif ($name === 'post_impressions_organic_unique') {
-                    $organicReach = $val;
-                } elseif ($name === 'post_impressions_viral_unique') {
-                    $viralReach = $val;
                 } elseif ($name === 'post_engaged_users') {
                     $metrics['engaged_users'] = max($metrics['engaged_users'], $val);
-                } elseif ($name === 'post_reactions_by_type_total') {
-                    $metrics['reactions_total'] = max($metrics['reactions_total'], $val);
-                } elseif ($name === 'post_video_views' || $name === 'post_video_views_unique') {
-                    $videoViews = max($videoViews, $val);
-                    $metrics['views'] = max($metrics['views'], $val);
                 }
             }
 
-            if ($viralImpressions > 0 || $organicImpressions > 0) {
-                $metrics['impressions'] = max($metrics['impressions'], $organicImpressions + $viralImpressions);
-                $metrics['views'] = max($metrics['views'], $metrics['impressions'], $videoViews);
-            }
-            if ($viralReach > 0 || $organicReach > 0) {
-                $metrics['reach'] = max($metrics['reach'], $organicReach + $viralReach);
-            }
             if ($metrics['reach'] === 0 && $metrics['impressions'] > 0) {
                 $metrics['reach'] = $metrics['impressions'];
             }
@@ -586,10 +560,10 @@ class MetaApiService {
                 // Fetch Instagram Media
                 $mediaUrl = self::BASE_URL . '/' . urlencode($pageId) . '/media?' . http_build_query([
                     'fields' => 'id,caption,media_type,media_url,thumbnail_url,permalink,like_count,comments_count,timestamp',
-                    'limit' => '25',
+                    'limit' => '15',
                     'access_token' => $token
                 ]);
-                $mediaData = self::makeGetRequest($mediaUrl);
+                $mediaData = self::makeGetRequest($mediaUrl, 4);
 
                 if (isset($mediaData['error'])) {
                     $accError = $mediaData['error']['message'] ?? 'Error de permisos al leer publicaciones de Instagram';
@@ -683,10 +657,10 @@ class MetaApiService {
                         // Ingest Instagram comments for this media
                         $commentsUrl = self::BASE_URL . '/' . urlencode($mediaId) . '/comments?' . http_build_query([
                             'fields' => 'id,text,username,timestamp,like_count',
-                            'limit' => '50',
+                            'limit' => '15',
                             'access_token' => $token
                         ]);
-                        $commentsData = self::makeGetRequest($commentsUrl);
+                        $commentsData = self::makeGetRequest($commentsUrl, 3);
 
                         if (!empty($commentsData['data']) && is_array($commentsData['data'])) {
                             foreach ($commentsData['data'] as $c) {
@@ -734,32 +708,32 @@ class MetaApiService {
                     }
                 }
             } else {
-                // Fetch Facebook Page Posts with accurate summary parameters (limit=1 for proper summary counts)
-                $fbFields = 'id,message,story,created_time,full_picture,permalink_url,shares,status_type,object_id,reactions.summary(true).limit(1),likes.summary(true).limit(1),comments.summary(true).limit(1)';
+                // Fetch Facebook Page Posts with valid Graph API v19+ fields
+                $fbFields = 'id,message,story,created_time,full_picture,permalink_url,shares,attachments{media,type,target{id}},reactions.summary(true).limit(1),comments.summary(true).limit(1)';
                 $pagePostsUrl = self::BASE_URL . '/' . urlencode($pageId) . '/posts?' . http_build_query([
                     'fields' => $fbFields,
-                    'limit' => '25',
+                    'limit' => '15',
                     'access_token' => $token
                 ]);
-                $feedData = self::makeGetRequest($pagePostsUrl);
+                $feedData = self::makeGetRequest($pagePostsUrl, 4);
 
                 // Fallback to /published_posts or /feed if /posts returned an error
                 if (isset($feedData['error'])) {
                     $feedUrlFallback = self::BASE_URL . '/' . urlencode($pageId) . '/published_posts?' . http_build_query([
                         'fields' => $fbFields,
-                        'limit' => '25',
+                        'limit' => '15',
                         'access_token' => $token
                     ]);
-                    $feedDataFallback = self::makeGetRequest($feedUrlFallback);
+                    $feedDataFallback = self::makeGetRequest($feedUrlFallback, 4);
                     if (!isset($feedDataFallback['error']) && !empty($feedDataFallback['data'])) {
                         $feedData = $feedDataFallback;
                     } else {
                         $feedUrlFallback2 = self::BASE_URL . '/' . urlencode($pageId) . '/feed?' . http_build_query([
                             'fields' => $fbFields,
-                            'limit' => '25',
+                            'limit' => '15',
                             'access_token' => $token
                         ]);
-                        $feedDataFallback2 = self::makeGetRequest($feedUrlFallback2);
+                        $feedDataFallback2 = self::makeGetRequest($feedUrlFallback2, 4);
                         if (!isset($feedDataFallback2['error']) && !empty($feedDataFallback2['data'])) {
                             $feedData = $feedDataFallback2;
                         }
@@ -780,7 +754,10 @@ class MetaApiService {
 
                     foreach ($feedData['data'] as $fbPost) {
                         $postIdExt = $fbPost['id'];
-                        $objectId = !empty($fbPost['object_id']) ? (string)$fbPost['object_id'] : null;
+                        $objectId = null;
+                        if (!empty($fbPost['attachments']['data'][0]['target']['id'])) {
+                            $objectId = (string)$fbPost['attachments']['data'][0]['target']['id'];
+                        }
                         $message = $fbPost['message'] ?? ($fbPost['story'] ?? 'Publicación de Página de Facebook');
                         $fullPic = $fbPost['full_picture'] ?? 'https://images.unsplash.com/photo-1552346154-21d32810aba3?w=480&h=320&auto=format&fit=crop&q=75';
                         $permalink = $fbPost['permalink_url'] ?? '';
@@ -790,14 +767,8 @@ class MetaApiService {
                         if (isset($fbPost['reactions']['summary']['total_count'])) {
                             $likes = (int)$fbPost['reactions']['summary']['total_count'];
                         }
-                        if ($likes === 0 && isset($fbPost['likes']['summary']['total_count'])) {
-                            $likes = (int)$fbPost['likes']['summary']['total_count'];
-                        }
                         if ($likes === 0 && !empty($fbPost['reactions']['data']) && is_array($fbPost['reactions']['data'])) {
                             $likes = count($fbPost['reactions']['data']);
-                        }
-                        if ($likes === 0 && !empty($fbPost['likes']['data']) && is_array($fbPost['likes']['data'])) {
-                            $likes = count($fbPost['likes']['data']);
                         }
 
                         $commentsCount = (int)($fbPost['comments']['summary']['total_count'] ?? (is_array($fbPost['comments']['data'] ?? null) ? count($fbPost['comments']['data']) : 0));
@@ -808,21 +779,6 @@ class MetaApiService {
                         $fbInsights = self::fetchFacebookPostInsights($postIdExt, $token, $objectId);
                         $impressions = (int)($fbInsights['impressions'] ?? 0);
                         $reach = (int)($fbInsights['reach'] ?? 0);
-                        $reactionsTotal = (int)($fbInsights['reactions_total'] ?? 0);
-                        if ($reactionsTotal > 0 && $likes === 0) {
-                            $likes = $reactionsTotal;
-                        }
-
-                        // If object_id exists and likes is still 0, query object directly for reactions
-                        if ($likes === 0 && !empty($objectId)) {
-                            $objUrl = self::BASE_URL . '/' . urlencode($objectId) . '?fields=reactions.summary(true).limit(1),likes.summary(true).limit(1)&access_token=' . urlencode($token);
-                            $objData = self::makeGetRequest($objUrl);
-                            if (isset($objData['reactions']['summary']['total_count'])) {
-                                $likes = (int)$objData['reactions']['summary']['total_count'];
-                            } elseif (isset($objData['likes']['summary']['total_count'])) {
-                                $likes = (int)$objData['likes']['summary']['total_count'];
-                            }
-                        }
 
                         $fbInteractions = $likes + $commentsCount + $shares;
 
@@ -903,10 +859,10 @@ class MetaApiService {
                         // Fetch comments for Facebook post
                         $postCommentsUrl = self::BASE_URL . '/' . urlencode($postIdExt) . '/comments?' . http_build_query([
                             'fields' => 'id,message,from,created_time,like_count',
-                            'limit' => '50',
+                            'limit' => '15',
                             'access_token' => $token
                         ]);
-                        $commentsData = self::makeGetRequest($postCommentsUrl);
+                        $commentsData = self::makeGetRequest($postCommentsUrl, 3);
 
                         if (!empty($commentsData['data']) && is_array($commentsData['data'])) {
                             foreach ($commentsData['data'] as $c) {
@@ -1220,11 +1176,11 @@ class MetaApiService {
         ];
     }
 
-    private static function makeGetRequest(string $url): array {
+    private static function makeGetRequest(string $url, int $timeout = 4, int $connectTimeout = 2): array {
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 6);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
+        curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $connectTimeout);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
         $response = curl_exec($ch);

@@ -1817,13 +1817,21 @@ const App = {
         method: 'POST',
         body: JSON.stringify({ action: 'sync_meta' })
       });
-      const res = await response.json();
+      
+      let res;
+      const text = await response.text();
+      try {
+        res = JSON.parse(text);
+      } catch (jsonErr) {
+        console.error('Error al parsear respuesta JSON de sync_meta:', text, jsonErr);
+        throw new Error(`El servidor respondió con estado ${response.status}: ${text.slice(0, 120)}`);
+      }
 
       if (loadingToast && loadingToast.remove) {
         loadingToast.remove();
       }
 
-      if (res.success) {
+      if (res && res.success) {
         const found = res.total_posts_found || res.synced_new_posts || 0;
         const comments = res.synced_new_comments || 0;
         const msg = `✅ ¡Sincronización con Meta completada con éxito! Se verificaron tus cuentas, actualizando ${found} publicaciones y ${comments} comentarios.`;
@@ -1835,14 +1843,16 @@ const App = {
           AnalyticsController.loadAnalytics();
         }
       } else {
-        App.showToast(`⚠️ ${res.message || 'No se pudo sincronizar con Meta.'}`, 'error', 6000);
+        const errMsg = res && res.message ? res.message : (res && res.error ? res.error : 'No se pudo sincronizar con Meta.');
+        App.showToast(`⚠️ ${errMsg}`, 'error', 7000);
       }
     } catch (err) {
-      console.error(err);
+      console.error('triggerMetaSync error:', err);
       if (loadingToast && loadingToast.remove) {
         loadingToast.remove();
       }
-      App.showToast('⚠️ Error de conexión al sincronizar con Meta. Por favor verifica tu conexión.', 'error', 6000);
+      const errMsg = err && err.message ? err.message : 'Error de conexión al sincronizar con Meta. Por favor verifica tu conexión.';
+      App.showToast(`⚠️ ${errMsg}`, 'error', 7000);
     } finally {
       syncButtons.forEach(btn => {
         btn.disabled = false;
