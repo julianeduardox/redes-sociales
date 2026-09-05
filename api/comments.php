@@ -35,6 +35,7 @@ try {
                 p.total_likes as post_likes_count,
                 p.total_comments as post_comments_count,
                 p.reach as post_reach,
+                p.impressions as post_impressions,
                 p.account_id,
                 COALESCE(a.account_name, 'Mi Cuenta') as account_name,
                 a.avatar_url as account_avatar,

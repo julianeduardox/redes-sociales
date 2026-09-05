@@ -3405,10 +3405,10 @@ select option:checked,
 /* Meta Insights Metric Chips */
 .post-metrics-chips {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
+  grid-template-columns: repeat(auto-fit, minmax(76px, 1fr));
+  gap: 6px 8px;
   background: rgba(255, 255, 255, 0.02);
-  padding: 8px 6px;
+  padding: 10px 8px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-subtle);
   margin-bottom: 14px;
@@ -3424,7 +3424,7 @@ select option:checked,
 }
 
 .metric-chip-label {
-  font-size: 0.65rem;
+  font-size: 0.64rem;
   color: var(--text-dim);
   text-transform: uppercase;
   font-weight: 700;
@@ -3435,7 +3435,7 @@ select option:checked,
 }
 
 .metric-chip-value {
-  font-size: clamp(0.78rem, 2.4vw, 0.95rem);
+  font-size: clamp(0.78rem, 2.2vw, 0.92rem);
   font-weight: 800;
   color: #fff;
   margin-top: 2px;
@@ -3445,7 +3445,8 @@ select option:checked,
   max-width: 100%;
 }
 
-.metric-chip-value.reach { color: var(--accent-cyan); }
+.metric-chip-value.views { color: #38bdf8; }
+.metric-chip-value.reach { color: #c084fc; }
 .metric-chip-value.engagement { color: var(--accent-emerald); }
 .metric-chip-value.saved { color: var(--accent-amber); }
 

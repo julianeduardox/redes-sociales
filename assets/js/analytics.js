@@ -78,35 +78,37 @@ const AnalyticsController = {
     const questionsPercent = Math.min(100, Math.max(0, Math.round((questionsCount / total) * 100)));
 
     const formatNumber = (num) => {
-      if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-      if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-      return num;
+      const n = parseInt(num, 10) || 0;
+      if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+      if (n >= 10000) return (n / 1000).toFixed(1) + 'K';
+      if (n >= 1000) return n.toLocaleString();
+      return n.toString();
     };
 
     container.innerHTML = `
       <!-- Top Meta Insights & Engagement KPIs -->
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
         <div style="background: var(--bg-card); padding: 20px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
-          <div style="font-size: 0.74rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">👁️ Alcance Total (Reach)</div>
-          <div style="font-size: 1.8rem; font-weight: 800; color: var(--accent-cyan); margin: 6px 0;">${formatNumber(stats.total_reach || 0)}</div>
-          <div style="font-size: 0.76rem; color: var(--text-muted);">${formatNumber(stats.total_impressions || 0)} impresiones en Meta</div>
+          <div style="font-size: 0.74rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">👁️ Visualizaciones Totales (Views)</div>
+          <div style="font-size: 1.8rem; font-weight: 800; color: var(--accent-cyan); margin: 6px 0;">${formatNumber(stats.total_impressions || 0)}</div>
+          <div style="font-size: 0.76rem; color: var(--text-muted);">${formatNumber(stats.total_reach || 0)} personas alcanzadas en Meta</div>
+        </div>
+
+        <div style="background: var(--bg-card); padding: 20px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+          <div style="font-size: 0.74rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">👥 Alcance Único (Reach)</div>
+          <div style="font-size: 1.8rem; font-weight: 800; color: #a855f7; margin: 6px 0;">${formatNumber(stats.total_reach || 0)}</div>
+          <div style="font-size: 0.76rem; color: var(--text-muted);">${stats.total_posts || 0} publicaciones analizadas</div>
         </div>
 
         <div style="background: var(--bg-card); padding: 20px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
           <div style="font-size: 0.74rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">🔥 Engagement Rate %</div>
-          <div style="font-size: 1.8rem; font-weight: 800; color: var(--accent-emerald); margin: 6px 0;">${parseFloat(stats.avg_engagement_rate) || 0}%</div>
-          <div style="font-size: 0.76rem; color: var(--text-muted);">${stats.total_posts || 0} publicaciones monitoreadas</div>
-        </div>
-
-        <div style="background: var(--bg-card); padding: 20px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
-          <div style="font-size: 0.74rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">🔖 Contenido Guardado</div>
-          <div style="font-size: 1.8rem; font-weight: 800; color: var(--accent-amber); margin: 6px 0;">${formatNumber(stats.total_saved || 0)}</div>
-          <div style="font-size: 0.76rem; color: var(--text-muted);">Saves & Memento Mori en Instagram</div>
+          <div style="font-size: 1.8rem; font-weight: 800; color: var(--accent-emerald); margin: 6px 0;">${(parseFloat(stats.avg_engagement_rate) || 0).toFixed(1)}%</div>
+          <div style="font-size: 0.76rem; color: var(--text-muted);">${formatNumber(stats.total_post_likes || 0)} likes • ${formatNumber(stats.total_saved || 0)} guardados</div>
         </div>
 
         <div style="background: var(--bg-card); padding: 20px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
           <div style="font-size: 0.74rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">⚡ Tasa de Respuesta IA</div>
-          <div style="font-size: 1.8rem; font-weight: 800; color: var(--primary); margin: 6px 0;">${parseFloat(stats.reply_rate_percent) || 0}%</div>
+          <div style="font-size: 1.8rem; font-weight: 800; color: var(--primary); margin: 6px 0;">${(parseFloat(stats.reply_rate_percent) || 0).toFixed(1)}%</div>
           <div style="font-size: 0.76rem; color: var(--text-muted);">${parseInt(stats.replied_count, 10) || 0} de ${parseInt(stats.total_comments, 10) || 0} comentarios atendidos</div>
         </div>
       </div>
@@ -201,8 +203,9 @@ const AnalyticsController = {
     const formatNumber = (num) => {
       const n = parseInt(num, 10) || 0;
       if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
-      if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
-      return n;
+      if (n >= 10000) return (n / 1000).toFixed(1) + 'K';
+      if (n >= 1000) return n.toLocaleString();
+      return n.toString();
     };
 
     container.innerHTML = posts.map(p => {
@@ -211,15 +214,17 @@ const AnalyticsController = {
       const safeLikes = formatNumber(p.total_likes || 0);
       const safeComments = formatNumber(p.total_comments || 0);
       const safeShares = formatNumber(p.total_shares || 0);
-      const safeReach = formatNumber(p.reach || 0);
-      const safeImpressions = formatNumber(p.impressions || 0);
+      const rawImpressions = parseInt(p.impressions, 10) || 0;
+      const rawReach = parseInt(p.reach, 10) || 0;
+      const safeImpressions = formatNumber(rawImpressions);
+      const safeReach = formatNumber(rawReach);
       const safeSaved = formatNumber(p.saved_count || 0);
       const engRate = (typeof p.engagement_rate !== 'undefined' && p.engagement_rate !== null) ? parseFloat(p.engagement_rate).toFixed(1) : '0.0';
       const mediaType = (p.media_type || 'image').toLowerCase();
 
       let mediaIcon = '📷 Imagen';
-      if (mediaType === 'video') mediaIcon = '🎥 Video / Reel';
-      else if (mediaType === 'carousel') mediaIcon = '📑 Carrusel';
+      if (mediaType === 'video' || mediaType === 'reel' || mediaType === 'reels') mediaIcon = '🎥 Video / Reel';
+      else if (mediaType === 'carousel' || mediaType === 'carousel_album') mediaIcon = '📑 Carrusel';
 
       // Sentiment counts
       const localComments = parseInt(p.local_comments_count, 10) || 0;
@@ -258,31 +263,36 @@ const AnalyticsController = {
 
               <!-- Meta Graph API Insights -->
               <div class="post-metrics-chips">
-                <div class="metric-chip">
-                  <span class="metric-chip-label">Alcance</span>
-                  <span class="metric-chip-value reach">👁️ ${safeReach}</span>
+                <div class="metric-chip" title="Total de visualizaciones / impresiones (Views)">
+                  <span class="metric-chip-label">Visualizaciones</span>
+                  <span class="metric-chip-value views">👁️ ${safeImpressions}</span>
                 </div>
-                <div class="metric-chip">
+                <div class="metric-chip" title="Cuentas únicas alcanzadas / Espectadores (Reach)">
+                  <span class="metric-chip-label">Alcance</span>
+                  <span class="metric-chip-value reach">👥 ${safeReach}</span>
+                </div>
+                <div class="metric-chip" title="Tasa de engagement calculada sobre interacciones reales">
                   <span class="metric-chip-label">Engagement</span>
                   <span class="metric-chip-value engagement">🔥 ${engRate}%</span>
                 </div>
-                <div class="metric-chip">
-                  <span class="metric-chip-label">Guardados</span>
-                  <span class="metric-chip-value saved">🔖 ${safeSaved}</span>
-                </div>
-                <div class="metric-chip">
+                <div class="metric-chip" title="Me gusta / Reacciones">
                   <span class="metric-chip-label">Likes</span>
                   <span class="metric-chip-value">❤️ ${safeLikes}</span>
                 </div>
-                <div class="metric-chip">
+                <div class="metric-chip" title="Comentarios">
                   <span class="metric-chip-label">Comentarios</span>
                   <span class="metric-chip-value">💬 ${safeComments}</span>
                 </div>
-                <div class="metric-chip">
+                <div class="metric-chip" title="Guardados en Instagram">
+                  <span class="metric-chip-label">Guardados</span>
+                  <span class="metric-chip-value saved">🔖 ${safeSaved}</span>
+                </div>
+                <div class="metric-chip" title="Veces compartido">
                   <span class="metric-chip-label">Shares</span>
                   <span class="metric-chip-value">🔄 ${safeShares}</span>
                 </div>
               </div>
+
 
               <!-- Sentiment Distribution -->
               <div class="post-sentiment-wrapper">

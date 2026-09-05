@@ -160,7 +160,7 @@ class MetaApiService {
     }
 
     /**
-     * Fetch Live Media Insights for an Instagram Post or Reel (Graph API v19/v20)
+     * Fetch Live Media Insights for an Instagram Post or Reel (Graph API v19/v20/v21)
      */
     public static function fetchMediaInsights(string $mediaId, string $accessToken, string $mediaType = 'image'): array {
         if (empty($accessToken) || empty($mediaId) || str_starts_with($mediaId, 'ig_post_') || str_starts_with($mediaId, 'mock_')) {
@@ -168,6 +168,7 @@ class MetaApiService {
         }
 
         $metrics = [
+            'views' => 0,
             'impressions' => 0,
             'reach' => 0,
             'saved_count' => 0,
@@ -175,21 +176,30 @@ class MetaApiService {
         ];
 
         $isReelOrVideo = in_array(strtolower($mediaType), ['video', 'reel', 'reels', 'clips'], true);
-        $metricNames = $isReelOrVideo ? 'reach,saved,total_interactions,plays' : 'reach,saved,total_interactions,impressions';
 
-        $url = self::BASE_URL . '/' . urlencode($mediaId) . '/insights?' . http_build_query([
-            'metric' => $metricNames,
-            'access_token' => $accessToken
-        ]);
-        $res = self::makeGetRequest($url);
+        // Sequence of metric set attempts to maximize compatibility with Graph API versions (v18, v19, v20, v21)
+        $candidates = $isReelOrVideo ? [
+            'views,plays,reach,saved,total_interactions',
+            'plays,reach,saved,total_interactions',
+            'views,reach,saved,total_interactions',
+            'reach,saved,total_interactions'
+        ] : [
+            'views,impressions,reach,saved,total_interactions',
+            'impressions,reach,saved,total_interactions',
+            'views,reach,saved,total_interactions',
+            'reach,saved,total_interactions'
+        ];
 
-        // Fallback if specific post format rejects one metric
-        if (isset($res['error'])) {
-            $fallbackUrl = self::BASE_URL . '/' . urlencode($mediaId) . '/insights?' . http_build_query([
-                'metric' => 'reach,saved,total_interactions',
+        $res = null;
+        foreach ($candidates as $metricSet) {
+            $url = self::BASE_URL . '/' . urlencode($mediaId) . '/insights?' . http_build_query([
+                'metric' => $metricSet,
                 'access_token' => $accessToken
             ]);
-            $res = self::makeGetRequest($fallbackUrl);
+            $res = self::makeGetRequest($url);
+            if (!isset($res['error']) && !empty($res['data'])) {
+                break;
+            }
         }
 
         if (isset($res['data']) && is_array($res['data'])) {
@@ -204,8 +214,14 @@ class MetaApiService {
                     $val = (int)$item['value'];
                 }
 
-                if ($name === 'impressions' || $name === 'plays') {
+                if ($name === 'views') {
+                    $metrics['views'] = $val;
                     $metrics['impressions'] = max($metrics['impressions'], $val);
+                } elseif ($name === 'impressions' || $name === 'plays') {
+                    $metrics['impressions'] = max($metrics['impressions'], $val);
+                    if ($metrics['views'] === 0) {
+                        $metrics['views'] = $val;
+                    }
                 } elseif ($name === 'reach') {
                     $metrics['reach'] = $val;
                 } elseif ($name === 'saved') {
@@ -220,7 +236,7 @@ class MetaApiService {
     }
 
     /**
-     * Fetch Live Post Insights for a Facebook Page Post (Graph API v19/v20)
+     * Fetch Live Post Insights for a Facebook Page Post (Graph API v19/v20/v21)
      */
     public static function fetchFacebookPostInsights(string $postId, string $accessToken): array {
         if (empty($accessToken) || empty($postId) || str_starts_with($postId, 'fb_post_') || str_starts_with($postId, 'mock_')) {
@@ -228,16 +244,30 @@ class MetaApiService {
         }
 
         $metrics = [
+            'views' => 0,
             'impressions' => 0,
             'reach' => 0,
             'engaged_users' => 0
         ];
 
-        $url = self::BASE_URL . '/' . urlencode($postId) . '/insights?' . http_build_query([
-            'metric' => 'post_impressions,post_impressions_unique,post_engaged_users',
-            'access_token' => $accessToken
-        ]);
-        $res = self::makeGetRequest($url);
+        $candidateSets = [
+            'post_impressions,post_impressions_unique,post_engaged_users,post_clicks',
+            'post_impressions,post_impressions_unique,post_engaged_users',
+            'post_impressions,post_engaged_users',
+            'post_impressions'
+        ];
+
+        $res = null;
+        foreach ($candidateSets as $metricSet) {
+            $url = self::BASE_URL . '/' . urlencode($postId) . '/insights?' . http_build_query([
+                'metric' => $metricSet,
+                'access_token' => $accessToken
+            ]);
+            $res = self::makeGetRequest($url);
+            if (!isset($res['error']) && !empty($res['data'])) {
+                break;
+            }
+        }
 
         if (isset($res['data']) && is_array($res['data'])) {
             foreach ($res['data'] as $item) {
@@ -252,11 +282,12 @@ class MetaApiService {
 
                 if ($name === 'post_impressions') {
                     $metrics['impressions'] = $val;
+                    $metrics['views'] = max($metrics['views'], $val);
                 } elseif ($name === 'post_impressions_unique') {
                     $metrics['reach'] = $val;
                 } elseif ($name === 'post_engaged_users') {
                     $metrics['engaged_users'] = $val;
-                    if ($metrics['reach'] === 0) {
+                    if ($metrics['reach'] === 0 && $val > 0) {
                         $metrics['reach'] = $val;
                     }
                 }
@@ -265,6 +296,7 @@ class MetaApiService {
 
         return $metrics;
     }
+
 
     /**
      * Post a reply to a Facebook or Instagram comment
