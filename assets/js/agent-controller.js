@@ -390,7 +390,7 @@ const AgentController = {
       postCaption.textContent = comment.post_caption ? `Sobre: "${comment.post_caption}"` : 'Publicación de la comunidad';
     }
     if (quote) quote.textContent = comment.comment_text || '';
-    if (score) score.textContent = `⭐ Score ${parseInt(comment.highlight_score, 10) || 50}/100`;
+    if (score) score.textContent = `⭐ Prioridad Comercial: ${parseInt(comment.highlight_score, 10) || 50}/100`;
     
     if (reason) {
       reason.textContent = comment.highlight_reason ? `✨ Análisis: ${comment.highlight_reason}` : '✨ Análisis de conexión y engagement comunitario activo.';

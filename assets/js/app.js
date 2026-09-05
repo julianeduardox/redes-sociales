@@ -1001,7 +1001,7 @@ const App = {
       postCaption.textContent = comment.post_caption || 'Publicación en redes sociales';
     }
     if (scoreBadge) {
-      scoreBadge.textContent = `⭐ Score ${parseInt(comment.highlight_score, 10) || 50}/100`;
+      scoreBadge.textContent = `⭐ Prioridad Comercial: ${parseInt(comment.highlight_score, 10) || 50}/100`;
     }
 
     // 2. Follower Comment info
@@ -1273,18 +1273,24 @@ const App = {
     const authorInput = document.getElementById('playground-author');
     const commentInput = document.getElementById('playground-comment');
 
-    if (scenarioKey === 'price_lead') {
+    if (scenarioKey === 'course_qa') {
       if (authorInput) authorInput.value = 'Carlos Ramos';
-      if (commentInput) commentInput.value = '¡Hola! Me interesan mucho sus productos y servicios. ¿Cuál es el precio y qué catálogo tienen disponible?';
-    } else if (scenarioKey === 'objection') {
+      if (commentInput) commentInput.value = '¿El curso incluye clases grabadas y cuánto tiempo tengo acceso?';
+    } else if (scenarioKey === 'philosophy') {
+      if (authorInput) authorInput.value = 'Marcos Silva';
+      if (commentInput) commentInput.value = '¿Cómo puedo aplicar la dicotomía del control cuando siento sobrecarga en mis proyectos?';
+    } else if (scenarioKey === 'price_lead') {
       if (authorInput) authorInput.value = 'Lucía Morales';
-      if (commentInput) commentInput.value = '¿Qué garantía ofrecen y cómo sé si funcionará de forma segura para mi empresa?';
+      if (commentInput) commentInput.value = '¡Hola! Me interesan mucho sus programas formativos. ¿Cuál es el precio y qué catálogo tienen disponible?';
+    } else if (scenarioKey === 'objection') {
+      if (authorInput) authorInput.value = 'Fernando Cruz';
+      if (commentInput) commentInput.value = '¿Qué garantía ofrecen y cómo sé si funcionará de forma segura para mi negocio?';
     } else if (scenarioKey === 'support') {
       if (authorInput) authorInput.value = 'David Silva';
-      if (commentInput) commentInput.value = 'Hola, tengo una duda urgente con mi cuenta y no puedo acceder. ¿Me pueden ayudar por favor?';
+      if (commentInput) commentInput.value = 'Hola, tengo una duda técnica con mi cuenta y no puedo acceder a las lecciones. ¿Me pueden ayudar por favor?';
     } else if (scenarioKey === 'gratitude') {
       if (authorInput) authorInput.value = 'Elena Ortiz';
-      if (commentInput) commentInput.value = '¡Excelente servicio y atención de primera! Quedé encantada con la rapidez y la calidad del trabajo.';
+      if (commentInput) commentInput.value = '¡Excelente contenido y lecciones! Quedé encantada con la claridad y la calidad práctica del material.';
     }
   },
 

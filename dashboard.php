@@ -636,11 +636,12 @@ $isMetaConnected = ($activeAccountsCount > 0);
 
               <!-- Quick Scenarios -->
               <div style="font-size: 0.74rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; margin-bottom: 6px;">Casos Rápidos de Prueba:</div>
-              <div class="quick-scenarios-row">
+              <div class="quick-scenarios-row" style="display: flex; flex-wrap: wrap; gap: 6px;">
+                <button type="button" class="quick-scenario-btn" onclick="App.setPlaygroundScenario('course_qa')">📚 Curso / Acceso</button>
+                <button type="button" class="quick-scenario-btn" onclick="App.setPlaygroundScenario('philosophy')">🏛️ Dicotomía / Concepto</button>
                 <button type="button" class="quick-scenario-btn" onclick="App.setPlaygroundScenario('price_lead')">🎯 Precio / Lead</button>
-                <button type="button" class="quick-scenario-btn" onclick="App.setPlaygroundScenario('objection')">🛡️ Garantía / Objeción</button>
-                <button type="button" class="quick-scenario-btn" onclick="App.setPlaygroundScenario('support')">🛠️ Soporte / Ayuda</button>
-                <button type="button" class="quick-scenario-btn" onclick="App.setPlaygroundScenario('gratitude')">✨ Elogio / Testimonio</button>
+                <button type="button" class="quick-scenario-btn" onclick="App.setPlaygroundScenario('support')">🛠️ Soporte / Técnico</button>
+                <button type="button" class="quick-scenario-btn" onclick="App.setPlaygroundScenario('gratitude')">✨ Elogio / Comunidad</button>
               </div>
 
               <div class="form-group" style="margin-bottom: 10px;">

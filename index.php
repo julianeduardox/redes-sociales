@@ -992,7 +992,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
                 </span>
               </div>
               <div class="flex items-center gap-2 sm:gap-3 text-[11px] sm:text-xs font-semibold text-slate-500 ml-auto sm:ml-0">
-                <span>Score: <strong id="sim-badge-score" class="text-brand-600 font-bold">94/100</strong></span>
+                <span>Prioridad Comercial: <strong id="sim-badge-score" class="text-brand-600 font-bold">96/100</strong></span>
                 <span class="text-emerald-600 font-bold">⚡ 120ms</span>
               </div>
             </div>
@@ -1002,7 +1002,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
             </p>
 
             <div class="flex items-center justify-between pt-3 border-t border-slate-200/60 text-xs text-slate-500">
-              <span data-i18n="sim_autopilot_ok" class="flex items-center gap-1.5 text-emerald-600 font-semibold text-[11px] sm:text-xs">
+              <span id="sim-badge-autopilot" data-i18n="sim_autopilot_ok" class="flex items-center gap-1.5 text-emerald-600 font-semibold text-[11px] sm:text-xs">
                 <span>✔</span> Apto para Autopilot en Instagram y Facebook
               </span>
               <button type="button" onclick="Simulator.copyResponse()" id="sim-btn-copy" class="copy-btn-action text-xs font-bold text-brand-600 hover:text-brand-800 flex items-center gap-1">
@@ -1151,7 +1151,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
             <span id="faq-icon-2" class="text-lg font-bold text-slate-400 transition-transform">+</span>
           </button>
           <div id="faq-ans-2" class="hidden px-4 sm:px-6 pb-5 sm:pb-6 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-4" data-i18n="faq_a2">
-            No. Cuentas con un calibrador de voz de marca donde defines tus principios, tono y longitud. Además, dispones del <strong>Modo Copilot</strong> que te muestra sugerencias para que las apruebes con un solo clic antes de que se publiquen, dándote control absoluto.
+            El sistema incorpora estrictos filtros anti-alucinación: nunca inventa ofertas, cupos falsos ni afirma haber enviado mensajes no realizados. Si una consulta requiere datos internos no disponibles, la IA orienta amablemente hacia el enlace oficial de la bio o solicita aclaraciones. Además, cuentas con el <strong>Modo Copilot</strong> para revisar y aprobar sugerencias antes de que se publiquen, garantizando control y veracidad absoluta.
           </div>
         </div>
 
@@ -1581,7 +1581,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           faq_q1: "¿Es seguro para mi cuenta de Instagram o Facebook?",
           faq_a1: "Totalmente seguro. Xindro opera exclusivamente a través de la API oficial de Meta Graph con permisos autorizados y webhooks verificados. No requerimos tu contraseña de Instagram y no utilizamos navegadores automatizados o emuladores no oficiales.",
           faq_q2: "¿La IA puede responder cosas fuera de lugar o inventar información?",
-          faq_a2: "No. Cuentas con un calibrador de voz de marca donde defines tus principios, tono y longitud. Además, dispones del <strong>Modo Copilot</strong> que te muestra sugerencias para que las apruebes con un solo clic antes de que se publiquen, dándote control absoluto.",
+          faq_a2: "El sistema incorpora estrictos filtros anti-alucinación: nunca inventa ofertas, cupos falsos ni afirma haber enviado mensajes no realizados. Si una consulta requiere datos internos no disponibles, la IA orienta amablemente hacia el enlace oficial de la bio o solicita aclaraciones. Además, cuentas con el <strong>Modo Copilot</strong> para revisar y aprobar sugerencias antes de que se publiquen, garantizando control y veracidad absoluta.",
           faq_q3: "¿Puedo conectar varias cuentas al mismo tiempo?",
           faq_a3: "Sí, puedes conectar y gestionar múltiples cuentas de Instagram y Páginas de Facebook de forma centralizada.",
           faq_q4: "¿Puedo empezar gratis sin ingresar tarjeta de crédito?",
@@ -1696,8 +1696,8 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           sim_opt_never: "No closing question",
           sim_lbl_comment: "Follower comment to simulate:",
           sim_presets_title: "Quick presets:",
-          sim_preset_1: "💡 \"Course pricing?\"",
-          sim_preset_2: "🔥 \"Great post\"",
+          sim_preset_1: "💡 \"Recorded classes & access?\"",
+          sim_preset_2: "🏛️ \"Dichotomy of control\"",
           sim_btn_gen: "Generate AI Response",
           sim_res_title: "Result Generated",
           sim_autopilot_ok: "✔ Eligible for Autopilot on Instagram and Facebook",
@@ -1737,7 +1737,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           faq_q1: "Is it safe for my Instagram or Facebook account?",
           faq_a1: "100% safe. Xindro operates strictly through official Meta Graph API endpoints with verified webhooks and granted permissions. We never ask for your account password or use unofficial scrapers.",
           faq_q2: "Can the AI hallucinate or post inappropriate replies?",
-          faq_a2: "No. You have a Brand Voice Calibrator to establish guidelines and tone. You also have <strong>Copilot Mode</strong>, which generates suggested replies for 1-click human approval before posting.",
+          faq_a2: "The system features strict anti-hallucination guardrails: it never invents offers, false scarcity, or unperformed actions. If a query requires specific unpublished business data, the AI warmly directs the user to the official bio link or DM. You also have <strong>Copilot Mode</strong> to review and approve suggestions with 1 click before publishing.",
           faq_q3: "Can I connect multiple accounts simultaneously?",
           faq_a3: "Yes, you can manage multiple Instagram accounts and Facebook Pages from a single centralized dashboard.",
           faq_q4: "Can I start for free without a credit card?",
@@ -1852,8 +1852,8 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           sim_opt_never: "Sem pergunta final",
           sim_lbl_comment: "Comentário do seguidor para simular:",
           sim_presets_title: "Rápidos:",
-          sim_preset_1: "💡 \"Preço do curso?\"",
-          sim_preset_2: "🔥 \"Ótima reflexão\"",
+          sim_preset_1: "💡 \"Aulas gravadas e acesso?\"",
+          sim_preset_2: "🏛️ \"Dicotomia do controle\"",
           sim_btn_gen: "Gerar Resposta com IA",
           sim_res_title: "Resultado Gerado",
           sim_autopilot_ok: "✔ Apto para Autopilot no Instagram e Facebook",
@@ -1893,7 +1893,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           faq_q1: "É seguro para minha conta do Instagram ou Facebook?",
           faq_a1: "Totalmente seguro. O Xindro opera estritamente através da API oficial do Meta Graph com permissões autorizadas e webhooks verificados. Nunca solicitamos sua senha e não usamos navegadores ou emuladores não oficiais.",
           faq_q2: "A IA pode responder coisas fora de contexto?",
-          faq_a2: "Não. Você conta com um calibrador de voz de marca para definir princípios e tom. Além disso, o <strong>Modo Copilot</strong> gera sugestões para aprovação humana com 1 clique antes de postar.",
+          faq_a2: "O sistema possui filtros rígidos anti-alucinação: nunca inventa ofertas, vagas falsas ou afirma ter enviado mensagens não realizadas. Se uma pergunta exige dados específicos não cadastrados, a IA orienta para o link oficial da bio ou DM. Além disso, você conta com o <strong>Modo Copilot</strong> para revisar e aprovar respostas antes da publicação.",
           faq_q3: "Posso conectar várias contas ao mesmo tempo?",
           faq_a3: "Sim, você pode conectar e gerenciar várias contas do Instagram e Páginas do Facebook de forma centralizada.",
           faq_q4: "Posso começar grátis sem cartão de crédito?",
@@ -1901,7 +1901,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           foot_brand_desc: "O sistema operacional de IA para criadores e agências de redes sociais. Respostas em tempo real, Smart Timing e sincronização oficial.",
           foot_status_pill: "Meta API 100% Operacional",
           foot_c2_t: "Produto",
-          foot_c2_1: "Preços",
+          foot_c2_1: "Precios",
           foot_c2_2: "Inspiração",
           foot_c3_t: "Empresa",
           foot_c3_1: "Sobre",
@@ -2011,25 +2011,28 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
       init() {
         const consent = localStorage.getItem('xindro_cookie_consent');
         if (!consent) {
-          setTimeout(() => {
-            const modal = document.getElementById('cookie-consent-modal');
-            if (modal) modal.classList.remove('hidden');
-          }, 600);
+          const modal = document.getElementById('cookie-consent-modal');
+          if (modal) modal.classList.remove('hidden');
         }
       },
 
       acceptAll() {
-        localStorage.setItem('xindro_cookie_consent', JSON.stringify({ essential: true, analytics: true, personalization: true, timestamp: Date.now() }));
+        localStorage.setItem('xindro_cookie_consent', JSON.stringify({
+          essential: true,
+          analytics: true,
+          personalization: true,
+          timestamp: Date.now()
+        }));
         this.hideModal();
       },
 
-      rejectAll() {
-        localStorage.setItem('xindro_cookie_consent', JSON.stringify({ essential: true, analytics: false, personalization: false, timestamp: Date.now() }));
-        this.hideModal();
-      },
-
-      close() {
-        localStorage.setItem('xindro_cookie_consent', 'dismissed');
+      rejectNonEssential() {
+        localStorage.setItem('xindro_cookie_consent', JSON.stringify({
+          essential: true,
+          analytics: false,
+          personalization: false,
+          timestamp: Date.now()
+        }));
         this.hideModal();
       },
 
@@ -2066,16 +2069,16 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
     const Simulator = {
       presets: {
         es: {
-          1: { text: "¿Cuánto cuesta la mentoría o curso? ¿Tienen cupos disponibles para este mes?", tone: "growth", closing: "always" },
-          2: { text: "¡Qué gran reflexión! Marco Aurelio y Séneca cambiaron mi forma de ver los problemas cotidianos. Gracias por compartir.", tone: "mentor", closing: "relevant" }
+          1: { text: "¿El curso incluye clases grabadas y cuánto tiempo tengo acceso?", tone: "empathy", closing: "always" },
+          2: { text: "¿Cómo puedo aplicar la dicotomía del control cuando siento estrés o sobrecarga en mis proyectos?", tone: "mentor", closing: "relevant" }
         },
         en: {
-          1: { text: "How much is the mentorship or course? Do you have spots available for this month?", tone: "growth", closing: "always" },
-          2: { text: "What an inspiring reflection! Marcus Aurelius changed how I view daily obstacles. Thank you for sharing.", tone: "mentor", closing: "relevant" }
+          1: { text: "Does the course include recorded lessons and how long do I have access?", tone: "empathy", closing: "always" },
+          2: { text: "How can I apply the dichotomy of control when I feel stressed or overwhelmed?", tone: "mentor", closing: "relevant" }
         },
         pt: {
-          1: { text: "Quanto custa a mentoria ou curso? Vocês têm vagas disponíveis para este mês?", tone: "growth", closing: "always" },
-          2: { text: "Que reflexão incrível! Marco Aurélio mudou minha forma de encarar os desafios do dia a dia. Obrigado por compartilhar.", tone: "mentor", closing: "relevant" }
+          1: { text: "O curso inclui aulas gravadas e por quanto tempo tenho acesso?", tone: "empathy", closing: "always" },
+          2: { text: "Como posso aplicar a dicotomia do controle quando sinto estresse ou sobrecarga?", tone: "mentor", closing: "relevant" }
         }
       },
 
@@ -2098,6 +2101,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         const outputText = document.getElementById('sim-output-text');
         const badgeIntent = document.getElementById('sim-badge-intent');
         const badgeScore = document.getElementById('sim-badge-score');
+        const badgeAutopilot = document.getElementById('sim-badge-autopilot');
         const lang = I18n.current || 'es';
 
         if (!text) return;
@@ -2109,66 +2113,150 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           let reply = '';
           let intent = 'Interés / Comunidad';
           let score = 92;
+          let autopilotText = '✔ Apto para Autopilot en Instagram y Facebook';
 
           const textLower = text.toLowerCase();
 
           if (lang === 'en') {
-            if (textLower.includes('price') || textLower.includes('cost') || textLower.includes('course') || textLower.includes('spot') || textLower.includes('how much')) {
-              intent = 'High-Converting Lead 💎';
-              score = 98;
+            const isCourseQA = textLower.includes('recorded') || textLower.includes('access') || textLower.includes('lesson') || textLower.includes('curriculum') || textLower.includes('how long');
+            const isDichotomy = textLower.includes('dichotomy') || textLower.includes('control') || textLower.includes('stoic') || textLower.includes('marcus');
+            const isPrice = textLower.includes('price') || textLower.includes('cost') || textLower.includes('how much') || textLower.includes('buy');
+
+            if (isCourseQA) {
+              intent = 'Qualified Lead • Course Structure 📚';
+              score = 96;
+              autopilotText = '✔ Verified & Grounded for Autopilot';
               reply = tone === 'mentor'
-                ? "True value lies in transformation and daily execution. I just sent you the full curriculum and details via DM so you can see if it fits your goals. Ready to take the leap? 🚀"
-                : "Hey! We opened only 10 spots this month for 1-on-1 focus. I just sent you a DM with the private link and a special perk. Were you able to check it? 📩";
+                ? "Hello! The program is structured for you to advance with discipline at your own pace. It includes full, flexible access to all recorded lessons, practical materials, and continuous updates. You can check the syllabus and register via our bio link. Any specific questions on the modules? 🏛️"
+                : (tone === 'empathy'
+                  ? "Hi there! Yes, the course includes full access to recorded lessons so you can learn at your own pace with ongoing access and bonus resources. You will find all details and enrollment in our bio link or feel free to DM us. Would you like to review the syllabus? 🤝"
+                  : "Hey! Absolutely, you get full flexible access to all high-impact recorded sessions and continuous resources. You can view the full curriculum and register directly via our bio link or send us a DM. Ready to level up? 🚀");
+            } else if (isDichotomy) {
+              intent = 'Stoic Philosophy & Mentorship 🧠';
+              score = 92;
+              autopilotText = '✔ Verified & Grounded for Autopilot';
+              reply = tone === 'mentor'
+                ? "The dichotomy of control is about focusing 100% of your energy on what is within your power (your decisions, effort, and attitude) and letting go of external outcomes. When facing friction ask: 'Is this under my direct control?'. Where would you like to apply it today? 🏛️"
+                : (tone === 'empathy'
+                  ? "Hello! Applying the dichotomy of control starts by separating what you can directly influence from what you cannot. Focus your energy on your response and let go of anxiety over external factors. What challenge are you navigating this week? 🤝"
+                  : "Great question! The dichotomy of control is the ultimate mental clarity tool: execute ruthlessly on your own actions and ignore external noise. Check our bio link for practical mindset frameworks. What habit are you building today? 🚀");
+            } else if (isPrice) {
+              intent = 'Commercial Lead 💎';
+              score = 96;
+              autopilotText = '✔ Verified & Grounded for Autopilot';
+              reply = tone === 'mentor'
+                ? "True value lies in execution and structured systems. You can review our full program curriculum, pricing tiers, and enrollment directly in our bio link. What key objective are you looking to achieve this month? 🏛️"
+                : "Hi! We have tailored packages designed for different growth stages. You can explore all details in our bio link or shoot us a DM for personalized guidance. What are your main goals? 🤝";
             } else if (textLower.includes('procrastinat') || textLower.includes('fear') || textLower.includes('advice') || textLower.includes('start')) {
-              intent = 'High-Value Mentorship Question 🧠';
+              intent = 'Mentorship & Growth 🧠';
               score = 95;
+              autopilotText = '✔ Verified & Grounded for Autopilot';
               reply = "Fear of failure only fades when you take action before your mind starts doubting. Break your goal into one 5-minute task today. Perfection doesn't exist; daily progress does. What small step will you take in the next 10 minutes? 👇";
             } else {
               intent = 'Connection & Retention ⚡';
               score = 90;
+              autopilotText = '✔ Verified & Grounded for Autopilot';
               reply = "Exactly. When you master your mind and apply wisdom in your daily routine, external obstacles lose their power. Thank you for being part of this community. Which habit helped you most this week? 🏛️";
             }
           } else if (lang === 'pt') {
-            if (textLower.includes('preço') || textLower.includes('custo') || textLower.includes('curso') || textLower.includes('vaga') || textLower.includes('quanto')) {
-              intent = 'Lead de Alta Conversão 💎';
-              score = 98;
+            const isCourseQA = textLower.includes('gravada') || textLower.includes('acesso') || textLower.includes('aula') || textLower.includes('tempo') || textLower.includes('cronograma');
+            const isDichotomy = textLower.includes('dicotomia') || textLower.includes('controle') || textLower.includes('estoic') || textLower.includes('marco aurelio');
+            const isPrice = textLower.includes('preço') || textLower.includes('custo') || textLower.includes('quanto') || textLower.includes('comprar');
+
+            if (isCourseQA) {
+              intent = 'Lead Qualificado • Estrutura do Curso 📚';
+              score = 96;
+              autopilotText = '✔ Resposta Verificada Apta para Autopilot';
               reply = tone === 'mentor'
-                ? "O valor real está na transformação e na disciplina diária. Acabei de te enviar o cronograma e os detalhes por mensagem privada para avaliar seus objetivos. Pronto para dar esse passo? 🚀"
-                : "Olá! Abrimos apenas 10 vagas este mês para acompanhamento exclusivo. Já te enviei um DM com o link e um benefício especial. Conseguiu ver? 📩";
+                ? "Olá! O programa foi desenhado para que você avance com disciplina no seu próprio ritmo. Inclui acesso completo a todas as aulas gravadas, materiais práticos e atualizações contínuas. Você pode conferir o cronograma no link da nossa bio. Alguma dúvida sobre os módulos? 🏛️"
+                : (tone === 'empathy'
+                  ? "Olá! Sim, o curso inclui acesso total às aulas gravadas para você estudar no seu tempo, com acesso contínuo e material de apoio. Você encontra todas as informações e inscrições no link da nossa biografia. Gostaria de saber mais sobre o conteúdo? 🤝"
+                  : "Olá! Com certeza, você tem acesso flexível e contínuo a todas as aulas gravadas e materiais práticos. Todos os detalhes e inscrições estão no link da nossa bio ou envie-nos uma mensagem privada. Pronto para começar? 🚀");
+            } else if (isDichotomy) {
+              intent = 'Filosofia Estoica & Mentoria 🧠';
+              score = 92;
+              autopilotText = '✔ Resposta Verificada Apta para Autopilot';
+              reply = tone === 'mentor'
+                ? "A dicotomia do controle ensina a focar 100% da sua energia no que depende de você (suas escolhas, ações e atitude) e aceitar com serenidade o externo. Diante de qualquer obstáculo, pergunte-se: 'Isso está sob meu controle direto?'. Onde você quer aplicar isso hoje? 🏛️"
+                : (tone === 'empathy'
+                  ? "Olá! Aplicar a dicotomia do controle começa por separar o que você pode influenciar diretamente daquilo que não pode. Foque sua energia na sua resposta e solte a ansiedade sobre o incontrolável. Que desafio você está enfrentando esta semana? 🤝"
+                  : "Excelente pergunta! A dicotomia do controle é a chave para o foco: aja com intensidade máxima nas suas ações e elimine o ruído do que você não controla. No link da nossa bio compartilhamos recursos práticos sobre mentalidade. Qual hábito você quer fortalecer hoje? 🚀");
+            } else if (isPrice) {
+              intent = 'Lead de Alta Conversão 💎';
+              score = 96;
+              autopilotText = '✔ Resposta Verificada Apta para Autopilot';
+              reply = tone === 'mentor'
+                ? "O valor real está na transformação e na disciplina diária. Você pode consultar o cronograma completo, planos e metodologia no link da nossa biografia. Qual objetivo principal você quer alcançar este mês? 🏛️"
+                : "Olá! Com certeza, temos opções adaptadas aos seus objetivos. Você pode conferir todos os detalhes e planos no link da nossa biografia ou nos enviar um DM para uma orientação personalizada. 🤝";
             } else if (textLower.includes('procrastin') || textLower.includes('medo') || textLower.includes('conselho') || textLower.includes('começar')) {
               intent = 'Pergunta de Mentoria & Valor 🧠';
               score = 95;
+              autopilotText = '✔ Resposta Verificada Apta para Autopilot';
               reply = "O medo do fracasso só desaparece quando você age antes que a mente comece a duvidar. Divida sua meta em uma ação de 5 minutos para hoje. Perfeição não existe; progresso diário sim. Qual pequena tarefa você fará nos próximos 10 minutos? 👇";
             } else {
               intent = 'Conexão & Retenção ⚡';
               score = 90;
+              autopilotText = '✔ Resposta Verificada Apta para Autopilot';
               reply = "Exatamente. Quando você domina sua mente e aplica sabedoria na rotina, os obstáculos externos perdem a força. Obrigado por fazer parte da comunidade. Qual princípio mais te ajudou esta semana? 🏛️";
             }
           } else {
-            if (textLower.includes('precio') || textLower.includes('curso') || textLower.includes('cuanto') || textLower.includes('costo') || textLower.includes('cupo')) {
-              intent = 'Lead de Alta Conversión 💎';
-              score = 98;
+            // Spanish (Default)
+            const isCourseQA = textLower.includes('grabada') || textLower.includes('grabadas') || textLower.includes('clases grabadas') || textLower.includes('acceso') || textLower.includes('tiempo tengo') || textLower.includes('cuanto tiempo') || textLower.includes('cuánto tiempo') || textLower.includes('duracion') || textLower.includes('duración') || textLower.includes('temario');
+            const isDichotomy = textLower.includes('dicotomia') || textLower.includes('dicotomía') || textLower.includes('control') || textLower.includes('estoic') || textLower.includes('marco aurelio') || textLower.includes('epicteto') || textLower.includes('seneca') || textLower.includes('séneca');
+            const isPrice = textLower.includes('precio') || textLower.includes('costo') || textLower.includes('cuanto vale') || textLower.includes('cuánto vale') || textLower.includes('cuanto cuesta') || textLower.includes('cuánto cuesta') || textLower.includes('como comprar');
+
+            if (isCourseQA) {
+              intent = 'Lead Calificado • Modalidad del Curso 📚';
+              score = 96;
+              autopilotText = '✔ Apto para Autopilot (Respuesta verificada sobre modalidad del curso)';
               reply = tone === 'mentor'
-                ? "El valor real está en la transformación y la disciplina diaria. Te envié todos los detalles y el temario completo por mensaje privado para que veas si encaja con tus objetivos. ¿Listo para dar el salto? 🚀"
-                : "¡Hola! Sí, abrimos solo 10 cupos para este mes para trabajar de forma personalizada. Ya te escribí por DM con el enlace y una sorpresa especial. ¿Pudiste revisarlo? 📩";
+                ? "¡Hola! El programa está diseñado para que avances con disciplina a tu propio ritmo. Incluye acceso completo y flexible a todas las clases grabadas, materiales prácticos y actualizaciones continuas. Puedes consultar el temario y registrarte en el enlace de nuestra biografía. ¿Tienes alguna duda puntual sobre los módulos? 🏛️"
+                : (tone === 'empathy'
+                  ? "¡Hola! Sí, el curso incluye acceso total a las clases grabadas para que aprendas a tu propio ritmo con acceso continuo y material de apoyo. Encontrarás el contenido completo y los detalles de inscripción en el enlace de nuestra biografía o puedes escribirnos por DM si deseas orientación. ¿Te gustaría conocer el temario? 🤝"
+                  : "¡Hola! Efectivamente, dispones de acceso flexible y continuo a todas las clases grabadas y recursos prácticos. Tienes los detalles del temario e inscripción directa en el enlace de nuestra bio, o puedes enviarnos un DM para resolver cualquier duda. ¿Listo para dar el salto? 🚀");
+            } else if (isDichotomy) {
+              intent = 'Consulta Conceptual & Mentoría Estoica 🧠';
+              score = 92;
+              autopilotText = '✔ Apto para Autopilot (Respuesta conceptual verificada y fundamentada)';
+              reply = tone === 'mentor'
+                ? "La dicotomía del control consiste en enfocar el 100% de nuestra energía en lo que sí depende de nosotros (nuestras decisiones, acciones y actitud) y soltar con serenidad lo externo. Ante cualquier problema pregúntate: '¿Está bajo mi control directo?'. Si lo está, actúa con determinación; si no, canaliza tu energía en tu propia respuesta y suelta lo demás. ¿En qué situación buscas aplicarlo hoy? 🏛️"
+                : (tone === 'empathy'
+                  ? "¡Hola! Aplicar la dicotomía del control comienza por reconocer qué parte de una situación está en tus manos y cuál no. Enfócate con calma en tu propia respuesta y deja ir la angustia por lo incontrolable. ¿Hay algún reto puntual que estés enfrentando esta semana? 🤝"
+                  : "¡Excelente pregunta! La dicotomía del control es la herramienta clave para mantener el foco: actúa con máxima intensidad en tus acciones y no pierdas energía en lo que no puedes cambiar. En el enlace de nuestra bio compartimos recursos prácticos sobre mentalidad. ¿Qué hábito quieres fortalecer hoy? 🚀");
+            } else if (isPrice) {
+              intent = 'Oportunidad Comercial / Lead 💎';
+              score = 96;
+              autopilotText = '✔ Apto para Autopilot (Respuesta comercial directa con enlace oficial)';
+              reply = tone === 'mentor'
+                ? "El verdadero valor reside en la transformación y la disciplina diaria. Puedes consultar toda la información de inversión, modalidades y metodología en el enlace de nuestra biografía. ¿Qué meta principal buscas alcanzar este mes? 🏛️"
+                : (tone === 'empathy'
+                  ? "¡Hola! Con mucho gusto te compartimos los detalles. Manejamos planes adaptados a lo que necesitas. Puedes ver toda la información en el enlace de nuestra biografía o escribirnos por DM si prefieres orientación personalizada. ¿Qué dudas tienes sobre el programa? 🤝"
+                  : "¡Hola! Puedes consultar la información oficial de planes y registro directamente en el enlace de nuestra bio, o escribirnos por DM si deseas una recomendación adaptada a tus metas. ¿Listo para dar el siguiente paso? 🚀");
             } else if (textLower.includes('procrastino') || textLower.includes('miedo') || textLower.includes('consejo') || textLower.includes('empezar')) {
               intent = 'Pregunta de Mentoría / Alto Valor 🧠';
               score = 95;
+              autopilotText = '✔ Apto para Autopilot (Consejo accionable fundamentado)';
               reply = "El miedo al fracaso solo desaparece cuando actúas antes de que la mente empiece a dudar. Divide tu meta en una sola acción de 5 minutos para hoy. La perfección no existe, el progreso diario sí. ¿Qué pequeña tarea harás en los próximos 10 minutos? 👇";
             } else {
               intent = 'Conexión & Retención ⚡';
               score = 90;
+              autopilotText = '✔ Apto para Autopilot (Comunidad y fidelización)';
               reply = "Exactamente. Cuando dominas tu mente y aplicas la sabiduría en tu rutina, los problemas externos pierden todo su poder. Gracias por ser parte de esta comunidad. ¿Qué principio estoico te ha servido más esta semana? 🏛️";
             }
           }
 
           if (closing === 'never') {
-            reply = reply.replace(/\¿[^\?]+\?\s*(👇|✨|🔥|🚀|📩|🤝)?$/i, '').replace(/\?[^\?]+\?\s*(👇|✨|🔥|🚀|📩|🤝)?$/i, '');
+            reply = reply.replace(/\¿[^\?]+\?\s*(👇|✨|🔥|🚀|📩|🤝|🏛️|📚)?$/i, '').replace(/\?[^\?]+\?\s*(👇|✨|🔥|🚀|📩|🤝|🏛️|📚)?$/i, '');
           }
 
           badgeIntent.textContent = '🎯 ' + intent;
           badgeScore.textContent = score + '/100';
           outputText.textContent = `"${reply}"`;
+
+          if (badgeAutopilot) {
+            badgeAutopilot.innerHTML = `<span>✔</span> ${autopilotText}`;
+            badgeAutopilot.className = 'flex items-center gap-1.5 text-emerald-600 font-semibold text-[11px] sm:text-xs';
+          }
 
           btn.disabled = false;
           btn.innerHTML = `<span>${I18n.dict[lang]?.sim_btn_gen || 'Generar Respuesta con IA'}</span><span>⚡</span>`;
@@ -2187,8 +2275,6 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         });
       }
     };
-
-
 
     document.addEventListener('DOMContentLoaded', () => {
       I18n.init();

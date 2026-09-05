@@ -122,8 +122,12 @@ class AiAgentService {
                 'sentiment' => $suitability['status'] === 'spam' ? 'spam' : 'neutral',
                 'intent' => $suitability['category'],
                 'highlight_score' => $suitability['status'] === 'spam' ? 10 : 25,
+                'commercial_priority' => $suitability['status'] === 'spam' ? 10 : 25,
                 'is_highlighted' => 0,
                 'highlight_reason' => $suitability['reason'],
+                'autopilot_ready' => false,
+                'autopilot_status' => 'ignored',
+                'autopilot_reason' => $suitability['reason'],
                 'detected_keywords' => []
             ];
         }
@@ -135,51 +139,74 @@ class AiAgentService {
         $intent = 'general';
         $highlightReason = 'Comentario de la comunidad';
         $keywords = [];
+        $autopilotReady = true;
+        $autopilotStatus = 'ready';
+        $autopilotReason = '✅ Respuesta verificada apta para publicación en Autopilot';
 
-        // 1. Commercial Leads / Pricing / Info / Buying Intent
+        // 1. Philosophical, Stoic, Conceptual & Mentorship QA (Dicotomía del control, mentalidad, disciplina, conceptos)
+        $conceptPatterns = [
+            'dicotomia', 'dicotomía', 'dicotomia del control', 'dicotomía del control', 'estoicismo', 'estoico', 'estoica',
+            'marco aurelio', 'seneca', 'séneca', 'epicteto', 'epícteto', 'amor fati', 'memento mori', 'autodominio',
+            'fortaleza mental', 'disciplina diaria', 'forjar disciplina', 'como aplicar', 'cómo aplicar', 'que significa',
+            'qué significa', 'miedo al fracaso', 'procrastino', 'procrastinar', 'procrastinacion', 'procrastinación',
+            'sin motivacion', 'sin motivación', 'falta de motivacion', 'falta de motivación', 'consejo', 'reflexion',
+            'reflexión', 'filosofia', 'filosofía', 'sabiduria', 'sabiduría', 'crecimiento personal', 'mentalidad',
+            'obstaculo es el camino', 'obstáculo es el camino', 'el obstaculo', 'el obstáculo', 'habito', 'hábito'
+        ];
+
+        // 2. Commercial Leads / Course / Product / Pricing / Access / Buying Intent
         $leadPatterns = [
             'precio', 'precios', 'costo', 'costos', 'cuanto vale', 'cuánto vale', 'cuanto cuesta', 'cuánto cuesta',
             'como comprar', 'cómo comprar', 'donde comprar', 'dónde comprar', 'donde estan', 'dónde están',
+            'clases grabadas', 'clase grabada', 'grabadas', 'grabada', 'tiempo de acceso', 'cuanto tiempo tengo',
+            'cuánto tiempo tengo', 'cuanto tiempo dura', 'cuánto tiempo dura', 'acceso de por vida', 'duracion',
+            'duración', 'temario', 'contenido del curso', 'certificado', 'certificacion', 'certificación',
             'envio', 'envíos', 'envío', 'informacion', 'información', 'catalogo', 'catálogo', 'info',
             'link', 'enlace', 'dm', 'inbox', 'disponible', 'disponibles', 'stock', 'promocion', 'promoción',
             'descuento', 'descuentos', 'cotizacion', 'cotización', 'agendar', 'agenda', 'asesoria', 'asesoría',
-            'me interesa', 'quiero uno', 'quiero mas info', 'quiero más info', 'como contrato', 'cómo contrato'
+            'me interesa', 'quiero uno', 'quiero mas info', 'quiero más info', 'como contrato', 'cómo contrato',
+            'inscripcion', 'inscripción', 'matricula', 'matrícula', 'cupo', 'cupos'
         ];
 
-        // 2. Sales Objections / Guarantees / Trust / Shipping Time
+        // 3. Sales Objections / Guarantees / Trust / Shipping Time
         $objectionPatterns = [
             'garantia', 'garantía', 'seguro', 'es seguro', 'devolucion', 'devolución', 'tarda mucho',
             'cuanto tarda', 'cuánto tarda', 'confiable', 'es confiable', 'estafa', 'funciona', 'realmente funciona',
-            'duda', 'desconfianza', 'calidad', 'testimonios', 'certificacion', 'certificación'
+            'vale la pena', 'duda', 'desconfianza', 'testimonios'
         ];
 
-        // 3. Customer Support / Post-Sale Issues / Help
+        // 4. Customer Support / Real Post-Sale Issues / Platform Access (Strictly isolated from conceptual words)
         $supportPatterns = [
-            'ayuda', 'soporte', 'problema', 'no me llego', 'no me llegó', 'no llego', 'error', 'falla',
-            'mi pedido', 'estado de mi orden', 'reclamo', 'queja', 'factura', 'no puedo ingresar',
-            'no funciona', 'necesito ayuda', 'asesor'
+            'no puedo ingresar', 'no puedo entrar', 'error al ingresar', 'falla la plataforma', 'error en la plataforma',
+            'clave incorrecta', 'contraseña incorrecta', 'error de contraseña', 'error de login', 'problema tecnico',
+            'problema técnico', 'problema para entrar', 'problema para ingresar', 'no me deja entrar', 'no me deja ingresar',
+            'no me llego el acceso', 'no me llegó el acceso', 'no me llego el correo', 'no me llegó el correo',
+            'problema con el pago', 'error en el pago', 'mi pedido', 'estado de mi orden', 'numero de orden',
+            'número de orden', 'solicitar factura', 'pedir factura', 'hacer un reclamo', 'reportar error',
+            'soporte tecnico', 'soporte técnico', 'ayuda con mi compra', 'no puedo ver el curso'
         ];
 
-        // 4. Testimonials / High Gratitude / Praise
+        // 5. Testimonials / High Gratitude / Praise
         $praisePatterns = [
             'excelente', 'increible', 'increíble', 'me encanto', 'me encantó', 'buenisimo', 'buenísimo',
             'genial', 'recomiendo', 'recomendado', 'lo mejor', 'felicitaciones', 'gran trabajo', 'super',
-            'súper', 'top', 'felicidades', 'gracias infinitas', 'cambio mi', 'cambió mi', 'los mejores'
+            'súper', 'top', 'felicidades', 'gracias infinitas', 'cambio mi vida', 'cambió mi vida', 'los mejores'
         ];
 
-        // Detect Leads & Buying Intent (Top priority for conversion)
+        // Detect Conceptual / Philosophy / Stoic / Mentorship First
+        $foundConcepts = [];
+        foreach ($conceptPatterns as $p) {
+            if (str_contains($textLower, $p)) {
+                $foundConcepts[] = $p;
+            }
+        }
+
+        // Detect Leads & Buying Intent
         $foundLeads = [];
         foreach ($leadPatterns as $p) {
             if (str_contains($textLower, $p)) {
                 $foundLeads[] = $p;
             }
-        }
-        if (!empty($foundLeads)) {
-            $sentiment = 'question';
-            $intent = 'lead_info';
-            $score = 96;
-            $highlightReason = '🎯 Oportunidad Comercial / Lead Calificado: Pregunta de precio, catálogo o compra lista para cerrar';
-            $keywords = $foundLeads;
         }
 
         // Detect Sales Objections
@@ -189,13 +216,6 @@ class AiAgentService {
                 $foundObjections[] = $p;
             }
         }
-        if (empty($foundLeads) && !empty($foundObjections)) {
-            $sentiment = 'question';
-            $intent = 'sales_objection';
-            $score = 92;
-            $highlightReason = '🛡️ Objeción de Venta / Garantía: Resuelve la duda con autoridad para concretar la conversión';
-            $keywords = $foundObjections;
-        }
 
         // Detect Customer Support
         $foundSupport = [];
@@ -203,13 +223,6 @@ class AiAgentService {
             if (str_contains($textLower, $p)) {
                 $foundSupport[] = $p;
             }
-        }
-        if (empty($foundLeads) && empty($foundObjections) && !empty($foundSupport)) {
-            $sentiment = 'urgent';
-            $intent = 'customer_support';
-            $score = 95;
-            $highlightReason = '🛠️ Soporte / Asistencia al Cliente: Requiere atención rápida y resolutiva';
-            $keywords = $foundSupport;
         }
 
         // Detect Praise & Testimonials
@@ -219,12 +232,62 @@ class AiAgentService {
                 $foundPraise[] = $p;
             }
         }
-        if (empty($foundLeads) && empty($foundObjections) && empty($foundSupport) && !empty($foundPraise)) {
+
+        // Priority Classification
+        if (!empty($foundConcepts)) {
+            $sentiment = 'question';
+            $intent = 'knowledge_concept';
+            $score = 92;
+            $highlightReason = '🧠 Consulta Conceptual & Mentoría: Pregunta filosófica o metodológica para aportar autoridad de marca';
+            $keywords = $foundConcepts;
+            $autopilotReady = true;
+            $autopilotStatus = 'ready';
+            $autopilotReason = '✔ Apto para Autopilot (Respuesta conceptual verificada y fundamentada)';
+        } elseif (!empty($foundLeads)) {
+            $sentiment = 'question';
+            $intent = 'lead_info';
+            $score = 96;
+            $highlightReason = '🎯 Oportunidad Comercial / Lead Calificado: Consulta de compra, acceso o programa formativo';
+            $keywords = $foundLeads;
+            
+            // Check if it's a general verified question vs custom pricing negotiation
+            $hasSpecificCustomQuery = (str_contains($textLower, 'descuento especial') || str_contains($textLower, 'pagar en cuotas') || str_contains($textLower, 'presupuesto personalizado'));
+            if ($hasSpecificCustomQuery) {
+                $autopilotReady = false;
+                $autopilotStatus = 'needs_review';
+                $autopilotReason = '⚠️ Prioridad comercial alta (96/100), pero requiere revisión humana por consultar condiciones financieras personalizadas';
+            } else {
+                $autopilotReady = true;
+                $autopilotStatus = 'ready';
+                $autopilotReason = '✔ Apto para Autopilot (Respuesta comercial directa con enlace oficial)';
+            }
+        } elseif (!empty($foundObjections)) {
+            $sentiment = 'question';
+            $intent = 'sales_objection';
+            $score = 90;
+            $highlightReason = '🛡️ Objeción de Venta / Garantía: Resuelve la duda con autoridad, transparencia y confianza';
+            $keywords = $foundObjections;
+            $autopilotReady = true;
+            $autopilotStatus = 'ready';
+            $autopilotReason = '✔ Apto para Autopilot (Garantías y términos institucionales verificados)';
+        } elseif (!empty($foundSupport)) {
+            $sentiment = 'urgent';
+            $intent = 'customer_support';
+            $score = 94;
+            $highlightReason = '🛠️ Soporte / Asistencia Técnica: Requiere atención personalizada por mensaje privado';
+            $keywords = $foundSupport;
+            $autopilotReady = false;
+            $autopilotStatus = 'needs_review';
+            $autopilotReason = '⚠️ Requiere revisión humana / canal privado para validar datos del usuario con seguridad';
+        } elseif (!empty($foundPraise)) {
             $sentiment = 'positive';
             $intent = 'gratitude_praise';
             $score = 88;
             $highlightReason = '✨ Testimonio Positivo & Fidelización: Conecta y agradece para impulsar la prueba social';
             $keywords = $foundPraise;
+            $autopilotReady = true;
+            $autopilotStatus = 'ready';
+            $autopilotReason = '✔ Apto para Autopilot (Agradecimiento cálido de la comunidad)';
         }
 
         // Question mark boost
@@ -257,8 +320,12 @@ class AiAgentService {
             'sentiment' => $sentiment,
             'intent' => $intent,
             'highlight_score' => $score,
+            'commercial_priority' => $score,
             'is_highlighted' => $isHighlighted,
             'highlight_reason' => $highlightReason,
+            'autopilot_ready' => $autopilotReady,
+            'autopilot_status' => $autopilotStatus,
+            'autopilot_reason' => $autopilotReason,
             'detected_keywords' => $keywords
         ];
     }
@@ -372,6 +439,7 @@ class AiAgentService {
         $firstName = explode(' ', trim($authorName))[0] ?: 'amigo';
         $analysis = self::analyzeComment($commentText, $postCaption);
         $intent = $analysis['intent'];
+        $textLower = mb_strtolower($commentText, 'UTF-8');
 
         // Check if there is a matching master few-shot example registered by the user
         $matchedExample = self::findMatchingFewShotExample($commentText, $fewShotExamples);
@@ -380,6 +448,7 @@ class AiAgentService {
         $eHeart = ($emojiStyle === 'minimal') ? '🤝' : (($emojiStyle === 'expressive') ? '🤝 ✨' : '🤝');
         $eRocket = ($emojiStyle === 'minimal') ? '🚀' : (($emojiStyle === 'expressive') ? '🚀 🎯' : '🚀');
         $eLight = ($emojiStyle === 'minimal') ? '💡' : (($emojiStyle === 'expressive') ? '💡 🌟' : '💡');
+        $ePillar = ($emojiStyle === 'minimal') ? '🏛️' : (($emojiStyle === 'expressive') ? '🏛️ ✨' : '🏛️');
 
         // Warmth greetings
         if ($warmthLevel >= 80) {
@@ -397,7 +466,7 @@ class AiAgentService {
         }
 
         // Closing Questions based on rule
-        $questionLead = ($closingQuestionRule !== 'never') ? "¿Te gustaría que te comparta los detalles directos a tu DM? 📩" : "Estamos a tu total disposición.";
+        $questionLead = ($closingQuestionRule !== 'never') ? "¿Te gustaría conocer más detalles sobre el contenido o temario? 👇" : "Estamos a tu total disposición.";
         $questionGeneral = ($closingQuestionRule !== 'never') ? "¿En qué proyecto o idea estás trabajando hoy? 👇" : "¡Un saludo y seguimos en contacto!";
         $questionPraise = ($closingQuestionRule !== 'never') ? "¿De qué tema te gustaría que hablemos en el próximo post? 💬" : "¡Gracias por formar parte de la comunidad!";
 
@@ -412,40 +481,86 @@ class AiAgentService {
             ];
         }
 
-        // Case 1: Commercial Lead / Pricing / Info
-        if ($intent === 'lead_info') {
+        // Case 1: Knowledge / Philosophical / Stoic / Concept Explanation
+        if ($intent === 'knowledge_concept') {
+            $isDichotomy = str_contains($textLower, 'dicotomia') || str_contains($textLower, 'dicotomía') || str_contains($textLower, 'control');
+            $isDiscipline = str_contains($textLower, 'disciplina') || str_contains($textLower, 'motivacion') || str_contains($textLower, 'motivación') || str_contains($textLower, 'procrastin');
+
+            if ($isDichotomy) {
+                return [
+                    'source' => 'heuristic_calibrated',
+                    'engagement' => "¡Hola $firstName! $ePillar La dicotomía del control consiste en enfocar el 100% de nuestra energía en lo que sí depende de nosotros (nuestras decisiones, acciones y actitud) y aceptar con serenidad lo externo. " . (($closingQuestionRule !== 'never') ? "¿En qué situación de tu día te gustaría empezar a aplicarlo? 👇" : "Un principio clave para el autodominio."),
+                    'conversion' => "¡Qué gran tema, $firstName! $eRocket Dominar la dicotomía del control transforma por completo tu enfoque y claridad mental. En el enlace de nuestra biografía compartimos guías y recursos prácticos sobre mentalidad estoica si deseas profundizar. ¿Qué aspecto de tu rutina buscas fortalecer hoy?",
+                    'support' => "Excelente consulta, $firstName. $eLight Para aplicarlo en lo cotidiano: ante cualquier obstáculo pregúntate '¿Está bajo mi control directo?'. Si lo está, actúa con determinación; si no, canaliza tu energía en tu propia respuesta y suelta lo demás. ¿Qué reto estás gestionando actualmente?",
+                    'engagement_tips' => '🧠 Las respuestas fundamentadas en sabiduría y autoridad consolidan a tu marca como referente de valor.'
+                ];
+            }
+
+            if ($isDiscipline) {
+                return [
+                    'source' => 'heuristic_calibrated',
+                    'engagement' => "¡Hola $firstName! $eHeart La motivación es pasajera, pero la disciplina diaria se construye con pequeñas victorias cotidianas de 5 minutos. No busques perfección inmediata, sino consistencia. " . (($closingQuestionRule !== 'never') ? "¿Cuál es esa pequeña acción que puedes completar hoy? 👇" : "El progreso diario lo cambia todo."),
+                    'conversion' => "¡Totalmente de acuerdo, $firstName! $eRocket Cuando aplicas un método estructurado, la disciplina se vuelve natural. Puedes consultar nuestras herramientas y metodologías en el enlace de la bio para dar el siguiente paso. ¿Te gustaría conocer más sobre el método?",
+                    'support' => "¡Hola $firstName! $eLight La clave para vencer la procrastinación es dividir el objetivo en una sola micro-tarea que puedas empezar de inmediato. ¿En qué meta estás enfocado esta semana?",
+                    'engagement_tips' => '💡 Aportar consejos prácticos y accionables fomenta conversaciones de alto engagement.'
+                ];
+            }
+
             return [
                 'source' => 'heuristic_calibrated',
-                'engagement' => "$greetEngage ¡Qué gusto que te interese! Manejamos opciones personalizadas adaptadas a lo que necesitas. Te envío un mensaje privado con todos los detalles. $questionLead",
-                'conversion' => "$greetConvert ¡Claro que sí, $firstName! Puedes ver la información completa y catálogo directamente en el enlace de nuestra biografía o si gustas te lo enviamos por DM ya mismo. ¡Será un gusto atenderte!",
-                'support' => "$greetSupport Para brindarte el presupuesto exacto y la disponibilidad en tu zona, ya mismo te enviamos la lista por privado. ¡Revisa tu bandeja de mensajes!",
-                'engagement_tips' => '🎯 Responder en menos de 15 minutos e invitar al DM eleva la tasa de conversión en más de un 60%.'
+                'engagement' => "¡Hola $firstName! $ePillar Los principios sólidos nos permiten mantener el rumbo sin importar las circunstancias externas. " . (($closingQuestionRule !== 'never') ? "¿Qué concepto o hábito te ha resultado más transformador? 💬" : "Un gusto reflexionar juntos en comunidad."),
+                'conversion' => "¡Excelente reflexión, $firstName! $eRocket Profundizar en estos fundamentos marca la diferencia en cualquier proyecto. Te invitamos a revisar los recursos formativos en el enlace de nuestra biografía. ¿En qué área estás buscando evolucionar hoy?",
+                'support' => "¡Hola $firstName! $eLight La claridad mental surge de la práctica constante y el pensamiento reflexivo. Con gusto seguimos compartiendo contenidos sobre este tema. ¿Qué duda puntual te gustaría que abordemos en el próximo post?",
+                'engagement_tips' => '🏛️ El contenido de valor y reflexión genera seguidores altamente fidelizados.'
             ];
         }
 
-        // Case 2: Sales Objections / Guarantees / Doubts
+        // Case 2: Commercial Lead / Course / Product / Pricing
+        if ($intent === 'lead_info') {
+            $isCourseStructure = str_contains($textLower, 'clases grabadas') || str_contains($textLower, 'grabada') || str_contains($textLower, 'tiempo de acceso') || str_contains($textLower, 'cuanto tiempo') || str_contains($textLower, 'cuánto tiempo') || str_contains($textLower, 'duracion') || str_contains($textLower, 'duración') || str_contains($textLower, 'temario');
+
+            if ($isCourseStructure) {
+                return [
+                    'source' => 'heuristic_calibrated',
+                    'engagement' => "¡Hola $firstName! $eHeart Sí, el programa incluye acceso flexible a clases grabadas para que avances a tu propio ritmo con acceso continuo y material de apoyo. " . $questionLead,
+                    'conversion' => "¡Hola $firstName! $eRocket Efectivamente, cuentas con acceso a todas las clases grabadas, recursos prácticos y actualizaciones del curso. Puedes consultar el temario completo y registrarte directamente en el enlace de nuestra biografía o enviarnos un DM si tienes alguna pregunta puntual.",
+                    'support' => "¡Con gusto, $firstName! $eLight El contenido formativo está estructurado en módulos grabados de alta calidad para repasar cuantas veces necesites. Encuentras la información oficial y los módulos en el enlace de nuestro perfil. ¿Tienes alguna duda sobre los temas incluidos?",
+                    'engagement_tips' => '🎯 Responder directamente a dudas técnicas del curso genera confianza inmediata y acelera la decisión de compra.'
+                ];
+            }
+
+            return [
+                'source' => 'heuristic_calibrated',
+                'engagement' => "$greetEngage ¡Qué gusto que te interese! Manejamos opciones adaptadas a tus objetivos y necesidades. Puedes consultar todos los detalles en el enlace de nuestra bio o escribirnos por DM. $questionLead",
+                'conversion' => "$greetConvert ¡Claro que sí, $firstName! Puedes ver la información completa, planes y disponibilidad directamente en el enlace de nuestra biografía, o si prefieres envíanos un DM y con gusto te orientamos.",
+                'support' => "$greetSupport Toda la información de inversión, metodología y opciones disponibles está detallada en el link de nuestro perfil. Si deseas una recomendación personalizada, déjanos un mensaje privado.",
+                'engagement_tips' => '🎯 Responder con claridad e invitar a los canales oficiales eleva la conversión sin crear falsas expectativas.'
+            ];
+        }
+
+        // Case 3: Sales Objections / Guarantees / Doubts
         if ($intent === 'sales_objection') {
             return [
                 'source' => 'heuristic_calibrated',
                 'engagement' => "$greetEngage Es totalmente comprensible tu consulta, $firstName. Todo nuestro trabajo cuenta con garantía de satisfacción y soporte dedicado para que tengas total tranquilidad. $questionLead",
-                'conversion' => "$greetConvert ¡Excelente pregunta! Respaldamos cada producto y servicio con políticas claras de garantía y atención 1 a 1. Además, puedes revisar testimonios de clientes en nuestras historias destacadas. ¿Te gustaría agendar una llamada rápida?",
-                'support' => "$greetSupport Tu seguridad y satisfacción son nuestra prioridad número uno. Te acabo de enviar un DM con los términos de garantía y respuestas a preguntas frecuentes. ¡Estamos aquí para ti!",
+                'conversion' => "$greetConvert ¡Excelente pregunta! Respaldamos cada programa y servicio con políticas claras de garantía y atención 1 a 1. Además, puedes revisar testimonios verificados en nuestras historias destacadas y en el enlace de la bio. ¿Te gustaría conocer más detalles?",
+                'support' => "$greetSupport Tu seguridad y satisfacción son nuestra máxima prioridad. Puedes revisar los términos de satisfacción y respuestas frecuentes en el enlace de nuestro perfil, o escribirnos un DM si deseas resolver dudas específicas.",
                 'engagement_tips' => '🛡️ Atender dudas con transparencia y rapidez disipa la fricción de compra y genera confianza inmediata.'
             ];
         }
 
-        // Case 3: Customer Support / Issues
+        // Case 4: Customer Support / Issues
         if ($intent === 'customer_support') {
             return [
                 'source' => 'heuristic_calibrated',
-                'engagement' => "$greetEngage ¡Hola $firstName! Queremos ayudarte de inmediato. Ya mismo nuestro equipo te escribe por DM para revisar tu caso y darte solución rápida.",
-                'conversion' => "$greetConvert Por favor cuéntanos por mensaje privado tu número de orden o correo para gestionarlo de forma prioritaria. ¡Estamos atentos para solucionarlo!",
-                'support' => "$greetSupport Lamentamos cualquier inconveniente. Ya estamos revisando tu reporte para que quede resuelto hoy mismo. ¡Revisa tus mensajes privados por favor!",
-                'engagement_tips' => '🛠️ Una atención al cliente empática y ágil transforma un reclamo en una oportunidad de fidelización.'
+                'engagement' => "$greetEngage ¡Hola $firstName! Queremos ayudarte de inmediato. Por favor envíanos un mensaje directo (DM) con los datos de tu cuenta o correo registrado para que nuestro equipo lo revise de forma prioritaria.",
+                'conversion' => "$greetConvert Por favor escríbenos por mensaje privado (DM) indicándonos tu correo de registro para que nuestro equipo técnico atienda tu caso de inmediato. ¡Estamos atentos para resolverlo!",
+                'support' => "$greetSupport Lamentamos cualquier inconveniente, $firstName. Ya mismo nuestro equipo de asistencia está disponible. Por favor contáctanos por mensaje directo para verificar tu acceso o caso hoy mismo.",
+                'engagement_tips' => '🛠️ Una atención al cliente empática y ágil transforma una incidencia en una oportunidad de fidelización.'
             ];
         }
 
-        // Case 4: Praise / Testimonials / Gratitude
+        // Case 5: Praise / Testimonials / Gratitude
         if ($intent === 'gratitude_praise') {
             return [
                 'source' => 'heuristic_calibrated',
@@ -456,11 +571,11 @@ class AiAgentService {
             ];
         }
 
-        // Case 5: General Comment
+        // Case 6: General Comment
         return [
             'source' => 'heuristic_calibrated',
             'engagement' => "$greetEngage ¡Gracias por compartir tu opinión con nosotros, $firstName! $questionGeneral",
-            'conversion' => "$greetConvert ¡Totalmente de acuerdo, $firstName! Si necesitas cualquier información adicional sobre lo que hacemos, el link en bio tiene todo listo para ti.",
+            'conversion' => "$greetConvert ¡Totalmente de acuerdo, $firstName! Si deseas conocer más sobre lo que hacemos, en el enlace de nuestra biografía tienes toda la información.",
             'support' => "$greetSupport ¡Un gran saludo $firstName! Encantados de leerte en nuestra comunidad. 🙌",
             'engagement_tips' => '💬 Las respuestas dinámicas y personalizadas mantienen a tu audiencia activa y comprometida.'
         ];
@@ -666,6 +781,12 @@ CALIBRACIÓN DE IDENTIDAD:
 CONCEPTOS CLAVE A DESTACAR: $keyPhrasesText.
 FRASES TOTALMENTE PROHIBIDAS (NUNCA LAS USES): $forbiddenText.
 
+REGLAS ESTRICTAS DE VERACIDAD Y ANTI-ALUCINACIÓN (OBLIGATORIAS):
+1. CERO FALSA ESCASEZ Y CERO INVENCIÓN: NUNCA inventes ofertas inexistentes, porcentajes de descuento no indicados ni cupos limitados ficticios (ej. "quedan 10 cupos").
+2. CERO ACCIONES NO REALIZADAS: NUNCA afirmes haber enviado un mensaje directo (DM), correo o realizado acciones externas ("te acabo de enviar un DM", "ya te escribí"). Si corresponde, invita cortésmente al seguidor a escribir por DM o a consultar el enlace en la bio.
+3. MANEJO DE DATOS FALTANTES: Si el seguidor pregunta por especificaciones internas, precios o accesos no descritos en el contexto, responde honestamente con los datos generales conocidos y oriéntalo amablemente al enlace de la bio o a enviar un DM para recibir asesoría personalizada.
+4. PREGUNTAS CONCEPTUALES Y FILOSÓFICAS: Si el seguidor consulta sobre un concepto, metodología, filosofía estoica (ej. Dicotomía del control) o pide un consejo, responde con fundamento, claridad y valor práctico. NUNCA desvíes preguntas conceptuales a soporte técnico de pedidos o reclamos.
+
 $fewShotText
 
 CONTEXTO ACTUAL:
@@ -742,22 +863,27 @@ PROMPT;
         return [
             [
                 'tag' => 'precio_leads',
-                'comment' => '¿Cuál es el precio del servicio y qué incluye?',
-                'reply' => '¡Hola {nombre}! Con gusto te comparto todos los detalles. Manejamos paquetes adaptados al tamaño de tu negocio. Te acabo de enviar un mensaje directo (DM) con la propuesta y el catálogo completo. ¿Qué objetivo principal te gustaría alcanzar este mes?'
+                'comment' => '¿Cuál es el precio del curso o programa y qué incluye?',
+                'reply' => '¡Hola {nombre}! Con gusto te comparto los detalles. El programa incluye acceso completo a las clases grabadas, módulos prácticos y soporte continuo. Puedes revisar los detalles e inscribirte directamente en el enlace de nuestra biografía, o enviarnos un DM si deseas asesoría personalizada. ¿Qué objetivo principal buscas alcanzar?'
+            ],
+            [
+                'tag' => 'concepto_filosofico',
+                'comment' => '¿Cómo aplico la dicotomía del control en mi día a día cuando siento estrés?',
+                'reply' => '¡Hola {nombre}! La clave es separar lo que depende al 100% de ti (tu actitud, tus decisiones y tu esfuerzo) de lo externo (el tráfico, las opiniones ajenas). Enfoca toda tu energía en tu propia respuesta y suelta lo incontrolable. ¿Qué obstáculo puntual estás enfrentando hoy?'
             ],
             [
                 'tag' => 'objecion_garantia',
-                'comment' => '¿Qué garantía tienen y cómo sé si funcionará para mi empresa?',
-                'reply' => 'Excelente pregunta, {nombre}. Respaldamos todo nuestro trabajo con garantía de satisfacción y soporte prioritario 1 a 1. Además, puedes revisar nuestros casos de éxito verificados en el enlace de la bio. ¿Te gustaría agendar una llamada rápida de 10 min para evaluar tu caso?'
+                'comment' => '¿Qué garantía tienen y cómo sé si funcionará para mí?',
+                'reply' => 'Excelente pregunta, {nombre}. Respaldamos todo nuestro trabajo con garantía de satisfacción y atención personalizada 1 a 1. Además, puedes revisar testimonios de nuestra comunidad en el enlace de la bio. ¿Te gustaría agendar una llamada rápida para evaluar tu caso?'
             ],
             [
                 'tag' => 'soporte_ayuda',
-                'comment' => 'Tengo una duda con mi cuenta y necesito soporte urgente por favor.',
-                'reply' => '¡Hola {nombre}! Por supuesto, nuestro equipo de soporte está listo para asistirte. Ya mismo te escribimos por DM para solucionar tu duda de inmediato. ¡Cuenta con nosotros!'
+                'comment' => 'Tengo un inconveniente con el acceso a mi cuenta en la plataforma.',
+                'reply' => '¡Hola {nombre}! Por supuesto, queremos que accedas sin inconvenientes. Por favor envíanos un mensaje privado (DM) con tu correo registrado para que nuestro equipo técnico lo verifique y resuelva de inmediato. ¡Cuenta con nosotros!'
             ],
             [
                 'tag' => 'felicitacion_agradecimiento',
-                'comment' => '¡Excelente contenido y qué gran servicio! Me ayudó muchísimo su recomendación.',
+                'comment' => '¡Excelente contenido y qué gran valor aportan! Me ayudó muchísimo su recomendación.',
                 'reply' => '¡Muchísimas gracias por tus palabras, {nombre}! Nos alegra enorme saber que te ha sido de gran valor. ¿De qué tema te gustaría que profundicemos en la siguiente publicación?'
             ]
         ];

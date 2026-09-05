@@ -892,22 +892,27 @@ class Database {
         return [
             [
                 'tag' => 'precio_leads',
-                'comment' => '¿Cuál es el precio del servicio y qué incluye?',
-                'reply' => '¡Hola {nombre}! Con gusto te comparto todos los detalles. Manejamos paquetes adaptados al tamaño de tu negocio. Te acabo de enviar un mensaje directo (DM) con la propuesta y el catálogo completo. ¿Qué objetivo principal te gustaría alcanzar este mes?'
+                'comment' => '¿Cuál es el precio del curso o programa y qué incluye?',
+                'reply' => '¡Hola {nombre}! Con gusto te comparto los detalles. El programa incluye acceso completo a las clases grabadas, módulos prácticos y soporte continuo. Puedes revisar los detalles e inscribirte directamente en el enlace de nuestra biografía, o enviarnos un DM si deseas asesoría personalizada. ¿Qué objetivo principal buscas alcanzar?'
+            ],
+            [
+                'tag' => 'concepto_filosofico',
+                'comment' => '¿Cómo aplico la dicotomía del control en mi día a día cuando siento estrés?',
+                'reply' => '¡Hola {nombre}! La clave es separar lo que depende al 100% de ti (tu actitud, tus decisiones y tu esfuerzo) de lo externo (el tráfico, las opiniones ajenas). Enfoca toda tu energía en tu propia respuesta y suelta lo incontrolable. ¿Qué obstáculo puntual estás enfrentando hoy?'
             ],
             [
                 'tag' => 'objecion_garantia',
-                'comment' => '¿Qué garantía tienen y cómo sé si funcionará para mi empresa?',
-                'reply' => 'Excelente pregunta, {nombre}. Respaldamos todo nuestro trabajo con garantía de satisfacción y soporte prioritario 1 a 1. Además, puedes revisar nuestros casos de éxito verificados en el enlace de la bio. ¿Te gustaría agendar una llamada rápida de 10 min para evaluar tu caso?'
+                'comment' => '¿Qué garantía tienen y cómo sé si funcionará para mí?',
+                'reply' => 'Excelente pregunta, {nombre}. Respaldamos todo nuestro trabajo con garantía de satisfacción y atención personalizada 1 a 1. Además, puedes revisar testimonios de nuestra comunidad en el enlace de la bio. ¿Te gustaría agendar una llamada rápida para evaluar tu caso?'
             ],
             [
                 'tag' => 'soporte_ayuda',
-                'comment' => 'Tengo una duda con mi cuenta y necesito soporte urgente por favor.',
-                'reply' => '¡Hola {nombre}! Por supuesto, nuestro equipo de soporte está listo para asistirte. Ya mismo te escribimos por DM para solucionar tu duda de inmediato. ¡Cuenta con nosotros!'
+                'comment' => 'Tengo un inconveniente con el acceso a mi cuenta en la plataforma.',
+                'reply' => '¡Hola {nombre}! Por supuesto, queremos que accedas sin inconvenientes. Por favor envíanos un mensaje privado (DM) con tu correo registrado para que nuestro equipo técnico lo verifique y resuelva de inmediato. ¡Cuenta con nosotros!'
             ],
             [
                 'tag' => 'felicitacion_agradecimiento',
-                'comment' => '¡Excelente contenido y qué gran servicio! Me ayudó muchísimo su recomendación.',
+                'comment' => '¡Excelente contenido y qué gran valor aportan! Me ayudó muchísimo su recomendación.',
                 'reply' => '¡Muchísimas gracias por tus palabras, {nombre}! Nos alegra enorme saber que te ha sido de gran valor. ¿De qué tema te gustaría que profundicemos en la siguiente publicación?'
             ]
         ];
