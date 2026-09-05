@@ -1751,31 +1751,109 @@ const App = {
     this.showToast('¡IDs de cuenta de Instagram y Token seleccionados! Haz clic en Guardar Tokens.', 'success');
   },
 
+  // Safe, Prominent DOM Toast Notification System with Support for info, loading, success & error
+  showToast(message, type = 'success', duration = 4000) {
+    const container = document.getElementById('toast-container');
+    if (!container) return null;
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+
+    let icon = '✨';
+    if (type === 'error') icon = '⚠️';
+    else if (type === 'info' || type === 'loading') icon = '<span class="spinner-inline"></span>';
+    else if (type === 'success') icon = '✅';
+
+    const iconSpan = document.createElement('span');
+    iconSpan.className = 'toast-icon';
+    iconSpan.innerHTML = icon;
+
+    const textSpan = document.createElement('span');
+    textSpan.className = 'toast-text';
+    textSpan.textContent = String(message);
+
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'toast-close-btn';
+    closeBtn.innerHTML = '&times;';
+    closeBtn.onclick = () => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateY(-20px) scale(0.95)';
+      setTimeout(() => toast.remove(), 250);
+    };
+
+    toast.appendChild(iconSpan);
+    toast.appendChild(textSpan);
+    toast.appendChild(closeBtn);
+    container.appendChild(toast);
+
+    if (duration > 0) {
+      setTimeout(() => {
+        if (toast.parentElement) {
+          toast.style.opacity = '0';
+          toast.style.transform = 'translateY(-20px) scale(0.95)';
+          setTimeout(() => toast.remove(), 250);
+        }
+      }, duration);
+    }
+    return toast;
+  },
+
   async triggerMetaSync() {
-    App.showToast('Sincronizando publicaciones, métricas e insights desde Meta Graph API...', 'success');
+    // 1. Locate all sync buttons and show active loading spinner state
+    const syncButtons = document.querySelectorAll('[onclick*="triggerMetaSync"]');
+    syncButtons.forEach(btn => {
+      btn.disabled = true;
+      btn.style.opacity = '0.7';
+      btn.style.pointerEvents = 'none';
+      btn.dataset.prevHtml = btn.innerHTML;
+      btn.innerHTML = '<span><span class="spinner-inline"></span> Sincronizando...</span>';
+    });
+
+    const loadingToast = App.showToast('🔄 Sincronizando con Meta Graph API... Obteniendo publicaciones y métricas reales.', 'info', 0);
+
     try {
       const response = await this.fetchWithCsrf('api/settings.php', {
         method: 'POST',
         body: JSON.stringify({ action: 'sync_meta' })
       });
       const res = await response.json();
+
+      if (loadingToast && loadingToast.remove) {
+        loadingToast.remove();
+      }
+
       if (res.success) {
-        let toastMsg = res.message || 'Sincronización completada con éxito.';
-        if (res.data) {
-          toastMsg += ` (Cuentas: ${res.data.pages_count || 0}, Posts: ${res.data.synced_posts || 0}, Comentarios: ${res.data.synced_comments || 0})`;
-        }
-        App.showToast(toastMsg, 'success');
+        const found = res.total_posts_found || res.synced_new_posts || 0;
+        const comments = res.synced_new_comments || 0;
+        const msg = `✅ ¡Sincronización con Meta completada con éxito! Se verificaron tus cuentas, actualizando ${found} publicaciones y ${comments} comentarios.`;
+        App.showToast(msg, 'success', 6000);
+
         await this.loadConnectedAccounts();
         await this.loadComments();
         if (typeof AnalyticsController !== 'undefined' && AnalyticsController.loadAnalytics) {
           AnalyticsController.loadAnalytics();
         }
       } else {
-        App.showToast(res.message || 'No se pudo sincronizar.', 'error');
+        App.showToast(`⚠️ ${res.message || 'No se pudo sincronizar con Meta.'}`, 'error', 6000);
       }
     } catch (err) {
       console.error(err);
-      App.showToast('Error en la sincronización con Meta.', 'error');
+      if (loadingToast && loadingToast.remove) {
+        loadingToast.remove();
+      }
+      App.showToast('⚠️ Error de conexión al sincronizar con Meta. Por favor verifica tu conexión.', 'error', 6000);
+    } finally {
+      syncButtons.forEach(btn => {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        btn.style.pointerEvents = 'auto';
+        if (btn.dataset.prevHtml) {
+          btn.innerHTML = btn.dataset.prevHtml;
+        } else {
+          btn.innerHTML = '<span>🔄 Sincronizar con Meta</span>';
+        }
+      });
     }
   },
 
@@ -1851,32 +1929,6 @@ const App = {
     } catch (err) {
       window.location.href = 'login.php';
     }
-  },
-
-  // Safe DOM Toast without XSS injection risk
-  showToast(message, type = 'success') {
-    const container = document.getElementById('toast-container');
-    if (!container) return;
-
-    const toast = document.createElement('div');
-    toast.className = `toast ${type === 'error' ? 'error' : 'success'}`;
-
-    const iconSpan = document.createElement('span');
-    iconSpan.textContent = type === 'success' ? '✨' : '⚠️';
-
-    const textSpan = document.createElement('span');
-    textSpan.textContent = String(message);
-
-    toast.appendChild(iconSpan);
-    toast.appendChild(textSpan);
-    container.appendChild(toast);
-
-    setTimeout(() => {
-      toast.style.opacity = '0';
-      toast.style.transform = 'translateY(10px)';
-      toast.style.transition = '0.3s ease';
-      setTimeout(() => toast.remove(), 300);
-    }, 4000);
   },
 
   setInputValue(id, val) {

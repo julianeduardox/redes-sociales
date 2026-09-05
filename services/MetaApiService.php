@@ -177,29 +177,22 @@ class MetaApiService {
 
         $isReelOrVideo = in_array(strtolower($mediaType), ['video', 'reel', 'reels', 'clips'], true);
 
-        // Sequence of metric set attempts to maximize compatibility with Graph API versions (v18, v19, v20, v21)
-        $candidates = $isReelOrVideo ? [
-            'views,plays,reach,saved,total_interactions',
-            'plays,reach,saved,total_interactions',
-            'views,reach,saved,total_interactions',
-            'reach,saved,total_interactions'
-        ] : [
-            'views,impressions,reach,saved,total_interactions',
-            'impressions,reach,saved,total_interactions',
-            'views,reach,saved,total_interactions',
-            'reach,saved,total_interactions'
-        ];
+        // Fast, direct candidate query
+        $primarySet = $isReelOrVideo ? 'views,plays,reach,saved,total_interactions' : 'views,impressions,reach,saved,total_interactions';
+        $url = self::BASE_URL . '/' . urlencode($mediaId) . '/insights?' . http_build_query([
+            'metric' => $primarySet,
+            'access_token' => $accessToken
+        ]);
+        $res = self::makeGetRequest($url);
 
-        $res = null;
-        foreach ($candidates as $metricSet) {
-            $url = self::BASE_URL . '/' . urlencode($mediaId) . '/insights?' . http_build_query([
-                'metric' => $metricSet,
+        // One single fallback if primary set failed (e.g. older API version or photo vs carousel)
+        if (isset($res['error']) || empty($res['data'])) {
+            $fallbackSet = 'reach,saved,total_interactions';
+            $urlFallback = self::BASE_URL . '/' . urlencode($mediaId) . '/insights?' . http_build_query([
+                'metric' => $fallbackSet,
                 'access_token' => $accessToken
             ]);
-            $res = self::makeGetRequest($url);
-            if (!isset($res['error']) && !empty($res['data'])) {
-                break;
-            }
+            $res = self::makeGetRequest($urlFallback);
         }
 
         if (isset($res['data']) && is_array($res['data'])) {
@@ -236,9 +229,6 @@ class MetaApiService {
     }
 
     /**
-     * Fetch Live Post Insights for a Facebook Page Post (Graph API v19/v20/v21)
-     */
-    /**
      * Fetch Live Post Insights for a Facebook Post, Video or Photo (Graph API v18/v19/v20/v21)
      */
     public static function fetchFacebookPostInsights(string $postId, string $accessToken, ?string $objectId = null): array {
@@ -254,42 +244,23 @@ class MetaApiService {
             'reactions_total' => 0
         ];
 
-        // Sequence of metric set attempts to maximize compatibility with Graph API versions
-        $candidateSets = [
-            'post_impressions,post_impressions_unique,post_impressions_viral,post_impressions_viral_unique,post_impressions_organic,post_impressions_organic_unique,post_engaged_users,post_reactions_by_type_total,post_clicks,post_video_views',
-            'post_impressions,post_impressions_unique,post_impressions_viral,post_impressions_viral_unique,post_engaged_users,post_reactions_by_type_total',
-            'post_impressions,post_impressions_unique,post_engaged_users,post_reactions_by_type_total,post_video_views',
-            'post_impressions,post_impressions_unique,post_engaged_users,post_clicks',
-            'post_impressions,post_impressions_unique,post_engaged_users',
-            'post_impressions,post_engaged_users',
-            'post_impressions',
-            'post_video_views,post_video_views_unique'
-        ];
+        // 1. Primary comprehensive query on the main post ID
+        $primaryMetric = 'post_impressions,post_impressions_unique,post_impressions_viral_unique,post_engaged_users,post_reactions_by_type_total,post_video_views';
+        $url = self::BASE_URL . '/' . urlencode($postId) . '/insights?' . http_build_query([
+            'metric' => $primaryMetric,
+            'access_token' => $accessToken
+        ]);
+        $res = self::makeGetRequest($url);
 
-        // List of candidate node IDs to query insights from
-        $nodeIds = [$postId];
-        if (str_contains($postId, '_')) {
-            $parts = explode('_', $postId, 2);
-            if (!empty($parts[1]) && is_numeric($parts[1])) {
-                $nodeIds[] = $parts[1]; // Try the numeric post ID alone
-            }
-        }
-        if (!empty($objectId) && is_numeric($objectId) && !in_array($objectId, $nodeIds, true)) {
-            $nodeIds[] = $objectId; // Try the underlying photo / video object ID
-        }
-
-        $res = null;
-        foreach ($nodeIds as $targetNodeId) {
-            foreach ($candidateSets as $metricSet) {
-                $url = self::BASE_URL . '/' . urlencode($targetNodeId) . '/insights?' . http_build_query([
-                    'metric' => $metricSet,
-                    'access_token' => $accessToken
-                ]);
-                $res = self::makeGetRequest($url);
-                if (!isset($res['error']) && !empty($res['data'])) {
-                    break 2;
-                }
-            }
+        // 2. Fast single fallback if primary metric set was not supported
+        if (isset($res['error']) || empty($res['data'])) {
+            $fallbackMetric = 'post_impressions,post_impressions_unique,post_engaged_users';
+            $targetId = (!empty($objectId) && is_numeric($objectId)) ? $objectId : $postId;
+            $urlFallback = self::BASE_URL . '/' . urlencode($targetId) . '/insights?' . http_build_query([
+                'metric' => $fallbackMetric,
+                'access_token' => $accessToken
+            ]);
+            $res = self::makeGetRequest($urlFallback);
         }
 
         if (isset($res['data']) && is_array($res['data'])) {
@@ -440,6 +411,9 @@ class MetaApiService {
      * Synchronize live posts, insights & comments from Meta Graph API for all connected Facebook Pages & Instagram Accounts
      */
     public static function syncFromMeta(?int $userId = null): array {
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(180);
+        }
         $uid = ($userId !== null && $userId > 0) ? $userId : (class_exists('Auth') && Auth::check() ? Auth::id() : 1);
         $pdo = Database::getConnection();
 
@@ -1249,7 +1223,8 @@ class MetaApiService {
     private static function makeGetRequest(string $url): array {
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 6);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
         $response = curl_exec($ch);
