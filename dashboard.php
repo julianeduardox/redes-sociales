@@ -414,7 +414,7 @@ $isMetaConnected = ($activeAccountsCount > 0);
         <div class="studio-grid-layout">
           <!-- Left Column: Identity Tuning & Golden Rules -->
           <div>
-            <form onsubmit="App.saveBrandStudioForm(event)">
+            <form onsubmit="App.saveBrandStudioForm(event)" autocomplete="off">
               <input type="hidden" id="setting-brand-id" value="" />
               
               <!-- Block 1: Brand Fundamentals -->
@@ -608,12 +608,12 @@ $isMetaConnected = ($activeAccountsCount > 0);
 
                 <div class="form-group">
                   <label>Google Gemini API Key (Opcional):</label>
-                  <input type="password" id="setting-gemini-key" placeholder="AIzaSy..." />
+                  <input type="text" class="masked-key-input" id="setting-gemini-key" autocomplete="new-password" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="AIzaSy..." />
                 </div>
 
                 <div class="form-group" style="margin-bottom: 0;">
                   <label>OpenAI API Key (Opcional):</label>
-                  <input type="password" id="setting-openai-key" placeholder="sk-proj-..." />
+                  <input type="text" class="masked-key-input" id="setting-openai-key" autocomplete="new-password" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="sk-proj-..." />
                 </div>
               </div>
 
@@ -724,28 +724,28 @@ $isMetaConnected = ($activeAccountsCount > 0);
         <div style="background: var(--bg-card); padding: 24px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 20px;">
           <h4 style="font-size: 1rem; font-weight: 800; margin-bottom: 16px; color: var(--fb-blue);">🔑 Credenciales y Tokens de Meta</h4>
 
-          <form onsubmit="App.saveSettingsForm(event)">
+          <form onsubmit="App.saveSettingsForm(event)" autocomplete="off">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
               <div class="form-group">
                 <label>Meta App ID:</label>
-                <input type="text" id="setting-meta-app-id" placeholder="Ej: 102938475610293" />
+                <input type="text" id="setting-meta-app-id" autocomplete="off" spellcheck="false" placeholder="Ej: 102938475610293" />
               </div>
 
               <div class="form-group">
                 <label>Meta App Secret:</label>
-                <input type="password" id="setting-meta-app-secret" placeholder="••••••••••••••••" />
+                <input type="text" class="masked-key-input" id="setting-meta-app-secret" autocomplete="new-password" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="••••••••••••••••" />
               </div>
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
               <div class="form-group">
                 <label>Instagram Business Account ID:</label>
-                <input type="text" id="setting-meta-ig-id" placeholder="Ej: 17841400000000000" />
+                <input type="text" id="setting-meta-ig-id" autocomplete="off" spellcheck="false" placeholder="Ej: 17841400000000000" />
               </div>
 
               <div class="form-group">
                 <label>Meta Page Access Token (Manual / Override):</label>
-                <input type="password" id="setting-meta-token" placeholder="EAA..." />
+                <input type="text" class="masked-key-input" id="setting-meta-token" autocomplete="new-password" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="EAA..." />
               </div>
             </div>
 

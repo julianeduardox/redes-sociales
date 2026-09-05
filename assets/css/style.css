@@ -4596,6 +4596,17 @@ select.topbar-brand-select option,
   }
 }
 
+.masked-key-input {
+  -webkit-text-security: disc !important;
+  text-security: disc !important;
+  font-family: monospace, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  letter-spacing: 2px !important;
+}
+
+.masked-key-input:focus {
+  letter-spacing: 1px !important;
+}
+
 
 
 
