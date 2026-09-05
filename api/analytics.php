@@ -195,9 +195,51 @@ try {
 
     $postsSql .= " GROUP BY p.id ORDER BY $orderClause";
 
-    $stmtPosts = $pdo->prepare($postsSql);
-    $stmtPosts->execute($postParams);
     $allPosts = $stmtPosts->fetchAll();
+
+    $totalImpressionsAgg = 0;
+    $totalReachAgg = 0;
+
+    foreach ($allPosts as &$p) {
+        $likes = (int)($p['total_likes'] ?? 0);
+        $comments = (int)($p['total_comments'] ?? 0);
+        $shares = (int)($p['total_shares'] ?? 0);
+        $saved = (int)($p['saved_count'] ?? 0);
+        $reach = (int)($p['reach'] ?? 0);
+        $impressions = (int)($p['impressions'] ?? 0);
+
+        if ($impressions === 0 && $reach > 0) {
+            $impressions = $reach;
+            $p['impressions'] = $impressions;
+        }
+        if ($reach === 0 && $impressions > 0) {
+            $reach = $impressions;
+            $p['reach'] = $reach;
+        }
+        $interactions = $likes + $comments + $shares + $saved;
+        if ($interactions > 0 && $reach < $interactions) {
+            $reach = max($reach, $interactions);
+            $p['reach'] = $reach;
+        }
+        if ($reach > 0 && $impressions < $reach) {
+            $impressions = $reach;
+            $p['impressions'] = $impressions;
+        }
+        if ($reach > 0) {
+            $p['engagement_rate'] = min(100.0, round(($interactions / $reach) * 100, 1));
+        }
+
+        $totalImpressionsAgg += $impressions;
+        $totalReachAgg += $reach;
+    }
+    unset($p);
+
+    if ($stats['total_impressions'] < $totalImpressionsAgg) {
+        $stats['total_impressions'] = $totalImpressionsAgg;
+    }
+    if ($stats['total_reach'] < $totalReachAgg) {
+        $stats['total_reach'] = $totalReachAgg;
+    }
 
     // 6. Drill-down for a single post if requested
     $drillPostData = null;

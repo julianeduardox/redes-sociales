@@ -586,7 +586,7 @@ class MetaApiService {
                 // Fetch Instagram Media
                 $mediaUrl = self::BASE_URL . '/' . urlencode($pageId) . '/media?' . http_build_query([
                     'fields' => 'id,caption,media_type,media_url,thumbnail_url,permalink,like_count,comments_count,timestamp',
-                    'limit' => '15',
+                    'limit' => '25',
                     'access_token' => $token
                 ]);
                 $mediaData = self::makeGetRequest($mediaUrl, 4);
@@ -747,10 +747,10 @@ class MetaApiService {
                 }
             } else {
                 // Fetch Facebook Page Posts with valid Graph API v19+ fields
-                $fbFields = 'id,message,story,created_time,full_picture,permalink_url,shares,attachments{media,type,target{id}},reactions.summary(true).limit(0),likes.summary(true).limit(0),comments.summary(true).limit(0)';
+                $fbFields = 'id,message,story,created_time,full_picture,permalink_url,shares,attachments{media,type,target{id}},reactions.summary(true).limit(1),likes.summary(true).limit(1),comments.summary(true).limit(1)';
                 $pagePostsUrl = self::BASE_URL . '/' . urlencode($pageId) . '/posts?' . http_build_query([
                     'fields' => $fbFields,
-                    'limit' => '15',
+                    'limit' => '25',
                     'access_token' => $token
                 ]);
                 $feedData = self::makeGetRequest($pagePostsUrl, 4);
@@ -759,7 +759,7 @@ class MetaApiService {
                 if (isset($feedData['error'])) {
                     $feedUrlFallback = self::BASE_URL . '/' . urlencode($pageId) . '/published_posts?' . http_build_query([
                         'fields' => $fbFields,
-                        'limit' => '15',
+                        'limit' => '25',
                         'access_token' => $token
                     ]);
                     $feedDataFallback = self::makeGetRequest($feedUrlFallback, 4);
@@ -768,7 +768,7 @@ class MetaApiService {
                     } else {
                         $feedUrlFallback2 = self::BASE_URL . '/' . urlencode($pageId) . '/feed?' . http_build_query([
                             'fields' => $fbFields,
-                            'limit' => '15',
+                            'limit' => '25',
                             'access_token' => $token
                         ]);
                         $feedDataFallback2 = self::makeGetRequest($feedUrlFallback2, 4);
@@ -830,7 +830,7 @@ class MetaApiService {
 
                         // If object_id exists and likes is still 0, query object directly for reactions
                         if ($likes === 0 && !empty($objectId) && is_numeric($objectId) && $objectId !== $postIdExt) {
-                            $objUrl = self::BASE_URL . '/' . urlencode($objectId) . '?fields=reactions.summary(true).limit(0),likes.summary(true).limit(0)&access_token=' . urlencode($token);
+                            $objUrl = self::BASE_URL . '/' . urlencode($objectId) . '?fields=reactions.summary(true).limit(1),likes.summary(true).limit(1)&access_token=' . urlencode($token);
                             $objData = self::makeGetRequest($objUrl, 3);
                             if (isset($objData['reactions']['summary']['total_count'])) {
                                 $likes = max($likes, (int)$objData['reactions']['summary']['total_count']);

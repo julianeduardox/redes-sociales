@@ -1807,10 +1807,10 @@ const App = {
       btn.style.opacity = '0.7';
       btn.style.pointerEvents = 'none';
       btn.dataset.prevHtml = btn.innerHTML;
-      btn.innerHTML = '<span><span class="spinner-inline"></span> Sincronizando...</span>';
+      btn.innerHTML = '<span><span class="spinner-inline"></span> Sincronizando con Meta...</span>';
     });
 
-    const loadingToast = App.showToast('🔄 Sincronizando con Meta Graph API... Obteniendo publicaciones y métricas reales.', 'info', 0);
+    const loadingToast = App.showToast('🔄 Sincronizando con Meta Graph API... Obteniendo publicaciones y métricas reales. Por favor espera, esto puede tardar unos minutos.', 'info', 0);
 
     try {
       const response = await this.fetchWithCsrf('api/settings.php', {

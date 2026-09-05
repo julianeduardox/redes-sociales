@@ -216,15 +216,29 @@ const AnalyticsController = {
 
     container.innerHTML = posts.map(p => {
       const safeImg = App.sanitizeUrl(p.media_url, 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=480&h=320&fit=crop&auto=format&q=75');
-      const safeCaption = App.escapeHtml(p.caption || 'Publicación');
-      const safeLikes = formatNumber(p.total_likes || 0);
-      const safeComments = formatNumber(p.total_comments || 0);
-      const safeShares = formatNumber(p.total_shares || 0);
-      const rawImpressions = parseInt(p.impressions, 10) || 0;
-      const rawReach = parseInt(p.reach, 10) || 0;
+      const rawLikes = parseInt(p.total_likes, 10) || 0;
+      const rawComments = parseInt(p.total_comments, 10) || 0;
+      const rawShares = parseInt(p.total_shares, 10) || 0;
+      const rawSaved = parseInt(p.saved_count, 10) || 0;
+      let rawReach = parseInt(p.reach, 10) || 0;
+      let rawImpressions = parseInt(p.impressions, 10) || 0;
+
+      if (rawImpressions === 0 && rawReach > 0) {
+        rawImpressions = rawReach;
+      }
+      if (rawReach === 0 && rawImpressions > 0) {
+        rawReach = rawImpressions;
+      }
+      if (rawReach > 0 && rawImpressions < rawReach) {
+        rawImpressions = rawReach;
+      }
+
+      const safeLikes = formatNumber(rawLikes);
+      const safeComments = formatNumber(rawComments);
+      const safeShares = formatNumber(rawShares);
       const safeImpressions = formatNumber(rawImpressions);
       const safeReach = formatNumber(rawReach);
-      const safeSaved = formatNumber(p.saved_count || 0);
+      const safeSaved = formatNumber(rawSaved);
       const engRate = (typeof p.engagement_rate !== 'undefined' && p.engagement_rate !== null) ? parseFloat(p.engagement_rate).toFixed(1) : '0.0';
       const mediaType = (p.media_type || 'image').toLowerCase();
 
