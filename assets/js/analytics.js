@@ -10,21 +10,27 @@ const AnalyticsController = {
   cachedAnalyticsData: null,
 
   switchSubtab(subtab) {
-    this.currentSubtab = subtab;
+    const validSubtabs = ['overview', 'posts'];
+    const activeSubtab = validSubtabs.includes(subtab) ? subtab : 'overview';
+    this.currentSubtab = activeSubtab;
+    
+    // Persist subtab state across F5 reloads
+    try {
+      sessionStorage.setItem('xindro_analytics_subtab', activeSubtab);
+      localStorage.setItem('xindro_analytics_subtab', activeSubtab);
+    } catch (e) {}
     
     document.querySelectorAll('.analytics-subnav .subtab-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.subtab === subtab);
+      btn.classList.toggle('active', btn.dataset.subtab === activeSubtab);
     });
 
     const overviewView = document.getElementById('analytics-overview-subview');
     const postsView = document.getElementById('analytics-posts-subview');
 
-    if (overviewView) overviewView.style.display = (subtab === 'overview') ? 'block' : 'none';
-    if (postsView) postsView.style.display = (subtab === 'posts') ? 'block' : 'none';
+    if (overviewView) overviewView.style.display = (activeSubtab === 'overview') ? 'block' : 'none';
+    if (postsView) postsView.style.display = (activeSubtab === 'posts') ? 'block' : 'none';
 
-    if (subtab === 'posts') {
-      this.loadAnalytics();
-    }
+    this.loadAnalytics();
   },
 
   filterPostsPlatform(platform) {

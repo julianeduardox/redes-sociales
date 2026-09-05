@@ -43,6 +43,22 @@ const App = {
   async init() {
     this.bindEvents();
     this.initViewDensity();
+
+    // 1. Detect and restore active tab from URL hash or storage immediately on page load / F5
+    const hash = window.location.hash ? window.location.hash.replace('#', '').trim() : '';
+    let savedTab = hash || sessionStorage.getItem('xindro_active_tab') || localStorage.getItem('xindro_active_tab') || 'inbox';
+    const validTabs = ['inbox', 'highlights', 'leads', 'urgent', 'spam', 'analytics', 'settings', 'meta'];
+    const tabToRestore = validTabs.includes(savedTab) ? savedTab : 'inbox';
+    this.switchTab(tabToRestore, false);
+
+    // 2. Listen for URL hash changes (browser back/forward navigation)
+    window.addEventListener('hashchange', () => {
+      const currentHash = window.location.hash.replace('#', '').trim();
+      if (currentHash && validTabs.includes(currentHash) && currentHash !== this.activeTab) {
+        this.switchTab(currentHash, false);
+      }
+    });
+
     try { await this.loadBrands(); } catch (e) { console.error('loadBrands error:', e); }
     try { await this.loadConnectedAccounts(); } catch (e) { console.error('loadConnectedAccounts error:', e); }
     try { await this.loadSettings(); } catch (e) { console.error('loadSettings error:', e); }
@@ -533,44 +549,98 @@ const App = {
     });
   },
 
-  switchTab(tab) {
-    this.activeTab = tab;
+  switchTab(tab, updateHistory = true) {
+    const validTabs = ['inbox', 'highlights', 'leads', 'urgent', 'spam', 'analytics', 'settings', 'meta'];
+    const activeTab = validTabs.includes(tab) ? tab : 'inbox';
+    this.activeTab = activeTab;
     
-    // Sync desktop sidebar
+    // 1. Persist active tab across browser reloads (F5) and sessions
+    try {
+      sessionStorage.setItem('xindro_active_tab', activeTab);
+      localStorage.setItem('xindro_active_tab', activeTab);
+    } catch (e) {}
+
+    // 2. Synchronize URL hash without causing viewport jumping
+    if (updateHistory !== false) {
+      if (window.history && window.history.replaceState) {
+        window.history.replaceState({ tab: activeTab }, '', '#' + activeTab);
+      } else {
+        window.location.hash = activeTab;
+      }
+    }
+
+    // 3. Sync desktop sidebar navigation active state
     document.querySelectorAll('.sidebar-nav .nav-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.tab === tab);
+      btn.classList.toggle('active', btn.dataset.tab === activeTab);
     });
 
-    // Sync mobile bottom navigation bar
+    // 4. Sync mobile bottom navigation bar active state
     document.querySelectorAll('.mobile-bottom-nav .bottom-nav-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.tab === tab);
+      btn.classList.toggle('active', btn.dataset.tab === activeTab);
     });
 
     this.toggleMobileSidebar(false);
 
-    // Show/hide view containers
+    // 5. Show/hide view containers seamlessly
     const mainFeedView = document.getElementById('view-feed-workspace');
     const settingsView = document.getElementById('view-settings');
     const analyticsView = document.getElementById('view-analytics');
     const metaView = document.getElementById('view-meta');
 
-    if (mainFeedView) mainFeedView.style.display = (tab === 'inbox' || tab === 'highlights' || tab === 'leads' || tab === 'urgent' || tab === 'spam') ? 'flex' : 'none';
-    if (settingsView) settingsView.style.display = (tab === 'settings') ? 'block' : 'none';
-    if (analyticsView) analyticsView.style.display = (tab === 'analytics') ? 'block' : 'none';
-    if (metaView) metaView.style.display = (tab === 'meta') ? 'block' : 'none';
+    if (mainFeedView) mainFeedView.style.display = (activeTab === 'inbox' || activeTab === 'highlights' || activeTab === 'leads' || activeTab === 'urgent' || activeTab === 'spam') ? 'flex' : 'none';
+    if (settingsView) settingsView.style.display = (activeTab === 'settings') ? 'block' : 'none';
+    if (analyticsView) analyticsView.style.display = (activeTab === 'analytics') ? 'block' : 'none';
+    if (metaView) metaView.style.display = (activeTab === 'meta') ? 'block' : 'none';
 
-    if (tab === 'highlights') {
+    // 6. Synchronize topbar page title dynamically
+    const topbarTitle = document.getElementById('topbar-page-title');
+    if (topbarTitle) {
+      switch (activeTab) {
+        case 'analytics':
+          topbarTitle.textContent = 'Métricas de Audiencia & Meta Graph API';
+          break;
+        case 'settings':
+          topbarTitle.textContent = 'Estudio de Voz de Marca & Prompt Dinámico';
+          break;
+        case 'meta':
+          topbarTitle.textContent = 'Configuración de Meta Graph API & Webhooks';
+          break;
+        case 'highlights':
+          topbarTitle.textContent = 'Comentarios Más Resaltantes';
+          break;
+        case 'leads':
+          topbarTitle.textContent = 'Leads & Consultas de Precios';
+          break;
+        case 'urgent':
+          topbarTitle.textContent = 'Objeciones & Soporte Prioritario';
+          break;
+        case 'spam':
+          topbarTitle.textContent = 'Filtro Anti-Spam & Moderación';
+          break;
+        default:
+          topbarTitle.textContent = 'Gestor de Comunidad & Conversión';
+          break;
+      }
+    }
+
+    // 7. Route and initialize view-specific behaviors
+    if (activeTab === 'highlights') {
       this.setFilterTag('highlighted');
-    } else if (tab === 'leads') {
+    } else if (activeTab === 'leads') {
       this.setFilterTag('leads');
-    } else if (tab === 'urgent') {
+    } else if (activeTab === 'urgent') {
       this.setFilterTag('urgent');
-    } else if (tab === 'spam') {
+    } else if (activeTab === 'spam') {
       this.setFilterTag('spam');
-    } else if (tab === 'inbox') {
+    } else if (activeTab === 'inbox') {
       this.setFilterTag('all');
-    } else if (tab === 'analytics') {
-      AnalyticsController.loadAnalytics();
+    } else if (activeTab === 'analytics') {
+      if (typeof AnalyticsController !== 'undefined') {
+        const savedSubtab = sessionStorage.getItem('xindro_analytics_subtab') || localStorage.getItem('xindro_analytics_subtab') || 'overview';
+        AnalyticsController.switchSubtab(savedSubtab);
+      }
+    } else if (activeTab === 'meta') {
+      this.loadConnectedAccounts();
     }
   },
 
