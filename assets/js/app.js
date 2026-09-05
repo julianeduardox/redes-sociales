@@ -107,7 +107,8 @@ const App = {
     container.innerHTML = accounts.map(a => {
       const isIg = a.platform === 'instagram';
       const icon = isIg ? '📸' : '📘';
-      const safeAvatar = this.sanitizeUrl(a.avatar_url, `https://ui-avatars.com/api/?name=${encodeURIComponent(a.account_name)}&background=${isIg ? 'e1306c' : '1877f2'}&color=fff`);
+      const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(a.account_name)}&background=${isIg ? 'e1306c' : '1877f2'}&color=fff`;
+      const safeAvatar = this.sanitizeUrl(a.avatar_url, defaultAvatar);
 
       const brandOptionsHtml = brands.map(b => `
         <option value="${b.id}" ${b.id == a.brand_voice_id ? 'selected' : ''}>
@@ -119,7 +120,7 @@ const App = {
         <div class="account-item-card" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 18px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
           <div style="display: flex; align-items: center; gap: 14px; min-width: 240px;">
             <div style="position: relative;">
-              <img src="${safeAvatar}" alt="avatar" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid ${isIg ? '#e1306c' : '#1877f2'};" />
+              <img src="${safeAvatar}" alt="avatar" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid ${isIg ? '#e1306c' : '#1877f2'};" onerror="this.onerror=null; this.src='${defaultAvatar}';" />
               <span style="position: absolute; bottom: -2px; right: -2px; font-size: 0.8rem; background: #0f172a; border-radius: 50%; padding: 2px;">${icon}</span>
             </div>
             <div>
@@ -133,8 +134,8 @@ const App = {
             </div>
           </div>
 
-          <!-- Brand Voice Selector Pill -->
-          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <!-- Brand Voice Selector & Disconnect Action -->
+          <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
             <div style="display: flex; flex-direction: column; gap: 4px;">
               <label style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: var(--accent-cyan); letter-spacing: 0.04em;">
                 🎭 Voz de Marca Asignada:
@@ -143,13 +144,49 @@ const App = {
                 ${brandOptionsHtml}
               </select>
             </div>
-            <span style="font-size: 0.75rem; background: rgba(16, 185, 129, 0.15); color: #34d399; font-weight: 700; padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(16, 185, 129, 0.3); align-self: flex-end; margin-bottom: 2px;">
-              🟢 Conectada
-            </span>
+            
+            <div style="display: flex; align-items: center; gap: 8px; align-self: flex-end;">
+              <span style="font-size: 0.75rem; background: rgba(16, 185, 129, 0.15); color: #34d399; font-weight: 700; padding: 7px 11px; border-radius: 6px; border: 1px solid rgba(16, 185, 129, 0.3);">
+                🟢 Conectada
+              </span>
+              <button type="button" class="btn-disconnect-account" onclick="App.disconnectAccount(${a.id}, '${this.escapeJs(a.account_name)}')" title="Desconectar y remover esta cuenta de Meta">
+                🔌 Desconectar
+              </button>
+            </div>
           </div>
         </div>
       `;
     }).join('');
+  },
+
+  async disconnectAccount(accountId, accountName) {
+    if (!accountId) return;
+    if (!confirm(`¿Estás seguro de que deseas desconectar la cuenta "${accountName}"?\n\nAl desconectarla, ya no aparecerá como conectada en tu panel ni se sincronizarán sus publicaciones.`)) {
+      return;
+    }
+    try {
+      const res = await this.fetchWithCsrf('api/settings.php', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'disconnect_account',
+          account_id: parseInt(accountId, 10)
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        this.showToast(data.message || `Cuenta "${accountName}" desconectada exitosamente.`, 'success');
+        if (this.activeAccountId == accountId) {
+          this.activeAccountId = 'all';
+        }
+        await this.loadConnectedAccounts();
+        await this.loadComments();
+      } else {
+        this.showToast(`Error: ${data.error || 'No se pudo desconectar la cuenta.'}`, 'error');
+      }
+    } catch (err) {
+      console.error('Error disconnecting account:', err);
+      this.showToast('Error de conexión al desconectar la cuenta.', 'error');
+    }
   },
 
   async assignAccountBrandVoice(accountId, brandVoiceId) {

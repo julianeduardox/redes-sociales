@@ -91,7 +91,7 @@ if (!empty($error)) {
 
         // 3. Query /me/accounts with Long-Lived Token to fetch Permanent Page Tokens and Linked Instagram accounts
         $accountsUrl = 'https://graph.facebook.com/v19.0/me/accounts?' . http_build_query([
-            'fields' => 'id,name,access_token,category,instagram_business_account{id,username,name,profile_picture_url}',
+            'fields' => 'id,name,access_token,category,picture{data{url}},instagram_business_account{id,username,name,profile_picture_url}',
             'limit' => '100',
             'access_token' => $longLivedUserToken
         ]);
@@ -118,6 +118,7 @@ if (!empty($error)) {
                 $pageId = $page['id'];
                 $pageName = $page['name'];
                 $pageToken = $page['access_token'] ?? '';
+                $pageAvatar = $page['picture']['data']['url'] ?? "https://graph.facebook.com/v19.0/{$pageId}/picture?type=large&access_token=" . urlencode($pageToken);
                 $igAccount = $page['instagram_business_account'] ?? null;
 
                 if (empty($primaryPageToken) && !empty($pageToken)) {
@@ -126,7 +127,7 @@ if (!empty($error)) {
 
                 $igId = $igAccount['id'] ?? null;
                 $igUsername = $igAccount['username'] ?? null;
-                $igAvatar = $igAccount['profile_picture_url'] ?? 'https://ui-avatars.com/api/?name=' . urlencode($pageName) . '&background=6366f1&color=fff';
+                $igAvatar = $igAccount['profile_picture_url'] ?? "https://graph.facebook.com/v19.0/{$igId}/picture?type=large&access_token=" . urlencode($pageToken);
 
                 if (empty($primaryIgId) && !empty($igId)) {
                     $primaryIgId = $igId;
@@ -138,6 +139,7 @@ if (!empty($error)) {
                     'name' => $pageName,
                     'platform' => 'facebook',
                     'handle' => 'fb_' . $pageId,
+                    'avatar' => $pageAvatar,
                     'is_ig' => false
                 ];
 
@@ -155,7 +157,7 @@ if (!empty($error)) {
                     $stmtUp->execute([
                         ':token' => $pageToken,
                         ':name' => $pageName,
-                        ':avatar' => 'https://ui-avatars.com/api/?name=' . urlencode($pageName) . '&background=1877f2&color=fff',
+                        ':avatar' => $pageAvatar,
                         ':id' => $existingFb['id']
                     ]);
                 } else {
@@ -168,7 +170,7 @@ if (!empty($error)) {
                         ':name' => $pageName,
                         ':handle' => 'fb_' . $pageId,
                         ':pid' => $pageId,
-                        ':avatar' => 'https://ui-avatars.com/api/?name=' . urlencode($pageName) . '&background=1877f2&color=fff',
+                        ':avatar' => $pageAvatar,
                         ':token' => $pageToken
                     ]);
                 }

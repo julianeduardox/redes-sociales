@@ -292,7 +292,7 @@ class MetaApiService {
 
         // 1. Auto-discover and refresh all Pages & Instagram accounts from Meta /me/accounts
         if (!empty($defaultToken)) {
-            $meAccountsUrl = self::BASE_URL . '/me/accounts?fields=id,name,access_token,category,instagram_business_account{id,username,name,profile_picture_url}&access_token=' . urlencode($defaultToken);
+            $meAccountsUrl = self::BASE_URL . '/me/accounts?fields=id,name,access_token,category,picture{data{url}},instagram_business_account{id,username,name,profile_picture_url}&limit=100&access_token=' . urlencode($defaultToken);
             $discovered = self::makeGetRequest($meAccountsUrl);
 
             $pagesList = [];
@@ -302,7 +302,7 @@ class MetaApiService {
                 $errMsg = $discovered['error']['message'] ?? '';
                 // If #100 or nonexisting field (accounts), the token itself is a Page Access Token!
                 if ($errCode == 100 || str_contains($errMsg, 'accounts')) {
-                    $pageMeUrl = self::BASE_URL . '/me?fields=id,name,category,instagram_business_account{id,username,name,profile_picture_url}&access_token=' . urlencode($defaultToken);
+                    $pageMeUrl = self::BASE_URL . '/me?fields=id,name,category,picture{data{url}},instagram_business_account{id,username,name,profile_picture_url}&access_token=' . urlencode($defaultToken);
                     $pageMeData = self::makeGetRequest($pageMeUrl);
                     if (!empty($pageMeData['id'])) {
                         $pageMeData['access_token'] = $defaultToken;
@@ -319,6 +319,7 @@ class MetaApiService {
                 $pid = $page['id'];
                 $pname = $page['name'];
                 $ptok = !empty($page['access_token']) ? $page['access_token'] : $defaultToken;
+                $pageAvatar = $page['picture']['data']['url'] ?? "https://graph.facebook.com/v19.0/{$pid}/picture?type=large&access_token=" . urlencode($ptok);
                 $ig = $page['instagram_business_account'] ?? null;
 
                 // A. Upsert Facebook Page Account
@@ -329,10 +330,11 @@ class MetaApiService {
                 if ($existingFb) {
                     $pdo->prepare("
                         UPDATE accounts 
-                        SET account_name = :name, access_token = :token, is_active = 1
+                        SET account_name = :name, avatar_url = :avatar, access_token = :token, is_active = 1
                         WHERE id = :id
                     ")->execute([
                         ':name' => $pname,
+                        ':avatar' => $pageAvatar,
                         ':token' => $ptok,
                         ':id' => $existingFb['id']
                     ]);
@@ -346,7 +348,7 @@ class MetaApiService {
                         ':name' => $pname,
                         ':handle' => 'fb_' . $pid,
                         ':pid' => $pid,
-                        ':avatar' => 'https://ui-avatars.com/api/?name=' . urlencode($pname) . '&background=1877f2&color=fff',
+                        ':avatar' => $pageAvatar,
                         ':token' => $ptok
                     ]);
                 }
@@ -356,7 +358,7 @@ class MetaApiService {
                     $igId = $ig['id'];
                     $igHandle = !empty($ig['username']) ? '@' . $ig['username'] : '@ig_' . $igId;
                     $igName = $ig['name'] ?? (!empty($ig['username']) ? '@' . $ig['username'] : $pname);
-                    $igAvatar = $ig['profile_picture_url'] ?? ('https://ui-avatars.com/api/?name=' . urlencode($igName) . '&background=e1306c&color=fff');
+                    $igAvatar = $ig['profile_picture_url'] ?? "https://graph.facebook.com/v19.0/{$igId}/picture?type=large&access_token=" . urlencode($ptok);
 
                     $checkIg = $pdo->prepare("SELECT id FROM accounts WHERE user_id = :uid AND (page_id = :ig_id OR account_handle = :handle) AND platform = 'instagram' LIMIT 1");
                     $checkIg->execute([':uid' => $uid, ':ig_id' => $igId, ':handle' => $igHandle]);

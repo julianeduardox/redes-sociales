@@ -37,8 +37,8 @@ try {
                 p.reach as post_reach,
                 p.account_id,
                 COALESCE(a.account_name, 'Mi Cuenta') as account_name,
-                COALESCE(a.account_handle, '') as account_handle,
-                COALESCE(a.avatar_url, '') as account_avatar,
+                a.avatar_url as account_avatar,
+                a.page_id as account_page_id,
                 COALESCE(a.platform, c.platform) as account_platform,
                 COALESCE(p.brand_voice_id, a.brand_voice_id, 1) as brand_voice_id,
                 COALESCE(bv.brand_name, 'Voz de Marca') as brand_voice_name,
@@ -93,6 +93,16 @@ try {
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         $comments = $stmt->fetchAll();
+
+        // Ensure real profile pictures are resolved
+        foreach ($comments as &$c) {
+            if (empty($c['account_avatar']) || str_contains($c['account_avatar'], 'ui-avatars.com')) {
+                if (!empty($c['account_page_id'])) {
+                    $c['account_avatar'] = "https://graph.facebook.com/v19.0/{$c['account_page_id']}/picture?type=large";
+                }
+            }
+        }
+        unset($c);
 
         // Calculate summary counts for this specific user
         $countStmt = $pdo->prepare("

@@ -74,6 +74,16 @@ try {
             $stmtAcc->execute([':uid' => $userId]);
             $accounts = $stmtAcc->fetchAll();
 
+            // Ensure profile pictures are dynamic Meta URLs when possible
+            foreach ($accounts as &$acc) {
+                if (empty($acc['avatar_url']) || str_contains($acc['avatar_url'], 'ui-avatars.com')) {
+                    if (!empty($acc['page_id'])) {
+                        $acc['avatar_url'] = "https://graph.facebook.com/v19.0/{$acc['page_id']}/picture?type=large";
+                    }
+                }
+            }
+            unset($acc);
+
             $stmtBrands = $pdo->prepare("SELECT id, brand_name, persona_name, tone_level, is_default FROM brand_voices WHERE user_id = :uid ORDER BY is_default DESC, id ASC");
             $stmtBrands->execute([':uid' => $userId]);
             $brands = $stmtBrands->fetchAll();
@@ -391,6 +401,38 @@ try {
             echo json_encode([
                 'success' => true,
                 'message' => 'Marca eliminada correctamente.'
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        if ($action === 'disconnect_account') {
+            $accountId = (int)($input['account_id'] ?? 0);
+            if ($accountId <= 0) {
+                echo json_encode(['success' => false, 'error' => 'ID de cuenta inválido.']);
+                exit;
+            }
+
+            // Clean up associated posts, comments, and replies for this account
+            $stmtPosts = $pdo->prepare("SELECT id FROM posts WHERE account_id = :aid AND user_id = :uid");
+            $stmtPosts->execute([':aid' => $accountId, ':uid' => $userId]);
+            $postIds = $stmtPosts->fetchAll(PDO::FETCH_COLUMN);
+            if (!empty($postIds)) {
+                $placeholders = implode(',', array_fill(0, count($postIds), '?'));
+                $pdo->prepare("DELETE FROM replies WHERE comment_id IN (SELECT id FROM comments WHERE post_id IN ($placeholders))")->execute($postIds);
+                $pdo->prepare("DELETE FROM comments WHERE post_id IN ($placeholders)")->execute($postIds);
+                $pdo->prepare("DELETE FROM posts WHERE id IN ($placeholders)")->execute($postIds);
+            }
+
+            // Delete the account for this user
+            $stmt = $pdo->prepare("DELETE FROM accounts WHERE id = :id AND user_id = :uid");
+            $stmt->execute([':id' => $accountId, ':uid' => $userId]);
+
+            // Invalidate cache
+            CacheService::invalidateAccountMappings();
+
+            echo json_encode([
+                'success' => true,
+                'message' => 'Cuenta desconectada y removida correctamente.'
             ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
             exit;
         }
