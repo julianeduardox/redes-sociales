@@ -145,6 +145,74 @@ if (!empty($error)) {
             }
         }
 
+        // Fallback 3: Inspect /debug_token for Granular Scopes Target IDs (Direct Page & Instagram resolution)
+        if (empty($pages)) {
+            $debugUrl = 'https://graph.facebook.com/v19.0/debug_token?' . http_build_query([
+                'input_token' => $longLivedUserToken,
+                'access_token' => "{$appId}|{$appSecret}"
+            ]);
+            $ch = curl_init($debugUrl);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+            $resDebug = curl_exec($ch);
+            curl_close($ch);
+            $debugData = json_decode($resDebug, true);
+            $granular = $debugData['data']['granular_scopes'] ?? [];
+            $seenTids = [];
+
+            foreach ($granular as $g) {
+                $targetIds = $g['target_ids'] ?? [];
+                foreach ($targetIds as $tid) {
+                    if (!isset($seenTids[$tid])) {
+                        $seenTids[$tid] = true;
+                        // 1. Try querying node as Facebook Page
+                        $pUrl = 'https://graph.facebook.com/v19.0/' . urlencode($tid) . '?' . http_build_query([
+                            'fields' => 'id,name,access_token,category,picture,instagram_business_account{id,username,name,profile_picture_url}',
+                            'access_token' => $longLivedUserToken
+                        ]);
+                        $ch = curl_init($pUrl);
+                        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+                        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+                        $resP = curl_exec($ch);
+                        curl_close($ch);
+                        $pData = json_decode($resP, true);
+
+                        if (!empty($pData['id']) && empty($pData['error'])) {
+                            if (empty($pData['access_token'])) {
+                                $pData['access_token'] = $longLivedUserToken;
+                            }
+                            $pages[] = $pData;
+                        } else {
+                            // 2. Try querying node as Instagram Business Account
+                            $igUrl = 'https://graph.facebook.com/v19.0/' . urlencode($tid) . '?' . http_build_query([
+                                'fields' => 'id,username,name,profile_picture_url',
+                                'access_token' => $longLivedUserToken
+                            ]);
+                            $ch = curl_init($igUrl);
+                            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+                            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+                            $resIg = curl_exec($ch);
+                            curl_close($ch);
+                            $igData = json_decode($resIg, true);
+                            if (!empty($igData['id']) && empty($igData['error'])) {
+                                $pages[] = [
+                                    'id' => 'page_ig_' . $igData['id'],
+                                    'name' => $igData['name'] ?? ($igData['username'] ?? 'Instagram Account'),
+                                    'access_token' => $longLivedUserToken,
+                                    'category' => 'Instagram Profile',
+                                    'picture' => ['data' => ['url' => $igData['profile_picture_url'] ?? '']],
+                                    'instagram_business_account' => $igData
+                                ];
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         if (isset($accountsData['error']) && empty($pages)) {
             $errMessage = $accountsData['error']['message'] ?? 'Error desconocido';
             $errCode = $accountsData['error']['code'] ?? 0;
