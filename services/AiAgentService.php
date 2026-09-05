@@ -7,7 +7,7 @@
  * - Zero-Token Local Heuristic Engine calibrated with brand guidelines & persona
  * - Golden Few-Shot Master Examples Learning
  * - Negative Constraints (Forbidden Words / Blacklist) & Key Brand Concepts
- * - Gemini & OpenAI integrations with dynamic system prompt calibration
+ * - OpenRouter unified multi-model integration (Claude 3.5 Sonnet, DeepSeek, GPT-4o, Llama 3.3)
  */
 require_once __DIR__ . '/../config/settings.php';
 require_once __DIR__ . '/../config/database.php';
@@ -372,33 +372,21 @@ class AiAgentService {
 
         $fewShotExamples = self::parseJsonSetting($runtimeOverrides['brand_few_shot_examples'] ?? ($brandVoice['few_shot_examples'] ?? Settings::get('brand_few_shot_examples', '')), self::getDefaultFewShotExamples());
 
-        $aiProvider = $runtimeOverrides['ai_provider'] ?? Settings::get('ai_provider', 'gemini');
-        $geminiKey = Settings::get('gemini_api_key', '');
-        $openaiKey = Settings::get('openai_api_key', '');
+        $aiProvider = $runtimeOverrides['ai_provider'] ?? Settings::get('ai_provider', 'openrouter');
+        $openrouterKey = Settings::get('openrouter_api_key', '');
+        $openrouterModel = $runtimeOverrides['openrouter_model'] ?? Settings::get('openrouter_model', 'anthropic/claude-3.5-sonnet');
 
-        // Try Gemini API first if configured
-        if ($aiProvider === 'gemini' && !empty($geminiKey)) {
-            $geminiResult = self::callGeminiApi(
+        // Try OpenRouter API first if configured
+        if ($aiProvider === 'openrouter' && !empty($openrouterKey)) {
+            $openrouterResult = self::callOpenRouterApi(
                 $authorName, $commentText, $platform, $postCaption, 
                 $brandName, $personaName, $brandIndustry, $brandTone, $brandDescription, $language,
                 $warmthLevel, $depthLevel, $energyLevel,
-                $closingQuestionRule, $emojiStyle, $keyPhrases, $forbiddenPhrases, $fewShotExamples, $geminiKey
+                $closingQuestionRule, $emojiStyle, $keyPhrases, $forbiddenPhrases, $fewShotExamples,
+                $openrouterKey, $openrouterModel
             );
-            if ($geminiResult !== null && !empty($geminiResult['engagement'])) {
-                return self::sanitizeRepliesWithForbidden($geminiResult, $forbiddenPhrases);
-            }
-        }
-
-        // Try OpenAI API if configured
-        if ($aiProvider === 'openai' && !empty($openaiKey)) {
-            $openaiResult = self::callOpenAiApi(
-                $authorName, $commentText, $platform, $postCaption, 
-                $brandName, $personaName, $brandIndustry, $brandTone, $brandDescription, $language,
-                $warmthLevel, $depthLevel, $energyLevel,
-                $closingQuestionRule, $emojiStyle, $keyPhrases, $forbiddenPhrases, $fewShotExamples, $openaiKey
-            );
-            if ($openaiResult !== null && !empty($openaiResult['engagement'])) {
-                return self::sanitizeRepliesWithForbidden($openaiResult, $forbiddenPhrases);
+            if ($openrouterResult !== null && !empty($openrouterResult['engagement'])) {
+                return self::sanitizeRepliesWithForbidden($openrouterResult, $forbiddenPhrases);
             }
         }
 
@@ -609,14 +597,14 @@ class AiAgentService {
     }
 
     /**
-     * Gemini API Dynamic Integration
+     * OpenRouter API Dynamic Integration (Supports Claude 3.5 Sonnet, DeepSeek V3/R1, GPT-4o, Llama 3.3, etc.)
      */
-    private static function callGeminiApi(
+    private static function callOpenRouterApi(
         string $authorName, string $commentText, string $platform, string $postCaption,
         string $brandName, string $personaName, string $brandIndustry, string $brandTone, string $brandDescription, string $language,
         int $warmthLevel, int $depthLevel, int $energyLevel,
         string $closingQuestionRule, string $emojiStyle, array $keyPhrases, array $forbiddenPhrases, array $fewShotExamples,
-        string $apiKey
+        string $apiKey, string $model = 'anthropic/claude-3.5-sonnet'
     ): ?array {
         $prompt = self::buildUniversalPrompt(
             $authorName, $commentText, $platform, $postCaption,
@@ -625,78 +613,15 @@ class AiAgentService {
             $closingQuestionRule, $emojiStyle, $keyPhrases, $forbiddenPhrases, $fewShotExamples
         );
 
-        $url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' . urlencode($apiKey);
+        $url = 'https://openrouter.ai/api/v1/chat/completions';
+        $selectedModel = !empty($model) ? trim($model) : 'anthropic/claude-3.5-sonnet';
 
         $payload = [
-            'contents' => [
-                [
-                    'parts' => [
-                        ['text' => $prompt]
-                    ]
-                ]
-            ],
-            'generationConfig' => [
-                'temperature' => 0.7,
-                'responseMimeType' => 'application/json'
-            ]
-        ];
-
-        $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 12);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($httpCode === 200 && $response) {
-            $resData = json_decode($response, true);
-            $candidateText = $resData['candidates'][0]['content']['parts'][0]['text'] ?? '';
-            $parsed = json_decode($candidateText, true);
-
-            if ($parsed && isset($parsed['engagement'])) {
-                return [
-                    'source' => 'gemini_flash',
-                    'engagement' => $parsed['engagement'] ?? '',
-                    'conversion' => $parsed['conversion'] ?? '',
-                    'support' => $parsed['support'] ?? '',
-                    'engagement_tips' => $parsed['engagement_tips'] ?? 'Respuesta generada con inteligencia artificial adaptada a tu voz de marca.'
-                ];
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * OpenAI API Dynamic Integration
-     */
-    private static function callOpenAiApi(
-        string $authorName, string $commentText, string $platform, string $postCaption,
-        string $brandName, string $personaName, string $brandIndustry, string $brandTone, string $brandDescription, string $language,
-        int $warmthLevel, int $depthLevel, int $energyLevel,
-        string $closingQuestionRule, string $emojiStyle, array $keyPhrases, array $forbiddenPhrases, array $fewShotExamples,
-        string $apiKey
-    ): ?array {
-        $prompt = self::buildUniversalPrompt(
-            $authorName, $commentText, $platform, $postCaption,
-            $brandName, $personaName, $brandIndustry, $brandTone, $brandDescription, $language,
-            $warmthLevel, $depthLevel, $energyLevel,
-            $closingQuestionRule, $emojiStyle, $keyPhrases, $forbiddenPhrases, $fewShotExamples
-        );
-
-        $url = 'https://api.openai.com/v1/chat/completions';
-
-        $payload = [
-            'model' => 'gpt-4o-mini',
+            'model' => $selectedModel,
             'messages' => [
                 [
                     'role' => 'system',
-                    'content' => "Eres un estratega de respuesta inteligente y asistente de marca para redes sociales. Responde siempre en JSON válido."
+                    'content' => "Eres un estratega de respuesta inteligente y asistente de marca para redes sociales. Responde siempre y exclusivamente en formato JSON estructurado válido."
                 ],
                 [
                     'role' => 'user',
@@ -707,15 +632,19 @@ class AiAgentService {
             'temperature' => 0.7
         ];
 
+        $appUrl = Settings::get('app_url', 'http://localhost/Redes%20sociales');
+
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
             'Content-Type: application/json',
-            'Authorization: Bearer ' . $apiKey
+            'Authorization: Bearer ' . $apiKey,
+            'HTTP-Referer: ' . $appUrl,
+            'X-Title: XINDRO Social AI'
         ]);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 12);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 15);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
 
         $response = curl_exec($ch);
@@ -725,15 +654,20 @@ class AiAgentService {
         if ($httpCode === 200 && $response) {
             $resData = json_decode($response, true);
             $content = $resData['choices'][0]['message']['content'] ?? '';
+            
+            // Clean markdown code blocks if model wrapped output in ```json ... ```
+            $content = preg_replace('/^```(?:json)?\s*/i', '', trim($content));
+            $content = preg_replace('/\s*```$/', '', trim($content));
+
             $parsed = json_decode($content, true);
 
             if ($parsed && isset($parsed['engagement'])) {
                 return [
-                    'source' => 'openai_gpt4o',
+                    'source' => 'openrouter_' . str_replace(['/', ':', '.'], '_', $selectedModel),
                     'engagement' => $parsed['engagement'] ?? '',
                     'conversion' => $parsed['conversion'] ?? '',
                     'support' => $parsed['support'] ?? '',
-                    'engagement_tips' => $parsed['engagement_tips'] ?? 'Respuesta generada con OpenAI adaptada a tu voz de marca.'
+                    'engagement_tips' => $parsed['engagement_tips'] ?? 'Respuesta generada con OpenRouter (' . htmlspecialchars($selectedModel) . ') adaptada a tu voz de marca.'
                 ];
             }
         }
@@ -742,7 +676,7 @@ class AiAgentService {
     }
 
     /**
-     * Build Universal Dynamic Prompt for Gemini & OpenAI
+     * Build Universal Dynamic Prompt for OpenRouter & Local Engine
      */
     private static function buildUniversalPrompt(
         string $authorName, string $commentText, string $platform, string $postCaption,

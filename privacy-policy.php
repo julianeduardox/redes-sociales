@@ -200,7 +200,7 @@ Security::applySecurityHeaders(false);
           <ul>
             <li><strong>Datos Analizados por la IA:</strong> Texto de comentarios públicos en publicaciones de Facebook e Instagram, nombres de usuario públicos (*handles*) y contexto de las publicaciones vinculadas.</li>
             <li><strong>Finalidad Exclusiva:</strong> Clasificación de intención comercial (identificación de preguntas sobre precios, soporte o felicitaciones), cálculo de sentimiento y redacción asistida de respuestas adaptadas al tono de marca del cliente.</li>
-            <li><strong>Compromiso de No Entrenamiento:</strong> <strong>NO utilizamos los datos privados, comentarios ni prompts de nuestros clientes para entrenar o reentrenar modelos públicos de terceros</strong> (Google Gemini u OpenAI). Las llamadas a las APIs de IA se ejecutan bajo acuerdos de cero retención para entrenamiento (*Zero Data Retention Agreements*).</li>
+            <li><strong>Compromiso de No Entrenamiento:</strong> <strong>NO utilizamos los datos privados, comentarios ni prompts de nuestros clientes para entrenar o reentrenar modelos públicos de terceros</strong> (OpenRouter / Anthropic / DeepSeek / OpenAI). Las llamadas a las APIs de IA se ejecutan bajo acuerdos de cero retención para entrenamiento (*Zero Data Retention Agreements*).</li>
           </ul>
         </div>
 
@@ -220,8 +220,7 @@ Security::applySecurityHeaders(false);
             Para proveer el Servicio, transferimos fragmentos de texto procesados a los siguientes subprocesadores ubicados en Estados Unidos, todos certificados bajo el <strong>EU-U.S. Data Privacy Framework (DPF)</strong> y Cláusulas Contractuales Tipo (SCC):
           </p>
           <ul>
-            <li><strong>Google LLC / Google Cloud Platform (EE.UU.):</strong> Proveedor del motor LLM Google Gemini.</li>
-            <li><strong>OpenAI LLC (EE.UU.):</strong> Proveedor del motor LLM GPT-4o-mini.</li>
+            <li><strong>OpenRouter LLC / Subprocesadores IA Asociados (EE.UU.):</strong> Enrutamiento unificado de inferencia de modelos LLM (Anthropic, DeepSeek, OpenAI, Meta).</li>
             <li><strong>Meta Platforms, Inc. / Meta Platforms Ireland Ltd. (EE.UU. / Irlanda):</strong> Ingesta y publicación mediante Meta Graph API.</li>
           </ul>
         </div>
@@ -321,7 +320,7 @@ Security::applySecurityHeaders(false);
         <div class="legal-section">
           <h2><span class="sec-num">3.</span> International Transfers & Subprocessors</h2>
           <p>
-            Data transfers to third-party AI sub-processors located in the US (Google Cloud LLC, OpenAI LLC, Meta Platforms Inc.) occur strictly under the <strong>EU-U.S. Data Privacy Framework (DPF)</strong> and Standard Contractual Clauses (SCCs).
+            Data transfers to third-party AI sub-processors located in the US (OpenRouter LLC, Meta Platforms Inc.) occur strictly under the <strong>EU-U.S. Data Privacy Framework (DPF)</strong> and Standard Contractual Clauses (SCCs).
           </p>
         </div>
 

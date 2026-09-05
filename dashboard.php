@@ -593,27 +593,46 @@ $isMetaConnected = ($activeAccountsCount > 0);
                 </div>
               </div>
 
-              <!-- Block 5: Optional AI Engines -->
+              <!-- Block 5: OpenRouter AI Engine & Multi-Model -->
               <div style="background: var(--bg-card); padding: 24px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 24px;">
-                <h4 style="font-size: 1rem; font-weight: 800; margin-bottom: 14px; color: #fff;">🔌 Motor de Generación & Claves</h4>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+                  <h4 style="font-size: 1rem; font-weight: 800; color: #fff; margin: 0;">🌐 Motor de Inteligencia Artificial (OpenRouter)</h4>
+                  <span style="font-size: 0.72rem; padding: 3px 8px; border-radius: 6px; background: rgba(99,102,241,0.15); color: #a5b4fc; font-weight: 700;">Multi-Model Hub</span>
+                </div>
 
                 <div class="form-group">
-                  <label>Proveedor de Inteligencia:</label>
-                  <select id="setting-ai-provider">
-                    <option value="gemini" selected>Google Gemini AI (Ultrarrápido y Calibrado con Voz de Marca)</option>
-                    <option value="openai">OpenAI (GPT-4o Mini con Calibración Dinámica)</option>
-                    <option value="heuristic">⚡ Motor Heurístico Calibrado Local (100% Gratuito - Cero Tokens)</option>
+                  <label>Proveedor de Generación:</label>
+                  <select id="setting-ai-provider" onchange="App.toggleAiProviderFields()">
+                    <option value="openrouter" selected>🌐 OpenRouter (Claude 3.5 Sonnet, DeepSeek V3/R1, GPT-4o, Llama 3.3)</option>
+                    <option value="heuristic">⚡ Motor Heurístico Calibrado Local (100% Gratuito • Cero Tokens • 0ms)</option>
                   </select>
                 </div>
 
-                <div class="form-group">
-                  <label>Google Gemini API Key (Opcional):</label>
-                  <input type="text" class="masked-key-input" id="setting-gemini-key" autocomplete="new-password" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="AIzaSy..." />
-                </div>
+                <div id="openrouter-settings-fields">
+                  <div class="form-group">
+                    <label>OpenRouter API Key:</label>
+                    <input type="text" class="masked-key-input" id="setting-openrouter-key" autocomplete="new-password" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="sk-or-v1-..." />
+                    <small style="color: var(--text-dim); font-size: 0.74rem; display: block; margin-top: 4px;">Obtén tu clave única en <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" style="color: var(--primary); text-decoration: underline;">openrouter.ai/keys</a> para acceder a más de 100 modelos con un solo saldo.</small>
+                  </div>
 
-                <div class="form-group" style="margin-bottom: 0;">
-                  <label>OpenAI API Key (Opcional):</label>
-                  <input type="text" class="masked-key-input" id="setting-openai-key" autocomplete="new-password" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="sk-proj-..." />
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label>Modelo de Inteligencia Preferido:</label>
+                    <div style="display: flex; gap: 8px;">
+                      <select id="setting-openrouter-model" style="flex: 1;" onchange="App.onOpenRouterModelSelect(this.value)">
+                        <option value="anthropic/claude-3.5-sonnet" selected>⭐ Anthropic Claude 3.5 Sonnet (Recomendado • Tono más humano, empático y natural)</option>
+                        <option value="deepseek/deepseek-chat">⚡ DeepSeek V3 (Ultra económico • Excelente en español y valor)</option>
+                        <option value="deepseek/deepseek-r1">🧠 DeepSeek R1 (Razonamiento profundo)</option>
+                        <option value="openai/gpt-4o-mini">🚀 OpenAI GPT-4o Mini (Rápido y eficiente)</option>
+                        <option value="openai/gpt-4o">💎 OpenAI GPT-4o (Máxima potencia multimodal)</option>
+                        <option value="meta-llama/llama-3.3-70b-instruct">🏛️ Meta Llama 3.3 70B (Open-Source líder)</option>
+                        <option value="google/gemini-2.0-flash-001">⚡ Google Gemini 2.0 Flash (Ultrarrápido)</option>
+                        <option value="custom">✏️ Especificar otro modelo personalizado...</option>
+                      </select>
+                    </div>
+                    <div id="openrouter-custom-model-wrapper" style="display: none; margin-top: 8px;">
+                      <input type="text" id="setting-openrouter-custom-model" placeholder="ej. mistralai/mistral-large-2407" style="font-size: 0.82rem;" />
+                    </div>
+                  </div>
                 </div>
               </div>
 

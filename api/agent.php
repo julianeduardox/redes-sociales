@@ -53,7 +53,8 @@ try {
         if (isset($input['brand_key_phrases']) && is_array($input['brand_key_phrases'])) $runtimeOverrides['brand_key_phrases'] = $input['brand_key_phrases'];
         if (isset($input['brand_forbidden_phrases']) && is_array($input['brand_forbidden_phrases'])) $runtimeOverrides['brand_forbidden_phrases'] = $input['brand_forbidden_phrases'];
         if (isset($input['brand_few_shot_examples']) && is_array($input['brand_few_shot_examples'])) $runtimeOverrides['brand_few_shot_examples'] = $input['brand_few_shot_examples'];
-        if (isset($input['ai_provider'])) $runtimeOverrides['ai_provider'] = Security::validateEnum($input['ai_provider'], ['gemini', 'openai', 'heuristic'], 'heuristic');
+        if (isset($input['ai_provider'])) $runtimeOverrides['ai_provider'] = Security::validateEnum($input['ai_provider'], ['openrouter', 'heuristic'], 'heuristic');
+        if (isset($input['openrouter_model'])) $runtimeOverrides['openrouter_model'] = Security::sanitizeString($input['openrouter_model'], 150);
 
         $replies = AiAgentService::generateReplies($authorName, $commentText, $platform, $postCaption, $overrideTone, $runtimeOverrides);
 

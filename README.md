@@ -1,6 +1,6 @@
 # ⚡ XINDRO AI Copilot - Multi-Brand Social Media Agency OS
 
-Plataforma SaaS multi-tenant y multi-cliente (White-label para agencias y creadores) para gestión de engagement, moderación asistida con Inteligencia Artificial agnóstica (Gemini / OpenAI / Motor Heurístico Comercial local), webhooks en tiempo real y analítica para **Instagram & Facebook (Meta Graph API)**.
+Plataforma SaaS multi-tenant y multi-cliente (White-label para agencias y creadores) para gestión de engagement, moderación asistida con Inteligencia Artificial agnóstica (OpenRouter: Claude 3.5 Sonnet / DeepSeek / GPT-4o / Llama + Motor Heurístico Comercial local), webhooks en tiempo real y analítica para **Instagram & Facebook (Meta Graph API)**.
 
 ---
 
@@ -43,7 +43,7 @@ Plataforma SaaS multi-tenant y multi-cliente (White-label para agencias y creado
    - **Usuario Tester API:** `tester@xindro.app`
    - **Contraseña:** `TesterPassword2026!`
 4. **Configuración de Marcas & APIs:**
-   Ingresa al **Estudio de Voz de Marca** para configurar clientes, prompts y proveedores de IA (Gemini / OpenAI).
+   Ingresa al **Estudio de Voz de Marca** para configurar clientes, prompts y proveedores de IA (OpenRouter / Motor Local).
 
 ---
 

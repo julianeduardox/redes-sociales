@@ -563,10 +563,10 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           <span class="text-purple-400">📸</span> Meta Graph API (Instagram & Facebook)
         </span>
         <span class="flex items-center gap-2 shrink-0 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
-          <span class="text-blue-400">⚡</span> Google Gemini 2.0 Engine
+          <span class="text-indigo-400">🌐</span> OpenRouter AI Hub (100+ Models)
         </span>
         <span class="flex items-center gap-2 shrink-0 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
-          <span class="text-emerald-400">🧠</span> OpenAI GPT-4o Integration
+          <span class="text-emerald-400">🧠</span> Claude 3.5 Sonnet & DeepSeek V3
         </span>
         <span class="flex items-center gap-2 shrink-0 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
           <span class="text-amber-400">🔒</span> HMAC-SHA256 Cryptographic Webhooks
@@ -583,10 +583,10 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           <span class="text-purple-400">📸</span> Meta Graph API (Instagram & Facebook)
         </span>
         <span class="flex items-center gap-2 shrink-0 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
-          <span class="text-blue-400">⚡</span> Google Gemini 2.0 Engine
+          <span class="text-indigo-400">🌐</span> OpenRouter AI Hub (100+ Models)
         </span>
         <span class="flex items-center gap-2 shrink-0 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
-          <span class="text-emerald-400">🧠</span> OpenAI GPT-4o Integration
+          <span class="text-emerald-400">🧠</span> Claude 3.5 Sonnet & DeepSeek V3
         </span>
         <span class="flex items-center gap-2 shrink-0 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
           <span class="text-amber-400">🔒</span> HMAC-SHA256 Cryptographic Webhooks
@@ -913,7 +913,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           </div>
           <div class="flex items-center gap-2 text-[10px] sm:text-xs font-mono text-slate-400">
             <span class="w-2 h-2 rounded-full bg-emerald-400 live-dot"></span>
-            <span>Zero-Latency Heuristic + Gemini LLM Engine</span>
+            <span>Zero-Latency Heuristic + OpenRouter LLM Hub</span>
           </div>
         </div>
 

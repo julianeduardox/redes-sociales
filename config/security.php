@@ -73,7 +73,7 @@ class Security {
                 "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
                 "font-src 'self' https://fonts.gstatic.com data:",
                 "img-src 'self' data: https: blob:",
-                "connect-src 'self' https://generativelanguage.googleapis.com https://api.openai.com https://graph.facebook.com",
+                "connect-src 'self' https://openrouter.ai https://graph.facebook.com",
                 "frame-ancestors 'self'",
                 "base-uri 'self'",
                 "form-action 'self'"

@@ -125,8 +125,7 @@ try {
         $activeBrand = AiAgentService::resolveActiveBrandVoice($pdo);
 
         // Mask keys partially for safe display
-        $maskedGemini = !empty($settings['gemini_api_key']) ? substr($settings['gemini_api_key'], 0, 4) . '...' . substr($settings['gemini_api_key'], -4) : '';
-        $maskedOpenAi = !empty($settings['openai_api_key']) ? substr($settings['openai_api_key'], 0, 4) . '...' . substr($settings['openai_api_key'], -4) : '';
+        $maskedOpenRouter = !empty($settings['openrouter_api_key']) ? substr($settings['openrouter_api_key'], 0, 7) . '...' . substr($settings['openrouter_api_key'], -4) : '';
         $maskedMetaToken = !empty($settings['meta_page_access_token']) ? substr($settings['meta_page_access_token'], 0, 6) . '...' . substr($settings['meta_page_access_token'], -4) : '';
         $maskedMetaSecret = !empty($settings['meta_app_secret']) ? substr($settings['meta_app_secret'], 0, 4) . '...' . substr($settings['meta_app_secret'], -4) : '';
 
@@ -162,11 +161,10 @@ try {
                 'brand_few_shot_examples' => is_array($fewShotExamples) ? $fewShotExamples : [],
 
                 // Engine & Keys
-                'ai_provider' => $settings['ai_provider'] ?? 'gemini',
-                'has_gemini_key' => !empty($settings['gemini_api_key']),
-                'gemini_api_key_masked' => $maskedGemini,
-                'has_openai_key' => !empty($settings['openai_api_key']),
-                'openai_api_key_masked' => $maskedOpenAi,
+                'ai_provider' => $settings['ai_provider'] ?? 'openrouter',
+                'has_openrouter_key' => !empty($settings['openrouter_api_key']),
+                'openrouter_api_key_masked' => $maskedOpenRouter,
+                'openrouter_model' => htmlspecialchars($settings['openrouter_model'] ?? 'anthropic/claude-3.5-sonnet', ENT_QUOTES, 'UTF-8'),
                 'autopilot_enabled' => ($settings['autopilot_enabled'] ?? '0') === '1' ? '1' : '0',
                 'autopilot_min_score' => (int)($settings['autopilot_min_score'] ?? 60),
                 
@@ -459,7 +457,10 @@ try {
 
         // 5. Action: save_all (Legacy & Global Engine Settings)
         if (isset($input['ai_provider'])) {
-            Settings::set('ai_provider', Security::validateEnum($input['ai_provider'], ['gemini', 'openai', 'heuristic'], 'gemini'));
+            Settings::set('ai_provider', Security::validateEnum($input['ai_provider'], ['openrouter', 'heuristic'], 'openrouter'));
+        }
+        if (isset($input['openrouter_model'])) {
+            Settings::set('openrouter_model', Security::sanitizeString($input['openrouter_model'], 150));
         }
         if (isset($input['autopilot_enabled'])) {
             $val = ($input['autopilot_enabled'] === '1' || $input['autopilot_enabled'] === 1 || $input['autopilot_enabled'] === true) ? '1' : '0';
@@ -483,11 +484,8 @@ try {
         }
 
         // Only update API keys if a new non-masked string is sent
-        if (!empty($input['gemini_api_key']) && !str_contains($input['gemini_api_key'], '...')) {
-            Settings::set('gemini_api_key', trim(Security::sanitizeString($input['gemini_api_key'], 200)));
-        }
-        if (!empty($input['openai_api_key']) && !str_contains($input['openai_api_key'], '...')) {
-            Settings::set('openai_api_key', trim(Security::sanitizeString($input['openai_api_key'], 200)));
+        if (!empty($input['openrouter_api_key']) && !str_contains($input['openrouter_api_key'], '...')) {
+            Settings::set('openrouter_api_key', trim(Security::sanitizeString($input['openrouter_api_key'], 250)));
         }
         if (!empty($input['meta_page_access_token']) && !str_contains($input['meta_page_access_token'], '...')) {
             Settings::set('meta_page_access_token', trim(Security::sanitizeString($input['meta_page_access_token'], 500)));

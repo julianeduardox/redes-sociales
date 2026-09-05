@@ -1091,9 +1091,28 @@ const App = {
         this.setInputValue('setting-brand-industry', d.brand_industry);
         this.setInputValue('setting-brand-tone', d.brand_tone);
         this.setInputValue('setting-brand-desc', d.brand_description);
-        this.setInputValue('setting-ai-provider', d.ai_provider);
-        this.setInputValue('setting-gemini-key', d.gemini_api_key_masked);
-        this.setInputValue('setting-openai-key', d.openai_api_key_masked);
+        this.setInputValue('setting-ai-provider', d.ai_provider || 'openrouter');
+        this.setInputValue('setting-openrouter-key', d.openrouter_api_key_masked);
+        
+        // Handle OpenRouter Model select
+        const modelSelect = document.getElementById('setting-openrouter-model');
+        const customInput = document.getElementById('setting-openrouter-custom-model');
+        const customWrapper = document.getElementById('openrouter-custom-model-wrapper');
+        const currentModel = d.openrouter_model || 'anthropic/claude-3.5-sonnet';
+        
+        if (modelSelect) {
+          const matchingOpt = Array.from(modelSelect.options).find(o => o.value === currentModel);
+          if (matchingOpt) {
+            modelSelect.value = currentModel;
+            if (customWrapper) customWrapper.style.display = 'none';
+          } else {
+            modelSelect.value = 'custom';
+            if (customInput) customInput.value = currentModel;
+            if (customWrapper) customWrapper.style.display = 'block';
+          }
+        }
+        this.toggleAiProviderFields();
+
         this.setInputValue('setting-closing-rule', d.brand_closing_question_rule);
         this.setInputValue('setting-emoji-style', d.brand_emoji_style);
 
@@ -1332,7 +1351,8 @@ const App = {
       brand_key_phrases: this.keyPhrases,
       brand_forbidden_phrases: this.forbiddenPhrases,
       brand_few_shot_examples: this.fewShotExamples,
-      ai_provider: document.getElementById('setting-ai-provider')?.value || 'heuristic'
+      ai_provider: document.getElementById('setting-ai-provider')?.value || 'openrouter',
+      openrouter_model: this.getSelectedOpenRouterModel()
     };
 
     try {
@@ -1345,9 +1365,11 @@ const App = {
       if (res.success && res.replies) {
         const reps = res.replies;
         let sourceTag = '⚡ Motor Heurístico Calibrado (Cero Tokens)';
-        if (reps.source && reps.source.includes('gemini')) sourceTag = '✨ Gemini AI Calibrado';
-        else if (reps.source && reps.source.includes('openai')) sourceTag = '🧠 OpenAI Calibrado';
-        else if (reps.source && reps.source.includes('trained')) sourceTag = '🎯 Ejemplo Maestro de Oro Aplicado';
+        if (reps.source && reps.source.includes('openrouter')) {
+          sourceTag = `🌐 OpenRouter (${this.getSelectedOpenRouterModel()}) Calibrado`;
+        } else if (reps.source && reps.source.includes('trained')) {
+          sourceTag = '🎯 Ejemplo Maestro de Oro Aplicado';
+        }
 
         resultsContainer.innerHTML = `
           <div style="font-size: 0.72rem; font-weight: 700; color: var(--accent-emerald); margin-bottom: 4px;">
@@ -1410,9 +1432,9 @@ const App = {
     // Also send AI Engine settings
     const globalPayload = {
       action: 'save_all',
-      ai_provider: document.getElementById('setting-ai-provider')?.value,
-      gemini_api_key: document.getElementById('setting-gemini-key')?.value,
-      openai_api_key: document.getElementById('setting-openai-key')?.value
+      ai_provider: document.getElementById('setting-ai-provider')?.value || 'openrouter',
+      openrouter_api_key: document.getElementById('setting-openrouter-key')?.value,
+      openrouter_model: this.getSelectedOpenRouterModel()
     };
 
     try {
@@ -1436,6 +1458,33 @@ const App = {
     } catch (err) {
       console.error(err);
       App.showToast('Error al guardar configuración de marca.', 'error');
+    }
+  },
+
+  getSelectedOpenRouterModel() {
+    const sel = document.getElementById('setting-openrouter-model')?.value || 'anthropic/claude-3.5-sonnet';
+    if (sel === 'custom') {
+      const customVal = document.getElementById('setting-openrouter-custom-model')?.value?.trim();
+      return customVal || 'anthropic/claude-3.5-sonnet';
+    }
+    return sel;
+  },
+
+  toggleAiProviderFields() {
+    const prov = document.getElementById('setting-ai-provider')?.value;
+    const box = document.getElementById('openrouter-settings-fields');
+    if (box) {
+      box.style.display = (prov === 'heuristic') ? 'none' : 'block';
+    }
+  },
+
+  onOpenRouterModelSelect(val) {
+    const customWrapper = document.getElementById('openrouter-custom-model-wrapper');
+    if (customWrapper) {
+      customWrapper.style.display = (val === 'custom') ? 'block' : 'none';
+      if (val === 'custom') {
+        document.getElementById('setting-openrouter-custom-model')?.focus();
+      }
     }
   },
 

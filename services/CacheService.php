@@ -3,7 +3,7 @@
  * High-Performance Multi-Tier Cache Service (L1 Static RAM / L2 APCu / L3 Atomic File)
  * Designed for Sub-Millisecond (< 0.1ms) In-Memory Lookup of:
  * - Brand Voices & AI Prompts
- * - User Settings & API Tokens (Meta, Gemini, OpenAI)
+ * - User Settings & API Tokens (Meta, OpenRouter)
  * - Page ID to User Account Mappings
  */
 require_once __DIR__ . '/../config/database.php';
