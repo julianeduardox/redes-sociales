@@ -60,7 +60,8 @@ $authUrl = 'https://www.facebook.com/v19.0/dialog/oauth?' . http_build_query([
     'redirect_uri' => $redirectUri,
     'state' => $state,
     'scope' => implode(',', $scopes),
-    'response_type' => 'code'
+    'response_type' => 'code',
+    'auth_type' => 'rerequest'
 ]);
 
 if (isset($_GET['json']) && $_GET['json'] === '1') {

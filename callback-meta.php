@@ -92,6 +92,7 @@ if (!empty($error)) {
         // 3. Query /me/accounts with Long-Lived Token to fetch Permanent Page Tokens and Linked Instagram accounts
         $accountsUrl = 'https://graph.facebook.com/v19.0/me/accounts?' . http_build_query([
             'fields' => 'id,name,access_token,category,instagram_business_account{id,username,name,profile_picture_url}',
+            'limit' => '100',
             'access_token' => $longLivedUserToken
         ]);
 
@@ -131,12 +132,13 @@ if (!empty($error)) {
                     $primaryIgId = $igId;
                 }
 
+                // Add Facebook Page to display list
                 $detectedAccounts[] = [
-                    'page_id' => $pageId,
-                    'page_name' => $pageName,
-                    'instagram_id' => $igId,
-                    'instagram_username' => $igUsername,
-                    'has_instagram' => !empty($igAccount)
+                    'id' => $pageId,
+                    'name' => $pageName,
+                    'platform' => 'facebook',
+                    'handle' => 'fb_' . $pageId,
+                    'is_ig' => false
                 ];
 
                 // 1. Upsert Facebook Page account
@@ -174,6 +176,16 @@ if (!empty($error)) {
                 // 2. Upsert Instagram Business Account if linked to this Page
                 if (!empty($igId)) {
                     $igDisplayName = $igAccount['name'] ?? ($igUsername ? "@{$igUsername}" : $pageName);
+
+                    // Add Instagram account to display list
+                    $detectedAccounts[] = [
+                        'id' => $igId,
+                        'name' => $igDisplayName,
+                        'platform' => 'instagram',
+                        'handle' => $igUsername ? "@{$igUsername}" : '@ig_' . $igId,
+                        'is_ig' => true
+                    ];
+
                     $stmtCheckIg = $pdo->prepare("SELECT id FROM accounts WHERE user_id = :uid AND page_id = :igid AND platform = 'instagram' LIMIT 1");
                     $stmtCheckIg->execute([':uid' => $userId, ':igid' => $igId]);
                     $existingIg = $stmtCheckIg->fetch();
@@ -322,9 +334,11 @@ if (!empty($error)) {
           <?php foreach ($detectedAccounts as $acc): ?>
             <div class="account-badge">
               <div>
-                <strong style="color: #fff; font-size: 0.9rem;"><?= htmlspecialchars($acc['page_name'], ENT_QUOTES, 'UTF-8') ?></strong>
-                <div style="font-size: 0.78rem; color: #94a3b8;">
-                  <?= $acc['has_instagram'] ? '📸 Instagram: @' . htmlspecialchars($acc['instagram_username'] ?? 'conectado', ENT_QUOTES, 'UTF-8') : '📘 Página de Facebook' ?>
+                <strong style="color: #fff; font-size: 0.9rem;">
+                  <?= ($acc['platform'] === 'instagram') ? '📸 ' : '📘 ' ?><?= htmlspecialchars($acc['name'], ENT_QUOTES, 'UTF-8') ?>
+                </strong>
+                <div style="font-size: 0.78rem; color: #94a3b8; margin-top: 2px;">
+                  <?= ($acc['platform'] === 'instagram') ? 'Instagram: ' . htmlspecialchars($acc['handle'], ENT_QUOTES, 'UTF-8') : 'Página de Facebook (' . htmlspecialchars($acc['id'], ENT_QUOTES, 'UTF-8') . ')' ?>
                 </div>
               </div>
               <span style="font-size: 0.75rem; background: rgba(16, 185, 129, 0.15); color: #34d399; font-weight: 700; padding: 4px 8px; border-radius: 6px;">Conectada</span>
