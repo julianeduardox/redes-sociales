@@ -589,7 +589,7 @@ class MetaApiService {
                     'limit' => '25',
                     'access_token' => $token
                 ]);
-                $mediaData = self::makeGetRequest($mediaUrl, 4);
+                $mediaData = self::makeGetRequest($mediaUrl, 3, 1);
 
                 if (isset($mediaData['error'])) {
                     $accError = $mediaData['error']['message'] ?? 'Error de permisos al leer publicaciones de Instagram';
@@ -597,6 +597,33 @@ class MetaApiService {
                 } elseif (!empty($mediaData['data']) && is_array($mediaData['data'])) {
                     $accPostsFound = count($mediaData['data']);
                     $totalPostsFoundOnMeta += $accPostsFound;
+
+                    // 1. Prepare Parallel Requests for Top 6 Posts (Insights & Comments)
+                    $multiUrls = [];
+                    $recentPosts = array_slice($mediaData['data'], 0, 6);
+                    foreach ($recentPosts as $media) {
+                        $mId = $media['id'];
+                        $mType = strtolower($media['media_type'] ?? 'image');
+                        $isReel = in_array($mType, ['video', 'reel', 'reels', 'clips'], true);
+                        $metricSet = $isReel ? 'views,plays,reach,saved,total_interactions' : 'views,impressions,reach,saved,total_interactions';
+                        
+                        $multiUrls['insights_' . $mId] = self::BASE_URL . '/' . urlencode($mId) . '/insights?' . http_build_query([
+                            'metric' => $metricSet,
+                            'access_token' => $token
+                        ]);
+
+                        $cCount = (int)($media['comments_count'] ?? 0);
+                        if ($cCount > 0) {
+                            $multiUrls['comments_' . $mId] = self::BASE_URL . '/' . urlencode($mId) . '/comments?' . http_build_query([
+                                'fields' => 'id,text,username,timestamp,like_count',
+                                'limit' => '15',
+                                'access_token' => $token
+                            ]);
+                        }
+                    }
+
+                    // Execute ALL parallel requests at once (< 400ms)
+                    $multiResponses = self::makeMultiGetRequests($multiUrls, 3, 1);
 
                     foreach ($mediaData['data'] as $media) {
                         $mediaId = $media['id'];
@@ -608,27 +635,55 @@ class MetaApiService {
                         $permalink = $media['permalink'] ?? '';
                         $postedAt = !empty($media['timestamp']) ? date('Y-m-d H:i:s', strtotime($media['timestamp'])) : date('Y-m-d H:i:s');
 
-                        $insights = self::fetchMediaInsights($mediaId, $token, $mediaType);
-                        $impressions = (int)($insights['impressions'] ?? 0);
-                        $reach = (int)($insights['reach'] ?? 0);
-                        $views = (int)($insights['views'] ?? 0);
+                        $impressions = 0;
+                        $reach = 0;
+                        $views = 0;
+                        $savedCount = 0;
 
-                        if ($impressions === 0 && $views > 0) {
-                            $impressions = $views;
+                        // Parse insights from parallel results
+                        if (isset($multiResponses['insights_' . $mediaId]['data']) && is_array($multiResponses['insights_' . $mediaId]['data'])) {
+                            foreach ($multiResponses['insights_' . $mediaId]['data'] as $item) {
+                                $name = $item['name'] ?? '';
+                                $val = 0;
+                                if (isset($item['total_value']['value'])) {
+                                    $val = (int)$item['total_value']['value'];
+                                } elseif (isset($item['values'][0]['value'])) {
+                                    $val = (int)$item['values'][0]['value'];
+                                } elseif (isset($item['value'])) {
+                                    $val = (int)$item['value'];
+                                }
+
+                                if ($name === 'views') {
+                                    $views = $val;
+                                    $impressions = max($impressions, $val);
+                                } elseif ($name === 'impressions' || $name === 'plays') {
+                                    $impressions = max($impressions, $val);
+                                    if ($views === 0) $views = $val;
+                                } elseif ($name === 'reach') {
+                                    $reach = $val;
+                                } elseif ($name === 'saved') {
+                                    $savedCount = $val;
+                                }
+                            }
                         }
-                        if ($impressions === 0 && $reach > 0) {
-                            $impressions = $reach;
-                        }
-                        if ($reach === 0 && $impressions > 0) {
-                            $reach = $impressions;
+
+                        if ($impressions === 0 && $views > 0) $impressions = $views;
+                        if ($impressions === 0 && $reach > 0) $impressions = $reach;
+                        if ($reach === 0 && $impressions > 0) $reach = $impressions;
+                        if ($views === 0 && $impressions > 0) $views = $impressions;
+                        $igInteractions = $likes + $commentsCount + $savedCount;
+                        if ($igInteractions > 0 && $reach < $igInteractions) {
+                            $reach = max($reach, $igInteractions);
                         }
                         if ($impressions > 0 && $reach > $impressions) {
                             $impressions = $reach;
                         }
+                        if ($reach === 0 && $igInteractions > 0) {
+                            $reach = $igInteractions;
+                            $impressions = $reach;
+                        }
 
-                        $savedCount = (int)($insights['saved_count'] ?? 0);
-                        $igInteractions = $likes + $commentsCount + $savedCount;
-                        $engagementRate = ($reach > 0) ? round(($igInteractions / $reach) * 100, 1) : (($impressions > 0) ? round(($igInteractions / $impressions) * 100, 1) : 0.0);
+                        $engagementRate = ($reach > 0) ? min(100.0, round(($igInteractions / $reach) * 100, 1)) : (($impressions > 0) ? min(100.0, round(($igInteractions / $impressions) * 100, 1)) : 0.0);
 
                         $checkPost = $pdo->prepare("SELECT id FROM posts WHERE external_post_id = :ext_id AND user_id = :uid LIMIT 1");
                         $checkPost->execute([':ext_id' => $mediaId, ':uid' => $uid]);
@@ -692,14 +747,8 @@ class MetaApiService {
                             $accNewPosts++;
                         }
 
-                        // Ingest Instagram comments for this media
-                        $commentsUrl = self::BASE_URL . '/' . urlencode($mediaId) . '/comments?' . http_build_query([
-                            'fields' => 'id,text,username,timestamp,like_count',
-                            'limit' => '15',
-                            'access_token' => $token
-                        ]);
-                        $commentsData = self::makeGetRequest($commentsUrl, 3);
-
+                        // Ingest comments from parallel results
+                        $commentsData = $multiResponses['comments_' . $mediaId] ?? [];
                         if (!empty($commentsData['data']) && is_array($commentsData['data'])) {
                             foreach ($commentsData['data'] as $c) {
                                 $cmtExtId = $c['id'];
@@ -753,7 +802,7 @@ class MetaApiService {
                     'limit' => '25',
                     'access_token' => $token
                 ]);
-                $feedData = self::makeGetRequest($pagePostsUrl, 4);
+                $feedData = self::makeGetRequest($pagePostsUrl, 3, 1);
 
                 // Fallback to /published_posts or /feed if /posts returned an error
                 if (isset($feedData['error'])) {
@@ -762,19 +811,9 @@ class MetaApiService {
                         'limit' => '25',
                         'access_token' => $token
                     ]);
-                    $feedDataFallback = self::makeGetRequest($feedUrlFallback, 4);
+                    $feedDataFallback = self::makeGetRequest($feedUrlFallback, 2, 1);
                     if (!isset($feedDataFallback['error']) && !empty($feedDataFallback['data'])) {
                         $feedData = $feedDataFallback;
-                    } else {
-                        $feedUrlFallback2 = self::BASE_URL . '/' . urlencode($pageId) . '/feed?' . http_build_query([
-                            'fields' => $fbFields,
-                            'limit' => '25',
-                            'access_token' => $token
-                        ]);
-                        $feedDataFallback2 = self::makeGetRequest($feedUrlFallback2, 4);
-                        if (!isset($feedDataFallback2['error']) && !empty($feedDataFallback2['data'])) {
-                            $feedData = $feedDataFallback2;
-                        }
                     }
                 }
 
@@ -790,12 +829,38 @@ class MetaApiService {
                     $accPostsFound = count($feedData['data']);
                     $totalPostsFoundOnMeta += $accPostsFound;
 
+                    // 1. Prepare Parallel Requests for Top 6 Posts (Insights, Comments, Photo Object Reactions)
+                    $multiUrls = [];
+                    $recentPosts = array_slice($feedData['data'], 0, 6);
+                    foreach ($recentPosts as $fbPost) {
+                        $pIdExt = $fbPost['id'];
+                        $objId = !empty($fbPost['attachments']['data'][0]['target']['id']) ? (string)$fbPost['attachments']['data'][0]['target']['id'] : null;
+
+                        $multiUrls['fb_insights_' . $pIdExt] = self::BASE_URL . '/' . urlencode($pIdExt) . '/insights?' . http_build_query([
+                            'metric' => 'post_impressions,post_impressions_unique,post_engaged_users,post_reactions_by_type_total,post_clicks',
+                            'access_token' => $token
+                        ]);
+
+                        $cCount = (int)($fbPost['comments']['summary']['total_count'] ?? (is_array($fbPost['comments']['data'] ?? null) ? count($fbPost['comments']['data']) : 0));
+                        if ($cCount > 0) {
+                            $multiUrls['fb_comments_' . $pIdExt] = self::BASE_URL . '/' . urlencode($pIdExt) . '/comments?' . http_build_query([
+                                'fields' => 'id,message,from,created_time,like_count',
+                                'limit' => '15',
+                                'access_token' => $token
+                            ]);
+                        }
+
+                        if (!empty($objId) && is_numeric($objId) && $objId !== $pIdExt) {
+                            $multiUrls['fb_obj_' . $pIdExt] = self::BASE_URL . '/' . urlencode($objId) . '?fields=reactions.summary(true).limit(1),likes.summary(true).limit(1)&access_token=' . urlencode($token);
+                        }
+                    }
+
+                    // Execute ALL parallel requests at once (< 400ms)
+                    $multiResponses = self::makeMultiGetRequests($multiUrls, 3, 1);
+
                     foreach ($feedData['data'] as $fbPost) {
                         $postIdExt = $fbPost['id'];
-                        $objectId = null;
-                        if (!empty($fbPost['attachments']['data'][0]['target']['id'])) {
-                            $objectId = (string)$fbPost['attachments']['data'][0]['target']['id'];
-                        }
+                        $objectId = !empty($fbPost['attachments']['data'][0]['target']['id']) ? (string)$fbPost['attachments']['data'][0]['target']['id'] : null;
                         $message = $fbPost['message'] ?? ($fbPost['story'] ?? 'Publicación de Página de Facebook');
                         $fullPic = $fbPost['full_picture'] ?? 'https://images.unsplash.com/photo-1552346154-21d32810aba3?w=480&h=320&auto=format&fit=crop&q=75';
                         $permalink = $fbPost['permalink_url'] ?? '';
@@ -815,23 +880,9 @@ class MetaApiService {
                             $likes = count($fbPost['likes']['data']);
                         }
 
-                        $commentsCount = (int)($fbPost['comments']['summary']['total_count'] ?? (is_array($fbPost['comments']['data'] ?? null) ? count($fbPost['comments']['data']) : 0));
-                        $shares = (int)($fbPost['shares']['count'] ?? 0);
-                        $postedAt = !empty($fbPost['created_time']) ? date('Y-m-d H:i:s', strtotime($fbPost['created_time'])) : date('Y-m-d H:i:s');
-
-                        // Query Facebook Insights with fallback to numeric ID & object_id
-                        $fbInsights = self::fetchFacebookPostInsights($postIdExt, $token, $objectId);
-                        $impressions = (int)($fbInsights['impressions'] ?? 0);
-                        $reach = (int)($fbInsights['reach'] ?? 0);
-                        $reactionsTotal = (int)($fbInsights['reactions_total'] ?? 0);
-                        if ($reactionsTotal > 0) {
-                            $likes = max($likes, $reactionsTotal);
-                        }
-
-                        // If object_id exists and likes is still 0, query object directly for reactions
-                        if ($likes === 0 && !empty($objectId) && is_numeric($objectId) && $objectId !== $postIdExt) {
-                            $objUrl = self::BASE_URL . '/' . urlencode($objectId) . '?fields=reactions.summary(true).limit(1),likes.summary(true).limit(1)&access_token=' . urlencode($token);
-                            $objData = self::makeGetRequest($objUrl, 3);
+                        // Check photo object reactions from parallel response
+                        if ($likes === 0 && isset($multiResponses['fb_obj_' . $postIdExt])) {
+                            $objData = $multiResponses['fb_obj_' . $postIdExt];
                             if (isset($objData['reactions']['summary']['total_count'])) {
                                 $likes = max($likes, (int)$objData['reactions']['summary']['total_count']);
                             }
@@ -840,16 +891,55 @@ class MetaApiService {
                             }
                         }
 
+                        $commentsCount = (int)($fbPost['comments']['summary']['total_count'] ?? (is_array($fbPost['comments']['data'] ?? null) ? count($fbPost['comments']['data']) : 0));
+                        $shares = (int)($fbPost['shares']['count'] ?? 0);
+                        $postedAt = !empty($fbPost['created_time']) ? date('Y-m-d H:i:s', strtotime($fbPost['created_time'])) : date('Y-m-d H:i:s');
+
+                        $impressions = 0;
+                        $reach = 0;
+                        $engagedUsers = 0;
+
+                        // Parse Facebook insights from parallel response
+                        if (isset($multiResponses['fb_insights_' . $postIdExt]['data']) && is_array($multiResponses['fb_insights_' . $postIdExt]['data'])) {
+                            foreach ($multiResponses['fb_insights_' . $postIdExt]['data'] as $item) {
+                                $name = $item['name'] ?? '';
+                                $val = 0;
+                                if (isset($item['values'][0]['value'])) {
+                                    $raw = $item['values'][0]['value'];
+                                    $val = is_array($raw) ? array_sum(array_map('intval', $raw)) : (int)$raw;
+                                } elseif (isset($item['total_value']['value'])) {
+                                    $val = (int)$item['total_value']['value'];
+                                }
+
+                                if ($name === 'post_impressions') {
+                                    $impressions = max($impressions, $val);
+                                } elseif ($name === 'post_impressions_unique') {
+                                    $reach = max($reach, $val);
+                                } elseif ($name === 'post_engaged_users') {
+                                    $engagedUsers = max($engagedUsers, $val);
+                                } elseif ($name === 'post_reactions_by_type_total') {
+                                    $likes = max($likes, $val);
+                                }
+                            }
+                        }
+
                         $fbInteractions = $likes + $commentsCount + $shares;
 
-                        // Ensure logical reach & views consistency when viral shares or interactions exist
+                        // Ensure logical reach & views consistency
                         if ($reach === 0 && $impressions > 0) {
                             $reach = $impressions;
+                        }
+                        if ($engagedUsers > 0 && $reach < $engagedUsers) {
+                            $reach = max($reach, $engagedUsers);
                         }
                         if ($fbInteractions > 0 && $reach < $fbInteractions) {
                             $reach = max($reach, $fbInteractions);
                         }
                         if ($reach > 0 && $impressions < $reach) {
+                            $impressions = $reach;
+                        }
+                        if ($reach === 0 && $fbInteractions > 0) {
+                            $reach = $fbInteractions;
                             $impressions = $reach;
                         }
 
@@ -916,14 +1006,8 @@ class MetaApiService {
                             $accNewPosts++;
                         }
 
-                        // Fetch comments for Facebook post
-                        $postCommentsUrl = self::BASE_URL . '/' . urlencode($postIdExt) . '/comments?' . http_build_query([
-                            'fields' => 'id,message,from,created_time,like_count',
-                            'limit' => '15',
-                            'access_token' => $token
-                        ]);
-                        $commentsData = self::makeGetRequest($postCommentsUrl, 3);
-
+                        // Parse comments from parallel response
+                        $commentsData = $multiResponses['fb_comments_' . $postIdExt] ?? [];
                         if (!empty($commentsData['data']) && is_array($commentsData['data'])) {
                             foreach ($commentsData['data'] as $c) {
                                 $cmtExtId = $c['id'];
@@ -1236,7 +1320,48 @@ class MetaApiService {
         ];
     }
 
-    private static function makeGetRequest(string $url, int $timeout = 4, int $connectTimeout = 2): array {
+    public static function makeMultiGetRequests(array $urls, int $timeout = 3, int $connectTimeout = 1): array {
+        if (empty($urls)) return [];
+        $mh = curl_multi_init();
+        $handles = [];
+
+        foreach ($urls as $key => $url) {
+            if (empty($url)) continue;
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $connectTimeout);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+            curl_multi_add_handle($mh, $ch);
+            $handles[$key] = $ch;
+        }
+
+        if (empty($handles)) {
+            curl_multi_close($mh);
+            return [];
+        }
+
+        $active = null;
+        do {
+            $status = curl_multi_exec($mh, $active);
+            if ($active) {
+                curl_multi_select($mh, 0.05);
+            }
+        } while ($active && $status == CURLM_OK);
+
+        $results = [];
+        foreach ($handles as $key => $ch) {
+            $response = curl_multi_getcontent($ch);
+            $results[$key] = $response ? (json_decode($response, true) ?? []) : [];
+            curl_multi_remove_handle($mh, $ch);
+            curl_close($ch);
+        }
+        curl_multi_close($mh);
+        return $results;
+    }
+
+    private static function makeGetRequest(string $url, int $timeout = 3, int $connectTimeout = 1): array {
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);

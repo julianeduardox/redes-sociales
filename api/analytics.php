@@ -195,6 +195,8 @@ try {
 
     $postsSql .= " GROUP BY p.id ORDER BY $orderClause";
 
+    $stmtPosts = $pdo->prepare($postsSql);
+    $stmtPosts->execute($postParams);
     $allPosts = $stmtPosts->fetchAll();
 
     $totalImpressionsAgg = 0;
