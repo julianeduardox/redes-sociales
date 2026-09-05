@@ -257,138 +257,309 @@ class MetaApiService {
     }
 
     /**
-     * Synchronize live posts, insights & comments from Meta Graph API
+     * Synchronize live posts, insights & comments from Meta Graph API for all connected Facebook Pages & Instagram Accounts
      */
     public static function syncFromMeta(?int $userId = null): array {
         $uid = ($userId !== null && $userId > 0) ? $userId : (class_exists('Auth') && Auth::check() ? Auth::id() : 1);
-        $accessToken = Settings::get('meta_page_access_token', '', $uid);
-        $igAccountId = Settings::get('meta_instagram_account_id', '', $uid);
+        $pdo = Database::getConnection();
 
-        if (empty($accessToken)) {
+        $defaultToken = Settings::get('meta_page_access_token', '', $uid);
+        $configuredIgId = Settings::get('meta_instagram_account_id', '', $uid);
+
+        // 1. Fetch all connected accounts for the user
+        $stmtAccounts = $pdo->prepare("SELECT * FROM accounts WHERE user_id = :uid AND is_active = 1");
+        $stmtAccounts->execute([':uid' => $uid]);
+        $accounts = $stmtAccounts->fetchAll();
+
+        // If no accounts found in database but token exists, auto-discover via /me/accounts
+        if (empty($accounts) && !empty($defaultToken)) {
+            $meAccountsUrl = self::BASE_URL . '/me/accounts?fields=id,name,access_token,category,instagram_business_account{id,username,name,profile_picture_url}&access_token=' . urlencode($defaultToken);
+            $discovered = self::makeGetRequest($meAccountsUrl);
+            if (!empty($discovered['data'])) {
+                foreach ($discovered['data'] as $p) {
+                    $pid = $p['id'];
+                    $pname = $p['name'];
+                    $ptok = $p['access_token'] ?? $defaultToken;
+                    $ig = $p['instagram_business_account'] ?? null;
+
+                    $stmtIns = $pdo->prepare("
+                        INSERT INTO accounts (user_id, platform, account_name, account_handle, page_id, avatar_url, access_token, is_active)
+                        VALUES (:uid, :platform, :name, :handle, :pid, :avatar, :token, 1)
+                    ");
+                    $stmtIns->execute([
+                        ':uid' => $uid,
+                        ':platform' => !empty($ig) ? 'instagram' : 'facebook',
+                        ':name' => $pname,
+                        ':handle' => !empty($ig['username']) ? "@{$ig['username']}" : 'fb_' . $pid,
+                        ':pid' => $pid,
+                        ':avatar' => $ig['profile_picture_url'] ?? ('https://ui-avatars.com/api/?name=' . urlencode($pname)),
+                        ':token' => $ptok
+                    ]);
+                    if (!empty($ig['id']) && empty($configuredIgId)) {
+                        $configuredIgId = $ig['id'];
+                        Settings::set('meta_instagram_account_id', $configuredIgId, $uid);
+                    }
+                }
+                $stmtAccounts->execute([':uid' => $uid]);
+                $accounts = $stmtAccounts->fetchAll();
+            }
+        }
+
+        if (empty($accounts) && empty($defaultToken)) {
             return [
                 'success' => false,
-                'message' => 'Configura el Page Access Token en la sección de Meta API para sincronizar en vivo.'
+                'message' => 'No hay cuentas ni tokens de Meta configurados. Haz clic en "Continuar con Facebook & Instagram" para conectar.'
             ];
         }
 
-        $pdo = Database::getConnection();
         $syncedPostsCount = 0;
         $syncedCommentsCount = 0;
+        $syncedAccountsCount = 0;
 
-        // 1. Sync Instagram if Account ID exists
-        if (!empty($igAccountId)) {
-            $mediaUrl = self::BASE_URL . '/' . urlencode($igAccountId) . '/media?fields=id,caption,media_type,media_url,permalink,like_count,comments_count,timestamp&limit=25&access_token=' . urlencode($accessToken);
-            $mediaData = self::makeGetRequest($mediaUrl);
+        // 2. Sync each connected account
+        foreach ($accounts as $acc) {
+            $accId = (int)$acc['id'];
+            $pageId = $acc['page_id'] ?? '';
+            $token = !empty($acc['access_token']) ? $acc['access_token'] : $defaultToken;
+            $platform = $acc['platform'] ?? 'facebook';
 
-            if (isset($mediaData['data']) && is_array($mediaData['data'])) {
-                foreach ($mediaData['data'] as $media) {
-                    $mediaId = $media['id'];
-                    $caption = $media['caption'] ?? 'Publicación de Instagram';
-                    $mediaImg = $media['media_url'] ?? 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=480&h=320&auto=format&fit=crop&q=75';
-                    $mediaType = strtolower($media['media_type'] ?? 'image');
-                    $likes = (int)($media['like_count'] ?? 0);
-                    $comments = (int)($media['comments_count'] ?? 0);
-                    $permalink = $media['permalink'] ?? '';
+            if (empty($token)) continue;
+            $syncedAccountsCount++;
 
-                    // Fetch Meta Insights for this media
-                    $insights = self::fetchMediaInsights($mediaId, $accessToken);
-                    $impressions = $insights['impressions'] ?? ($likes * 8);
-                    $reach = $insights['reach'] ?? ($likes * 6);
-                    $savedCount = $insights['saved_count'] ?? (int)($likes * 0.15);
-                    $engagementRate = ($reach > 0) ? round((($likes + $comments + $savedCount) / $reach) * 100, 1) : 0.0;
+            // A. If Instagram or has linked Instagram ID
+            $igId = ($platform === 'instagram' && !empty($configuredIgId)) ? $configuredIgId : $configuredIgId;
 
-                    // Check if post exists
-                    $checkPost = $pdo->prepare("SELECT id FROM posts WHERE external_post_id = :ext_id AND user_id = :uid LIMIT 1");
-                    $checkPost->execute([':ext_id' => $mediaId, ':uid' => $uid]);
-                    $existingPost = $checkPost->fetch();
+            if (!empty($igId)) {
+                $mediaUrl = self::BASE_URL . '/' . urlencode($igId) . '/media?fields=id,caption,media_type,media_url,permalink,like_count,comments_count,timestamp&limit=25&access_token=' . urlencode($token);
+                $mediaData = self::makeGetRequest($mediaUrl);
 
-                    if ($existingPost) {
-                        $postId = $existingPost['id'];
-                        // Update metrics
-                        $stmtUp = $pdo->prepare("
-                            UPDATE posts 
-                            SET total_likes = :likes, total_comments = :comments, impressions = :impressions, 
-                                reach = :reach, saved_count = :saved, engagement_rate = :eng_rate, 
-                                last_synced_at = datetime('now')
-                            WHERE id = :id AND user_id = :uid
-                        ");
-                        $stmtUp->execute([
-                            ':likes' => $likes,
-                            ':comments' => $comments,
-                            ':impressions' => $impressions,
-                            ':reach' => $reach,
-                            ':saved' => $savedCount,
-                            ':eng_rate' => $engagementRate,
-                            ':id' => $postId,
-                            ':uid' => $uid
-                        ]);
-                    } else {
-                        $stmtInsert = $pdo->prepare("
-                            INSERT INTO posts (
-                                user_id, account_id, platform, external_post_id, caption, media_url, 
-                                media_type, permalink, total_likes, total_comments, total_shares, 
-                                impressions, reach, saved_count, engagement_rate, last_synced_at
-                            ) VALUES (
-                                :uid, 1, 'instagram', :ext_id, :caption, :media_url, 
-                                :media_type, :permalink, :likes, :comments, 0, 
-                                :impressions, :reach, :saved, :eng_rate, datetime('now')
-                            )
-                        ");
-                        $stmtInsert->execute([
-                            ':uid' => $uid,
-                            ':ext_id' => $mediaId,
-                            ':caption' => $caption,
-                            ':media_url' => $mediaImg,
-                            ':media_type' => $mediaType,
-                            ':permalink' => $permalink,
-                            ':likes' => $likes,
-                            ':comments' => $comments,
-                            ':impressions' => $impressions,
-                            ':reach' => $reach,
-                            ':saved' => $savedCount,
-                            ':eng_rate' => $engagementRate
-                        ]);
-                        $postId = $pdo->lastInsertId();
-                        $syncedPostsCount++;
+                if (!empty($mediaData['data']) && is_array($mediaData['data'])) {
+                    foreach ($mediaData['data'] as $media) {
+                        $mediaId = $media['id'];
+                        $caption = $media['caption'] ?? 'Publicación de Instagram';
+                        $mediaImg = $media['media_url'] ?? 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=480&h=320&auto=format&fit=crop&q=75';
+                        $mediaType = strtolower($media['media_type'] ?? 'image');
+                        $likes = (int)($media['like_count'] ?? 0);
+                        $comments = (int)($media['comments_count'] ?? 0);
+                        $permalink = $media['permalink'] ?? '';
+
+                        $insights = self::fetchMediaInsights($mediaId, $token);
+                        $impressions = $insights['impressions'] ?? max(10, $likes * 8);
+                        $reach = $insights['reach'] ?? max(8, $likes * 6);
+                        $savedCount = $insights['saved_count'] ?? (int)($likes * 0.15);
+                        $engagementRate = ($reach > 0) ? round((($likes + $comments + $savedCount) / $reach) * 100, 1) : 0.0;
+
+                        $checkPost = $pdo->prepare("SELECT id FROM posts WHERE external_post_id = :ext_id AND user_id = :uid LIMIT 1");
+                        $checkPost->execute([':ext_id' => $mediaId, ':uid' => $uid]);
+                        $existingPost = $checkPost->fetch();
+
+                        if ($existingPost) {
+                            $postId = (int)$existingPost['id'];
+                            $stmtUp = $pdo->prepare("
+                                UPDATE posts 
+                                SET total_likes = :likes, total_comments = :comments, impressions = :impressions, 
+                                    reach = :reach, saved_count = :saved, engagement_rate = :eng_rate, 
+                                    last_synced_at = datetime('now')
+                                WHERE id = :id AND user_id = :uid
+                            ");
+                            $stmtUp->execute([
+                                ':likes' => $likes,
+                                ':comments' => $comments,
+                                ':impressions' => $impressions,
+                                ':reach' => $reach,
+                                ':saved' => $savedCount,
+                                ':eng_rate' => $engagementRate,
+                                ':id' => $postId,
+                                ':uid' => $uid
+                            ]);
+                        } else {
+                            $stmtInsert = $pdo->prepare("
+                                INSERT INTO posts (
+                                    user_id, account_id, platform, external_post_id, caption, media_url, 
+                                    media_type, permalink, total_likes, total_comments, total_shares, 
+                                    impressions, reach, saved_count, engagement_rate, last_synced_at
+                                ) VALUES (
+                                    :uid, :acc_id, 'instagram', :ext_id, :caption, :media_url, 
+                                    :media_type, :permalink, :likes, :comments, 0, 
+                                    :impressions, :reach, :saved, :eng_rate, datetime('now')
+                                )
+                            ");
+                            $stmtInsert->execute([
+                                ':uid' => $uid,
+                                ':acc_id' => $accId,
+                                ':ext_id' => $mediaId,
+                                ':caption' => $caption,
+                                ':media_url' => $mediaImg,
+                                ':media_type' => $mediaType,
+                                ':permalink' => $permalink,
+                                ':likes' => $likes,
+                                ':comments' => $comments,
+                                ':impressions' => $impressions,
+                                ':reach' => $reach,
+                                ':saved' => $savedCount,
+                                ':eng_rate' => $engagementRate
+                            ]);
+                            $postId = (int)$pdo->lastInsertId();
+                            $syncedPostsCount++;
+                        }
+
+                        // Fetch comments for Instagram media
+                        $commentsUrl = self::BASE_URL . '/' . urlencode($mediaId) . '/comments?fields=id,text,username,timestamp,like_count&limit=50&access_token=' . urlencode($token);
+                        $commentsData = self::makeGetRequest($commentsUrl);
+
+                        if (!empty($commentsData['data']) && is_array($commentsData['data'])) {
+                            foreach ($commentsData['data'] as $c) {
+                                $checkCmt = $pdo->prepare("SELECT id FROM comments WHERE external_comment_id = :ext_id AND user_id = :uid LIMIT 1");
+                                $checkCmt->execute([':ext_id' => $c['id'], ':uid' => $uid]);
+                                if (!$checkCmt->fetch()) {
+                                    $analysis = AiAgentService::analyzeComment($c['text'], $caption, $c['like_count'] ?? 0, $uid);
+                                    $stmtInsertCmt = $pdo->prepare("
+                                        INSERT INTO comments (
+                                            user_id, post_id, platform, external_comment_id, author_name, author_handle, 
+                                            author_avatar, comment_text, sentiment, intent, highlight_score, 
+                                            is_highlighted, highlight_reason, likes_count, status
+                                        ) VALUES (
+                                            :uid, :post_id, 'instagram', :ext_id, :author_name, :author_handle, 
+                                            :author_avatar, :comment_text, :sentiment, :intent, :highlight_score, 
+                                            :is_highlighted, :highlight_reason, :likes_count, 'pending'
+                                        )
+                                    ");
+                                    $stmtInsertCmt->execute([
+                                        ':uid' => $uid,
+                                        ':post_id' => $postId,
+                                        ':ext_id' => $c['id'],
+                                        ':author_name' => $c['username'] ?? 'Usuario Instagram',
+                                        ':author_handle' => '@' . ($c['username'] ?? 'usuario'),
+                                        ':author_avatar' => 'https://ui-avatars.com/api/?name=' . urlencode($c['username'] ?? 'U') . '&background=6366f1&color=fff',
+                                        ':comment_text' => $c['text'],
+                                        ':sentiment' => $analysis['sentiment'],
+                                        ':intent' => $analysis['intent'],
+                                        ':highlight_score' => $analysis['highlight_score'],
+                                        ':is_highlighted' => $analysis['is_highlighted'],
+                                        ':highlight_reason' => $analysis['highlight_reason'],
+                                        ':likes_count' => (int)($c['like_count'] ?? 0)
+                                    ]);
+                                    $syncedCommentsCount++;
+                                }
+                            }
+                        }
                     }
+                }
+            }
 
-                    // Fetch comments for this media
-                    $commentsUrl = self::BASE_URL . '/' . urlencode($mediaId) . '/comments?fields=id,text,username,timestamp,like_count&limit=50&access_token=' . urlencode($accessToken);
-                    $commentsData = self::makeGetRequest($commentsUrl);
+            // B. Sync Facebook Page Feed
+            if (!empty($pageId)) {
+                $pageFeedUrl = self::BASE_URL . '/' . urlencode($pageId) . '/feed?fields=id,message,created_time,full_picture,permalink_url,shares,reactions.summary(total_count),comments.summary(total_count){id,message,from,created_time,like_count}&limit=25&access_token=' . urlencode($token);
+                $feedData = self::makeGetRequest($pageFeedUrl);
 
-                    if (isset($commentsData['data']) && is_array($commentsData['data'])) {
-                        foreach ($commentsData['data'] as $c) {
-                            $checkCmt = $pdo->prepare("SELECT id FROM comments WHERE external_comment_id = :ext_id AND user_id = :uid LIMIT 1");
-                            $checkCmt->execute([':ext_id' => $c['id'], ':uid' => $uid]);
-                            if (!$checkCmt->fetch()) {
-                                $analysis = AiAgentService::analyzeComment($c['text'], $caption, $c['like_count'] ?? 0, $uid);
-                                $stmtInsertCmt = $pdo->prepare("
-                                    INSERT INTO comments (
-                                        user_id, post_id, platform, external_comment_id, author_name, author_handle, 
-                                        author_avatar, comment_text, sentiment, intent, highlight_score, 
-                                        is_highlighted, highlight_reason, likes_count, status
-                                    ) VALUES (
-                                        :uid, :post_id, 'instagram', :ext_id, :author_name, :author_handle, 
-                                        :author_avatar, :comment_text, :sentiment, :intent, :highlight_score, 
-                                        :is_highlighted, :highlight_reason, :likes_count, 'pending'
-                                    )
-                                ");
-                                $stmtInsertCmt->execute([
-                                    ':uid' => $uid,
-                                    ':post_id' => $postId,
-                                    ':ext_id' => $c['id'],
-                                    ':author_name' => $c['username'] ?? 'Usuario Instagram',
-                                    ':author_handle' => '@' . ($c['username'] ?? 'usuario'),
-                                    ':author_avatar' => 'https://ui-avatars.com/api/?name=' . urlencode($c['username'] ?? 'U') . '&background=6366f1&color=fff',
-                                    ':comment_text' => $c['text'],
-                                    ':sentiment' => $analysis['sentiment'],
-                                    ':intent' => $analysis['intent'],
-                                    ':highlight_score' => $analysis['highlight_score'],
-                                    ':is_highlighted' => $analysis['is_highlighted'],
-                                    ':highlight_reason' => $analysis['highlight_reason'],
-                                    ':likes_count' => (int)($c['like_count'] ?? 0)
-                                ]);
-                                $syncedCommentsCount++;
+                if (!empty($feedData['data']) && is_array($feedData['data'])) {
+                    foreach ($feedData['data'] as $fbPost) {
+                        $postIdExt = $fbPost['id'];
+                        $message = $fbPost['message'] ?? 'Publicación de Página de Facebook';
+                        $fullPic = $fbPost['full_picture'] ?? 'https://images.unsplash.com/photo-1552346154-21d32810aba3?w=480&h=320&auto=format&fit=crop&q=75';
+                        $permalink = $fbPost['permalink_url'] ?? '';
+                        $likes = (int)($fbPost['reactions']['summary']['total_count'] ?? 0);
+                        $commentsCount = (int)($fbPost['comments']['summary']['total_count'] ?? 0);
+                        $shares = (int)($fbPost['shares']['count'] ?? 0);
+
+                        $reach = max(10, ($likes + $commentsCount) * 5);
+                        $impressions = max(15, ($likes + $commentsCount) * 7);
+                        $engagementRate = ($reach > 0) ? round((($likes + $commentsCount + $shares) / $reach) * 100, 1) : 0.0;
+
+                        $checkPost = $pdo->prepare("SELECT id FROM posts WHERE external_post_id = :ext_id AND user_id = :uid LIMIT 1");
+                        $checkPost->execute([':ext_id' => $postIdExt, ':uid' => $uid]);
+                        $existingPost = $checkPost->fetch();
+
+                        if ($existingPost) {
+                            $postId = (int)$existingPost['id'];
+                            $stmtUp = $pdo->prepare("
+                                UPDATE posts 
+                                SET total_likes = :likes, total_comments = :comments, total_shares = :shares,
+                                    impressions = :impressions, reach = :reach, engagement_rate = :eng_rate, 
+                                    last_synced_at = datetime('now')
+                                WHERE id = :id AND user_id = :uid
+                            ");
+                            $stmtUp->execute([
+                                ':likes' => $likes,
+                                ':comments' => $commentsCount,
+                                ':shares' => $shares,
+                                ':impressions' => $impressions,
+                                ':reach' => $reach,
+                                ':eng_rate' => $engagementRate,
+                                ':id' => $postId,
+                                ':uid' => $uid
+                            ]);
+                        } else {
+                            $stmtInsert = $pdo->prepare("
+                                INSERT INTO posts (
+                                    user_id, account_id, platform, external_post_id, caption, media_url, 
+                                    media_type, permalink, total_likes, total_comments, total_shares, 
+                                    impressions, reach, saved_count, engagement_rate, last_synced_at
+                                ) VALUES (
+                                    :uid, :acc_id, 'facebook', :ext_id, :caption, :media_url, 
+                                    'status', :permalink, :likes, :comments, :shares, 
+                                    :impressions, :reach, 0, :eng_rate, datetime('now')
+                                )
+                            ");
+                            $stmtInsert->execute([
+                                ':uid' => $uid,
+                                ':acc_id' => $accId,
+                                ':ext_id' => $postIdExt,
+                                ':caption' => $message,
+                                ':media_url' => $fullPic,
+                                ':permalink' => $permalink,
+                                ':likes' => $likes,
+                                ':comments' => $commentsCount,
+                                ':shares' => $shares,
+                                ':impressions' => $impressions,
+                                ':reach' => $reach,
+                                ':eng_rate' => $engagementRate
+                            ]);
+                            $postId = (int)$pdo->lastInsertId();
+                            $syncedPostsCount++;
+                        }
+
+                        // Ingest Facebook comments
+                        if (!empty($fbPost['comments']['data']) && is_array($fbPost['comments']['data'])) {
+                            foreach ($fbPost['comments']['data'] as $c) {
+                                $cmtId = $c['id'];
+                                $cText = $c['message'] ?? '';
+                                $fromName = $c['from']['name'] ?? 'Usuario de Facebook';
+
+                                if (empty($cText)) continue;
+
+                                $checkCmt = $pdo->prepare("SELECT id FROM comments WHERE external_comment_id = :ext_id AND user_id = :uid LIMIT 1");
+                                $checkCmt->execute([':ext_id' => $cmtId, ':uid' => $uid]);
+                                if (!$checkCmt->fetch()) {
+                                    $analysis = AiAgentService::analyzeComment($cText, $message, $c['like_count'] ?? 0, $uid);
+                                    $stmtInsertCmt = $pdo->prepare("
+                                        INSERT INTO comments (
+                                            user_id, post_id, platform, external_comment_id, author_name, author_handle, 
+                                            author_avatar, comment_text, sentiment, intent, highlight_score, 
+                                            is_highlighted, highlight_reason, likes_count, status
+                                        ) VALUES (
+                                            :uid, :post_id, 'facebook', :ext_id, :author_name, :author_handle, 
+                                            :author_avatar, :comment_text, :sentiment, :intent, :highlight_score, 
+                                            :is_highlighted, :highlight_reason, :likes_count, 'pending'
+                                        )
+                                    ");
+                                    $stmtInsertCmt->execute([
+                                        ':uid' => $uid,
+                                        ':post_id' => $postId,
+                                        ':ext_id' => $cmtId,
+                                        ':author_name' => $fromName,
+                                        ':author_handle' => 'fb_' . substr($cmtId, 0, 8),
+                                        ':author_avatar' => 'https://ui-avatars.com/api/?name=' . urlencode($fromName) . '&background=1877f2&color=fff',
+                                        ':comment_text' => $cText,
+                                        ':sentiment' => $analysis['sentiment'],
+                                        ':intent' => $analysis['intent'],
+                                        ':highlight_score' => $analysis['highlight_score'],
+                                        ':is_highlighted' => $analysis['is_highlighted'],
+                                        ':highlight_reason' => $analysis['highlight_reason'],
+                                        ':likes_count' => (int)($c['like_count'] ?? 0)
+                                    ]);
+                                    $syncedCommentsCount++;
+                                }
                             }
                         }
                     }
@@ -398,9 +569,10 @@ class MetaApiService {
 
         return [
             'success' => true,
+            'synced_accounts' => $syncedAccountsCount,
             'synced_new_posts' => $syncedPostsCount,
             'synced_new_comments' => $syncedCommentsCount,
-            'message' => "Sincronización completada con Meta Graph API. Se sincronizaron las publicaciones e importaron $syncedCommentsCount comentarios."
+            'message' => "Sincronización completada con Meta Graph API. Se sincronizaron $syncedAccountsCount cuentas, $syncedPostsCount publicaciones nuevas y $syncedCommentsCount comentarios analizados con IA."
         ];
     }
 
