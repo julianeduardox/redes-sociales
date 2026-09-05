@@ -56,7 +56,7 @@ const App = {
     try {
       const res = await this.fetchWithCsrf('api/settings.php?action=list_accounts');
       const data = await res.json();
-      if (data.success) {
+      if (data && data.success) {
         this.connectedAccounts = data.accounts || [];
         const brands = data.brands || [];
 
@@ -79,11 +79,38 @@ const App = {
           badgeCount.textContent = `${this.connectedAccounts.length} cuenta${this.connectedAccounts.length === 1 ? '' : 's'}`;
         }
 
-        // 3. Render accounts manager cards in settings/meta
+        // 3. Update sidebar connection status pill (ON / OFF)
+        this.updateSidebarConnectionStatus();
+
+        // 4. Render accounts manager cards in settings/meta
         this.renderAccountsManager(this.connectedAccounts, brands);
       }
     } catch (err) {
       console.error('Error loading connected accounts:', err);
+      const container = document.getElementById('connected-accounts-list');
+      if (container) {
+        container.innerHTML = `
+          <div style="padding: 20px; text-align: center; color: var(--accent-rose); font-size: 0.85rem;">
+            ⚠️ No se pudieron cargar las cuentas vinculadas.
+            <button type="button" class="btn-secondary-mini" onclick="App.loadConnectedAccounts()" style="margin-left: 8px;">Reintentar</button>
+          </div>
+        `;
+      }
+    }
+  },
+
+  updateSidebarConnectionStatus() {
+    const statusPill = document.getElementById('sidebar-connection-status-pill');
+    if (!statusPill) return;
+    const isConnected = Array.isArray(this.connectedAccounts) && this.connectedAccounts.length > 0;
+    if (isConnected) {
+      statusPill.className = 'connection-status-badge on';
+      statusPill.innerHTML = '<span class="status-dot"></span><span class="status-label">ON</span>';
+      statusPill.title = `${this.connectedAccounts.length} cuenta${this.connectedAccounts.length === 1 ? '' : 's'} vinculada${this.connectedAccounts.length === 1 ? '' : 's'}`;
+    } else {
+      statusPill.className = 'connection-status-badge off';
+      statusPill.innerHTML = '<span class="status-dot"></span><span class="status-label">OFF</span>';
+      statusPill.title = 'Sin cuentas vinculadas (Desconectado)';
     }
   },
 
@@ -93,10 +120,10 @@ const App = {
 
     if (!accounts || accounts.length === 0) {
       container.innerHTML = `
-        <div style="padding: 24px; text-align: center; color: var(--text-dim); font-size: 0.84rem;">
-          <div style="font-size: 2rem; margin-bottom: 8px;">📱</div>
-          <strong style="color: #fff; display: block; margin-bottom: 4px;">No hay cuentas de Meta vinculadas todavía</strong>
-          <p style="margin: 0; max-width: 420px; margin: 0 auto;">
+        <div style="padding: 28px 16px; text-align: center; color: var(--text-dim); font-size: 0.84rem;">
+          <div style="font-size: 2.2rem; margin-bottom: 8px;">📱</div>
+          <strong style="color: #fff; display: block; margin-bottom: 4px; font-size: 0.95rem;">No hay cuentas de Meta vinculadas todavía</strong>
+          <p style="margin: 0; max-width: 420px; margin: 0 auto; line-height: 1.5;">
             Haz clic en <strong>"Continuar con Facebook & Instagram"</strong> arriba para conectar automáticamente tus Páginas y perfiles.
           </p>
         </div>
@@ -104,64 +131,75 @@ const App = {
       return;
     }
 
-    container.innerHTML = accounts.map(a => {
-      const isIg = a.platform === 'instagram';
-      const icon = isIg ? '📸' : '📘';
-      const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(a.account_name)}&background=${isIg ? 'e1306c' : '1877f2'}&color=fff`;
-      const safeAvatar = this.sanitizeUrl(a.avatar_url, defaultAvatar);
+    try {
+      container.innerHTML = accounts.map(a => {
+        const isIg = a.platform === 'instagram';
+        const icon = isIg ? '📸' : '📘';
+        const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(a.account_name || 'Account')}&background=${isIg ? 'e1306c' : '1877f2'}&color=fff`;
+        const safeAvatar = this.sanitizeUrl(a.avatar_url, defaultAvatar);
 
-      const brandOptionsHtml = brands.map(b => `
-        <option value="${b.id}" ${b.id == a.brand_voice_id ? 'selected' : ''}>
-          ${this.escapeHtml(b.brand_name)} (${this.escapeHtml(b.tone_level || 'General')})
-        </option>
-      `).join('');
+        const brandOptionsHtml = (brands || []).map(b => `
+          <option value="${b.id}" ${b.id == a.brand_voice_id ? 'selected' : ''}>
+            ${this.escapeHtml(b.brand_name)} (${this.escapeHtml(b.tone_level || 'General')})
+          </option>
+        `).join('');
 
-      return `
-        <div class="account-item-card" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 18px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
-          <div style="display: flex; align-items: center; gap: 14px; min-width: 240px;">
-            <div style="position: relative;">
-              <img src="${safeAvatar}" alt="avatar" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid ${isIg ? '#e1306c' : '#1877f2'};" onerror="this.onerror=null; this.src='${defaultAvatar}';" />
-              <span style="position: absolute; bottom: -2px; right: -2px; font-size: 0.8rem; background: #0f172a; border-radius: 50%; padding: 2px;">${icon}</span>
-            </div>
-            <div>
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <strong style="color: #fff; font-size: 0.95rem;">${this.escapeHtml(a.account_name)}</strong>
-                <span class="platform-badge-mini ${isIg ? 'instagram' : 'facebook'}">${isIg ? 'IG' : 'FB'}</span>
+        return `
+          <div class="account-item-card" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 18px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 14px; min-width: 240px;">
+              <div style="position: relative;">
+                <img src="${safeAvatar}" alt="avatar" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid ${isIg ? '#e1306c' : '#1877f2'};" onerror="this.onerror=null; this.src='${defaultAvatar}';" />
+                <span style="position: absolute; bottom: -2px; right: -2px; font-size: 0.8rem; background: #0f172a; border-radius: 50%; padding: 2px;">${icon}</span>
               </div>
-              <div style="font-size: 0.8rem; color: var(--text-dim); margin-top: 2px;">
-                ${this.escapeHtml(a.account_handle || '')} • 📊 ${parseInt(a.posts_count || 0, 10)} posts • 💬 ${parseInt(a.comments_count || 0, 10)} comentarios
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <strong style="color: #fff; font-size: 0.95rem;">${this.escapeHtml(a.account_name)}</strong>
+                  <span class="platform-badge-mini ${isIg ? 'instagram' : 'facebook'}">${isIg ? 'IG' : 'FB'}</span>
+                </div>
+                <div style="font-size: 0.8rem; color: var(--text-dim); margin-top: 2px;">
+                  ${this.escapeHtml(a.account_handle || '')} • 📊 ${parseInt(a.posts_count || 0, 10)} posts • 💬 ${parseInt(a.comments_count || 0, 10)} comentarios
+                </div>
+              </div>
+            </div>
+
+            <!-- Brand Voice Selector & Disconnect Action -->
+            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                <label style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: var(--accent-cyan); letter-spacing: 0.04em;">
+                  🎭 Voz de Marca Asignada:
+                </label>
+                <select class="account-brand-voice-select" style="background: #0f172a; border: 1px solid var(--border-active); color: #fff; padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.84rem; font-weight: 700; cursor: pointer; min-width: 220px;" onchange="App.assignAccountBrandVoice(${a.id}, this.value)">
+                  ${brandOptionsHtml}
+                </select>
+              </div>
+              
+              <div style="display: flex; align-items: center; gap: 8px; align-self: flex-end;">
+                <span style="font-size: 0.75rem; background: rgba(16, 185, 129, 0.15); color: #34d399; font-weight: 700; padding: 7px 11px; border-radius: 6px; border: 1px solid rgba(16, 185, 129, 0.3);">
+                  🟢 Conectada
+                </span>
+                <button type="button" class="btn-disconnect-account" onclick="App.disconnectAccount(${a.id})" title="Desconectar y remover esta cuenta de Meta">
+                  🔌 Desconectar
+                </button>
               </div>
             </div>
           </div>
-
-          <!-- Brand Voice Selector & Disconnect Action -->
-          <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-            <div style="display: flex; flex-direction: column; gap: 4px;">
-              <label style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: var(--accent-cyan); letter-spacing: 0.04em;">
-                🎭 Voz de Marca Asignada:
-              </label>
-              <select class="account-brand-voice-select" style="background: #0f172a; border: 1px solid var(--border-active); color: #fff; padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.84rem; font-weight: 700; cursor: pointer; min-width: 220px;" onchange="App.assignAccountBrandVoice(${a.id}, this.value)">
-                ${brandOptionsHtml}
-              </select>
-            </div>
-            
-            <div style="display: flex; align-items: center; gap: 8px; align-self: flex-end;">
-              <span style="font-size: 0.75rem; background: rgba(16, 185, 129, 0.15); color: #34d399; font-weight: 700; padding: 7px 11px; border-radius: 6px; border: 1px solid rgba(16, 185, 129, 0.3);">
-                🟢 Conectada
-              </span>
-              <button type="button" class="btn-disconnect-account" onclick="App.disconnectAccount(${a.id}, '${this.escapeJs(a.account_name)}')" title="Desconectar y remover esta cuenta de Meta">
-                🔌 Desconectar
-              </button>
-            </div>
-          </div>
+        `;
+      }).join('');
+    } catch (renderErr) {
+      console.error('Error rendering accounts manager:', renderErr);
+      container.innerHTML = `
+        <div style="padding: 20px; text-align: center; color: var(--accent-rose); font-size: 0.85rem;">
+          ⚠️ Error al mostrar las cuentas vinculadas.
         </div>
       `;
-    }).join('');
+    }
   },
 
   async disconnectAccount(accountId, accountName) {
     if (!accountId) return;
-    if (!confirm(`¿Estás seguro de que deseas desconectar la cuenta "${accountName}"?\n\nAl desconectarla, ya no aparecerá como conectada en tu panel ni se sincronizarán sus publicaciones.`)) {
+    const target = (this.connectedAccounts || []).find(x => x.id == accountId);
+    const name = accountName || (target ? target.account_name : `cuenta #${accountId}`);
+    if (!confirm(`¿Estás seguro de que deseas desconectar la cuenta "${name}"?\n\nAl desconectarla, ya no aparecerá como conectada en tu panel ni se sincronizarán sus publicaciones.`)) {
       return;
     }
     try {
@@ -174,7 +212,7 @@ const App = {
       });
       const data = await res.json();
       if (data.success) {
-        this.showToast(data.message || `Cuenta "${accountName}" desconectada exitosamente.`, 'success');
+        this.showToast(data.message || `Cuenta "${name}" desconectada exitosamente.`, 'success');
         if (this.activeAccountId == accountId) {
           this.activeAccountId = 'all';
         }
@@ -1781,6 +1819,11 @@ const App = {
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+  },
+
+  escapeJs(str) {
+    if (!str) return '';
+    return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
   },
 
   sanitizeUrl(url, fallback = '') {

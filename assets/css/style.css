@@ -145,7 +145,7 @@ body {
 }
 
 .brand-tag {
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   font-weight: 700;
   color: var(--accent-cyan);
   text-transform: uppercase;
@@ -155,14 +155,49 @@ body {
   gap: 4px;
 }
 
-.brand-tag::before {
-  content: '';
+/* Real-time Connection Status Badge (ON / OFF) */
+.connection-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4.5px;
+  padding: 1.5px 6.5px;
+  border-radius: 9999px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  transition: all 0.25s ease;
+  user-select: none;
+  line-height: 1.2;
+}
+
+.connection-status-badge.on {
+  background: rgba(16, 185, 129, 0.16);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34d399;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.15);
+}
+
+.connection-status-badge.on .status-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--accent-cyan);
-  box-shadow: 0 0 8px var(--accent-cyan);
-  animation: pulse-dot 2s infinite;
+  background: #10b981;
+  box-shadow: 0 0 6px #10b981;
+  animation: pulse-dot 1.8s infinite ease-in-out;
+}
+
+.connection-status-badge.off {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.28);
+  color: #fca5a5;
+}
+
+.connection-status-badge.off .status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ef4444;
+  opacity: 0.8;
 }
 
 /* User Session Card */

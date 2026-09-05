@@ -13,6 +13,7 @@ $currentUser = Auth::user();
 $userId = $currentUser['id'] ?? 1;
 $csrfToken = Security::getCsrfToken();
 $userBrands = [];
+$activeAccountsCount = 0;
 
 try {
     $pdo = Database::getConnection();
@@ -26,10 +27,16 @@ try {
         $stmtBrands->execute([$userId]);
         $userBrands = $stmtBrands->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    $stmtAccCount = $pdo->prepare("SELECT COUNT(*) FROM accounts WHERE user_id = ? AND is_active = 1");
+    $stmtAccCount->execute([$userId]);
+    $activeAccountsCount = (int)$stmtAccCount->fetchColumn();
 } catch (Throwable $e) {
     error_log("Brand pre-render notice: " . $e->getMessage());
     $userBrands = [];
+    $activeAccountsCount = 0;
 }
+$isMetaConnected = ($activeAccountsCount > 0);
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -57,8 +64,14 @@ try {
     <div class="sidebar-header">
       <div class="brand-icon-box" style="background: linear-gradient(135deg, #7c3aed, #4f46e5); color: #fff;">⚡</div>
       <div class="brand-text">
-        <h1 style="font-family: 'Syne', sans-serif; font-weight: 900; letter-spacing: -0.02em;">XINDRO Copilot</h1>
-        <div class="brand-tag">Multi-Brand & Agency AI OS</div>
+        <div style="display: flex; align-items: center; gap: 7px;">
+          <h1 style="font-family: 'Syne', sans-serif; font-weight: 900; letter-spacing: -0.02em; margin: 0; font-size: 1.15rem;">XINDRO Copilot</h1>
+          <span id="sidebar-connection-status-pill" class="connection-status-badge <?= $isMetaConnected ? 'on' : 'off' ?>" title="<?= $isMetaConnected ? ($activeAccountsCount . ' cuenta' . ($activeAccountsCount === 1 ? '' : 's') . ' vinculada' . ($activeAccountsCount === 1 ? '' : 's')) : 'Sin cuentas vinculadas' ?>">
+            <span class="status-dot"></span>
+            <span class="status-label"><?= $isMetaConnected ? 'ON' : 'OFF' ?></span>
+          </span>
+        </div>
+        <div class="brand-tag" style="margin-top: 2px;">Multi-Brand & Agency AI OS</div>
       </div>
       <button type="button" class="btn-close-sidebar-mobile" onclick="App.toggleMobileSidebar(false)">&times;</button>
     </div>
