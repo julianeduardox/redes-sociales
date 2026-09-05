@@ -113,10 +113,10 @@ $isMetaConnected = ($activeAccountsCount > 0);
     </div>
 
     <nav class="sidebar-nav">
-      <div class="nav-section-title">Comunidad & Inbox</div>
+      <div class="nav-section-title">Comunidad & Conversación</div>
       <button class="nav-btn active" data-tab="inbox">
         <span class="icon">📥</span>
-        <span>Inbox de Comentarios</span>
+        <span>Bandeja de Entrada</span>
         <span class="nav-badge" id="badge-count-inbox">0</span>
       </button>
 
@@ -128,7 +128,7 @@ $isMetaConnected = ($activeAccountsCount > 0);
 
       <button class="nav-btn" data-tab="leads">
         <span class="icon">🎯</span>
-        <span>Leads & Precios</span>
+        <span>Consultas de Compra (Leads)</span>
         <span class="nav-badge" id="badge-count-leads">0</span>
       </button>
 
@@ -143,20 +143,20 @@ $isMetaConnected = ($activeAccountsCount > 0);
         <span class="nav-badge" id="badge-count-spam" style="background: rgba(244,63,94,0.25); color: #fb7185;">0</span>
       </button>
 
-      <div class="nav-section-title" style="margin-top: 10px;">Inteligencia & Config</div>
+      <div class="nav-section-title" style="margin-top: 10px;">Configuración & Estrategia</div>
       <button class="nav-btn" data-tab="analytics">
         <span class="icon">📈</span>
-        <span>Métricas de Audiencia</span>
+        <span>Métricas & Horarios</span>
       </button>
 
       <button class="nav-btn" data-tab="settings">
-        <span class="icon">🤖</span>
-        <span>Voz de Marca & Prompt</span>
+        <span class="icon">🎭</span>
+        <span>Estilo de Respuesta</span>
       </button>
 
       <button class="nav-btn" data-tab="meta">
-        <span class="icon">⚙️</span>
-        <span>Meta Graph API</span>
+        <span class="icon">🔗</span>
+        <span>Conectar Redes</span>
       </button>
     </nav>
 
@@ -278,6 +278,43 @@ $isMetaConnected = ($activeAccountsCount > 0);
           </button>
         </div>
 
+        <!-- 3-Step Interactive Onboarding Wizard Banner -->
+        <div id="dashboard-onboarding-banner" class="dashboard-onboarding-card">
+          <div class="onboarding-card-header">
+            <div class="onboarding-card-title">
+              <span class="onboarding-badge">🚀 Guía Rápida</span>
+              <h4>Comienza en 3 pasos simples</h4>
+            </div>
+            <button type="button" class="btn-dismiss-onboarding" onclick="App.dismissOnboarding()" title="Ocultar guía">&times;</button>
+          </div>
+          <div class="onboarding-steps-grid">
+            <div class="onboarding-step-item <?= $isMetaConnected ? 'completed' : 'active' ?>" onclick="App.switchTab('meta')">
+              <div class="step-num"><?= $isMetaConnected ? '✔' : '1' ?></div>
+              <div class="step-content">
+                <div class="step-title">1. Conectar Redes</div>
+                <div class="step-desc">Vincula tu Instagram o Facebook oficial.</div>
+              </div>
+              <span class="step-action-arrow">↗</span>
+            </div>
+            <div class="onboarding-step-item <?= (!empty($userBrands) && count($userBrands) > 0) ? 'completed' : '' ?>" onclick="App.switchTab('settings')">
+              <div class="step-num"><?= (!empty($userBrands) && count($userBrands) > 0) ? '✔' : '2' ?></div>
+              <div class="step-content">
+                <div class="step-title">2. Estilo de Respuesta</div>
+                <div class="step-desc">Define el tono y la voz de tu marca.</div>
+              </div>
+              <span class="step-action-arrow">↗</span>
+            </div>
+            <div class="onboarding-step-item" onclick="AgentController.openAssistantModal()">
+              <div class="step-num">3</div>
+              <div class="step-content">
+                <div class="step-title">3. Probar Copiloto</div>
+                <div class="step-desc">Genera tu primera respuesta contextualizada.</div>
+              </div>
+              <span class="step-action-arrow">✨</span>
+            </div>
+          </div>
+        </div>
+
         <div class="feed-header">
           <div class="search-box">
             <span class="search-icon">🔍</span>
@@ -287,7 +324,7 @@ $isMetaConnected = ($activeAccountsCount > 0);
           <div class="filter-tags">
             <button class="filter-tag active" data-filter="all">Todos</button>
             <button class="filter-tag" data-filter="highlighted">⭐ Más Resaltantes</button>
-            <button class="filter-tag" data-filter="leads">🎯 Leads & Precios</button>
+            <button class="filter-tag" data-filter="leads">🎯 Consultas de Compra</button>
             <button class="filter-tag" data-filter="urgent">🛡️ Objeciones & Soporte</button>
             <button class="filter-tag" data-filter="pending">⏳ Pendientes</button>
             <button class="filter-tag" data-filter="replied">✅ Respondidos</button>
@@ -740,122 +777,137 @@ $isMetaConnected = ($activeAccountsCount > 0);
           </div>
         </div>
 
-        <!-- Meta App Credentials & Tokens Card -->
-        <div style="background: var(--bg-card); padding: 24px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 20px;">
-          <h4 style="font-size: 1rem; font-weight: 800; margin-bottom: 16px; color: var(--fb-blue);">🔑 Credenciales y Tokens de Meta</h4>
+        <!-- Advanced Developer Settings (Collapsible) -->
+        <details class="advanced-dev-details" style="background: var(--bg-card); border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 20px; overflow: hidden;">
+          <summary style="padding: 18px 24px; font-size: 0.95rem; font-weight: 800; color: var(--text-main); cursor: pointer; display: flex; align-items: center; justify-content: space-between; user-select: none;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span>🛠️</span>
+              <span>Configuración Avanzada / Desarrolladores (Webhooks, Tokens Manuales & App Review)</span>
+            </div>
+            <span style="font-size: 0.75rem; color: var(--text-dim); background: rgba(255,255,255,0.05); padding: 3px 8px; border-radius: 4px;">Opcional ▼</span>
+          </summary>
 
-          <form onsubmit="App.saveSettingsForm(event)" autocomplete="off">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
-              <div class="form-group">
-                <label>Meta App ID:</label>
-                <input type="text" id="setting-meta-app-id" autocomplete="off" spellcheck="false" placeholder="Ej: 102938475610293" />
+          <div style="padding: 0 24px 24px 24px; border-top: 1px solid var(--border-subtle);">
+            
+            <!-- Meta App Credentials & Tokens Card -->
+            <div style="margin-top: 20px; margin-bottom: 20px;">
+              <h4 style="font-size: 0.95rem; font-weight: 800; margin-bottom: 12px; color: var(--fb-blue);">🔑 Credenciales y Tokens Manuales de Meta</h4>
+
+              <form onsubmit="App.saveSettingsForm(event)" autocomplete="off">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                  <div class="form-group">
+                    <label>Meta App ID:</label>
+                    <input type="text" id="setting-meta-app-id" autocomplete="off" spellcheck="false" placeholder="Ej: 102938475610293" />
+                  </div>
+
+                  <div class="form-group">
+                    <label>Meta App Secret:</label>
+                    <input type="text" class="masked-key-input" id="setting-meta-app-secret" autocomplete="new-password" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="••••••••••••••••" />
+                  </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                  <div class="form-group">
+                    <label>Instagram Business Account ID:</label>
+                    <input type="text" id="setting-meta-ig-id" autocomplete="off" spellcheck="false" placeholder="Ej: 17841400000000000" />
+                  </div>
+
+                  <div class="form-group">
+                    <label>Meta Page Access Token (Manual / Override):</label>
+                    <input type="text" class="masked-key-input" id="setting-meta-token" autocomplete="new-password" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="EAA..." />
+                  </div>
+                </div>
+
+                <div style="display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap;">
+                  <button type="submit" class="btn-primary-action">
+                    Guardar Credenciales 💾
+                  </button>
+                  <button type="button" class="btn-primary-action" style="background: linear-gradient(135deg, #06b6d4, #0284c7);" onclick="App.testMetaConnection()">
+                    🔍 Diagnosticar Token & Permisos
+                  </button>
+                  <button type="button" class="btn-primary-action" style="background: linear-gradient(135deg, #10b981, #059669);" onclick="App.auditMetaAppReview()">
+                    🛡️ Pre-Auditoría App Review Meta
+                  </button>
+                  <button type="button" class="btn-primary-action" style="background: #1877f2;" onclick="App.triggerMetaSync()">
+                    🔄 Sincronizar en Vivo
+                  </button>
+                </div>
+              </form>
+
+              <!-- Live Diagnostics Report Box -->
+              <div id="meta-diagnostic-container" style="display: none; margin-top: 20px;">
+                <!-- Diagnostic results injected dynamically -->
               </div>
 
-              <div class="form-group">
-                <label>Meta App Secret:</label>
-                <input type="text" class="masked-key-input" id="setting-meta-app-secret" autocomplete="new-password" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="••••••••••••••••" />
+              <!-- Pre-Audit Scanner Report Box -->
+              <div id="meta-audit-container" style="display: none; margin-top: 20px;">
+                <!-- Pre-audit results injected dynamically -->
               </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
-              <div class="form-group">
-                <label>Instagram Business Account ID:</label>
-                <input type="text" id="setting-meta-ig-id" autocomplete="off" spellcheck="false" placeholder="Ej: 17841400000000000" />
+            <!-- Webhooks Box -->
+            <div style="background: rgba(0,0,0,0.2); padding: 18px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); margin-bottom: 20px;">
+              <h4 style="font-size: 0.95rem; font-weight: 800; margin-bottom: 10px;">📡 Webhook en Tiempo Real (Meta Developers)</h4>
+              <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px;">Para que el agente reciba y responda comentarios inmediatamente cuando se publican en tus posts:</p>
+
+              <div style="background: rgba(0,0,0,0.4); padding: 10px 14px; border-radius: var(--radius-sm); font-family: monospace; font-size: 0.82rem; color: #a5b4fc; margin-bottom: 8px;">
+                Callback URL: <strong>https://socialapi.turbogram.site/api/webhook.php</strong>
               </div>
-
-              <div class="form-group">
-                <label>Meta Page Access Token (Manual / Override):</label>
-                <input type="text" class="masked-key-input" id="setting-meta-token" autocomplete="new-password" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="EAA..." />
+              <div style="background: rgba(0,0,0,0.4); padding: 10px 14px; border-radius: var(--radius-sm); font-family: monospace; font-size: 0.82rem; color: #34d399;">
+                Verify Token: <strong>social_boost_secure_token_2026</strong>
               </div>
-            </div>
-
-            <div style="display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap;">
-              <button type="submit" class="btn-primary-action">
-                Guardar Credenciales 💾
-              </button>
-              <button type="button" class="btn-primary-action" style="background: linear-gradient(135deg, #06b6d4, #0284c7);" onclick="App.testMetaConnection()">
-                🔍 Diagnosticar Token & Permisos
-              </button>
-              <button type="button" class="btn-primary-action" style="background: linear-gradient(135deg, #10b981, #059669);" onclick="App.auditMetaAppReview()">
-                🛡️ Pre-Auditoría App Review Meta
-              </button>
-              <button type="button" class="btn-primary-action" style="background: #1877f2;" onclick="App.triggerMetaSync()">
-                🔄 Sincronizar en Vivo
-              </button>
-            </div>
-          </form>
-
-          <!-- Live Diagnostics Report Box -->
-          <div id="meta-diagnostic-container" style="display: none; margin-top: 20px;">
-            <!-- Diagnostic results injected dynamically -->
-          </div>
-
-          <!-- Pre-Audit Scanner Report Box -->
-          <div id="meta-audit-container" style="display: none; margin-top: 20px;">
-            <!-- Pre-audit results injected dynamically -->
-          </div>
-        </div>
-
-        <div style="background: var(--bg-card); padding: 24px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 20px;">
-          <h4 style="font-size: 1rem; font-weight: 800; margin-bottom: 12px;">📡 Webhook en Tiempo Real (Meta Developers)</h4>
-          <p style="font-size: 0.84rem; color: var(--text-muted); margin-bottom: 14px;">Para que el agente reciba y responda comentarios inmediatamente cuando se publican en tus posts:</p>
-
-          <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: var(--radius-sm); font-family: monospace; font-size: 0.85rem; color: #a5b4fc; margin-bottom: 8px;">
-            Callback URL: <strong>https://socialapi.turbogram.site/api/webhook.php</strong>
-          </div>
-          <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: var(--radius-sm); font-family: monospace; font-size: 0.85rem; color: #34d399;">
-            Verify Token: <strong>social_boost_secure_token_2026</strong>
-          </div>
-          <div style="margin-top: 10px; font-size: 0.78rem; color: var(--text-dim);">
-            Campos requeridos en la suscripción del Webhook: <code style="color: #f1f5f9;">feed</code> (Páginas de Facebook) y <code style="color: #f1f5f9;">comments</code>, <code style="color: #f1f5f9;">mentions</code> (Instagram Graph API).
-          </div>
-        </div>
-
-        <!-- Compliance & Security Guide -->
-        <div style="background: var(--bg-card); padding: 24px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 20px;">
-          <h4 style="font-size: 1rem; font-weight: 800; margin-bottom: 14px; color: var(--accent-cyan);">📋 URLs Oficiales para Registrar en tu Meta App Dashboard</h4>
-          <p style="font-size: 0.84rem; color: var(--text-muted); margin-bottom: 16px;">
-            Copia y pega estas URLs directamente en <strong>Meta for Developers &gt; Configuración básica de la App</strong> y en la sección de <strong>Revisión de la App (App Review)</strong>:
-          </p>
-
-          <div style="display: flex; flex-direction: column; gap: 10px;">
-            <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
-              <div style="font-size: 0.74rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; margin-bottom: 4px;">URL de la Política de Privacidad (Privacy Policy URL):</div>
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <code style="color: #a5b4fc; font-size: 0.85rem;">https://socialapi.turbogram.site/privacy-policy.php</code>
-                <a href="privacy-policy.php" target="_blank" class="btn-primary-action" style="padding: 4px 10px; font-size: 0.72rem; text-decoration: none;">Ver Página ↗️</a>
+              <div style="margin-top: 8px; font-size: 0.76rem; color: var(--text-dim);">
+                Campos requeridos en la suscripción del Webhook: <code style="color: #f1f5f9;">feed</code> (Páginas de Facebook) y <code style="color: #f1f5f9;">comments</code>, <code style="color: #f1f5f9;">mentions</code> (Instagram Graph API).
               </div>
             </div>
 
-            <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
-              <div style="font-size: 0.74rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; margin-bottom: 4px;">URL de las Condiciones del Servicio (Terms of Service URL):</div>
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <code style="color: #a5b4fc; font-size: 0.85rem;">https://socialapi.turbogram.site/terms-of-service.php</code>
-                <a href="terms-of-service.php" target="_blank" class="btn-primary-action" style="padding: 4px 10px; font-size: 0.72rem; text-decoration: none;">Ver Página ↗️</a>
+            <!-- Compliance & URLs -->
+            <div style="background: rgba(0,0,0,0.2); padding: 18px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); margin-bottom: 20px;">
+              <h4 style="font-size: 0.95rem; font-weight: 800; margin-bottom: 12px; color: var(--accent-cyan);">📋 URLs Oficiales para Meta App Dashboard</h4>
+              <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 14px;">
+                Copia y pega estas URLs directamente en <strong>Meta for Developers &gt; Configuración básica</strong>:
+              </p>
+
+              <div style="display: flex; flex-direction: column; gap: 8px;">
+                <div style="background: rgba(0,0,0,0.3); padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+                  <div style="font-size: 0.72rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; margin-bottom: 2px;">URL de Privacidad:</div>
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <code style="color: #a5b4fc; font-size: 0.82rem;">https://socialapi.turbogram.site/privacy-policy.php</code>
+                    <a href="privacy-policy.php" target="_blank" class="btn-primary-action" style="padding: 3px 8px; font-size: 0.7rem; text-decoration: none;">Ver ↗️</a>
+                  </div>
+                </div>
+
+                <div style="background: rgba(0,0,0,0.3); padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+                  <div style="font-size: 0.72rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; margin-bottom: 2px;">URL de Términos:</div>
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <code style="color: #a5b4fc; font-size: 0.82rem;">https://socialapi.turbogram.site/terms-of-service.php</code>
+                    <a href="terms-of-service.php" target="_blank" class="btn-primary-action" style="padding: 3px 8px; font-size: 0.7rem; text-decoration: none;">Ver ↗️</a>
+                  </div>
+                </div>
+
+                <div style="background: rgba(0,0,0,0.3); padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+                  <div style="font-size: 0.72rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; margin-bottom: 2px;">URL de Eliminación de Datos:</div>
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <code style="color: #38bdf8; font-size: 0.82rem;">https://socialapi.turbogram.site/data-deletion.php</code>
+                    <a href="data-deletion.php" target="_blank" class="btn-primary-action" style="padding: 3px 8px; font-size: 0.7rem; text-decoration: none;">Ver ↗️</a>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
-              <div style="font-size: 0.74rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; margin-bottom: 4px;">URL de Eliminación de Datos de Usuario (Data Deletion Instructions / Callback):</div>
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <code style="color: #38bdf8; font-size: 0.85rem;">https://socialapi.turbogram.site/data-deletion.php</code>
-                <a href="data-deletion.php" target="_blank" class="btn-primary-action" style="padding: 4px 10px; font-size: 0.72rem; text-decoration: none;">Ver Página ↗️</a>
-              </div>
-              <small style="font-size: 0.72rem; color: var(--text-dim); margin-top: 4px; display: block;">Callback API alternativo: <code>https://socialapi.turbogram.site/api/data-deletion.php</code></small>
+            <!-- Compliance Checklist -->
+            <div style="background: rgba(0,0,0,0.2); padding: 18px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+              <h4 style="font-size: 0.95rem; font-weight: 800; margin-bottom: 10px; color: var(--accent-emerald);">🛡️ Kit de Aprobación para Meta App Review</h4>
+              <ul style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.7; padding-left: 18px; margin: 0;">
+                <li><strong>Verificación de Negocio:</strong> En Meta Business Manager para solicitar permisos avanzados en App Review.</li>
+                <li><strong>Cuenta de Instagram Profesional:</strong> Tipo <em>Creador</em> o <em>Empresa</em> vinculada a una Página de Facebook.</li>
+                <li><strong>Protocolo HTTPS / SSL:</strong> Certificado SSL válido (TLS 1.2+).</li>
+                <li><strong>Kit de Textos de Justificación:</strong> En la carpeta <code>docs/meta-app-review-kit.md</code>.</li>
+              </ul>
             </div>
+
           </div>
-        </div>
-
-        <!-- Compliance & Security Guide -->
-        <div style="background: var(--bg-card); padding: 24px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
-          <h4 style="font-size: 1rem; font-weight: 800; margin-bottom: 12px; color: var(--accent-emerald);">🛡️ Kit de Aprobación para Meta App Review</h4>
-          <ul style="font-size: 0.84rem; color: var(--text-muted); line-height: 1.8; padding-left: 20px;">
-            <li><strong>Verificación de Negocio (Business Verification):</strong> En Meta Business Manager para solicitar permisos avanzados en App Review.</li>
-            <li><strong>Cuenta de Instagram Profesional:</strong> Debe ser tipo <em>Creador</em> o <em>Empresa</em> vinculada a una Página de Facebook.</li>
-            <li><strong>Protocolo HTTPS / SSL:</strong> La URL de tu Webhook y sitio web debe contar con un certificado SSL válido (TLS 1.2+).</li>
-            <li><strong>Kit de Textos de Justificación:</strong> En la carpeta <code>docs/meta-app-review-kit.md</code> encontrarás las justificaciones exactas en inglés y español para cada permiso solicitado y el guión de 3 minutos para el video demostrativo.</li>
-          </ul>
-        </div>
+        </details>
 
       </div>
     </div>

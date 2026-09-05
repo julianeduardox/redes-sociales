@@ -119,6 +119,7 @@ try {
             FROM comments
             WHERE user_id = :user_id
         ");
+        $countStmt->execute([':user_id' => $userId]);
         $counts = $countStmt->fetch() ?: [];
         $counts['total'] = (int)($counts['total'] ?? 0);
         $counts['highlighted_count'] = (int)($counts['highlighted_count'] ?? 0);

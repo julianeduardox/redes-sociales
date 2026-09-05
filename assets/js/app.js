@@ -65,6 +65,24 @@ const App = {
     try { await this.loadComments(); } catch (e) { console.error('loadComments error:', e); }
     this.renderTagChips();
     this.renderFewShotExamples();
+    this.checkOnboardingBanner();
+  },
+
+  dismissOnboarding() {
+    const banner = document.getElementById('dashboard-onboarding-banner');
+    if (banner) {
+      banner.style.display = 'none';
+      localStorage.setItem('xindro_onboarding_dismissed', '1');
+    }
+  },
+
+  checkOnboardingBanner() {
+    const banner = document.getElementById('dashboard-onboarding-banner');
+    if (!banner) return;
+    const dismissed = localStorage.getItem('xindro_onboarding_dismissed');
+    if (dismissed === '1') {
+      banner.style.display = 'none';
+    }
   },
 
   // Connected Accounts & Multi-Brand Voice Routing Manager

@@ -452,24 +452,24 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
 
       <!-- Main Headline (H1) -->
       <h1 class="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-midnight leading-[1.15] mb-5 sm:mb-6 max-w-4xl mx-auto">
-        <span data-i18n="hero_h1_p1">Automatiza tus redes sociales.</span> <br class="hidden sm:inline" />
-        <span class="gradient-text" data-i18n="hero_h1_p2">Escala tu comunidad sin perder el toque humano.</span>
+        <span data-i18n="hero_h1_p1">Convierte los comentarios de Instagram y Facebook</span> <br class="hidden sm:inline" />
+        <span class="gradient-text" data-i18n="hero_h1_p2">en conversaciones que hacen crecer tu negocio.</span>
       </h1>
 
       <!-- Subtitle (P) -->
-      <p data-i18n="hero_sub" class="text-sm sm:text-lg md:text-xl text-slate-600 max-w-2xl mx-auto mb-8 sm:mb-10 leading-relaxed font-normal">
-        Responde comentarios en piloto automático, analiza métricas de engagement para encontrar tu horario perfecto y escala tu presencia en Instagram y Facebook sin esfuerzo manual.
+      <p data-i18n="hero_sub" class="text-sm sm:text-lg md:text-xl text-slate-600 max-w-3xl mx-auto mb-8 sm:mb-10 leading-relaxed font-normal">
+        Reúne tus comentarios, identifica consultas de compra y prepara respuestas con el estilo de tu marca. Revisa las sugerencias antes de publicar y dedica más tiempo a crear y atender oportunidades.
       </p>
 
       <!-- CTAs Button Group with Shimmer Glow -->
       <div class="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 max-w-md mx-auto mb-12 sm:mb-16">
         <a href="#simulador" class="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-7 py-3.5 sm:px-8 sm:py-4 rounded-xl text-sm sm:text-base font-bold text-white gradient-button shadow-glow-md shimmer-btn">
-          <span data-i18n="hero_cta_sim">Prueba el Simulador</span>
+          <span data-i18n="hero_cta_sim">Probar una respuesta gratis</span>
           <span class="text-lg">✨</span>
         </a>
-        <a href="#calculadora-roi" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3.5 sm:px-8 sm:py-4 rounded-xl text-sm sm:text-base font-bold text-slate-700 bg-white border border-slate-200 hover:border-brand-300 hover:bg-slate-50 hover:text-brand-700 shadow-sm secondary-btn">
-          <span data-i18n="hero_cta_calc">Calcular Impacto ROI</span>
-          <span>📊</span>
+        <a href="#por-que-xindro" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3.5 sm:px-8 sm:py-4 rounded-xl text-sm sm:text-base font-bold text-slate-700 bg-white border border-slate-200 hover:border-brand-300 hover:bg-slate-50 hover:text-brand-700 shadow-sm secondary-btn">
+          <span data-i18n="hero_cta_calc">Ver cómo funciona</span>
+          <span>💡</span>
         </a>
       </div>
 
@@ -612,37 +612,37 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         
         <div class="p-2 sm:p-3 min-w-0">
           <div class="text-2xl sm:text-3xl md:text-4xl font-black text-midnight tracking-tight mb-1">
-            +500K<span class="text-brand-600">+</span>
+            +15 hrs<span class="text-brand-600">/mes</span>
           </div>
           <p data-i18n="stat_1" class="text-[10px] sm:text-xs md:text-sm font-semibold text-slate-500 uppercase tracking-wider leading-tight break-words">
-            Comentarios Respondidos
+            Tiempo Manual Ahorrado
           </p>
         </div>
 
         <div class="p-2 sm:p-3 min-w-0">
           <div class="text-2xl sm:text-3xl md:text-4xl font-black text-brand-600 tracking-tight mb-1">
-            3.4x
+            100%
           </div>
           <p data-i18n="stat_2" class="text-[10px] sm:text-xs md:text-sm font-semibold text-slate-500 uppercase tracking-wider leading-tight break-words">
-            Aumento en Engagement
+            Control y Aprobación Humana
           </p>
         </div>
 
         <div class="p-2 sm:p-3 min-w-0">
           <div class="text-2xl sm:text-3xl md:text-4xl font-black text-midnight tracking-tight mb-1">
-            99.8%
+            0 leads
           </div>
           <p data-i18n="stat_3" class="text-[10px] sm:text-xs md:text-sm font-semibold text-slate-500 uppercase tracking-wider leading-tight break-words">
-            Precisión de Voz Humana
+            Oportunidades de Compra Perdidas
           </p>
         </div>
 
         <div class="p-2 sm:p-3 min-w-0">
           <div class="text-2xl sm:text-3xl md:text-4xl font-black text-emerald-600 tracking-tight mb-1">
-            &lt; 180ms
+            &lt; 2.5 min
           </div>
           <p data-i18n="stat_4" class="text-[10px] sm:text-xs md:text-sm font-semibold text-slate-500 uppercase tracking-wider leading-tight break-words">
-            Latencia de API en Vivo
+            Tiempo Promedio de Respuesta
           </p>
         </div>
 
@@ -1025,7 +1025,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
   <!-- 9. PRECIOS & PLANES -->
   <!-- ========================================================================= -->
   <section id="precios" class="py-16 sm:py-24 bg-white border-b border-slate-100">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       
       <div class="text-center max-w-2xl mx-auto mb-12 sm:mb-16">
         <span data-i18n="price_badge" class="text-xs font-extrabold uppercase tracking-wider text-brand-600 bg-brand-50 px-3.5 py-1 rounded-full border border-brand-200">
@@ -1035,75 +1035,107 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           Comienza gratis y escala con tu comunidad.
         </h2>
         <p data-i18n="price_sub" class="text-xs sm:text-base text-slate-600 font-normal">
-          Sin contratos forzosos. Cancela en cualquier momento.
+          Sin contratos forzosos ni permanencia. Facturación clara en Euros. Cancela en cualquier momento.
         </p>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 items-stretch">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6 items-stretch">
         
-        <!-- Plan 1: Starter -->
-        <div class="rounded-2xl sm:rounded-3xl bg-slatecard border border-slate-200 p-6 sm:p-8 flex flex-col justify-between hover:shadow-subtle-card transition-all">
+        <!-- Plan 1: Inicial (Gratis) -->
+        <div class="rounded-2xl sm:rounded-3xl bg-slatecard border border-slate-200 p-5 sm:p-6 flex flex-col justify-between hover:shadow-subtle-card hover:border-slate-300 transition-all">
           <div>
-            <h3 data-i18n="plan1_t" class="text-base sm:text-lg font-bold text-midnight mb-1">Creador Starter</h3>
-            <p data-i18n="plan1_d" class="text-xs text-slate-500 mb-5 sm:mb-6">Para creadores que dan sus primeros pasos.</p>
-            <div class="flex items-baseline gap-1 mb-5 sm:mb-6">
-              <span class="text-3xl sm:text-4xl font-black text-midnight">$0</span>
+            <div class="text-xs font-extrabold text-slate-500 uppercase tracking-wider mb-1">Entrada</div>
+            <h3 data-i18n="plan1_t" class="text-base sm:text-lg font-bold text-midnight mb-1">Plan Inicial</h3>
+            <p data-i18n="plan1_d" class="text-xs text-slate-500 mb-5 leading-relaxed">Para probar el motor y dar los primeros pasos.</p>
+            <div class="flex items-baseline gap-1 mb-5">
+              <span class="text-3xl sm:text-4xl font-black text-midnight">0 €</span>
               <span data-i18n="plan1_p" class="text-xs text-slate-500 font-bold">/ mes gratis</span>
             </div>
-            <ul class="space-y-3 text-xs text-slate-600 font-medium mb-6 sm:mb-8">
-              <li class="flex items-center gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan1_f1">Hasta 1 cuenta de Instagram/Facebook</span></li>
-              <li class="flex items-center gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan1_f2">100 respuestas automáticas / mes</span></li>
-              <li class="flex items-center gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan1_f3">Asistente Copilot IA</span></li>
-              <li class="flex items-center gap-2 text-slate-400"><span class="text-slate-300">✖</span> <span data-i18n="plan1_f4">Acceso a API de desarrolladores</span></li>
+            <ul class="space-y-2.5 text-xs text-slate-600 font-medium mb-6">
+              <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan1_f1">1 cuenta conectada (IG o FB)</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan1_f2">50 respuestas / tokens al mes</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan1_f3">Asistente Copilot con revisión</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan1_f4">Infraestructura oficial de Meta</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan1_f5">Soporte estándar</span></li>
             </ul>
           </div>
-          <a href="login.php" data-i18n="plan1_btn" class="w-full py-3 rounded-full text-center text-xs sm:text-sm font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition-colors">
-            Crear Cuenta Gratis
+          <a href="login.php" data-i18n="plan1_btn" class="w-full py-2.5 sm:py-3 rounded-xl text-center text-xs sm:text-sm font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition-colors shadow-sm">
+            Comenzar Gratis
           </a>
         </div>
 
-        <!-- Plan 2: Pro Growth (Featured) -->
-        <div class="rounded-2xl sm:rounded-3xl bg-white border-2 border-brand-500 p-6 sm:p-8 flex flex-col justify-between shadow-glow-sm relative">
-          <div data-i18n="plan2_badge" class="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-brand-600 to-indigo-600 text-white text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider px-3.5 py-1 rounded-full shadow-sm">
-            Más Popular
-          </div>
+        <!-- Plan 2: Creador (Económico) -->
+        <div class="rounded-2xl sm:rounded-3xl bg-slatecard border border-slate-200 p-5 sm:p-6 flex flex-col justify-between hover:shadow-subtle-card hover:border-brand-300 transition-all">
           <div>
-            <h3 data-i18n="plan2_t" class="text-base sm:text-lg font-bold text-midnight mb-1">Creador Pro</h3>
-            <p data-i18n="plan2_d" class="text-xs text-slate-500 mb-5 sm:mb-6">Para marcas y creadores en rápido crecimiento.</p>
-            <div class="flex items-baseline gap-1 mb-5 sm:mb-6">
-              <span class="text-3xl sm:text-4xl font-black text-midnight">$29</span>
+            <div class="text-xs font-extrabold text-brand-600 uppercase tracking-wider mb-1">Económico</div>
+            <h3 data-i18n="plan2_t" class="text-base sm:text-lg font-bold text-midnight mb-1">Plan Creador</h3>
+            <p data-i18n="plan2_d" class="text-xs text-slate-500 mb-5 leading-relaxed">Para creadores individuales y marcas personales.</p>
+            <div class="flex items-baseline gap-1 mb-5">
+              <span class="text-3xl sm:text-4xl font-black text-midnight">9.99 €</span>
               <span data-i18n="plan2_p" class="text-xs text-slate-500 font-bold">/ mes</span>
             </div>
-            <ul class="space-y-3 text-xs text-slate-700 font-medium mb-6 sm:mb-8">
-              <li class="flex items-center gap-2"><span class="text-brand-600 font-bold">✔</span> <span data-i18n="plan2_f1">Cuentas ilimitadas de Meta</span></li>
-              <li class="flex items-center gap-2"><span class="text-brand-600 font-bold">✔</span> <span data-i18n="plan2_f2">Respuestas ilimitadas en Autopilot</span></li>
-              <li class="flex items-center gap-2"><span class="text-brand-600 font-bold">✔</span> <span data-i18n="plan2_f3">Calibrador de Voz de Marca personalizado</span></li>
-              <li class="flex items-center gap-2"><span class="text-brand-600 font-bold">✔</span> <span data-i18n="plan2_f4">Smart Timing & Analíticas de Engagement</span></li>
-              <li class="flex items-center gap-2"><span class="text-brand-600 font-bold">✔</span> <span data-i18n="plan2_f5">Soporte prioritario 24/7</span></li>
+            <ul class="space-y-2.5 text-xs text-slate-600 font-medium mb-6">
+              <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan2_f1">2 canales (Instagram y Facebook)</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan2_f2">500 respuestas / tokens al mes</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan2_f3">Automatización activa en canales clave</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan2_f4">Ventana de oro del algoritmo</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan2_f5">Configuración de tono base de IA</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan2_f6">Soporte prioritario por email</span></li>
             </ul>
           </div>
-          <a href="login.php" data-i18n="plan2_btn" class="w-full py-3.5 rounded-full text-center text-xs sm:text-sm font-bold text-white gradient-button shadow-glow-sm shimmer-btn">
+          <a href="login.php" data-i18n="plan2_btn" class="w-full py-2.5 sm:py-3 rounded-xl text-center text-xs sm:text-sm font-bold text-brand-700 bg-brand-50 border border-brand-200 hover:bg-brand-100 transition-colors shadow-sm">
+            Elegir Plan Creador
+          </a>
+        </div>
+
+        <!-- Plan 3: Pro / Negocio (⭐ Featured Anchor) -->
+        <div class="rounded-2xl sm:rounded-3xl bg-white border-2 border-brand-500 p-5 sm:p-6 flex flex-col justify-between shadow-glow-sm relative">
+          <div data-i18n="plan3_badge" class="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-brand-600 to-indigo-600 text-white text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider px-3 py-0.5 rounded-full shadow-sm whitespace-nowrap">
+            ⭐ Más Recomendado
+          </div>
+          <div>
+            <div class="text-xs font-extrabold text-brand-700 uppercase tracking-wider mb-1">Recomendado</div>
+            <h3 data-i18n="plan3_t" class="text-base sm:text-lg font-bold text-midnight mb-1">Pro / Negocio</h3>
+            <p data-i18n="plan3_d" class="text-xs text-slate-500 mb-5 leading-relaxed">Para negocios y creadores que monetizan.</p>
+            <div class="flex items-baseline gap-1 mb-5">
+              <span class="text-3xl sm:text-4xl font-black text-brand-600">20.99 €</span>
+              <span data-i18n="plan3_p" class="text-xs text-slate-500 font-bold">/ mes</span>
+            </div>
+            <ul class="space-y-2.5 text-xs text-slate-700 font-medium mb-6">
+              <li class="flex items-start gap-2"><span class="text-brand-600 font-bold">✔</span> <span data-i18n="plan3_f1">Hasta 5 cuentas conectadas</span></li>
+              <li class="flex items-start gap-2"><span class="text-brand-600 font-bold">✔</span> <span data-i18n="plan3_f2">2.500 respuestas / tokens al mes</span></li>
+              <li class="flex items-start gap-2"><span class="text-brand-600 font-bold">✔</span> <span data-i18n="plan3_f3">Detección avanzada de leads y compra</span></li>
+              <li class="flex items-start gap-2"><span class="text-brand-600 font-bold">✔</span> <span data-i18n="plan3_f4">Smart Timing para horarios óptimos</span></li>
+              <li class="flex items-start gap-2"><span class="text-brand-600 font-bold">✔</span> <span data-i18n="plan3_f5">Prioridad en latencia de API</span></li>
+              <li class="flex items-start gap-2"><span class="text-brand-600 font-bold">✔</span> <span data-i18n="plan3_f6">Calibrador de Voz de Marca multi-tono</span></li>
+              <li class="flex items-start gap-2"><span class="text-brand-600 font-bold">✔</span> <span data-i18n="plan3_f7">Soporte prioritario 24/7</span></li>
+            </ul>
+          </div>
+          <a href="login.php" data-i18n="plan3_btn" class="w-full py-2.5 sm:py-3 rounded-xl text-center text-xs sm:text-sm font-bold text-white gradient-button shadow-glow-sm shimmer-btn">
             Comenzar con Pro
           </a>
         </div>
 
-        <!-- Plan 3: API & Agencias -->
-        <div class="rounded-2xl sm:rounded-3xl bg-slatecard border border-slate-200 p-6 sm:p-8 flex flex-col justify-between hover:shadow-subtle-card transition-all">
+        <!-- Plan 4: Agencia -->
+        <div class="rounded-2xl sm:rounded-3xl bg-slatecard border border-slate-200 p-5 sm:p-6 flex flex-col justify-between hover:shadow-subtle-card hover:border-slate-300 transition-all">
           <div>
-            <h3 data-i18n="plan3_t" class="text-base sm:text-lg font-bold text-midnight mb-1">API & Agencias</h3>
-            <p data-i18n="plan3_d" class="text-xs text-slate-500 mb-5 sm:mb-6">Para desarrolladores y agencias de marketing.</p>
-            <div class="flex items-baseline gap-1 mb-5 sm:mb-6">
-              <span class="text-3xl sm:text-4xl font-black text-midnight">$79</span>
-              <span data-i18n="plan3_p" class="text-xs text-slate-500 font-bold">/ mes</span>
+            <div class="text-xs font-extrabold text-slate-500 uppercase tracking-wider mb-1">Escala</div>
+            <h3 data-i18n="plan4_t" class="text-base sm:text-lg font-bold text-midnight mb-1">Plan Agencia</h3>
+            <p data-i18n="plan4_d" class="text-xs text-slate-500 mb-5 leading-relaxed">Para agencias y gestión multi-cliente.</p>
+            <div class="flex items-baseline gap-1 mb-5">
+              <span class="text-3xl sm:text-4xl font-black text-midnight">79.99 €</span>
+              <span data-i18n="plan4_p" class="text-xs text-slate-500 font-bold">/ mes</span>
             </div>
-            <ul class="space-y-3 text-xs text-slate-600 font-medium mb-6 sm:mb-8">
-              <li class="flex items-center gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan3_f1">Acceso total a REST API & Webhooks</span></li>
-              <li class="flex items-center gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan3_f2">Gestión de hasta 25 clientes aislados</span></li>
-              <li class="flex items-center gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan3_f3">100,000 llamadas a API incluidas / mes</span></li>
-              <li class="flex items-center gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan3_f4">Marca blanca & Webhook dedicado</span></li>
+            <ul class="space-y-2.5 text-xs text-slate-600 font-medium mb-6">
+              <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan4_f1">Hasta 20 cuentas conectadas</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan4_f2">10.000 respuestas / tokens al mes</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan4_f3">Multi-cliente con voces independientes</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan4_f4">Aislamiento total de marcas y datos</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan4_f5">Máxima velocidad y exportación</span></li>
+              <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan4_f6">Acceso para equipos y soporte dedicado</span></li>
             </ul>
           </div>
-          <a href="login.php" data-i18n="plan3_btn" class="w-full py-3 rounded-full text-center text-xs sm:text-sm font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition-colors">
+          <a href="login.php" data-i18n="plan4_btn" class="w-full py-2.5 sm:py-3 rounded-xl text-center text-xs sm:text-sm font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition-colors shadow-sm">
             Acceso para Agencias
           </a>
         </div>
@@ -1443,14 +1475,6 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         const icon = document.getElementById('faq-icon-' + id);
         if (!ans) return;
 
-        const isHidden = ans.classList.contains('hidden');
-        for (let i = 1; i <= 4; i++) {
-          const a = document.getElementById('faq-ans-' + i);
-          const ic = document.getElementById('faq-icon-' + i);
-          if (a) a.classList.add('hidden');
-          if (ic) { ic.textContent = '+'; ic.style.transform = 'rotate(0deg)'; }
-        }
-
         if (isHidden) {
           ans.classList.remove('hidden');
           if (icon) { icon.textContent = '−'; icon.style.transform = 'rotate(180deg)'; }
@@ -1465,7 +1489,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
       dict: {
         es: {
           page_title: "XINDRO — El Sistema Operativo de IA para Creadores de Contenido",
-          page_desc: "Automatiza tus redes sociales. Responde comentarios en piloto automático, analiza métricas de engagement y publica en múltiples plataformas desde una sola API.",
+          page_desc: "Convierte los comentarios de Instagram y Facebook en conversaciones que hacen crecer tu negocio con IA contextualizada.",
           nav_products: "Productos",
           nav_why: "¿Por qué Xindro?",
           nav_simulator: "Simulador",
@@ -1476,10 +1500,11 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           nav_cta: "Comienza gratis",
           nav_dashboard: "Ir a mi Panel",
           hero_badge: "El sistema operativo de IA para creadores de contenido",
-          hero_h1_p1: "Automatiza tus redes sociales.",
-          hero_h1_p2: "Escala tu comunidad sin perder el toque humano.",
-          hero_sub: "Responde comentarios en piloto automático, analiza métricas de engagement para encontrar tu horario perfecto y publica en múltiples plataformas.",
-          hero_cta_sim: "Prueba el Simulador",
+          hero_h1_p1: "Convierte los comentarios de Instagram y Facebook",
+          hero_h1_p2: "en conversaciones que hacen crecer tu negocio.",
+          hero_sub: "Reúne tus comentarios, identifica consultas de compra y prepara respuestas con el estilo de tu marca. Revisa las sugerencias antes de publicar y dedica más tiempo a crear y atender oportunidades.",
+          hero_cta_sim: "Probar una respuesta gratis",
+          hero_cta_calc: "Ver cómo funciona",
           hero_card_title: "XINDRO Live Copilot — Flujo en Tiempo Real",
           hero_card_status: "Meta Webhook Activo",
           hero_card_time: "Instagram • Hace 2 seg",
@@ -1492,15 +1517,15 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           hero_comment_sample: "Llevo semanas intentando ser constante en mis redes pero me quedo sin ideas y pierdo motivación. ¿Cómo estructuran su rutina diaria?",
           hero_reply_sample: "Alejandro, la clave no es la motivación que va y viene, sino los sistemas. Bloquea 45 min cada mañana antes de revisar el móvil. La disciplina diaria supera a la inspiración esporádica. ¿Qué es lo primero que harás mañana al despertar? 👇",
           marquee_title: "Integrado con la Infraestructura Oficial de Redes Sociales e Inteligencia Artificial",
-          stat_1: "Comentarios Respondidos",
-          stat_2: "Aumento en Engagement",
-          stat_3: "Precisión de Voz Humana",
-          stat_4: "Latencia de Sistema en Vivo",
+          stat_1: "Tiempo Manual Ahorrado",
+          stat_2: "Control y Aprobación Humana",
+          stat_3: "Oportunidades de Compra Perdidas",
+          stat_4: "Tiempo Promedio de Respuesta",
           why_badge: "Diferenciales Reales",
           why_h2: "¿Por qué los creadores y agencias eligen Xindro?",
           why_sub: "Diseñado desde el código para responder en segundos, proteger tu reputación y maximizar el algoritmo sin sonar como un robot.",
           why_p1_t: "Respuestas en Tiempo Real (<180ms)",
-          why_p1_d: "El algoritmo de Meta premia a las cuentas que interactúan en los primeros 15 minutos. Nuestro motor heurístico responde casi al instante.",
+          why_p1_d: "El algoritmo de Meta premia a las cuentas que interactúan en los primeros 15 minutos. Nuestro motor responde casi al instante.",
           why_p1_tag: "✔ Cero demora de engagement",
           why_p2_t: "Voz de Marca Auténtica & Calibrada",
           why_p2_d: "Configura el nivel de calidez, profundidad y energía. Tus seguidores recibirán respuestas empáticas y humanas, nunca genéricas.",
@@ -1510,11 +1535,11 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           why_p3_tag: "✔ Seguridad y cumplimiento oficial",
           why_p4_t: "Smart Timing Basado en Datos",
           why_p4_d: "Analiza los patrones de actividad real de tu comunidad para decirte la hora exacta en la que obtendrás mayor alcance y guardados.",
-          why_p4_tag: "✔ +142% de alcance orgánico",
+          why_p4_tag: "✔ Horarios óptimos de publicación",
           why_p5_t: "Motor de Engagement Avanzado",
           why_p5_d: "Integra el motor de engagement en tus propios procesos de marketing con endpoints limpios y optimizados para alto rendimiento.",
           why_p5_tag: "✔ Flujo de trabajo optimizado",
-          why_p6_t: "Ahorra +35 Horas de Trabajo al Mes",
+          why_p6_t: "Ahorra +15 Horas de Trabajo al Mes",
           why_p6_d: "Elimina el trabajo repetitivo de responder dudas frecuentes y aprovecha ese tiempo para crear contenido que mueva tu negocio.",
           why_p6_tag: "✔ Enfoque 100% en crear",
           calc_badge: "Calculadora de Impacto",
@@ -1540,41 +1565,56 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           sim_opt_never: "Sin pregunta final",
           sim_lbl_comment: "Comentario de tu seguidor a simular:",
           sim_presets_title: "Rápidos:",
-          sim_preset_1: "💡 \"¿Precio del curso?\"",
-          sim_preset_2: "🔥 \"Gran reflexión\"",
+          sim_preset_1: "💡 \"¿El curso incluye clases grabadas?\"",
+          sim_preset_2: "🏛️ \"Dicotomía del control\"",
           sim_btn_gen: "Generar Respuesta con IA",
           sim_res_title: "Resultado Generado",
           sim_autopilot_ok: "✔ Apto para Autopilot en Instagram y Facebook",
           sim_btn_copy: "📋 Copiar",
           price_badge: "Planes Transparentes",
           price_h2: "Comienza gratis y escala con tu comunidad.",
-          price_sub: "Sin contratos forzosos. Cancela en cualquier momento.",
-          plan1_t: "Creador Starter",
-          plan1_d: "Para creadores que dan sus primeros pasos.",
+          price_sub: "Sin contratos forzosos ni permanencia. Facturación clara en Euros. Cancela en cualquier momento.",
+          plan1_t: "Plan Inicial",
+          plan1_d: "Para probar el motor y dar los primeros pasos.",
           plan1_p: "/ mes gratis",
-          plan1_f1: "Hasta 1 cuenta de Instagram/Facebook",
-          plan1_f2: "100 respuestas automáticas / mes",
-          plan1_f3: "Asistente Copilot IA",
-          plan1_f4: "Acceso al motor base",
-          plan1_btn: "Crear Cuenta Gratis",
-          plan2_badge: "Más Popular",
-          plan2_t: "Creador Pro",
-          plan2_d: "Para marcas y creadores en rápido crecimiento.",
+          plan1_f1: "1 cuenta conectada (IG o FB)",
+          plan1_f2: "50 respuestas / tokens al mes",
+          plan1_f3: "Asistente Copilot con revisión",
+          plan1_f4: "Infraestructura oficial de Meta",
+          plan1_f5: "Soporte estándar",
+          plan1_btn: "Comenzar Gratis",
+          plan2_t: "Plan Creador",
+          plan2_d: "Para creadores individuales y marcas personales.",
           plan2_p: "/ mes",
-          plan2_f1: "Cuentas ilimitadas de Meta",
-          plan2_f2: "Respuestas ilimitadas en Autopilot",
-          plan2_f3: "Calibrador de Voz de Marca personalizado",
-          plan2_f4: "Smart Timing & Analíticas de Engagement",
-          plan2_f5: "Soporte prioritario 24/7",
-          plan2_btn: "Comenzar con Pro",
-          plan3_t: "Agencias",
-          plan3_d: "Para equipos de marketing y gestión de marcas.",
+          plan2_f1: "2 canales (Instagram y Facebook)",
+          plan2_f2: "500 respuestas / tokens al mes",
+          plan2_f3: "Automatización activa en canales clave",
+          plan2_f4: "Ventana de oro del algoritmo",
+          plan2_f5: "Configuración de tono base de IA",
+          plan2_f6: "Soporte prioritario por email",
+          plan2_btn: "Elegir Plan Creador",
+          plan3_badge: "⭐ Más Recomendado",
+          plan3_t: "Pro / Negocio",
+          plan3_d: "Para negocios y creadores que monetizan.",
           plan3_p: "/ mes",
-          plan3_f1: "Gestión de cuentas centralizada",
-          plan3_f2: "Gestión de hasta 25 clientes aislados",
-          plan3_f3: "Respuestas automáticas ilimitadas",
-          plan3_f4: "Marca blanca & Soporte dedicado",
-          plan3_btn: "Acceso para Agencias",
+          plan3_f1: "Hasta 5 cuentas conectadas",
+          plan3_f2: "2.500 respuestas / tokens al mes",
+          plan3_f3: "Detección avanzada de leads y compra",
+          plan3_f4: "Smart Timing para horarios óptimos",
+          plan3_f5: "Prioridad en latencia de API",
+          plan3_f6: "Calibrador de Voz de Marca multi-tono",
+          plan3_f7: "Soporte prioritario 24/7",
+          plan3_btn: "Comenzar con Pro",
+          plan4_t: "Plan Agencia",
+          plan4_d: "Para agencias y gestión multi-cliente.",
+          plan4_p: "/ mes",
+          plan4_f1: "Hasta 20 cuentas conectadas",
+          plan4_f2: "10.000 respuestas / tokens al mes",
+          plan4_f3: "Multi-cliente con voces independientes",
+          plan4_f4: "Aislamiento total de marcas y datos",
+          plan4_f5: "Máxima velocidad y exportación",
+          plan4_f6: "Acceso para equipos y soporte dedicado",
+          plan4_btn: "Acceso para Agencias",
           faq_badge: "Respuestas Claras",
           faq_h2: "Preguntas Frecuentes",
           faq_sub: "Todo lo que necesitas saber antes de empezar a automatizar tu comunidad.",
@@ -1585,7 +1625,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           faq_q3: "¿Puedo conectar varias cuentas al mismo tiempo?",
           faq_a3: "Sí, puedes conectar y gestionar múltiples cuentas de Instagram y Páginas de Facebook de forma centralizada.",
           faq_q4: "¿Puedo empezar gratis sin ingresar tarjeta de crédito?",
-          faq_a4: "Sí. El plan Creador Starter es 100% gratuito e incluye hasta 100 respuestas al mes y el asistente Copilot para que puedas probar el impacto en tu comunidad antes de decidir actualizar.",
+          faq_a4: "Sí. El plan Inicial es 100% gratuito e incluye hasta 50 respuestas de prueba al mes y el asistente Copilot para que puedas probar el impacto en tu comunidad antes de decidir actualizar.",
           foot_brand_desc: "El sistema operativo de IA para creadores y agencias de redes sociales. Respuestas en tiempo real, Smart Timing y sincronización oficial.",
           foot_status_pill: "Meta API 100% Operativa",
           foot_c2_t: "Producto",
@@ -1621,7 +1661,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
 
         en: {
           page_title: "XINDRO — The AI Operating System for Content Creators",
-          page_desc: "Automate your social media. Reply to comments on autopilot, analyze engagement metrics to find your perfect posting time, and scale your presence across platforms.",
+          page_desc: "Turn Instagram and Facebook comments into conversations that grow your business with contextual AI.",
           nav_products: "Products",
           nav_why: "Why Xindro?",
           nav_simulator: "Simulator",
@@ -1632,10 +1672,11 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           nav_cta: "Get started free",
           nav_dashboard: "Go to Dashboard",
           hero_badge: "The AI operating system for content creators",
-          hero_h1_p1: "Automate your social media.",
-          hero_h1_p2: "Scale your community without losing the human touch.",
-          hero_sub: "Reply to comments on autopilot, analyze engagement metrics to find your perfect posting time, and publish across multiple platforms seamlessly.",
-          hero_cta_sim: "Try the Simulator",
+          hero_h1_p1: "Turn Instagram and Facebook comments",
+          hero_h1_p2: "into conversations that grow your business.",
+          hero_sub: "Consolidate your comments, identify purchase inquiries, and draft replies tailored to your brand voice. Review suggestions before publishing and spend more time creating and closing deals.",
+          hero_cta_sim: "Try a free AI reply",
+          hero_cta_calc: "See how it works",
           hero_card_title: "XINDRO Live Copilot — Real-Time Flow",
           hero_card_status: "Meta Webhook Active",
           hero_card_time: "Instagram • 2s ago",
@@ -1648,10 +1689,10 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           hero_comment_sample: "I've been trying to stay consistent on social media for weeks but I run out of ideas and lose motivation. How do you structure your daily routine?",
           hero_reply_sample: "Alejandro, the key isn't motivation that comes and goes, but systems. Block 45 min every morning before checking your phone. Daily discipline beats sporadic inspiration. What is the first thing you will do tomorrow when you wake up? 👇",
           marquee_title: "Integrated with Official Social Media & AI Infrastructure",
-          stat_1: "Comments Replied",
-          stat_2: "Increase in Engagement",
-          stat_3: "Human Voice Accuracy",
-          stat_4: "Live System Latency",
+          stat_1: "Manual Time Saved",
+          stat_2: "Human Review & Control",
+          stat_3: "Lost Purchase Opportunities",
+          stat_4: "Average Response Time",
           why_badge: "Real Differentials",
           why_h2: "Why do creators and agencies choose Xindro?",
           why_sub: "Architected from code to reply in seconds, protect your brand reputation, and win the algorithm without sounding robotic.",
@@ -1666,11 +1707,11 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           why_p3_tag: "✔ Enterprise compliance & security",
           why_p4_t: "Data-Driven Smart Timing",
           why_p4_d: "Analyzes actual audience activity to predict the exact second your post will receive peak reach and saves.",
-          why_p4_tag: "✔ +142% organic reach boost",
+          why_p4_tag: "✔ Optimal posting schedules",
           why_p5_t: "Advanced Engagement Engine",
           why_p5_d: "Embed the engagement engine into your own marketing workflows with clean, high-performance API endpoints.",
           why_p5_tag: "✔ Optimized workflows",
-          why_p6_t: "Save +35 Hours of Manual Work / Month",
+          why_p6_t: "Save +15 Hours of Manual Work / Month",
           why_p6_d: "Eliminate repetitive comment triage and spend your valuable energy on creating high-impact content.",
           why_p6_tag: "✔ 100% focus on creating",
           calc_badge: "Impact Calculator",
@@ -1696,7 +1737,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           sim_opt_never: "No closing question",
           sim_lbl_comment: "Follower comment to simulate:",
           sim_presets_title: "Quick presets:",
-          sim_preset_1: "💡 \"Recorded classes & access?\"",
+          sim_preset_1: "💡 \"Does the course include recorded classes?\"",
           sim_preset_2: "🏛️ \"Dichotomy of control\"",
           sim_btn_gen: "Generate AI Response",
           sim_res_title: "Result Generated",
@@ -1704,33 +1745,48 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           sim_btn_copy: "📋 Copy",
           price_badge: "Transparent Pricing",
           price_h2: "Start free and scale with your audience.",
-          price_sub: "No lock-in contracts. Cancel anytime.",
-          plan1_t: "Creator Starter",
-          plan1_d: "For creators taking their first steps.",
+          price_sub: "No lock-in contracts. Clear Euro billing. Cancel anytime.",
+          plan1_t: "Starter Plan",
+          plan1_d: "To test the engine and take the first steps.",
           plan1_p: "/ month free",
-          plan1_f1: "Up to 1 Instagram/Facebook account",
-          plan1_f2: "100 automated replies / month",
-          plan1_f3: "AI Copilot Assistant",
-          plan1_f4: "Base engine access",
-          plan1_btn: "Create Free Account",
-          plan2_badge: "Most Popular",
-          plan2_t: "Creator Pro",
-          plan2_d: "For rapidly growing creators and personal brands.",
+          plan1_f1: "1 connected account (IG or FB)",
+          plan1_f2: "50 replies / tokens per month",
+          plan1_f3: "Copilot assistant with human review",
+          plan1_f4: "Official Meta Graph infrastructure",
+          plan1_f5: "Standard support",
+          plan1_btn: "Start for Free",
+          plan2_t: "Creator Plan",
+          plan2_d: "For individual creators and personal brands.",
           plan2_p: "/ month",
-          plan2_f1: "Unlimited Meta accounts",
-          plan2_f2: "Unlimited Autopilot replies",
-          plan2_f3: "Custom Brand Voice Calibrator",
-          plan2_f4: "Smart Timing & Engagement Analytics",
-          plan2_f5: "24/7 Priority Support",
-          plan2_btn: "Get Started with Pro",
-          plan3_t: "Agencies",
-          plan3_d: "For content teams and marketing agencies.",
+          plan2_f1: "2 channels (Instagram and Facebook)",
+          plan2_f2: "500 replies / tokens per month",
+          plan2_f3: "Active automation on key channels",
+          plan2_f4: "Golden algorithm reply window",
+          plan2_f5: "Base AI tone configuration",
+          plan2_f6: "Priority email support",
+          plan2_btn: "Choose Creator Plan",
+          plan3_badge: "⭐ Most Popular",
+          plan3_t: "Pro / Business",
+          plan3_d: "For businesses and monetizing creators.",
           plan3_p: "/ month",
-          plan3_f1: "Centralized account management",
-          plan3_f2: "Manage up to 25 isolated client tenants",
-          plan3_f3: "Unlimited automated replies",
-          plan3_f4: "White-label & Dedicated support",
-          plan3_btn: "Agency Access",
+          plan3_f1: "Up to 5 connected accounts",
+          plan3_f2: "2,500 replies / tokens per month",
+          plan3_f3: "Advanced purchase & lead intent detection",
+          plan3_f4: "Smart Timing for peak reach hours",
+          plan3_f5: "Priority API response latency",
+          plan3_f6: "Multi-tone Brand Voice Calibrator",
+          plan3_f7: "24/7 Priority support",
+          plan3_btn: "Get Started with Pro",
+          plan4_t: "Agency Plan",
+          plan4_d: "For marketing agencies and multi-client scale.",
+          plan4_p: "/ month",
+          plan4_f1: "Up to 20 connected accounts",
+          plan4_f2: "10,000 replies / tokens per month",
+          plan4_f3: "Multi-client management & custom brand voices",
+          plan4_f4: "Strict tenant & brand database isolation",
+          plan4_f5: "Maximum speed & PDF/Excel reporting",
+          plan4_f6: "Team access & 24/7 dedicated support",
+          plan4_btn: "Agency Access",
           faq_badge: "Clear Answers",
           faq_h2: "Frequently Asked Questions",
           faq_sub: "Everything you need to know before automating your community.",
@@ -1741,7 +1797,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           faq_q3: "Can I connect multiple accounts simultaneously?",
           faq_a3: "Yes, you can manage multiple Instagram accounts and Facebook Pages from a single centralized dashboard.",
           faq_q4: "Can I start for free without a credit card?",
-          faq_a4: "Yes! The Creator Starter plan is 100% free with up to 100 automated replies per month and Copilot assistant included.",
+          faq_a4: "Yes! The Starter plan is 100% free with up to 50 trial replies per month and the Copilot assistant included so you can test the impact on your community.",
           foot_brand_desc: "The AI operating system for creators and social media agencies. Real-time replies, Smart Timing, and official synchronization.",
           foot_status_pill: "Meta API 100% Operational",
           foot_c2_t: "Product",
@@ -1777,7 +1833,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
 
         pt: {
           page_title: "XINDRO — O Sistema Operacional de IA para Criadores de Conteúdo",
-          page_desc: "Automatize suas redes sociais. Responda a comentários no piloto automático, analise métricas de engajamento para encontrar seu horário perfeito e escale sua presença.",
+          page_desc: "Converta comentários do Instagram e Facebook em conversas que fazem seu negócio crescer com IA contextualizada.",
           nav_products: "Produtos",
           nav_why: "Por que a Xindro?",
           nav_simulator: "Simulador",
@@ -1788,10 +1844,11 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           nav_cta: "Comece grátis",
           nav_dashboard: "Ir ao Painel",
           hero_badge: "O sistema operacional de IA para criadores de conteúdo",
-          hero_h1_p1: "Automatize suas redes sociais.",
-          hero_h1_p2: "Escale sua comunidade sem perder o toque humano.",
-          hero_sub: "Responda a comentários no piloto automático, analise métricas de engajamento para encontrar seu horário perfeito e publique em várias plataformas.",
-          hero_cta_sim: "Testar o Simulador",
+          hero_h1_p1: "Converta comentários do Instagram e Facebook",
+          hero_h1_p2: "em conversas que fazem seu negócio crescer.",
+          hero_sub: "Reúna seus comentários, identifique dúvidas de compra e prepare respostas no estilo da sua marca. Revise as sugestões antes de publicar e dedique mais tempo a criar e atender oportunidades.",
+          hero_cta_sim: "Testar uma resposta grátis",
+          hero_cta_calc: "Ver como funciona",
           hero_card_title: "XINDRO Live Copilot — Fluxo em Tempo Real",
           hero_card_status: "Meta Webhook Ativo",
           hero_card_time: "Instagram • Há 2 seg",
@@ -1804,10 +1861,10 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           hero_comment_sample: "Estou há semanas tentando ter consistência nas redes, mas fico sem ideias e perco a motivação. Como vocês estruturam a rotina diária?",
           hero_reply_sample: "Alejandro, o segredo não é a motivação que vai e vem, mas os sistemas. Bloqueie 45 min toda manhã antes de olhar o celular. A disciplina diária supera a inspiração passageira. Qual é a primeira coisa que você fará amanhã ao acordar? 👇",
           marquee_title: "Integrado com a Infraestrutura Oficial de Redes Sociais e Inteligência Artificial",
-          stat_1: "Comentários Respondidos",
-          stat_2: "Aumento no Engajamento",
-          stat_3: "Precisão de Voz Humana",
-          stat_4: "Latência de Sistema em Vivo",
+          stat_1: "Tempo Manual Economizado",
+          stat_2: "Controle e Aprovação Humana",
+          stat_3: "Oportunidades de Venda Perdidas",
+          stat_4: "Tempo Médio de Resposta",
           why_badge: "Diferenciais Reais",
           why_h2: "Por que criadores e agências escolhem a Xindro?",
           why_sub: "Projetado desde o código para responder em segundos, proteger sua marca e vencer o algoritmo sem soar artificial.",
@@ -1822,11 +1879,11 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           why_p3_tag: "✔ Segurança e conformidade oficial",
           why_p4_t: "Smart Timing Baseado em Dados",
           why_p4_d: "Analisa a atividade real da sua comunidade para indicar o segundo exato de postagem com maior alcance.",
-          why_p4_tag: "✔ +142% de alcance orgánico",
+          why_p4_tag: "✔ Horários ideais de postagem",
           why_p5_t: "Motor de Engagement Avançado",
           why_p5_d: "Integre o motor de engajamento em seus próprios fluxos de marketing com endpoints simples e de alto desempenho.",
           why_p5_tag: "✔ Fluxos de trabalho otimizados",
-          why_p6_t: "Economize +35 Horas de Trabalho por Mês",
+          why_p6_t: "Economize +15 Horas de Trabalho por Mês",
           why_p6_d: "Elimine o trabalho repetitivo de responder dúvidas frequentes e foque em criar conteúdo de alto impacto.",
           why_p6_tag: "✔ 100% de foco na criação",
           calc_badge: "Calculadora de Impacto",
@@ -1850,9 +1907,9 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           sim_opt_always: "Sempre incluir pergunta",
           sim_opt_rel: "Apenas quando relevante",
           sim_opt_never: "Sem pergunta final",
-          sim_lbl_comment: "Comentário do seguidor para simular:",
+          sim_lbl_comment: "Comentario do seguidor para simular:",
           sim_presets_title: "Rápidos:",
-          sim_preset_1: "💡 \"Aulas gravadas e acesso?\"",
+          sim_preset_1: "💡 \"O curso inclui aulas gravadas?\"",
           sim_preset_2: "🏛️ \"Dicotomia do controle\"",
           sim_btn_gen: "Gerar Resposta com IA",
           sim_res_title: "Resultado Gerado",
@@ -1860,33 +1917,48 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           sim_btn_copy: "📋 Copiar",
           price_badge: "Planos Transparentes",
           price_h2: "Comece grátis e escale com sua comunidade.",
-          price_sub: "Sem contratos obrigatórios. Cancele quando quiser.",
-          plan1_t: "Criador Starter",
-          plan1_d: "Para criadores dando os primeiros passos.",
+          price_sub: "Sem contratos obrigatórios. Faturamento claro em Euros. Cancele quando quiser.",
+          plan1_t: "Plano Inicial",
+          plan1_d: "Para testar o motor e dar os primeiros passos.",
           plan1_p: "/ mês grátis",
-          plan1_f1: "Até 1 conta do Instagram/Facebook",
-          plan1_f2: "100 respostas automáticas / mês",
-          plan1_f3: "Assistente Copilot IA",
-          plan1_f4: "Acesso ao motor base",
-          plan1_btn: "Criar Conta Grátis",
-          plan2_badge: "Mais Popular",
-          plan2_t: "Criador Pro",
-          plan2_d: "Para marcas e criadores em rápido crescimento.",
+          plan1_f1: "1 conta conectada (IG ou FB)",
+          plan1_f2: "50 respostas / tokens por mês",
+          plan1_f3: "Assistente Copilot com revisão",
+          plan1_f4: "Infraestrutura oficial da Meta",
+          plan1_f5: "Suporte padrão",
+          plan1_btn: "Começar Grátis",
+          plan2_t: "Plano Criador",
+          plan2_d: "Para criadores individuais e marcas pessoais.",
           plan2_p: "/ mês",
-          plan2_f1: "Contas ilimitadas da Meta",
-          plan2_f2: "Respostas ilimitadas no Autopilot",
-          plan2_f3: "Calibrador de Tom de Marca personalizado",
-          plan2_f4: "Smart Timing & Métricas de Engajamento",
-          plan2_f5: "Suporte prioritário 24/7",
-          plan2_btn: "Começar com Pro",
-          plan3_t: "Agências",
-          plan3_d: "Para equipes de marketing e gestão de marcas.",
+          plan2_f1: "2 canais (Instagram e Facebook)",
+          plan2_f2: "500 respostas / tokens por mês",
+          plan2_f3: "Automação ativa nos canais principais",
+          plan2_f4: "Janela de ouro do algoritmo",
+          plan2_f5: "Configuração de tom base de IA",
+          plan2_f6: "Suporte prioritário por email",
+          plan2_btn: "Escolher Plano Criador",
+          plan3_badge: "⭐ Mais Recomendado",
+          plan3_t: "Pro / Negócio",
+          plan3_d: "Para negócios e criadores que monetizam.",
           plan3_p: "/ mês",
-          plan3_f1: "Gerenciamento centralizado de contas",
-          plan3_f2: "Gerenciamento de até 25 clientes isolados",
-          plan3_f3: "Respostas automáticas ilimitadas",
-          plan3_f4: "Marca branca & Suporte dedicado",
-          plan3_btn: "Acesso para Agências",
+          plan3_f1: "Até 5 contas conectadas",
+          plan3_f2: "2.500 respostas / tokens por mês",
+          plan3_f3: "Detecção avançada de leads e compras",
+          plan3_f4: "Smart Timing para horários ideais",
+          plan3_f5: "Prioridade em latência de API",
+          plan3_f6: "Calibrador de Tom de Marca multi-tom",
+          plan3_f7: "Suporte prioritário 24/7",
+          plan3_btn: "Começar com Pro",
+          plan4_t: "Plano Agência",
+          plan4_d: "Para agências e gestão multi-cliente.",
+          plan4_p: "/ mês",
+          plan4_f1: "Até 20 contas conectadas",
+          plan4_f2: "10.000 respostas / tokens por mês",
+          plan4_f3: "Multi-cliente com vozes de marca independentes",
+          plan4_f4: "Isolamento total de marcas e dados",
+          plan4_f5: "Velocidade máxima e exportação de relatórios",
+          plan4_f6: "Acesso para equipes e suporte dedicado",
+          plan4_btn: "Acesso para Agências",
           faq_badge: "Respostas Claras",
           faq_h2: "Perguntas Frequentes",
           faq_sub: "Tudo o que você precisa saber antes de automatizar sua comunidade.",
@@ -1897,7 +1969,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           faq_q3: "Posso conectar várias contas ao mesmo tempo?",
           faq_a3: "Sim, você pode conectar e gerenciar várias contas do Instagram e Páginas do Facebook de forma centralizada.",
           faq_q4: "Posso começar grátis sem cartão de crédito?",
-          faq_a4: "Sim! O plano Criador Starter é 100% gratuito com até 100 respostas automáticas por mês e assistente Copilot incluído.",
+          faq_a4: "Sim! O plano Inicial é 100% gratuito com até 50 respostas de teste por mês e o assistente Copilot incluído para você testar o impacto na sua comunidade.",
           foot_brand_desc: "O sistema operacional de IA para criadores e agências de redes sociais. Respostas em tempo real, Smart Timing e sincronização oficial.",
           foot_status_pill: "Meta API 100% Operacional",
           foot_c2_t: "Produto",
@@ -1927,7 +1999,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           cookie_cat2_t: "Cookies de Desempenho & Análise",
           cookie_cat2_d: "Permitem medir a velocidade de resposta da IA e otimizar a experiência dos criadores.",
           cookie_cat3_t: "Cookies de Personalização & Idioma",
-          cookie_cat3_d: "Lembram suas preferências de idioma (Espanhol, Inglês, Português), tom padrão e configurações do simulador.",
+          cookie_cat3_d: "Lembram suas preferências de idioma (Espanhol, Inglés, Português), tom padrão e configurações do simulador.",
           modal_pref_save: "Salvar Minhas Preferências"
         }
       },
