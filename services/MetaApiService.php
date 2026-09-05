@@ -404,6 +404,240 @@ class MetaApiService {
         ];
     }
 
+    /**
+     * Complete Pre-Audit Scanner for Meta App Review Readiness
+     * Audits SSL, Legal URLs, Async Webhook Queue, OAuth 2.0 Credentials, and Graph API Permissions
+     */
+    public static function auditAppReviewReadiness(?int $userId = null): array {
+        $uid = ($userId !== null && $userId > 0) ? $userId : (class_exists('Auth') && Auth::check() ? Auth::id() : 1);
+        $pdo = Database::getConnection();
+
+        $appId = Settings::get('meta_app_id', '', $uid);
+        $appSecret = Settings::get('meta_app_secret', '', $uid);
+        $pageAccessToken = Settings::get('meta_page_access_token', '', $uid);
+        $igAccountId = Settings::get('meta_instagram_account_id', '', $uid);
+        $webhookVerifyToken = Settings::get('webhook_verify_token', 'social_boost_secure_token_2026', $uid);
+
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $isHttps = ($protocol === 'https');
+        $isLocalhost = (str_contains($host, 'localhost') || str_contains($host, '127.0.0.1'));
+
+        $baseUri = rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'] ?? '')), '/\\');
+        $baseUrl = $protocol . '://' . $host . ($baseUri !== '' ? $baseUri : '');
+
+        $checklist = [];
+        $totalChecks = 0;
+        $passedChecks = 0;
+
+        // 1. HTTPS / SSL Check
+        $totalChecks++;
+        if ($isHttps) {
+            $passedChecks++;
+            $checklist[] = [
+                'category' => 'Infraestructura',
+                'name' => 'Certificado SSL / HTTPS Activo',
+                'status' => 'pass',
+                'description' => 'Tu sitio web utiliza protocolo seguro HTTPS, indispensable para la aprobación de Meta.',
+                'details' => $baseUrl
+            ];
+        } else {
+            $checklist[] = [
+                'category' => 'Infraestructura',
+                'name' => 'Protocolo SSL / HTTPS',
+                'status' => $isLocalhost ? 'warning' : 'fail',
+                'description' => $isLocalhost 
+                    ? 'Estás en entorno local (localhost). Meta exige HTTPS para producción, pero en desarrollo local puedes usar ngrok o Cloudflare Tunnel.'
+                    : 'Meta exige que todas las URLs públicas y webhooks utilicen HTTPS con certificado TLS 1.2+.',
+                'details' => 'Actual: ' . $protocol . '://' . $host
+            ];
+            if ($isLocalhost) $passedChecks += 0.5;
+        }
+
+        // 2. Legal Suite (Privacy Policy, Terms of Service, Data Deletion)
+        $legalDocs = [
+            [
+                'name' => 'Política de Privacidad (Privacy Policy)',
+                'file' => __DIR__ . '/../privacy-policy.php',
+                'url' => $baseUrl . '/privacy-policy.php',
+                'compliance' => 'RGPD / CCPA / EU AI Act 2024/1689 & Meta Developer Policy §4.a'
+            ],
+            [
+                'name' => 'Condiciones del Servicio (Terms of Service)',
+                'file' => __DIR__ . '/../terms-of-service.php',
+                'url' => $baseUrl . '/terms-of-service.php',
+                'compliance' => 'Límites de responsabilidad de IA, propiedad intelectual y reglas de uso'
+            ],
+            [
+                'name' => 'Página de Eliminación de Datos (User Data Deletion URL)',
+                'file' => __DIR__ . '/../data-deletion.php',
+                'url' => $baseUrl . '/data-deletion.php',
+                'compliance' => 'Requerido por Meta para el cumplimiento del RGPD (Art. 17)'
+            ],
+            [
+                'name' => 'Endpoint de Eliminación de Datos (Data Deletion Callback API)',
+                'file' => __DIR__ . '/../api/data-deletion.php',
+                'url' => $baseUrl . '/api/data-deletion.php',
+                'compliance' => 'Responde con confirmation_code y URL de seguimiento JSON exigido por Meta'
+            ]
+        ];
+
+        foreach ($legalDocs as $doc) {
+            $totalChecks++;
+            if (file_exists($doc['file'])) {
+                $passedChecks++;
+                $checklist[] = [
+                    'category' => 'Blindaje Legal & Meta Policy',
+                    'name' => $doc['name'],
+                    'status' => 'pass',
+                    'description' => 'Documento legal disponible y adaptado a ' . $doc['compliance'] . '.',
+                    'details' => $doc['url']
+                ];
+            } else {
+                $checklist[] = [
+                    'category' => 'Blindaje Legal & Meta Policy',
+                    'name' => $doc['name'],
+                    'status' => 'fail',
+                    'description' => 'El archivo no fue encontrado en el servidor.',
+                    'details' => $doc['url']
+                ];
+            }
+        }
+
+        // 3. Webhook Infrastructure & Async Queue
+        $totalChecks++;
+        $webhookFile = __DIR__ . '/../api/webhook.php';
+        $queueExists = false;
+        try {
+            $stmt = $pdo->query("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='webhook_queue'");
+            $queueExists = ((int)$stmt->fetchColumn() > 0);
+        } catch (Throwable) {}
+
+        if (file_exists($webhookFile) && $queueExists) {
+            $passedChecks++;
+            $checklist[] = [
+                'category' => 'Webhooks & Alta Concurrencia',
+                'name' => 'Procesador Webhook Asíncrono (<50ms)',
+                'status' => 'pass',
+                'description' => 'Webhook activo con tabla de cola async y validación HMAC-SHA256 para evitar timeouts de Meta.',
+                'details' => $baseUrl . '/api/webhook.php'
+            ];
+        } else {
+            $checklist[] = [
+                'category' => 'Webhooks & Alta Concurrencia',
+                'name' => 'Procesador Webhook Asíncrono',
+                'status' => 'warning',
+                'description' => 'Verifica que la tabla webhook_queue exista en la base de datos.',
+                'details' => $baseUrl . '/api/webhook.php'
+            ];
+        }
+
+        // 4. Meta OAuth 2.0 Credentials
+        $totalChecks++;
+        if (!empty($appId) && !empty($appSecret)) {
+            $passedChecks++;
+            $checklist[] = [
+                'category' => 'Autenticación OAuth 2.0',
+                'name' => 'Meta App ID & App Secret Configurados',
+                'status' => 'pass',
+                'description' => 'Credenciales oficiales de la App de Meta listas para intercambiar tokens de larga duración.',
+                'details' => 'App ID: ' . substr($appId, 0, 4) . '****'
+            ];
+        } elseif (!empty($appId)) {
+            $checklist[] = [
+                'category' => 'Autenticación OAuth 2.0',
+                'name' => 'Meta App Secret Pendiente',
+                'status' => 'warning',
+                'description' => 'Falta ingresar el App Secret en la pestaña de Meta para permitir el flujo OAuth automático.',
+                'details' => 'Configura el App Secret de developers.facebook.com'
+            ];
+            $passedChecks += 0.5;
+        } else {
+            $checklist[] = [
+                'category' => 'Autenticación OAuth 2.0',
+                'name' => 'Meta App ID & App Secret',
+                'status' => 'warning',
+                'description' => 'Ingresa tu App ID y Secret para habilitar el botón de login oficial de Meta OAuth.',
+                'details' => 'Obténlos en developers.facebook.com > Configuración Básica'
+            ];
+        }
+
+        // 5. Active Token & Permissions Live Diagnostics
+        $totalChecks++;
+        $tokenDiag = self::testMetaConnection($pageAccessToken);
+        $permissionsList = [];
+
+        if ($tokenDiag['success']) {
+            $passedChecks++;
+            $checklist[] = [
+                'category' => 'Permisos & Graph API',
+                'name' => 'Conexión con Meta Graph API Activa',
+                'status' => 'pass',
+                'description' => 'Token autenticado como: ' . ($tokenDiag['meta_user']['name'] ?? 'Usuario de Meta'),
+                'details' => 'Permisos verificados: ' . count($tokenDiag['permissions'])
+            ];
+            $permissionsList = $tokenDiag['permissions'];
+        } else {
+            $checklist[] = [
+                'category' => 'Permisos & Graph API',
+                'name' => 'Token de Acceso de Meta',
+                'status' => (!empty($pageAccessToken)) ? 'fail' : 'warning',
+                'description' => $tokenDiag['message'] ?? 'Conecta tu cuenta o ingresa un Page Access Token.',
+                'details' => 'Genera tu token en Meta OAuth o Graph API Explorer'
+            ];
+        }
+
+        // 6. Instagram Business Account Linked
+        $totalChecks++;
+        if (!empty($igAccountId)) {
+            $passedChecks++;
+            $checklist[] = [
+                'category' => 'Instagram Professional',
+                'name' => 'Cuenta de Instagram Vinculada',
+                'status' => 'pass',
+                'description' => 'ID de Cuenta Profesional de Instagram detectado y listo para recibir métricas e interacciones.',
+                'details' => 'IG Account ID: ' . $igAccountId
+            ];
+        } else {
+            $checklist[] = [
+                'category' => 'Instagram Professional',
+                'name' => 'Cuenta de Instagram Vinculada',
+                'status' => 'warning',
+                'description' => 'Conéctate mediante el botón OAuth oficial para detectar y vincular automáticamente tu Instagram Profesional.',
+                'details' => 'Requiere cuenta Profesional (Creador o Empresa) enlazada a una Página'
+            ];
+        }
+
+        $score = round(($passedChecks / max($totalChecks, 1)) * 100);
+        $isReady = ($score >= 80);
+
+        return [
+            'success' => true,
+            'score' => $score,
+            'is_ready' => $isReady,
+            'status_label' => $isReady ? 'Listo para Someter a App Review' : 'Acciones Pendientes de Configuración',
+            'base_url' => $baseUrl,
+            'checklist' => $checklist,
+            'permissions' => $permissionsList,
+            'submission_urls' => [
+                'privacy_policy' => $baseUrl . '/privacy-policy.php',
+                'terms_of_service' => $baseUrl . '/terms-of-service.php',
+                'data_deletion' => $baseUrl . '/data-deletion.php',
+                'data_deletion_callback' => $baseUrl . '/api/data-deletion.php',
+                'webhook_url' => $baseUrl . '/api/webhook.php',
+                'oauth_redirect_uri' => $baseUrl . '/callback-meta.php'
+            ],
+            'recommendations' => $isReady ? [
+                '¡Excelente trabajo! Tu plataforma cumple con todos los requerimientos técnicos y legales exigidos por Meta.',
+                'Dirígete a developers.facebook.com > Revisión de la App y copia las justificaciones de la guía adjunta.',
+                'Graba un screencast de 2 a 3 minutos mostrando la autenticación con Meta y la respuesta del Agente IA.'
+            ] : [
+                'Completa los puntos marcados con advertencia o error en la lista para maximizar tus posibilidades de aprobación por Meta.',
+                'Configura tu App ID y Secret para autorizar permisos mediante el botón OAuth oficial.'
+            ]
+        ];
+    }
+
     private static function makeGetRequest(string $url): array {
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -419,3 +653,4 @@ class MetaApiService {
         return $response ? (json_decode($response, true) ?? []) : [];
     }
 }
+

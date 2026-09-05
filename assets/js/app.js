@@ -817,6 +817,7 @@ const App = {
 
         // Meta Inputs
         this.setInputValue('setting-meta-app-id', d.meta_app_id);
+        this.setInputValue('setting-meta-app-secret', d.meta_app_secret_masked);
         this.setInputValue('setting-meta-ig-id', d.meta_instagram_account_id);
         this.setInputValue('setting-meta-token', d.meta_page_access_token_masked);
       }
@@ -1141,6 +1142,7 @@ const App = {
     if (e) e.preventDefault();
     const payload = {
       meta_app_id: document.getElementById('setting-meta-app-id')?.value,
+      meta_app_secret: document.getElementById('setting-meta-app-secret')?.value,
       meta_instagram_account_id: document.getElementById('setting-meta-ig-id')?.value,
       meta_page_access_token: document.getElementById('setting-meta-token')?.value
     };
@@ -1290,6 +1292,151 @@ const App = {
             <div>
               <h4 style="font-size: 1.05rem; font-weight: 800; color: #fff;">Error de Conexión</h4>
               <p style="font-size: 0.82rem; color: var(--text-muted);">No se pudo establecer comunicación con el servidor para diagnosticar Meta.</p>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+  },
+
+  // Pre-Audit Scanner for Meta App Review Readiness
+  async auditMetaAppReview() {
+    const auditContainer = document.getElementById('meta-audit-container');
+    if (!auditContainer) return;
+
+    auditContainer.style.display = 'block';
+    auditContainer.innerHTML = `
+      <div class="meta-diagnostic-card" style="text-align: center; padding: 28px;">
+        <div style="display: inline-block; width: 32px; height: 32px; border: 3px solid rgba(16,185,129,0.3); border-top-color: #10b981; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 12px;"></div>
+        <div style="font-size: 0.95rem; font-weight: 700; color: #fff;">Ejecutando Pre-Auditoría para Meta App Review...</div>
+        <p style="font-size: 0.8rem; color: var(--text-dim); margin-top: 4px;">Comprobando SSL, Términos y Privacidad, eliminación de datos, cola asíncrona de webhooks y permisos.</p>
+      </div>
+    `;
+
+    try {
+      const response = await this.fetchWithCsrf('api/settings.php', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'audit_meta' })
+      });
+
+      const res = await response.json();
+
+      let scoreColor = '#10b981';
+      if (res.score < 50) scoreColor = '#ef4444';
+      else if (res.score < 80) scoreColor = '#f59e0b';
+
+      auditContainer.innerHTML = `
+        <div class="meta-diagnostic-card" style="border-color: rgba(16, 185, 129, 0.3);">
+          <!-- Top Score Banner -->
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-bottom: 18px; padding-bottom: 16px; border-bottom: 1px solid var(--border-subtle);">
+            <div>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 1.4rem;">🛡️</span>
+                <div>
+                  <h4 style="font-size: 1.1rem; font-weight: 800; color: #fff; margin: 0;">Resultado de Auditoría Pre-App Review</h4>
+                  <p style="font-size: 0.8rem; color: var(--text-muted); margin: 2px 0 0;">${this.escapeHtml(res.status_label || '')}</p>
+                </div>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="text-align: right;">
+                <div style="font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700;">Cumplimiento Meta</div>
+                <div style="font-size: 1.4rem; font-weight: 900; color: ${scoreColor};">${res.score || 0}%</div>
+              </div>
+              <div style="width: 54px; height: 54px; border-radius: 50%; background: conic-gradient(${scoreColor} ${(res.score || 0) * 3.6}deg, rgba(255,255,255,0.08) 0deg); display: flex; align-items: center; justify-content: center;">
+                <div style="width: 44px; height: 44px; border-radius: 50%; background: #111827; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 800; color: #fff;">
+                  ${res.score || 0}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Checklist Grid -->
+          <div style="font-size: 0.84rem; font-weight: 700; color: #fff; margin-bottom: 10px;">📋 Requisitos Técnicos y Políticas Auditados:</div>
+          <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px;">
+            ${(res.checklist || []).map(item => {
+              let badgeColor = 'rgba(16, 185, 129, 0.15)';
+              let badgeText = '#34d399';
+              let icon = '✓';
+              if (item.status === 'fail') {
+                badgeColor = 'rgba(239, 68, 68, 0.15)';
+                badgeText = '#f87171';
+                icon = '✕';
+              } else if (item.status === 'warning') {
+                badgeColor = 'rgba(245, 158, 11, 0.15)';
+                badgeText = '#fbbf24';
+                icon = '⚠️';
+              }
+              return `
+                <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 12px 14px; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
+                  <div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                      <span style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: var(--accent-cyan); background: rgba(6,182,212,0.1); padding: 2px 6px; border-radius: 4px;">${this.escapeHtml(item.category)}</span>
+                      <strong style="font-size: 0.88rem; color: #f1f5f9;">${this.escapeHtml(item.name)}</strong>
+                    </div>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin: 6px 0 2px; line-height: 1.4;">${this.escapeHtml(item.description)}</p>
+                    ${item.details ? `<code style="font-size: 0.74rem; color: #94a3b8;">${this.escapeHtml(item.details)}</code>` : ''}
+                  </div>
+                  <span style="background: ${badgeColor}; color: ${badgeText}; font-size: 0.74rem; font-weight: 800; padding: 4px 8px; border-radius: 6px; white-space: nowrap;">
+                    ${icon} ${item.status.toUpperCase()}
+                  </span>
+                </div>
+              `;
+            }).join('')}
+          </div>
+
+          <!-- Official Submission URLs to Copy -->
+          ${res.submission_urls ? `
+            <div style="background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.25); padding: 16px; border-radius: var(--radius-sm); margin-bottom: 16px;">
+              <div style="font-size: 0.82rem; font-weight: 800; color: #a5b4fc; margin-bottom: 8px;">🔗 URLs de Registro Oficial en developers.facebook.com:</div>
+              <div style="display: grid; grid-template-columns: 1fr; gap: 8px; font-size: 0.78rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 6px;">
+                  <span style="color: #94a3b8;">Privacy Policy:</span>
+                  <code style="color: #fff;">${this.escapeHtml(res.submission_urls.privacy_policy)}</code>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 6px;">
+                  <span style="color: #94a3b8;">Terms of Service:</span>
+                  <code style="color: #fff;">${this.escapeHtml(res.submission_urls.terms_of_service)}</code>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 6px;">
+                  <span style="color: #94a3b8;">User Data Deletion:</span>
+                  <code style="color: #fff;">${this.escapeHtml(res.submission_urls.data_deletion)}</code>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 6px;">
+                  <span style="color: #94a3b8;">OAuth Redirect URI:</span>
+                  <code style="color: #fff;">${this.escapeHtml(res.submission_urls.oauth_redirect_uri)}</code>
+                </div>
+              </div>
+            </div>
+          ` : ''}
+
+          <!-- Recommendations -->
+          ${res.recommendations && res.recommendations.length > 0 ? `
+            <div style="background: rgba(255, 255, 255, 0.02); padding: 12px; border-radius: var(--radius-sm); border-left: 3px solid var(--accent-emerald);">
+              <div style="font-size: 0.8rem; font-weight: 700; color: var(--accent-emerald); margin-bottom: 4px;">🚀 Próximos Pasos para la Aprobación:</div>
+              <ul style="font-size: 0.78rem; color: var(--text-muted); padding-left: 18px; line-height: 1.6; margin: 0;">
+                ${res.recommendations.map(r => `<li>${this.escapeHtml(r)}</li>`).join('')}
+              </ul>
+            </div>
+          ` : ''}
+        </div>
+      `;
+
+      if (res.is_ready) {
+        this.showToast('¡Auditoría completada! Tu app está lista para App Review.', 'success');
+      } else {
+        this.showToast('Auditoría completada con advertencias.', 'info');
+      }
+
+    } catch (err) {
+      console.error(err);
+      auditContainer.innerHTML = `
+        <div class="meta-diagnostic-card">
+          <div class="diagnostic-header-status">
+            <div class="status-indicator-icon error">❌</div>
+            <div>
+              <h4 style="font-size: 1.05rem; font-weight: 800; color: #fff;">Error de Auditoría</h4>
+              <p style="font-size: 0.82rem; color: var(--text-muted);">No se pudo ejecutar la auditoría pre-app review.</p>
             </div>
           </div>
         </div>

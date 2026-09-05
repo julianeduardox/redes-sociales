@@ -649,43 +649,81 @@ try {
     <div id="view-meta" style="display: none; padding: 28px; overflow-y: auto; height: calc(100vh - 70px);">
       <div style="max-width: 860px; margin: 0 auto;">
         <h3 style="font-size: 1.4rem; font-weight: 800; margin-bottom: 6px;">⚙️ Conexión Oficial con Meta Graph API (Instagram & Facebook)</h3>
-        <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 24px;">Configura y diagnostica la vinculación segura de tu cuenta con Meta para acceder a estadísticas en vivo y moderación automática.</p>
+        <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 24px;">Configura y diagnostica la vinculación segura de tu cuenta con Meta para acceder a estadísticas en vivo, moderación automática y certificación en App Review.</p>
 
+        <!-- Official OAuth 2.0 One-Click Connect Box -->
+        <div style="background: linear-gradient(135deg, rgba(24, 119, 242, 0.12), rgba(99, 102, 241, 0.12)); border: 1px solid rgba(24, 119, 242, 0.35); padding: 24px; border-radius: var(--radius-md); margin-bottom: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                <span style="font-size: 1.3rem;">🚀</span>
+                <h4 style="font-size: 1.05rem; font-weight: 800; color: #fff; margin: 0;">Conexión Oficial con Facebook & Instagram (OAuth 2.0)</h4>
+              </div>
+              <p style="font-size: 0.84rem; color: #cbd5e1; margin: 0; max-width: 520px; line-height: 1.5;">
+                Genera automáticamente <strong>Tokens de Larga Duración (60 días / Permanentes de Página)</strong> sin tener que copiar y pegar tokens manualmente desde Graph API Explorer.
+              </p>
+            </div>
+            <a href="api/meta-oauth.php" class="btn-primary-action" style="background: #1877f2; padding: 12px 20px; font-size: 0.9rem; font-weight: 800; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(24, 119, 242, 0.4);">
+              <span>📘</span>
+              <span>Continuar con Facebook & Instagram</span>
+              <span>↗️</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Meta App Credentials & Tokens Card -->
         <div style="background: var(--bg-card); padding: 24px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 20px;">
           <h4 style="font-size: 1rem; font-weight: 800; margin-bottom: 16px; color: var(--fb-blue);">🔑 Credenciales y Tokens de Meta</h4>
 
           <form onsubmit="App.saveSettingsForm(event)">
-            <div class="form-group">
-              <label>Meta App ID:</label>
-              <input type="text" id="setting-meta-app-id" placeholder="Ej: 102938475610293" />
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+              <div class="form-group">
+                <label>Meta App ID:</label>
+                <input type="text" id="setting-meta-app-id" placeholder="Ej: 102938475610293" />
+              </div>
+
+              <div class="form-group">
+                <label>Meta App Secret:</label>
+                <input type="password" id="setting-meta-app-secret" placeholder="••••••••••••••••" />
+              </div>
             </div>
 
-            <div class="form-group">
-              <label>Instagram Business Account ID:</label>
-              <input type="text" id="setting-meta-ig-id" placeholder="Ej: 17841400000000000" />
-            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+              <div class="form-group">
+                <label>Instagram Business Account ID:</label>
+                <input type="text" id="setting-meta-ig-id" placeholder="Ej: 17841400000000000" />
+              </div>
 
-            <div class="form-group">
-              <label>Meta Page Access Token:</label>
-              <input type="password" id="setting-meta-token" placeholder="EAA..." />
+              <div class="form-group">
+                <label>Meta Page Access Token (Manual / Override):</label>
+                <input type="password" id="setting-meta-token" placeholder="EAA..." />
+              </div>
             </div>
 
             <div style="display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap;">
               <button type="submit" class="btn-primary-action">
-                Guardar Tokens 💾
+                Guardar Credenciales 💾
               </button>
               <button type="button" class="btn-primary-action" style="background: linear-gradient(135deg, #06b6d4, #0284c7);" onclick="App.testMetaConnection()">
-                🔍 Diagnosticar y Probar Conexión con Meta
+                🔍 Diagnosticar Token & Permisos
+              </button>
+              <button type="button" class="btn-primary-action" style="background: linear-gradient(135deg, #10b981, #059669);" onclick="App.auditMetaAppReview()">
+                🛡️ Pre-Auditoría App Review Meta
               </button>
               <button type="button" class="btn-primary-action" style="background: #1877f2;" onclick="App.triggerMetaSync()">
-                🔄 Sincronizar en Vivo Ahora
+                🔄 Sincronizar en Vivo
               </button>
             </div>
           </form>
 
           <!-- Live Diagnostics Report Box -->
-          <div id="meta-diagnostic-container" style="display: none;">
+          <div id="meta-diagnostic-container" style="display: none; margin-top: 20px;">
             <!-- Diagnostic results injected dynamically -->
+          </div>
+
+          <!-- Pre-Audit Scanner Report Box -->
+          <div id="meta-audit-container" style="display: none; margin-top: 20px;">
+            <!-- Pre-audit results injected dynamically -->
           </div>
         </div>
 
@@ -741,14 +779,17 @@ try {
 
         <!-- Compliance & Security Guide -->
         <div style="background: var(--bg-card); padding: 24px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
-          <h4 style="font-size: 1rem; font-weight: 800; margin-bottom: 12px; color: var(--accent-emerald);">🛡️ Requisitos para que Meta apruebe esta Integración Oficial</h4>
+          <h4 style="font-size: 1rem; font-weight: 800; margin-bottom: 12px; color: var(--accent-emerald);">🛡️ Kit de Aprobación para Meta App Review</h4>
           <ul style="font-size: 0.84rem; color: var(--text-muted); line-height: 1.8; padding-left: 20px;">
             <li><strong>Verificación de Negocio (Business Verification):</strong> En Meta Business Manager para solicitar permisos avanzados en App Review.</li>
             <li><strong>Cuenta de Instagram Profesional:</strong> Debe ser tipo <em>Creador</em> o <em>Empresa</em> vinculada a una Página de Facebook.</li>
             <li><strong>Protocolo HTTPS / SSL:</strong> La URL de tu Webhook y sitio web debe contar con un certificado SSL válido (TLS 1.2+).</li>
-            <li><strong>Políticas de Privacidad y Términos Públicos:</strong> Registradas con las URLs provistas arriba.</li>
+            <li><strong>Kit de Textos de Justificación:</strong> En la carpeta <code>docs/meta-app-review-kit.md</code> encontrarás las justificaciones exactas en inglés y español para cada permiso solicitado y el guión de 3 minutos para el video demostrativo.</li>
           </ul>
         </div>
+
+      </div>
+    </div>
 
     <!-- Mobile Bottom Navigation Bar -->
     <nav class="mobile-bottom-nav">

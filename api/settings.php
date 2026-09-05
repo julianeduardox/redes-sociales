@@ -81,6 +81,7 @@ try {
         $maskedGemini = !empty($settings['gemini_api_key']) ? substr($settings['gemini_api_key'], 0, 4) . '...' . substr($settings['gemini_api_key'], -4) : '';
         $maskedOpenAi = !empty($settings['openai_api_key']) ? substr($settings['openai_api_key'], 0, 4) . '...' . substr($settings['openai_api_key'], -4) : '';
         $maskedMetaToken = !empty($settings['meta_page_access_token']) ? substr($settings['meta_page_access_token'], 0, 6) . '...' . substr($settings['meta_page_access_token'], -4) : '';
+        $maskedMetaSecret = !empty($settings['meta_app_secret']) ? substr($settings['meta_app_secret'], 0, 4) . '...' . substr($settings['meta_app_secret'], -4) : '';
 
         $keyPhrases = !empty($activeBrand['key_phrases']) ? json_decode($activeBrand['key_phrases'], true) : [
             'Calidad garantizada', 'Atención personalizada', 'Envíos a todo el país', 'Comunidad oficial', 'Asesoría directa'
@@ -124,6 +125,8 @@ try {
                 
                 // Meta Graph API
                 'meta_app_id' => htmlspecialchars($settings['meta_app_id'] ?? '', ENT_QUOTES, 'UTF-8'),
+                'has_meta_secret' => !empty($settings['meta_app_secret']),
+                'meta_app_secret_masked' => $maskedMetaSecret,
                 'meta_instagram_account_id' => htmlspecialchars($settings['meta_instagram_account_id'] ?? '', ENT_QUOTES, 'UTF-8'),
                 'has_meta_token' => !empty($settings['meta_page_access_token']),
                 'meta_page_access_token_masked' => $maskedMetaToken,
@@ -140,7 +143,7 @@ try {
         $rawInput = file_get_contents('php://input');
         $input = json_decode($rawInput, true) ?? $_POST;
         $action = Security::validateEnum($input['action'] ?? 'save_all', [
-            'save_all', 'save_brand', 'set_active_brand', 'delete_brand', 'sync_meta', 'test_meta'
+            'save_all', 'save_brand', 'set_active_brand', 'delete_brand', 'sync_meta', 'test_meta', 'audit_meta'
         ], 'save_all');
 
         // 1. Action: Switch Active Brand Voice
@@ -327,6 +330,12 @@ try {
             exit;
         }
 
+        if ($action === 'audit_meta') {
+            $auditResult = MetaApiService::auditAppReviewReadiness($userId);
+            echo json_encode($auditResult, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
         // 5. Action: save_all (Legacy & Global Engine Settings)
         if (isset($input['ai_provider'])) {
             Settings::set('ai_provider', Security::validateEnum($input['ai_provider'], ['gemini', 'openai', 'heuristic'], 'gemini'));
@@ -341,6 +350,9 @@ try {
         }
         if (isset($input['meta_app_id'])) {
             Settings::set('meta_app_id', Security::sanitizeString($input['meta_app_id'], 100));
+        }
+        if (isset($input['meta_app_secret']) && !str_contains($input['meta_app_secret'], '...')) {
+            Settings::set('meta_app_secret', trim(Security::sanitizeString($input['meta_app_secret'], 150)));
         }
         if (isset($input['meta_instagram_account_id'])) {
             Settings::set('meta_instagram_account_id', Security::sanitizeString($input['meta_instagram_account_id'], 100));
