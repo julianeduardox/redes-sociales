@@ -226,6 +226,9 @@ if (!empty($error)) {
             $pdo->prepare("DELETE FROM accounts WHERE user_id = :uid AND (page_id LIKE 'page_stoic_%' OR page_id LIKE 'page_user_%' OR page_id LIKE 'mock_%')")->execute([':uid' => $userId]);
 
             // Save active credentials in settings
+            if (!empty($longLivedUserToken)) {
+                Settings::set('meta_user_access_token', $longLivedUserToken, $userId);
+            }
             if (!empty($primaryPageToken)) {
                 Settings::set('meta_page_access_token', $primaryPageToken, $userId);
             }

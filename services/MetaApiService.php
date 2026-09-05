@@ -281,7 +281,9 @@ class MetaApiService {
         $uid = ($userId !== null && $userId > 0) ? $userId : (class_exists('Auth') && Auth::check() ? Auth::id() : 1);
         $pdo = Database::getConnection();
 
-        $defaultToken = Settings::get('meta_page_access_token', '', $uid);
+        $userToken = Settings::get('meta_user_access_token', '', $uid);
+        $pageToken = Settings::get('meta_page_access_token', '', $uid);
+        $defaultToken = !empty($userToken) ? $userToken : $pageToken;
         $defaultBrandVoiceId = Database::ensureDefaultBrandVoice($pdo, $uid);
 
         $accountDiagnostics = [];
