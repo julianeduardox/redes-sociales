@@ -131,6 +131,7 @@ if ($method === 'GET') {
                 'success' => true,
                 'users' => $users,
                 'allowed_models' => $allowedModels,
+                'models_catalog' => $allowedModels,
                 'plans' => [
                     'starter' => Database::getPlanDetails('starter'),
                     'creator' => Database::getPlanDetails('creator'),

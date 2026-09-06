@@ -6353,4 +6353,31 @@ details.advanced-dev-details[open] summary {
   background: linear-gradient(180deg, rgba(124, 58, 237, 0.12) 0%, rgba(17, 24, 39, 0.6) 100%);
 }
 
+.admin-model-select {
+  width: 100%;
+  max-width: 280px;
+  background: #0f172a;
+  color: #f8fafc;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+
+.admin-model-select:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
+}
+
+.admin-model-select option {
+  background: #0f172a;
+  color: #f8fafc;
+  padding: 8px 12px;
+}
+
 

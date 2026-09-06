@@ -140,13 +140,11 @@ $requestedScopes = $_GET['scopes'] ?? '';
 if (!empty($requestedScopes)) {
     $scopes = array_filter(array_map('trim', explode(',', $requestedScopes)));
 } else {
-    // Core active scopes for Facebook Pages, Instagram Business, Comments Moderation & Real-Time Insights
+    // Core active scopes for Facebook Pages, Instagram Business, Comments Moderation & Real-Time Insights (Meta Graph v19+)
     $scopes = [
         'pages_show_list',
         'pages_read_engagement',
-        'pages_read_user_content',
         'pages_manage_posts',
-        'read_insights',
         'instagram_basic',
         'instagram_manage_comments',
         'instagram_manage_insights'

@@ -881,7 +881,7 @@ $isMetaConnected = ($activeAccountsCount > 0);
               </p>
             </div>
             <div style="display: flex; gap: 8px;">
-              <button type="button" class="btn-primary-action" style="padding: 8px 14px; font-size: 0.8rem; background: rgba(99,102,241,0.15); border: 1px solid var(--border-active);" onclick="App.loadConnectedAccounts()">
+              <button type="button" id="btn-reload-connected-accounts" class="btn-primary-action" style="padding: 8px 14px; font-size: 0.8rem; background: rgba(99,102,241,0.15); border: 1px solid var(--border-active);" onclick="App.loadConnectedAccounts(true)">
                 <span>🔄 Recargar Cuentas</span>
               </button>
             </div>
@@ -1864,6 +1864,8 @@ $isMetaConnected = ($activeAccountsCount > 0);
       <!-- Rendered dynamically -->
     </div>
   </div>
+</div>
+
 <!-- Modal: Upgrade Plan / Comparador de Planes -->
 <div class="modal-overlay" id="modal-upgrade-plan" style="display: none;" onclick="if(event.target===this) App.closeUpgradePlanModal()">
   <div class="modal-box" style="max-width: 860px; background: #0f172a; border: 1px solid rgba(99, 102, 241, 0.35); box-shadow: 0 25px 60px rgba(0,0,0,0.85);">

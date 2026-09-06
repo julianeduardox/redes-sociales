@@ -95,10 +95,21 @@ class AiAgentService {
         $textNoEmoji = preg_replace('/[\x{1F600}-\x{1F64F}\x{1F300}-\x{1F5FF}\x{1F680}-\x{1F6FF}\x{1F700}-\x{1F77F}\x{1F780}-\x{1F7FF}\x{1F800}-\x{1F8FF}\x{1F900}-\x{1F9FF}\x{1FA00}-\x{1FA6F}\x{1FA70}-\x{1FAFF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}\x{2300}-\x{23FF}\x{2B50}\x{200D}\x{FE0F}\s\p{P}]/u', '', $text);
         
         if (mb_strlen($textNoEmoji, 'UTF-8') < 2) {
+            // Check if it contains actual emojis to reply with emojis
+            $hasEmoji = preg_match('/[\x{1F600}-\x{1F64F}\x{1F300}-\x{1F5FF}\x{1F680}-\x{1F6FF}\x{1F700}-\x{1F77F}\x{1F780}-\x{1F7FF}\x{1F800}-\x{1F8FF}\x{1F900}-\x{1F9FF}\x{1FA00}-\x{1FA6F}\x{1FA70}-\x{1FAFF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}\x{2300}-\x{23FF}\x{2B50}]/u', $text);
+            if ($hasEmoji) {
+                return [
+                    'status' => 'valid',
+                    'should_reply' => true,
+                    'reason' => '🎨 Reacción con emojis de la comunidad (apto para responder con emojis)',
+                    'category' => 'emoji_reaction'
+                ];
+            }
+
             return [
                 'status' => 'ignored',
                 'should_reply' => false,
-                'reason' => '🎨 Comentario de solo emojis/stickers (sin texto para responder)',
+                'reason' => '🎨 Comentario vacío o símbolo suelto sin texto para responder',
                 'category' => 'sticker'
             ];
         }
@@ -129,6 +140,22 @@ class AiAgentService {
                 'autopilot_status' => 'ignored',
                 'autopilot_reason' => $suitability['reason'],
                 'detected_keywords' => []
+            ];
+        }
+
+        // Special handling for emoji reactions (e.g. 👏👏, 🔥, ❤️, 💪, 🙌)
+        if ($suitability['category'] === 'emoji_reaction') {
+            return [
+                'sentiment' => 'positive',
+                'intent' => 'emoji_reaction',
+                'highlight_score' => 75,
+                'commercial_priority' => 70,
+                'is_highlighted' => 0,
+                'highlight_reason' => 'Reacción de apoyo y entusiasmo con emojis',
+                'autopilot_ready' => true,
+                'autopilot_status' => 'ready',
+                'autopilot_reason' => 'Reacción positiva con emojis lista para auto-responder',
+                'detected_keywords' => ['emoji_reaction']
             ];
         }
 
@@ -506,6 +533,63 @@ class AiAgentService {
             ];
         }
 
+        // Case 0: Pure Emoji / Emoji Reaction Comments (e.g. 👏👏, 🔥, ❤️, 💪, 🙌)
+        if ($intent === 'emoji_reaction' || mb_strlen(preg_replace('/[\x{1F600}-\x{1F64F}\x{1F300}-\x{1F5FF}\x{1F680}-\x{1F6FF}\x{1F700}-\x{1F77F}\x{1F780}-\x{1F7FF}\x{1F800}-\x{1F8FF}\x{1F900}-\x{1F9FF}\x{1FA00}-\x{1FA6F}\x{1FA70}-\x{1FAFF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}\x{2300}-\x{23FF}\x{2B50}\x{200D}\x{FE0F}\s\p{P}]/u', '', $commentText), 'UTF-8') < 2) {
+            $isApplause = str_contains($commentText, '👏') || str_contains($commentText, '🙌');
+            $isFire = str_contains($commentText, '🔥') || str_contains($commentText, '⚡') || str_contains($commentText, '🚀');
+            $isLove = str_contains($commentText, '❤️') || str_contains($commentText, '😍') || str_contains($commentText, '🥰') || str_contains($commentText, '💖');
+            $isStrength = str_contains($commentText, '💪') || str_contains($commentText, '🎯') || str_contains($commentText, '🏆');
+
+            if ($isApplause) {
+                return [
+                    'source' => 'heuristic_calibrated',
+                    'engagement' => "¡Muchas gracias por los aplausos y la buena vibra, $displayName! 👏🔥 ¡Seguimos con todo!",
+                    'conversion' => "¡Gracias por el apoyo, $displayName! 👏🚀 Si tienes cualquier duda o quieres conocer más de nuestros proyectos, déjanos un DM.",
+                    'support' => "¡Un honor contar con tu presencia en la comunidad, $displayName! 🏛️✨ ¡Un fuerte abrazo!",
+                    'engagement_tips' => '👏 Responder con rapidez a comentarios de aplausos y emojis eleva la visibilidad en el algoritmo de Meta.'
+                ];
+            }
+
+            if ($isFire) {
+                return [
+                    'source' => 'heuristic_calibrated',
+                    'engagement' => "¡A tope con esa energía, $displayName! 🔥⚡ ¡Vamos con todo!",
+                    'conversion' => "¡Esa es la actitud, $displayName! 🔥🚀 Si buscas dar el siguiente paso, tienes toda la información en el enlace de la bio.",
+                    'support' => "¡Fuerza e impulso para tus metas, $displayName! 🔥💪 ¡Seguimos firmes!",
+                    'engagement_tips' => '🔥 La reciprocidad en comentarios de alta energía impulsa la viralidad y el alcance de la publicación.'
+                ];
+            }
+
+            if ($isLove) {
+                return [
+                    'source' => 'heuristic_calibrated',
+                    'engagement' => "¡Mucho cariño para ti, $displayName! ❤️✨ ¡Gracias de corazón por formar parte de esta comunidad!",
+                    'conversion' => "¡Gracias por tanto cariño, $displayName! ❤️🚀 Estamos a tu entera disposición por DM para lo que necesites.",
+                    'support' => "¡Un saludo muy especial para ti, $displayName! ❤️🤝 ¡Seguimos sumando valor juntos!",
+                    'engagement_tips' => '❤️ Conectar emocionalmente con las muestras de aprecio de seguidores afianza la lealtad hacia la marca.'
+                ];
+            }
+
+            if ($isStrength) {
+                return [
+                    'source' => 'heuristic_calibrated',
+                    'engagement' => "¡Disciplina y fuerza imparable, $displayName! 💪⚡ ¡Vamos por más!",
+                    'conversion' => "¡Con toda la determinación, $displayName! 💪🚀 Encuentras nuestras metodologías y recursos en el enlace del perfil.",
+                    'support' => "¡Constancia y enfoque cada día, $displayName! 🏛️💪 ¡Foco total en los objetivos!",
+                    'engagement_tips' => '💪 Reafirmar la mentalidad y determinación refuerza la identidad y autoridad de la marca.'
+                ];
+            }
+
+            // General emojis fallback
+            return [
+                'source' => 'heuristic_calibrated',
+                'engagement' => "¡Muchas gracias por la gran vibra, $displayName! 🙌✨ ¡A seguir creciendo juntos!",
+                'conversion' => "¡Gracias por la buena energía, $displayName! 🚀✨ Recuerda que estamos a un DM de distancia para lo que necesites.",
+                'support' => "¡Agradecidos con tu presencia en la comunidad, $displayName! 🤝✨ ¡Un saludo enorme!",
+                'engagement_tips' => '✨ Responder de forma automática a los comentarios de emojis asegura una tasa de respuesta cercana al 100%.'
+            ];
+        }
+
         // Case 1: Knowledge / Philosophical / Stoic / Concept Explanation & Virtue Reflections
         if ($intent === 'knowledge_concept') {
             $isVirtueReflection = str_contains($textLower, 'virtud') || str_contains($textLower, 'momento') || str_contains($textLower, 'decid') || str_contains($textLower, 'crear') || str_contains($textLower, 'perfect') || str_contains($textLower, 'presente') || str_contains($textLower, 'tiempo') || str_contains($textLower, 'alma') || str_contains($textLower, 'sabidur') || str_contains($textLower, 'serenidad');
@@ -785,6 +869,7 @@ REGLAS ESTRICTAS DE VERACIDAD Y ANTI-ALUCINACIÓN (OBLIGATORIAS):
 2. CERO ACCIONES NO REALIZADAS: NUNCA afirmes haber enviado un mensaje directo (DM), correo o realizado acciones externas ("te acabo de enviar un DM", "ya te escribí"). Si corresponde, invita cortésmente al seguidor a escribir por DM o a consultar el enlace en la bio.
 3. MANEJO DE DATOS FALTANTES: Si el seguidor pregunta por especificaciones internas, precios o accesos no descritos en el contexto, responde honestamente con los datos generales conocidos y oriéntalo amablemente al enlace de la bio o a enviar un DM para recibir asesoría personalizada.
 4. PREGUNTAS CONCEPTUALES Y FILOSÓFICAS: Si el seguidor consulta sobre un concepto, metodología, filosofía estoica (ej. Dicotomía del control) o pide un consejo, responde con fundamento, claridad y valor práctico. NUNCA desvíes preguntas conceptuales a soporte técnico de pedidos o reclamos.
+5. COMENTARIOS DE SOLO EMOJIS O REACCIONES: Si el comentario del seguidor consiste en emojis o reacciones (ej. 👏👏, 🔥, ❤️, 💪, 🙌), responde de forma rápida, agradecida y cercana utilizando también emojis expresivos y coherentes con el tono de la marca, para maximizar el engagement y responder a la mayor cantidad posible de interacciones.
 
 $fewShotText
 

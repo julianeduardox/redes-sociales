@@ -112,7 +112,14 @@ const App = {
   },
 
   // Connected Accounts & Multi-Brand Voice Routing Manager
-  async loadConnectedAccounts() {
+  async loadConnectedAccounts(showFeedback = false) {
+    const reloadBtn = document.getElementById('btn-reload-connected-accounts');
+    const originalBtnHtml = reloadBtn ? reloadBtn.innerHTML : null;
+    if (showFeedback && reloadBtn) {
+      reloadBtn.disabled = true;
+      reloadBtn.innerHTML = '<span><span class="spinner-inline"></span> Actualizando...</span>';
+    }
+
     try {
       const res = await this.fetchWithCsrf('api/settings.php?action=list_accounts');
       const data = await res.json();
@@ -147,17 +154,29 @@ const App = {
 
         // 4. Render accounts manager cards in settings/meta
         this.renderAccountsManager(this.connectedAccounts, brands);
+
+        if (showFeedback) {
+          this.showToast(`✅ Cuentas actualizadas: ${this.connectedAccounts.length} cuenta${this.connectedAccounts.length === 1 ? '' : 's'} disponible${this.connectedAccounts.length === 1 ? '' : 's'}.`, 'success');
+        }
       }
     } catch (err) {
       console.error('Error loading connected accounts:', err);
+      if (showFeedback) {
+        this.showToast('⚠️ No se pudieron recargar las cuentas vinculadas.', 'error');
+      }
       const container = document.getElementById('connected-accounts-list');
       if (container) {
         container.innerHTML = `
           <div style="padding: 20px; text-align: center; color: var(--accent-rose); font-size: 0.85rem;">
             ⚠️ No se pudieron cargar las cuentas vinculadas.
-            <button type="button" class="btn-secondary-mini" onclick="App.loadConnectedAccounts()" style="margin-left: 8px;">Reintentar</button>
+            <button type="button" class="btn-secondary-mini" onclick="App.loadConnectedAccounts(true)" style="margin-left: 8px;">Reintentar</button>
           </div>
         `;
+      }
+    } finally {
+      if (reloadBtn && originalBtnHtml) {
+        reloadBtn.disabled = false;
+        reloadBtn.innerHTML = originalBtnHtml;
       }
     }
   },
@@ -2036,6 +2055,8 @@ const App = {
   },
 
   async triggerMetaSync() {
+    const startTime = Date.now();
+
     // 1. Locate all sync buttons and show active loading spinner state
     const syncButtons = document.querySelectorAll('[onclick*="triggerMetaSync"]');
     syncButtons.forEach(btn => {
@@ -2046,7 +2067,18 @@ const App = {
       btn.innerHTML = '<span><span class="spinner-inline"></span> Sincronizando con Meta...</span>';
     });
 
-    const loadingToast = App.showToast('🔄 Sincronizando con Meta Graph API... Obteniendo publicaciones y métricas reales. Por favor espera, esto puede tardar unos minutos.', 'info', 0);
+    // 2. Add visual banner in posts container if available
+    const postsContainer = document.getElementById('posts-grid-container');
+    let syncBanner = null;
+    if (postsContainer) {
+      syncBanner = document.createElement('div');
+      syncBanner.id = 'sync-active-banner';
+      syncBanner.style.cssText = 'grid-column: 1 / -1; padding: 18px 24px; background: rgba(24, 119, 242, 0.12); border: 1px solid rgba(24, 119, 242, 0.4); border-radius: 12px; margin-bottom: 16px; display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 0.88rem; color: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.3);';
+      syncBanner.innerHTML = '<span class="spinner-inline"></span> <span><strong>Sincronizando con Meta Graph API...</strong> Obteniendo tus publicaciones y comentarios en vivo. Esto puede tardar unos minutos.</span>';
+      postsContainer.prepend(syncBanner);
+    }
+
+    const loadingToast = this.showToast('🔄 Sincronizando con Meta Graph API... Obteniendo publicaciones y métricas reales. Por favor espera, esto puede tardar unos minutos.', 'info', 0);
 
     try {
       const response = await this.fetchWithCsrf('api/settings.php', {
@@ -2063,15 +2095,24 @@ const App = {
         throw new Error(`El servidor respondió con estado ${response.status}: ${text.slice(0, 120)}`);
       }
 
+      // Ensure minimum 1.2s visibility for the loading message so it is clearly readable
+      const elapsed = Date.now() - startTime;
+      if (elapsed < 1200) {
+        await new Promise(r => setTimeout(r, 1200 - elapsed));
+      }
+
       if (loadingToast && loadingToast.remove) {
         loadingToast.remove();
+      }
+      if (syncBanner && syncBanner.remove) {
+        syncBanner.remove();
       }
 
       if (res && res.success) {
         const found = res.total_posts_found || res.synced_new_posts || 0;
         const comments = res.synced_new_comments || 0;
         const msg = `✅ ¡Sincronización con Meta completada con éxito! Se verificaron tus cuentas, actualizando ${found} publicaciones y ${comments} comentarios.`;
-        App.showToast(msg, 'success', 6000);
+        this.showToast(msg, 'success', 6000);
 
         await this.loadConnectedAccounts();
         await this.loadComments();
@@ -2081,15 +2122,18 @@ const App = {
         this.lastHeartbeatTimestamp = Date.now();
       } else {
         const errMsg = res && res.message ? res.message : (res && res.error ? res.error : 'No se pudo sincronizar con Meta.');
-        App.showToast(`⚠️ ${errMsg}`, 'error', 7000);
+        this.showToast(`⚠️ ${errMsg}`, 'error', 7000);
       }
     } catch (err) {
       console.error('triggerMetaSync error:', err);
       if (loadingToast && loadingToast.remove) {
         loadingToast.remove();
       }
+      if (syncBanner && syncBanner.remove) {
+        syncBanner.remove();
+      }
       const errMsg = err && err.message ? err.message : 'Error de conexión al sincronizar con Meta. Por favor verifica tu conexión.';
-      App.showToast(`⚠️ ${errMsg}`, 'error', 7000);
+      this.showToast(`⚠️ ${errMsg}`, 'error', 7000);
     } finally {
       syncButtons.forEach(btn => {
         btn.disabled = false;
@@ -2336,7 +2380,7 @@ const App = {
       const data = await res.json();
       if (data && data.success) {
         this.adminUsersList = data.users || [];
-        this.adminModelsCatalog = data.models_catalog || {};
+        this.adminModelsCatalog = data.models_catalog || data.allowed_models || {};
 
         // Update KPIs
         const kpis = data.kpis || {};
