@@ -148,7 +148,12 @@ $isMetaConnected = ($activeAccountsCount > 0);
         <span class="nav-badge" id="badge-count-spam" style="background: rgba(244,63,94,0.25); color: #fb7185;">0</span>
       </button>
 
-      <div class="nav-section-title" style="margin-top: 10px;">Configuración & Estrategia</div>
+      <div class="nav-section-title" style="margin-top: 10px;">Estrategia & Crecimiento</div>
+      <button class="nav-btn" data-tab="planner">
+        <span class="icon">📅</span>
+        <span>Planificador & Calendario</span>
+      </button>
+
       <button class="nav-btn" data-tab="analytics">
         <span class="icon">📈</span>
         <span>Métricas & Horarios</span>
@@ -358,6 +363,90 @@ $isMetaConnected = ($activeAccountsCount > 0);
         </div>
       </section>
 
+    </div>
+
+    <!-- View: AI Content Planner & Smart Auto-Scheduler -->
+    <div id="view-planner" style="display: none; padding: 28px; overflow-y: auto; height: calc(100vh - 70px);">
+      <div style="max-width: 1400px; margin: 0 auto;">
+        
+        <!-- Planner Top Bar -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-bottom: 22px;">
+          <div>
+            <h3 style="font-size: 1.4rem; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px;">
+              <span>📅</span> Planificador de Contenido & Horarios Dorados
+            </h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">
+              Crea contenido de alto impacto con IA y programa tus publicaciones automáticamente en las horas de mayor engagement.
+            </p>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <div class="platform-pill-group">
+              <button class="platform-pill active" data-planner-platform="all" onclick="PlannerController.filterPlatform('all')">🌐 Todas</button>
+              <button class="platform-pill" data-planner-platform="instagram" onclick="PlannerController.filterPlatform('instagram')">📸 Instagram</button>
+              <button class="platform-pill" data-planner-platform="facebook" onclick="PlannerController.filterPlatform('facebook')">📘 Facebook</button>
+            </div>
+
+            <button class="btn-primary-action" style="background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); font-weight: 700; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);" onclick="PlannerController.openCreatorModal()">
+              <span>✨ Redactar con IA Copilot</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Section: Available Golden Slots Banner -->
+        <div class="planner-golden-banner" style="margin-bottom: 24px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 1.1rem;">🏆</span>
+              <span style="font-size: 0.9rem; font-weight: 800; color: #fff;">Próximas Ventanas Doradas Recomendadas por el Algoritmo</span>
+            </div>
+            <span style="font-size: 0.76rem; color: #a5b4fc; background: rgba(99, 102, 241, 0.15); padding: 3px 10px; border-radius: 12px; border: 1px solid rgba(99, 102, 241, 0.3);">
+              Calculado con tus métricas reales de retención
+            </span>
+          </div>
+          <div id="planner-golden-slots-list" class="golden-slots-horizontal-list">
+            <!-- Rendered by PlannerController.renderGoldenSlotsBanner() -->
+          </div>
+        </div>
+
+        <!-- Section: Calendar Navigation & Month Matrix -->
+        <div class="analytics-section-card" style="padding: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 12px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <h4 id="calendar-month-title" style="font-size: 1.15rem; font-weight: 800; color: #fff;">Septiembre 2026</h4>
+              <div class="calendar-nav-buttons">
+                <button class="cal-nav-btn" onclick="PlannerController.prevMonth()" title="Mes anterior">◀</button>
+                <button class="cal-nav-btn today" onclick="PlannerController.goToCurrentMonth()">Hoy</button>
+                <button class="cal-nav-btn" onclick="PlannerController.nextMonth()" title="Mes siguiente">▶</button>
+              </div>
+            </div>
+
+            <!-- Status KPI chips -->
+            <div class="calendar-status-summary">
+              <span class="cal-badge-kpi scheduled" id="kpi-count-scheduled">📌 0 Programadas</span>
+              <span class="cal-badge-kpi published" id="kpi-count-published">✅ 0 Publicadas</span>
+              <span class="cal-badge-kpi drafts" id="kpi-count-drafts">📝 0 Borradores</span>
+            </div>
+          </div>
+
+          <!-- Calendar Days Header -->
+          <div class="calendar-grid-header">
+            <div>Lun</div>
+            <div>Mar</div>
+            <div>Mié</div>
+            <div>Jue</div>
+            <div>Vie</div>
+            <div>Sáb</div>
+            <div>Dom</div>
+          </div>
+
+          <!-- Calendar Grid Cells -->
+          <div id="calendar-grid-cells" class="calendar-grid-body">
+            <!-- Rendered by PlannerController.renderCalendar() -->
+          </div>
+        </div>
+
+      </div>
     </div>
 
     <!-- View 2: Analytics & Metrics -->
@@ -1510,12 +1599,161 @@ $isMetaConnected = ($activeAccountsCount > 0);
   </div>
 </div>
 
+<!-- Modal: AI Content Creator & Golden Scheduler -->
+<div class="modal-overlay" id="modal-content-creator" style="display: none;">
+  <div class="modal-card modal-lg" style="max-width: 960px; max-height: 90vh; display: flex; flex-direction: column;">
+    <div class="modal-header" style="padding: 18px 24px; border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <h4 style="font-size: 1.1rem; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px;">
+          <span>✨</span> Estudio de Creación de Contenido con IA
+        </h4>
+        <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0;">
+          Genera copys de alta conversión calibrados con tu voz de marca y programa en horarios dorados.
+        </p>
+      </div>
+      <button class="modal-close-btn" onclick="PlannerController.closeCreatorModal()">&times;</button>
+    </div>
+
+    <div class="modal-body" style="padding: 24px; overflow-y: auto; flex: 1;">
+      <!-- Step 1: Input Form -->
+      <div id="creator-step-input" style="display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 20px;">
+        <div style="grid-column: 1 / -1;">
+          <label style="font-size: 0.82rem; font-weight: 700; color: #fff; margin-bottom: 6px; display: block;">
+            💡 ¿De qué quieres hablar en esta publicación? (Idea / Tema / Noticia)
+          </label>
+          <div style="display: flex; gap: 10px;">
+            <input type="text" id="creator-topic-input" class="form-input" style="flex: 1;" placeholder="Ej. 3 Claves de enfoque diario para emprendedores, o Lanzamiento de nueva membresía..." />
+            <button class="btn-primary-action" id="btn-generate-drafts" style="background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); min-width: 180px; justify-content: center;" onclick="PlannerController.triggerGenerateDrafts()">
+              <span>⚡ Generar con IA</span>
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-dim); margin-bottom: 4px; display: block;">Formato de Publicación:</label>
+          <select id="creator-format-select" class="form-select">
+            <option value="reel" selected>🎥 Video / Reel (Mayor Retención)</option>
+            <option value="carousel">📑 Carrusel Educativo</option>
+            <option value="image">📷 Imagen / Frase Gráfica</option>
+            <option value="story">📱 Historia / Story</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-dim); margin-bottom: 4px; display: block;">Objetivo Comercial:</label>
+          <select id="creator-goal-select" class="form-select">
+            <option value="connection" selected>🤝 Conexión & Reflexión (Engagement)</option>
+            <option value="conversion">🎯 Conversión & Leads (Ventas / DM)</option>
+            <option value="authority">🧠 Autoridad & Educación (Guardados)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Step 2: Generated Proposals Grid -->
+      <div id="creator-proposals-wrapper" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+          <h5 style="font-size: 0.92rem; font-weight: 800; color: var(--accent-cyan);">
+            🎯 Selecciona una Propuesta Generada para Personalizar:
+          </h5>
+          <span style="font-size: 0.74rem; color: var(--text-muted);">Haz clic en una tarjeta para editar y programar</span>
+        </div>
+
+        <div id="creator-proposals-grid" class="proposals-cards-grid">
+          <!-- Rendered dynamically -->
+        </div>
+
+        <!-- Selected Proposal Editor -->
+        <div id="creator-editor-box" class="creator-editor-container" style="display: none; margin-top: 20px;">
+          <h5 style="font-size: 0.9rem; font-weight: 800; color: #fff; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+            <span>✏️</span> Editor Final & Programación en Horario Dorado
+          </h5>
+
+          <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 18px;">
+            <!-- Left: Text Editor -->
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <div>
+                <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-dim); margin-bottom: 4px; display: block;">Gancho / Hook de Entrada:</label>
+                <input type="text" id="editor-hook-input" class="form-input" style="font-weight: 700; color: #fff;" />
+              </div>
+
+              <div>
+                <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-dim); margin-bottom: 4px; display: block;">Texto Completo del Copy:</label>
+                <textarea id="editor-caption-input" class="form-textarea" rows="7" style="line-height: 1.5; font-size: 0.84rem;"></textarea>
+              </div>
+
+              <div>
+                <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-dim); margin-bottom: 4px; display: block;">URL de Imagen / Media de Apoyo (Opcional):</label>
+                <input type="text" id="editor-media-input" class="form-input" placeholder="https://images.unsplash.com/..." />
+              </div>
+            </div>
+
+            <!-- Right: Golden Slot Selector & Details -->
+            <div style="background: rgba(255, 255, 255, 0.025); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 16px; display: flex; flex-direction: column; justify-content: space-between;">
+              <div style="display: flex; flex-direction: column; gap: 12px;">
+                <div>
+                  <label style="font-size: 0.78rem; font-weight: 700; color: var(--accent-amber); margin-bottom: 6px; display: block;">
+                    🏆 Horario Dorado Sugerido:
+                  </label>
+                  <select id="editor-golden-slot-select" class="form-select" onchange="PlannerController.onGoldenSlotSelectChanged(this.value)">
+                    <!-- Populated dynamically -->
+                  </select>
+                </div>
+
+                <div>
+                  <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-dim); margin-bottom: 4px; display: block;">
+                    Fecha y Hora Exacta (Editable):
+                  </label>
+                  <input type="datetime-local" id="editor-datetime-input" class="form-input" />
+                </div>
+
+                <div>
+                  <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-dim); margin-bottom: 4px; display: block;">Plataforma de Publicación:</label>
+                  <select id="editor-platform-select" class="form-select">
+                    <option value="instagram">📸 Instagram (Feed & Reels)</option>
+                    <option value="facebook">📘 Facebook (Muro)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style="display: flex; gap: 8px; margin-top: 16px;">
+                <button type="button" class="btn-primary-action" style="flex: 1; justify-content: center; background: linear-gradient(135deg, #10b981 0%, #059669 100%);" onclick="PlannerController.savePostFromEditor('scheduled')">
+                  <span>📅 Programar Post</span>
+                </button>
+                <button type="button" class="btn-primary-action" style="background: rgba(255, 255, 255, 0.06); color: var(--text-muted);" onclick="PlannerController.savePostFromEditor('draft')">
+                  <span>📝 Borrador</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Post Detail & Live Preview Modal -->
+<div class="modal-overlay" id="modal-post-preview" style="display: none;">
+  <div class="modal-card" style="max-width: 640px;">
+    <div class="modal-header" style="padding: 16px 20px; border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+      <h4 id="preview-modal-title" style="font-size: 1rem; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 6px;">
+        <span>📱</span> Detalle de Publicación Programada
+      </h4>
+      <button class="modal-close-btn" onclick="PlannerController.closePreviewModal()">&times;</button>
+    </div>
+
+    <div class="modal-body" id="preview-modal-content" style="padding: 20px;">
+      <!-- Rendered dynamically -->
+    </div>
+  </div>
+</div>
+
 <!-- Toast Container -->
 <div class="toast-container" id="toast-container"></div>
 
 <!-- Scripts (Cache Busted) -->
 <script src="assets/js/agent-controller.js?v=<?= time() ?>"></script>
 <script src="assets/js/analytics.js?v=<?= time() ?>"></script>
+<script src="assets/js/planner.js?v=<?= time() ?>"></script>
 <script src="assets/js/app.js?v=<?= time() ?>"></script>
 
 </body>

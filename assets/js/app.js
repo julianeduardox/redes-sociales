@@ -47,7 +47,7 @@ const App = {
     // 1. Detect and restore active tab from URL hash or storage immediately on page load / F5
     const hash = window.location.hash ? window.location.hash.replace('#', '').trim() : '';
     let savedTab = hash || sessionStorage.getItem('xindro_active_tab') || localStorage.getItem('xindro_active_tab') || 'inbox';
-    const validTabs = ['inbox', 'highlights', 'leads', 'urgent', 'spam', 'analytics', 'settings', 'meta'];
+    const validTabs = ['inbox', 'highlights', 'leads', 'urgent', 'spam', 'planner', 'analytics', 'settings', 'meta'];
     const tabToRestore = validTabs.includes(savedTab) ? savedTab : 'inbox';
     this.switchTab(tabToRestore, false);
 
@@ -568,7 +568,7 @@ const App = {
   },
 
   switchTab(tab, updateHistory = true) {
-    const validTabs = ['inbox', 'highlights', 'leads', 'urgent', 'spam', 'analytics', 'settings', 'meta'];
+    const validTabs = ['inbox', 'highlights', 'leads', 'urgent', 'spam', 'planner', 'analytics', 'settings', 'meta'];
     const activeTab = validTabs.includes(tab) ? tab : 'inbox';
     this.activeTab = activeTab;
     
@@ -602,11 +602,13 @@ const App = {
     // 5. Show/hide view containers seamlessly
     const mainFeedView = document.getElementById('view-feed-workspace');
     const settingsView = document.getElementById('view-settings');
+    const plannerView = document.getElementById('view-planner');
     const analyticsView = document.getElementById('view-analytics');
     const metaView = document.getElementById('view-meta');
 
     if (mainFeedView) mainFeedView.style.display = (activeTab === 'inbox' || activeTab === 'highlights' || activeTab === 'leads' || activeTab === 'urgent' || activeTab === 'spam') ? 'flex' : 'none';
     if (settingsView) settingsView.style.display = (activeTab === 'settings') ? 'block' : 'none';
+    if (plannerView) plannerView.style.display = (activeTab === 'planner') ? 'block' : 'none';
     if (analyticsView) analyticsView.style.display = (activeTab === 'analytics') ? 'block' : 'none';
     if (metaView) metaView.style.display = (activeTab === 'meta') ? 'block' : 'none';
 
@@ -614,6 +616,9 @@ const App = {
     const topbarTitle = document.getElementById('topbar-page-title');
     if (topbarTitle) {
       switch (activeTab) {
+        case 'planner':
+          topbarTitle.textContent = 'Planificador de Contenido & Horarios Dorados';
+          break;
         case 'analytics':
           topbarTitle.textContent = 'Métricas de Audiencia & Meta Graph API';
           break;
@@ -652,6 +657,10 @@ const App = {
       this.setFilterTag('spam');
     } else if (activeTab === 'inbox') {
       this.setFilterTag('all');
+    } else if (activeTab === 'planner') {
+      if (typeof PlannerController !== 'undefined') {
+        PlannerController.loadPlanner();
+      }
     } else if (activeTab === 'analytics') {
       if (typeof AnalyticsController !== 'undefined') {
         const savedSubtab = sessionStorage.getItem('xindro_analytics_subtab') || localStorage.getItem('xindro_analytics_subtab') || 'overview';

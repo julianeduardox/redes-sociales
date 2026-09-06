@@ -419,6 +419,31 @@ class Database {
                     processed_at TIMESTAMP
                 );
                 CREATE INDEX IF NOT EXISTS idx_webhook_status_created ON webhook_queue(status, created_at);
+
+                CREATE TABLE IF NOT EXISTS scheduled_posts (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER NOT NULL DEFAULT 1,
+                    account_id INTEGER,
+                    brand_voice_id INTEGER,
+                    platform VARCHAR(50) NOT NULL DEFAULT 'instagram',
+                    content_format VARCHAR(50) DEFAULT 'reel',
+                    topic TEXT,
+                    hook_title TEXT,
+                    caption TEXT NOT NULL,
+                    media_url TEXT,
+                    scheduled_for TIMESTAMP NOT NULL,
+                    is_golden_slot INTEGER DEFAULT 1,
+                    golden_window_label VARCHAR(100),
+                    status VARCHAR(50) DEFAULT 'scheduled',
+                    meta_publish_id VARCHAR(255),
+                    error_message TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE SET NULL,
+                    FOREIGN KEY (brand_voice_id) REFERENCES brand_voices(id) ON DELETE SET NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_sched_user_status ON scheduled_posts(user_id, status, scheduled_for);
             ");
 
         } elseif ($driver === 'mysql') {
@@ -587,6 +612,31 @@ class Database {
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     processed_at DATETIME,
                     INDEX idx_webhook_status_created (status, created_at)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+                CREATE TABLE IF NOT EXISTS scheduled_posts (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NOT NULL DEFAULT 1,
+                    account_id INT,
+                    brand_voice_id INT,
+                    platform VARCHAR(50) NOT NULL DEFAULT 'instagram',
+                    content_format VARCHAR(50) DEFAULT 'reel',
+                    topic TEXT,
+                    hook_title TEXT,
+                    caption TEXT NOT NULL,
+                    media_url TEXT,
+                    scheduled_for DATETIME NOT NULL,
+                    is_golden_slot INT DEFAULT 1,
+                    golden_window_label VARCHAR(100),
+                    status VARCHAR(50) DEFAULT 'scheduled',
+                    meta_publish_id VARCHAR(255),
+                    error_message TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    INDEX idx_sched_user_status (user_id, status, scheduled_for),
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE SET NULL,
+                    FOREIGN KEY (brand_voice_id) REFERENCES brand_voices(id) ON DELETE SET NULL
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             ");
 
@@ -757,6 +807,31 @@ class Database {
                     processed_at DATETIME
                 );
                 CREATE INDEX IF NOT EXISTS idx_webhook_status_created ON webhook_queue(status, created_at);
+
+                CREATE TABLE IF NOT EXISTS scheduled_posts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL DEFAULT 1,
+                    account_id INTEGER,
+                    brand_voice_id INTEGER,
+                    platform TEXT NOT NULL DEFAULT 'instagram',
+                    content_format TEXT DEFAULT 'reel',
+                    topic TEXT,
+                    hook_title TEXT,
+                    caption TEXT NOT NULL,
+                    media_url TEXT,
+                    scheduled_for DATETIME NOT NULL,
+                    is_golden_slot INTEGER DEFAULT 1,
+                    golden_window_label TEXT,
+                    status TEXT DEFAULT 'scheduled',
+                    meta_publish_id TEXT,
+                    error_message TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE SET NULL,
+                    FOREIGN KEY (brand_voice_id) REFERENCES brand_voices(id) ON DELETE SET NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_sched_user_status ON scheduled_posts(user_id, status, scheduled_for);
             ");
         }
     }
@@ -856,6 +931,93 @@ class Database {
                 $stmtInsTester->execute([':hash' => $testerHash]);
                 $testerId = (int)$pdo->lastInsertId();
                 self::seedInitialData($pdo, $testerId);
+            }
+
+            // 6. Ensure scheduled_posts table exists
+            $schedCols = self::getTableColumns($pdo, 'scheduled_posts');
+            if (empty($schedCols)) {
+                if ($driver === 'pgsql') {
+                    $pdo->exec("
+                        CREATE TABLE IF NOT EXISTS scheduled_posts (
+                            id SERIAL PRIMARY KEY,
+                            user_id INTEGER NOT NULL DEFAULT 1,
+                            account_id INTEGER,
+                            brand_voice_id INTEGER,
+                            platform VARCHAR(50) NOT NULL DEFAULT 'instagram',
+                            content_format VARCHAR(50) DEFAULT 'reel',
+                            topic TEXT,
+                            hook_title TEXT,
+                            caption TEXT NOT NULL,
+                            media_url TEXT,
+                            scheduled_for TIMESTAMP NOT NULL,
+                            is_golden_slot INTEGER DEFAULT 1,
+                            golden_window_label VARCHAR(100),
+                            status VARCHAR(50) DEFAULT 'scheduled',
+                            meta_publish_id VARCHAR(255),
+                            error_message TEXT,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                            FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE SET NULL,
+                            FOREIGN KEY (brand_voice_id) REFERENCES brand_voices(id) ON DELETE SET NULL
+                        );
+                        CREATE INDEX IF NOT EXISTS idx_sched_user_status ON scheduled_posts(user_id, status, scheduled_for);
+                    ");
+                } elseif ($driver === 'mysql') {
+                    $pdo->exec("
+                        CREATE TABLE IF NOT EXISTS scheduled_posts (
+                            id INT AUTO_INCREMENT PRIMARY KEY,
+                            user_id INT NOT NULL DEFAULT 1,
+                            account_id INT,
+                            brand_voice_id INT,
+                            platform VARCHAR(50) NOT NULL DEFAULT 'instagram',
+                            content_format VARCHAR(50) DEFAULT 'reel',
+                            topic TEXT,
+                            hook_title TEXT,
+                            caption TEXT NOT NULL,
+                            media_url TEXT,
+                            scheduled_for DATETIME NOT NULL,
+                            is_golden_slot INT DEFAULT 1,
+                            golden_window_label VARCHAR(100),
+                            status VARCHAR(50) DEFAULT 'scheduled',
+                            meta_publish_id VARCHAR(255),
+                            error_message TEXT,
+                            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                            INDEX idx_sched_user_status (user_id, status, scheduled_for),
+                            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                            FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE SET NULL,
+                            FOREIGN KEY (brand_voice_id) REFERENCES brand_voices(id) ON DELETE SET NULL
+                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                    ");
+                } else {
+                    $pdo->exec("
+                        CREATE TABLE IF NOT EXISTS scheduled_posts (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            user_id INTEGER NOT NULL DEFAULT 1,
+                            account_id INTEGER,
+                            brand_voice_id INTEGER,
+                            platform TEXT NOT NULL DEFAULT 'instagram',
+                            content_format TEXT DEFAULT 'reel',
+                            topic TEXT,
+                            hook_title TEXT,
+                            caption TEXT NOT NULL,
+                            media_url TEXT,
+                            scheduled_for DATETIME NOT NULL,
+                            is_golden_slot INTEGER DEFAULT 1,
+                            golden_window_label TEXT,
+                            status TEXT DEFAULT 'scheduled',
+                            meta_publish_id TEXT,
+                            error_message TEXT,
+                            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                            FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE SET NULL,
+                            FOREIGN KEY (brand_voice_id) REFERENCES brand_voices(id) ON DELETE SET NULL
+                        );
+                        CREATE INDEX IF NOT EXISTS idx_sched_user_status ON scheduled_posts(user_id, status, scheduled_for);
+                    ");
+                }
             }
 
         } catch (Throwable $e) {

@@ -5368,3 +5368,458 @@ details.advanced-dev-details[open] summary {
   border-radius: var(--radius-sm);
   padding: 10px 12px;
 }
+
+/* ==========================================================================
+   📅 AI CONTENT PLANNER & CALENDAR STYLES
+   ========================================================================== */
+
+.planner-golden-banner {
+  background: linear-gradient(135deg, rgba(20, 24, 39, 0.95) 0%, rgba(30, 27, 75, 0.6) 100%);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: var(--radius-md);
+  padding: 18px 20px;
+}
+
+.golden-slots-horizontal-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.golden-slot-pill-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.golden-slot-pill-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(245, 158, 11, 0.4);
+  transform: translateY(-2px);
+}
+
+.golden-slot-pill-card.occupied {
+  opacity: 0.65;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.slot-pill-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.slot-pill-rank {
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: #fbbf24;
+}
+
+.slot-pill-eng {
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: var(--accent-emerald);
+}
+
+.slot-pill-datetime {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.slot-pill-datetime .time {
+  color: var(--accent-cyan);
+}
+
+.btn-slot-use {
+  background: rgba(99, 102, 241, 0.2);
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  color: #a5b4fc;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.btn-slot-use:hover {
+  background: var(--primary);
+  color: #fff;
+}
+
+.slot-occupied-tag {
+  font-size: 0.72rem;
+  color: var(--accent-emerald);
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+/* Calendar Matrix Controls */
+.calendar-nav-buttons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+}
+
+.cal-nav-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-base);
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cal-nav-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.cal-nav-btn.today {
+  background: rgba(99, 102, 241, 0.2);
+  color: #a5b4fc;
+}
+
+.calendar-status-summary {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cal-badge-kpi {
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--border-subtle);
+}
+
+.cal-badge-kpi.scheduled {
+  background: rgba(99, 102, 241, 0.15);
+  color: #a5b4fc;
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+.cal-badge-kpi.published {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--accent-emerald);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.cal-badge-kpi.drafts {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-muted);
+}
+
+/* Calendar Grid */
+.calendar-grid-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 6px;
+}
+
+.calendar-grid-body {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.cal-day-cell {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  min-height: 120px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s ease;
+}
+
+.cal-day-cell:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.cal-day-cell.today {
+  border-color: rgba(99, 102, 241, 0.6);
+  background: rgba(99, 102, 241, 0.06);
+}
+
+.cal-day-cell.cal-day-empty {
+  background: transparent;
+  border-color: transparent;
+  min-height: 60px;
+}
+
+.cal-day-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.cal-day-num {
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.cal-golden-badge {
+  font-size: 0.65rem;
+  font-weight: 800;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #fbbf24;
+  padding: 1px 5px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.cal-btn-add {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cal-btn-add:hover {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+.cal-day-posts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.cal-post-chip {
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cal-post-chip:hover {
+  transform: translateX(2px);
+  filter: brightness(1.15);
+}
+
+.cal-post-chip.scheduled {
+  background: rgba(99, 102, 241, 0.25);
+  border: 1px solid rgba(99, 102, 241, 0.45);
+  color: #e0e7ff;
+}
+
+.cal-post-chip.published {
+  background: rgba(16, 185, 129, 0.25);
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  color: #a7f3d0;
+}
+
+.cal-post-chip.draft {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--text-muted);
+}
+
+.cal-chip-time {
+  font-weight: 800;
+  font-size: 0.68rem;
+}
+
+.cal-chip-hook {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+/* Proposal Cards in Content Creator Modal */
+.proposals-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.proposal-card {
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.proposal-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(99, 102, 241, 0.35);
+}
+
+.proposal-card.selected {
+  border-color: #a855f7;
+  background: rgba(168, 85, 247, 0.08);
+  box-shadow: 0 0 16px rgba(168, 85, 247, 0.2);
+}
+
+.proposal-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.proposal-type-badge {
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.proposal-select-indicator {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #a5b4fc;
+}
+
+.proposal-hook {
+  font-size: 0.8rem;
+  color: var(--accent-cyan);
+  line-height: 1.35;
+}
+
+.proposal-caption-preview {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.proposal-visual-hint {
+  font-size: 0.72rem;
+  color: #fbbf24;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 6px;
+}
+
+/* Creator Editor Container */
+.creator-editor-container {
+  background: rgba(10, 14, 26, 0.7);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+}
+
+/* Mock Post Card for Detail Preview */
+.mock-post-card {
+  background: #000;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.mock-post-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+}
+
+.mock-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #a855f7);
+}
+
+.mock-user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.mock-name {
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.mock-date {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+}
+
+.mock-media-wrap {
+  width: 100%;
+  max-height: 280px;
+  overflow: hidden;
+  background: #111;
+}
+
+.mock-media-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mock-post-body {
+  padding: 14px;
+}
+
+.golden-tag-badge {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #fbbf24;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 12px;
+}
+

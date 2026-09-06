@@ -134,7 +134,18 @@ logTest(
 );
 
 // -------------------------------------------------------------
-// 5. ENDPOINT: /api/settings.php (Configuración de Voz de Marca)
+// 5. ENDPOINT: /api/planner.php (Planificador & Horarios Dorados)
+// -------------------------------------------------------------
+$plannerRes = makeRequest($appUrl . '/api/planner.php', 'GET');
+logTest(
+    '/api/planner.php',
+    'Protección de Calendario y Publicaciones Programadas',
+    in_array($plannerRes['code'], [401, 403], true),
+    "HTTP {$plannerRes['code']} (Aislamiento y Sesión verificados) | {$plannerRes['duration_ms']}ms"
+);
+
+// -------------------------------------------------------------
+// 6. ENDPOINT: /api/settings.php (Configuración de Voz de Marca)
 // -------------------------------------------------------------
 $settingsRes = makeRequest($appUrl . '/api/settings.php', 'GET');
 logTest(
