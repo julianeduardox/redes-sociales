@@ -1020,6 +1020,30 @@ class Database {
                 }
             }
 
+            // Ensure AI model, token quota & presence columns in users
+            try {
+                $driver = self::getDriver();
+                if ($driver === 'sqlite') {
+                    $uCols = $pdo->query("PRAGMA table_info(users)")->fetchAll(PDO::FETCH_ASSOC);
+                    $uColNames = array_column($uCols, 'name');
+                    if (!in_array('ai_model', $uColNames)) {
+                        $pdo->exec("ALTER TABLE users ADD COLUMN ai_model TEXT DEFAULT 'anthropic/claude-3.5-sonnet'");
+                    }
+                    if (!in_array('max_tokens', $uColNames)) {
+                        $pdo->exec("ALTER TABLE users ADD COLUMN max_tokens INTEGER DEFAULT 50000");
+                    }
+                    if (!in_array('used_tokens', $uColNames)) {
+                        $pdo->exec("ALTER TABLE users ADD COLUMN used_tokens INTEGER DEFAULT 0");
+                    }
+                    if (!in_array('last_activity_at', $uColNames)) {
+                        $pdo->exec("ALTER TABLE users ADD COLUMN last_activity_at DATETIME");
+                        $pdo->exec("UPDATE users SET last_activity_at = CURRENT_TIMESTAMP WHERE last_activity_at IS NULL");
+                    }
+                }
+            } catch (Throwable $e) {
+                error_log("Users AI columns migration notice: " . $e->getMessage());
+            }
+
         } catch (Throwable $e) {
             error_log("Schema migration notice: " . $e->getMessage());
         }

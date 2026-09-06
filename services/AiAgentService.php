@@ -378,18 +378,45 @@ class AiAgentService {
 
         $fewShotExamples = self::parseJsonSetting($runtimeOverrides['brand_few_shot_examples'] ?? ($brandVoice['few_shot_examples'] ?? Settings::get('brand_few_shot_examples', '')), self::getDefaultFewShotExamples());
 
+        $targetUserId = (int)($runtimeOverrides['user_id'] ?? (class_exists('Auth') && Auth::check() ? Auth::id() : ($brandVoice['user_id'] ?? 1)));
+        $userAiConfig = null;
+        if ($targetUserId > 0) {
+            try {
+                $uStmt = $pdo->prepare("SELECT id, role, email, ai_model, max_tokens, used_tokens FROM users WHERE id = :id LIMIT 1");
+                $uStmt->execute([':id' => $targetUserId]);
+                $userAiConfig = $uStmt->fetch(PDO::FETCH_ASSOC);
+            } catch (Throwable $e) {}
+        }
+
         $aiProvider = $runtimeOverrides['ai_provider'] ?? Settings::get('ai_provider', 'openrouter');
         $openrouterKey = Settings::get('openrouter_api_key', '');
-        $openrouterModel = $runtimeOverrides['openrouter_model'] ?? Settings::get('openrouter_model', 'anthropic/claude-3.5-sonnet');
+        
+        // Priority: runtime override > user's assigned model from admin > system setting
+        $userAssignedModel = !empty($userAiConfig['ai_model']) ? trim($userAiConfig['ai_model']) : '';
+        if (!empty($userAssignedModel)) {
+            if ($userAssignedModel === 'heuristic') {
+                $aiProvider = 'heuristic';
+            } else {
+                $openrouterModel = $runtimeOverrides['openrouter_model'] ?? $userAssignedModel;
+            }
+        } else {
+            $openrouterModel = $runtimeOverrides['openrouter_model'] ?? Settings::get('openrouter_model', 'anthropic/claude-3.5-sonnet');
+        }
 
-        // Try OpenRouter API first if configured
-        if ($aiProvider === 'openrouter' && !empty($openrouterKey)) {
+        // Check user token quota
+        $maxTokens = (int)($userAiConfig['max_tokens'] ?? 50000);
+        $usedTokens = (int)($userAiConfig['used_tokens'] ?? 0);
+        $isTokensExhausted = ($maxTokens > 0 && $usedTokens >= $maxTokens);
+
+        // Try OpenRouter API first if configured and user has remaining quota
+        if ($aiProvider === 'openrouter' && !empty($openrouterKey) && !$isTokensExhausted) {
             $openrouterResult = self::callOpenRouterApi(
                 $authorName, $commentText, $platform, $postCaption, 
                 $brandName, $personaName, $brandIndustry, $brandTone, $brandDescription, $language,
                 $warmthLevel, $depthLevel, $energyLevel,
                 $closingQuestionRule, $emojiStyle, $keyPhrases, $forbiddenPhrases, $fewShotExamples,
-                $openrouterKey, $openrouterModel
+                $openrouterKey, $openrouterModel,
+                $targetUserId, $pdo
             );
             if ($openrouterResult !== null && !empty($openrouterResult['engagement'])) {
                 return self::sanitizeRepliesWithForbidden($openrouterResult, $forbiddenPhrases);
@@ -625,7 +652,8 @@ class AiAgentService {
         string $brandName, string $personaName, string $brandIndustry, string $brandTone, string $brandDescription, string $language,
         int $warmthLevel, int $depthLevel, int $energyLevel,
         string $closingQuestionRule, string $emojiStyle, array $keyPhrases, array $forbiddenPhrases, array $fewShotExamples,
-        string $apiKey, string $model = 'anthropic/claude-3.5-sonnet'
+        string $apiKey, string $model = 'anthropic/claude-3.5-sonnet',
+        int $targetUserId = 0, ?PDO $pdo = null
     ): ?array {
         $prompt = self::buildUniversalPrompt(
             $authorName, $commentText, $platform, $postCaption,
@@ -676,6 +704,17 @@ class AiAgentService {
             $resData = json_decode($response, true);
             $content = $resData['choices'][0]['message']['content'] ?? '';
             
+            // Deduct / record tokens used
+            $tokensUsed = (int)($resData['usage']['total_tokens'] ?? 0);
+            if ($tokensUsed > 0 && $targetUserId > 0 && $pdo) {
+                try {
+                    $upTokens = $pdo->prepare("UPDATE users SET used_tokens = used_tokens + :tokens, last_activity_at = CURRENT_TIMESTAMP WHERE id = :uid");
+                    $upTokens->execute([':tokens' => $tokensUsed, ':uid' => $targetUserId]);
+                } catch (Throwable $t) {
+                    error_log("Token update error: " . $t->getMessage());
+                }
+            }
+
             // Clean markdown code blocks if model wrapped output in ```json ... ```
             $content = preg_replace('/^```(?:json)?\s*/i', '', trim($content));
             $content = preg_replace('/\s*```$/', '', trim($content));
@@ -683,12 +722,17 @@ class AiAgentService {
             $parsed = json_decode($content, true);
 
             if ($parsed && isset($parsed['engagement'])) {
+                $tipNotice = 'Respuesta generada con OpenRouter (' . htmlspecialchars($selectedModel) . ') adaptada a tu voz de marca.';
+                if ($tokensUsed > 0) {
+                    $tipNotice .= ' [Consumo: ' . number_format($tokensUsed) . ' tokens]';
+                }
                 return [
                     'source' => 'openrouter_' . str_replace(['/', ':', '.'], '_', $selectedModel),
                     'engagement' => $parsed['engagement'] ?? '',
                     'conversion' => $parsed['conversion'] ?? '',
                     'support' => $parsed['support'] ?? '',
-                    'engagement_tips' => $parsed['engagement_tips'] ?? 'Respuesta generada con OpenRouter (' . htmlspecialchars($selectedModel) . ') adaptada a tu voz de marca.'
+                    'tokens_used' => $tokensUsed,
+                    'engagement_tips' => $parsed['engagement_tips'] ?? $tipNotice
                 ];
             }
         }

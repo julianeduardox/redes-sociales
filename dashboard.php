@@ -11,6 +11,7 @@ Auth::requireAuth(false);
 
 $currentUser = Auth::user();
 $userId = $currentUser['id'] ?? 1;
+$isAdmin = Auth::isAdmin();
 $csrfToken = Security::getCsrfToken();
 $userBrands = [];
 $activeAccountsCount = 0;
@@ -136,6 +137,13 @@ $isMetaConnected = ($activeAccountsCount > 0);
         <span class="icon">🔗</span>
         <span>Conexión Meta</span>
       </button>
+
+      <?php if ($isAdmin): ?>
+      <button class="nav-btn" data-tab="users">
+        <span class="icon">👥</span>
+        <span>Usuarios & Tokens</span>
+      </button>
+      <?php endif; ?>
     </nav>
 
     <!-- Compact Copilot Quick Trigger -->
@@ -184,8 +192,8 @@ $isMetaConnected = ($activeAccountsCount > 0);
         <button type="button" class="btn-mobile-menu" id="btn-mobile-menu" onclick="App.toggleMobileSidebar(true)" aria-label="Abrir Menú">☰</button>
         <h2 class="page-title" id="topbar-page-title">Comentarios & Conversación</h2>
 
-        <!-- Agency Multi-Brand Switcher (Styled as Capsule Pill Group) -->
-        <div class="topbar-brand-switcher" id="topbar-brand-switcher" title="Cambiar de marca o cliente activo">
+        <!-- Agency Multi-Brand Switcher (Shown ONLY when in Voz de Marca IA) -->
+        <div class="topbar-brand-switcher" id="topbar-brand-switcher" title="Cambiar de marca o cliente activo" style="display: none;">
           <div class="brand-select-pill">
             <span class="brand-pill-icon">🏢</span>
             <select id="topbar-brand-select" class="topbar-brand-select" onchange="App.switchActiveBrand(this.value)">
@@ -225,10 +233,6 @@ $isMetaConnected = ($activeAccountsCount > 0);
           <div class="heartbeat-dot" id="heartbeat-dot"></div>
           <span id="heartbeat-status-text">Auto-Sync: Activo (3m)</span>
         </div>
-
-        <button class="btn-primary-action" onclick="App.openModal('modal-simulate')">
-          <span>+ Simular Comentario</span>
-        </button>
       </div>
     </header>
 
@@ -511,31 +515,9 @@ $isMetaConnected = ($activeAccountsCount > 0);
     <div id="view-settings" style="display: none; padding: 28px; overflow-y: auto; height: calc(100vh - 70px);">
       <div style="max-width: 1280px; margin: 0 auto;">
         
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-bottom: 24px;">
-          <div>
-            <h3 style="font-size: 1.45rem; font-weight: 800; color: #fff; margin-bottom: 6px;">🤖 Estudio de Voz de Marca & Prompt Dinámico</h3>
-            <p style="font-size: 0.88rem; color: var(--text-muted);">Configura la personalidad, persona, idioma y prompt de la IA adaptado a cualquier cliente o nicho comercial.</p>
-          </div>
-
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <div style="background: rgba(255,255,255,0.04); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 4px 10px; display: flex; align-items: center; gap: 8px;">
-              <span style="font-size: 0.85rem;">🏢 Marca en Edición:</span>
-              <select id="settings-brand-voice-selector" class="topbar-brand-select" onchange="App.loadBrandVoiceDetails(this.value)">
-                <?php if (empty($userBrands)): ?>
-                  <option value="">Cargando marcas...</option>
-                <?php else: ?>
-                  <?php foreach ($userBrands as $b): ?>
-                    <option value="<?= (int)$b['id'] ?>" <?= !empty($b['is_default']) ? 'selected' : '' ?>>
-                      <?= htmlspecialchars($b['brand_name'], ENT_QUOTES, 'UTF-8') ?> (<?= htmlspecialchars($b['industry'] ?? 'General', ENT_QUOTES, 'UTF-8') ?>)
-                    </option>
-                  <?php endforeach; ?>
-                <?php endif; ?>
-              </select>
-            </div>
-            <button type="button" class="btn-primary-action" onclick="App.openNewBrandModal()">
-              <span>+ Nueva Marca</span>
-            </button>
-          </div>
+        <div style="margin-bottom: 24px;">
+          <h3 style="font-size: 1.45rem; font-weight: 800; color: #fff; margin-bottom: 6px;">🤖 Estudio de Voz de Marca & Prompt Dinámico</h3>
+          <p style="font-size: 0.88rem; color: var(--text-muted);">Configura la personalidad, persona, idioma y prompt de la IA adaptado a cualquier cliente o nicho comercial.</p>
         </div>
 
         <div class="studio-grid-layout">
@@ -544,7 +526,24 @@ $isMetaConnected = ($activeAccountsCount > 0);
             <form onsubmit="App.saveBrandStudioForm(event)" autocomplete="off">
               <input type="hidden" id="setting-brand-id" value="" />
               
-              <!-- Block 1: Brand Fundamentals -->
+              <!-- Progressive Disclosure Sub-tabs Bar -->
+              <div class="studio-subtabs-bar">
+                <button type="button" class="studio-subtab-btn active" id="btn-subtab-identity" onclick="App.switchStudioTab('identity')">
+                  <span>🎨 1. Personalidad & Tono</span>
+                </button>
+                <button type="button" class="studio-subtab-btn" id="btn-subtab-rules" onclick="App.switchStudioTab('rules')">
+                  <span>🛡️ 2. Reglas & Ejemplos</span>
+                </button>
+                <?php if ($isAdmin): ?>
+                <button type="button" class="studio-subtab-btn" id="btn-subtab-model" onclick="App.switchStudioTab('model')">
+                  <span>🧠 3. Motor IA & API</span>
+                </button>
+                <?php endif; ?>
+              </div>
+
+              <!-- Tab Pane 1: Identity, Personality & Tone Calibration -->
+              <div id="studio-tab-identity" class="studio-tab-pane">
+                <!-- Block 1: Brand Fundamentals -->
               <div style="background: var(--bg-card); padding: 24px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 20px;">
                 <h4 style="font-size: 1rem; font-weight: 800; margin-bottom: 16px; color: var(--accent-cyan); display: flex; align-items: center; gap: 8px;">
                   <span>🏢 Identidad, Persona & Nicho del Cliente</span>
@@ -676,9 +675,12 @@ $isMetaConnected = ($activeAccountsCount > 0);
                   </div>
                 </div>
               </div>
+              </div><!-- End studio-tab-identity -->
 
-              <!-- Block 3: Golden Rules (Keywords & Forbidden Words) -->
-              <div style="background: var(--bg-card); padding: 24px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 20px;">
+              <!-- Tab Pane 2: Golden Rules & Few-Shot Master Examples -->
+              <div id="studio-tab-rules" class="studio-tab-pane" style="display: none;">
+                <!-- Block 3: Golden Rules (Keywords & Forbidden Words) -->
+                <div style="background: var(--bg-card); padding: 24px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 20px;">
                 <h4 style="font-size: 1rem; font-weight: 800; margin-bottom: 6px; color: var(--accent-cyan); display: flex; align-items: center; gap: 8px;">
                   <span>🛡️ Conceptos Clave & Frases Prohibidas</span>
                 </h4>
@@ -719,49 +721,55 @@ $isMetaConnected = ($activeAccountsCount > 0);
                   <!-- Rendered dynamically -->
                 </div>
               </div>
+              </div><!-- End studio-tab-rules -->
 
-              <!-- Block 5: OpenRouter AI Engine & Multi-Model -->
-              <div style="background: var(--bg-card); padding: 24px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 24px;">
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
-                  <h4 style="font-size: 1rem; font-weight: 800; color: #fff; margin: 0;">🌐 Motor de Inteligencia Artificial (OpenRouter)</h4>
-                  <span style="font-size: 0.72rem; padding: 3px 8px; border-radius: 6px; background: rgba(99,102,241,0.15); color: #a5b4fc; font-weight: 700;">Multi-Model Hub</span>
-                </div>
+              <?php if ($isAdmin): ?>
+              <!-- Tab Pane 3: AI Engine & Model Settings (Admin Only) -->
+              <div id="studio-tab-model" class="studio-tab-pane" style="display: none;">
+                <!-- Block 5: OpenRouter AI Engine & Multi-Model -->
+                <div style="background: var(--bg-card); padding: 24px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 24px;">
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+                    <h4 style="font-size: 1rem; font-weight: 800; color: #fff; margin: 0;">🌐 Motor de Inteligencia Artificial (OpenRouter)</h4>
+                    <span style="font-size: 0.72rem; padding: 3px 8px; border-radius: 6px; background: rgba(99,102,241,0.15); color: #a5b4fc; font-weight: 700;">Multi-Model Hub</span>
+                  </div>
 
-                <div class="form-group">
-                  <label>Proveedor de Generación:</label>
-                  <select id="setting-ai-provider" onchange="App.toggleAiProviderFields()">
-                    <option value="openrouter" selected>🌐 OpenRouter (Claude 3.5 Sonnet, DeepSeek V3/R1, GPT-4o, Llama 3.3)</option>
-                    <option value="heuristic">⚡ Motor Heurístico Calibrado Local (100% Gratuito • Cero Tokens • 0ms)</option>
-                  </select>
-                </div>
-
-                <div id="openrouter-settings-fields">
                   <div class="form-group">
-                    <label>OpenRouter API Key:</label>
-                    <input type="text" class="masked-key-input" id="setting-openrouter-key" autocomplete="new-password" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="sk-or-v1-..." />
-                    <small style="color: var(--text-dim); font-size: 0.74rem; display: block; margin-top: 4px;">Obtén tu clave única en <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" style="color: var(--primary); text-decoration: underline;">openrouter.ai/keys</a> para acceder a más de 100 modelos con un solo saldo.</small>
+                    <label>Proveedor de Generación:</label>
+                    <select id="setting-ai-provider" onchange="App.toggleAiProviderFields()">
+                      <option value="openrouter" selected>🌐 OpenRouter (Claude 3.5 Sonnet, DeepSeek V3/R1, GPT-4o, Llama 3.3)</option>
+                      <option value="heuristic">⚡ Motor Heurístico Calibrado Local (100% Gratuito • Cero Tokens • 0ms)</option>
+                    </select>
                   </div>
 
-                  <div class="form-group" style="margin-bottom: 0;">
-                    <label>Modelo de Inteligencia Preferido:</label>
-                    <div style="display: flex; gap: 8px;">
-                      <select id="setting-openrouter-model" style="flex: 1;" onchange="App.onOpenRouterModelSelect(this.value)">
-                        <option value="anthropic/claude-3.5-sonnet" selected>⭐ Anthropic Claude 3.5 Sonnet (Recomendado • Tono más humano, empático y natural)</option>
-                        <option value="deepseek/deepseek-chat">⚡ DeepSeek V3 (Ultra económico • Excelente en español y valor)</option>
-                        <option value="deepseek/deepseek-r1">🧠 DeepSeek R1 (Razonamiento profundo)</option>
-                        <option value="openai/gpt-4o-mini">🚀 OpenAI GPT-4o Mini (Rápido y eficiente)</option>
-                        <option value="openai/gpt-4o">💎 OpenAI GPT-4o (Máxima potencia multimodal)</option>
-                        <option value="meta-llama/llama-3.3-70b-instruct">🏛️ Meta Llama 3.3 70B (Open-Source líder)</option>
-                        <option value="google/gemini-2.0-flash-001">⚡ Google Gemini 2.0 Flash (Ultrarrápido)</option>
-                        <option value="custom">✏️ Especificar otro modelo personalizado...</option>
-                      </select>
+                  <div id="openrouter-settings-fields">
+                    <div class="form-group">
+                      <label>OpenRouter API Key:</label>
+                      <input type="text" class="masked-key-input" id="setting-openrouter-key" autocomplete="new-password" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="sk-or-v1-..." />
+                      <small style="color: var(--text-dim); font-size: 0.74rem; display: block; margin-top: 4px;">Obtén tu clave única en <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" style="color: var(--primary); text-decoration: underline;">openrouter.ai/keys</a> para acceder a más de 100 modelos con un solo saldo.</small>
                     </div>
-                    <div id="openrouter-custom-model-wrapper" style="display: none; margin-top: 8px;">
-                      <input type="text" id="setting-openrouter-custom-model" placeholder="ej. mistralai/mistral-large-2407" style="font-size: 0.82rem;" />
+
+                    <div class="form-group" style="margin-bottom: 0;">
+                      <label>Modelo de Inteligencia Preferido:</label>
+                      <div style="display: flex; gap: 8px;">
+                        <select id="setting-openrouter-model" style="flex: 1;" onchange="App.onOpenRouterModelSelect(this.value)">
+                          <option value="anthropic/claude-3.5-sonnet" selected>⭐ Anthropic Claude 3.5 Sonnet (Recomendado • Tono más humano, empático y natural)</option>
+                          <option value="deepseek/deepseek-chat">⚡ DeepSeek V3 (Ultra económico • Excelente en español y valor)</option>
+                          <option value="deepseek/deepseek-r1">🧠 DeepSeek R1 (Razonamiento profundo)</option>
+                          <option value="openai/gpt-4o-mini">🚀 OpenAI GPT-4o Mini (Rápido y eficiente)</option>
+                          <option value="openai/gpt-4o">💎 OpenAI GPT-4o (Máxima potencia multimodal)</option>
+                          <option value="meta-llama/llama-3.3-70b-instruct">🏛️ Meta Llama 3.3 70B (Open-Source líder)</option>
+                          <option value="google/gemini-2.0-flash-001">⚡ Google Gemini 2.0 Flash (Ultrarrápido)</option>
+                          <option value="custom">✏️ Especificar otro modelo personalizado...</option>
+                        </select>
+                      </div>
+                      <div id="openrouter-custom-model-wrapper" style="display: none; margin-top: 8px;">
+                        <input type="text" id="setting-openrouter-custom-model" placeholder="ej. mistralai/mistral-large-2407" style="font-size: 0.82rem;" />
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              </div><!-- End studio-tab-model -->
+              <?php endif; ?>
 
               <button type="submit" class="btn-primary-action" style="width: 100%; justify-content: center; padding: 14px; font-size: 0.95rem; font-weight: 800;">
                 Guardar Voz de Marca y Calibración 💾
@@ -800,9 +808,14 @@ $isMetaConnected = ($activeAccountsCount > 0);
                 <textarea id="playground-comment" rows="3" style="font-size: 0.82rem;" placeholder="Escribe cualquier comentario ficticio para evaluar la respuesta de la IA..."></textarea>
               </div>
 
-              <button type="button" class="btn-primary-action" style="width: 100%; justify-content: center; background: linear-gradient(135deg, #6366f1, #3b82f6);" onclick="App.testVoicePlayground()">
-                <span>⚡ Probar Voz Calibrada de la IA</span>
-              </button>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                <button type="button" class="btn-primary-action" style="justify-content: center; background: linear-gradient(135deg, #6366f1, #3b82f6); font-size: 0.8rem; padding: 10px 8px;" onclick="App.testVoicePlayground()">
+                  <span>⚡ Probar Respuesta IA</span>
+                </button>
+                <button type="button" class="btn-primary-action" style="justify-content: center; background: rgba(255, 255, 255, 0.08); border: 1px solid var(--border-subtle); color: #fff; font-size: 0.8rem; padding: 10px 8px;" onclick="App.openSimulateCommentModalFromPlayground()" title="Simular e inyectar este comentario en el Feed del Dashboard">
+                  <span>📥 Simular en Feed</span>
+                </button>
+              </div>
 
               <!-- Playground Output Results -->
               <div id="playground-results-container" class="playground-results-container" style="display: none;">
@@ -1001,6 +1014,107 @@ $isMetaConnected = ($activeAccountsCount > 0);
 
       </div>
     </div>
+
+    <?php if ($isAdmin): ?>
+    <!-- View 5: Admin Users, AI Models & Token Quota Management -->
+    <div id="view-users" style="display: none; padding: 28px; overflow-y: auto; height: calc(100vh - 70px);">
+      <div style="max-width: 1280px; margin: 0 auto;">
+        
+        <!-- Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-bottom: 24px;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+              <h3 style="font-size: 1.45rem; font-weight: 800; color: #fff; margin: 0;">👥 Gestión de Usuarios, Modelos IA & Cuotas de Tokens</h3>
+              <span style="font-size: 0.72rem; padding: 3px 8px; border-radius: 6px; background: rgba(99,102,241,0.18); color: #a5b4fc; font-weight: 700; border: 1px solid rgba(99,102,241,0.3);">Panel Admin</span>
+            </div>
+            <p style="font-size: 0.88rem; color: var(--text-muted); margin: 0;">Supervisa usuarios registrados, detecta conexiones en tiempo real, asigna el modelo LLM por cuenta y define los límites de tokens.</p>
+          </div>
+
+          <div style="display: flex; gap: 10px;">
+            <button type="button" class="btn-primary-action" onclick="App.loadAdminUsers(true)" style="background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); color: #fff; padding: 10px 16px;">
+              <span>🔄 Actualizar Estado</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- KPI Summary Cards -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin-bottom: 24px;">
+          <div class="admin-kpi-card">
+            <div class="admin-kpi-icon" style="background: rgba(99,102,241,0.15); color: #818cf8;">👥</div>
+            <div>
+              <div class="admin-kpi-label">Usuarios Registrados</div>
+              <div class="admin-kpi-val" id="kpi-total-users">--</div>
+            </div>
+          </div>
+
+          <div class="admin-kpi-card">
+            <div class="admin-kpi-icon" style="background: rgba(16,185,129,0.15); color: #34d399;">🟢</div>
+            <div>
+              <div class="admin-kpi-label">En Línea Ahora</div>
+              <div class="admin-kpi-val" id="kpi-online-users" style="color: #34d399;">--</div>
+            </div>
+          </div>
+
+          <div class="admin-kpi-card">
+            <div class="admin-kpi-icon" style="background: rgba(245,158,11,0.15); color: #fbbf24;">⚡</div>
+            <div>
+              <div class="admin-kpi-label">Tokens Totales Consumidos</div>
+              <div class="admin-kpi-val" id="kpi-total-tokens">--</div>
+            </div>
+          </div>
+
+          <div class="admin-kpi-card">
+            <div class="admin-kpi-icon" style="background: rgba(236,72,153,0.15); color: #f472b6;">🧠</div>
+            <div>
+              <div class="admin-kpi-label">Modelo Más Asignado</div>
+              <div class="admin-kpi-val" id="kpi-top-model" style="font-size: 0.95rem; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">--</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter & Search Toolbar -->
+        <div style="background: var(--bg-card); padding: 14px 18px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">
+          <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 260px;">
+            <span style="color: var(--text-dim); font-size: 1.1rem;">🔍</span>
+            <input type="text" id="admin-user-search-input" placeholder="Buscar por nombre o correo electrónico..." style="background: transparent; border: none; outline: none; color: #fff; width: 100%; font-size: 0.88rem;" oninput="App.filterAdminUsersTable(this.value)" />
+          </div>
+
+          <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+            <button type="button" class="admin-filter-pill active" id="filter-user-all" onclick="App.setAdminUserFilter('all')">Todos</button>
+            <button type="button" class="admin-filter-pill" id="filter-user-online" onclick="App.setAdminUserFilter('online')">🟢 En Línea</button>
+            <button type="button" class="admin-filter-pill" id="filter-user-client" onclick="App.setAdminUserFilter('user')">Clientes</button>
+            <button type="button" class="admin-filter-pill" id="filter-user-admin" onclick="App.setAdminUserFilter('admin')">Admins</button>
+          </div>
+        </div>
+
+        <!-- Users Data Table Container -->
+        <div style="background: var(--bg-card); border-radius: var(--radius-md); border: 1px solid var(--border-subtle); overflow: hidden; box-shadow: var(--shadow-sm);">
+          <div style="overflow-x: auto;">
+            <table class="admin-users-table" style="width: 100%; border-collapse: collapse; text-align: left;">
+              <thead>
+                <tr style="border-bottom: 1px solid var(--border-subtle); background: rgba(255,255,255,0.02); font-size: 0.76rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px;">
+                  <th style="padding: 14px 18px;">Usuario / Cuenta</th>
+                  <th style="padding: 14px 18px;">Estado & Presencia</th>
+                  <th style="padding: 14px 18px; min-width: 280px;">Modelo IA Asignado</th>
+                  <th style="padding: 14px 18px; min-width: 260px;">Cuota de Tokens & Consumo</th>
+                  <th style="padding: 14px 18px; text-align: right;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="admin-users-tbody">
+                <tr>
+                  <td colspan="5" style="padding: 36px; text-align: center; color: var(--text-muted); font-size: 0.88rem;">
+                    <div style="display: inline-block; width: 22px; height: 22px; border: 2px solid rgba(99,102,241,0.3); border-top-color: #6366f1; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 8px;"></div>
+                    <div>Cargando directorio de usuarios...</div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <?php endif; ?>
 
     <!-- Mobile Bottom Navigation Bar -->
     <nav class="mobile-bottom-nav">

@@ -53,7 +53,7 @@ const App = {
     // 1. Detect and restore active tab from URL hash or storage immediately on page load / F5
     const hash = window.location.hash ? window.location.hash.replace('#', '').trim() : '';
     let savedTab = hash || sessionStorage.getItem('xindro_active_tab') || localStorage.getItem('xindro_active_tab') || 'inbox';
-    const validTabs = ['inbox', 'highlights', 'leads', 'urgent', 'spam', 'planner', 'analytics', 'settings', 'meta'];
+    const validTabs = ['inbox', 'highlights', 'leads', 'urgent', 'spam', 'planner', 'analytics', 'settings', 'meta', 'users'];
     const tabToRestore = validTabs.includes(savedTab) ? savedTab : 'inbox';
     this.switchTab(tabToRestore, false);
 
@@ -606,7 +606,7 @@ const App = {
   },
 
   switchTab(tab, updateHistory = true) {
-    const validTabs = ['inbox', 'highlights', 'leads', 'urgent', 'spam', 'planner', 'analytics', 'settings', 'meta'];
+    const validTabs = ['inbox', 'highlights', 'leads', 'urgent', 'spam', 'planner', 'analytics', 'settings', 'meta', 'users'];
     const activeTab = validTabs.includes(tab) ? tab : 'inbox';
     this.activeTab = activeTab;
     
@@ -643,12 +643,20 @@ const App = {
     const plannerView = document.getElementById('view-planner');
     const analyticsView = document.getElementById('view-analytics');
     const metaView = document.getElementById('view-meta');
+    const usersView = document.getElementById('view-users');
 
     if (mainFeedView) mainFeedView.style.display = (activeTab === 'inbox' || activeTab === 'highlights' || activeTab === 'leads' || activeTab === 'urgent' || activeTab === 'spam') ? 'flex' : 'none';
     if (settingsView) settingsView.style.display = (activeTab === 'settings') ? 'block' : 'none';
     if (plannerView) plannerView.style.display = (activeTab === 'planner') ? 'block' : 'none';
     if (analyticsView) analyticsView.style.display = (activeTab === 'analytics') ? 'block' : 'none';
     if (metaView) metaView.style.display = (activeTab === 'meta') ? 'block' : 'none';
+    if (usersView) usersView.style.display = (activeTab === 'users') ? 'block' : 'none';
+
+    // Show Agency Multi-Brand Switcher in topbar ONLY when in Voz de Marca IA (settings tab)
+    const topbarBrandSwitcher = document.getElementById('topbar-brand-switcher');
+    if (topbarBrandSwitcher) {
+      topbarBrandSwitcher.style.display = (activeTab === 'settings') ? 'flex' : 'none';
+    }
 
     // 6. Synchronize topbar page title dynamically
     const topbarTitle = document.getElementById('topbar-page-title');
@@ -665,6 +673,9 @@ const App = {
           break;
         case 'meta':
           topbarTitle.textContent = 'Configuración de Meta Graph API & Webhooks';
+          break;
+        case 'users':
+          topbarTitle.textContent = 'Gestión de Usuarios, Modelos IA & Cuotas de Tokens';
           break;
         case 'highlights':
           topbarTitle.textContent = 'Comentarios Destacados & Leads';
@@ -704,8 +715,13 @@ const App = {
         const savedSubtab = sessionStorage.getItem('xindro_analytics_subtab') || localStorage.getItem('xindro_analytics_subtab') || 'overview';
         AnalyticsController.switchSubtab(savedSubtab);
       }
+    } else if (activeTab === 'settings') {
+      const savedStudioTab = sessionStorage.getItem('xindro_studio_tab') || 'identity';
+      this.switchStudioTab(savedStudioTab);
     } else if (activeTab === 'meta') {
       this.loadConnectedAccounts();
+    } else if (activeTab === 'users') {
+      this.loadAdminUsers();
     }
   },
 
@@ -1386,6 +1402,34 @@ const App = {
       if (authorInput) authorInput.value = 'Elena Ortiz';
       if (commentInput) commentInput.value = '¡Excelente contenido y lecciones! Quedé encantada con la claridad y la calidad práctica del material.';
     }
+  },
+
+  switchStudioTab(tab) {
+    const validTabs = ['identity', 'rules', 'model'];
+    const activeSubtab = validTabs.includes(tab) ? tab : 'identity';
+    validTabs.forEach(t => {
+      const pane = document.getElementById(`studio-tab-${t}`);
+      const btn = document.getElementById(`btn-subtab-${t}`);
+      if (pane) pane.style.display = (t === activeSubtab) ? 'block' : 'none';
+      if (btn) btn.classList.toggle('active', t === activeSubtab);
+    });
+    try {
+      sessionStorage.setItem('xindro_studio_tab', activeSubtab);
+    } catch (e) {}
+  },
+
+  openSimulateCommentModalFromPlayground() {
+    const author = document.getElementById('playground-author')?.value.trim();
+    const comment = document.getElementById('playground-comment')?.value.trim();
+    if (author) {
+      const simAuthor = document.getElementById('sim-author');
+      if (simAuthor) simAuthor.value = author;
+    }
+    if (comment) {
+      const simComment = document.getElementById('sim-comment');
+      if (simComment) simComment.value = comment;
+    }
+    this.openModal('modal-simulate');
   },
 
   async testVoicePlayground() {
@@ -2202,6 +2246,285 @@ const App = {
       return this.escapeHtml(clean);
     }
     return fallback;
+  },
+
+  // ==========================================
+  // Admin Users & AI Model / Token Management
+  // ==========================================
+  adminUsersList: [],
+  adminModelsCatalog: {},
+  adminUserFilter: 'all',
+  adminUserSearchQuery: '',
+
+  async loadAdminUsers(forceToast = false) {
+    try {
+      const tbody = document.getElementById('admin-users-tbody');
+      if (tbody && (!this.adminUsersList || this.adminUsersList.length === 0)) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="5" style="padding: 36px; text-align: center; color: var(--text-muted); font-size: 0.88rem;">
+              <div style="display: inline-block; width: 22px; height: 22px; border: 2px solid rgba(99,102,241,0.3); border-top-color: #6366f1; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 8px;"></div>
+              <div>Cargando directorio de usuarios...</div>
+            </td>
+          </tr>
+        `;
+      }
+
+      const res = await this.fetchWithCsrf('api/admin_users.php?action=list');
+      const data = await res.json();
+      if (data && data.success) {
+        this.adminUsersList = data.users || [];
+        this.adminModelsCatalog = data.models_catalog || {};
+
+        // Update KPIs
+        const kpis = data.kpis || {};
+        const elTotal = document.getElementById('kpi-total-users');
+        const elOnline = document.getElementById('kpi-online-users');
+        const elTokens = document.getElementById('kpi-total-tokens');
+        const elModel = document.getElementById('kpi-top-model');
+
+        if (elTotal) elTotal.textContent = `${kpis.total_users || 0} Usuarios`;
+        if (elOnline) elOnline.textContent = `${kpis.online_users || 0} Conectado${kpis.online_users === 1 ? '' : 's'}`;
+        if (elTokens) elTokens.textContent = `${(kpis.total_tokens_consumed || 0).toLocaleString()} Tokens`;
+        if (elModel) elModel.textContent = kpis.top_model || 'Claude 3.5 Sonnet';
+
+        this.renderAdminUsers();
+
+        if (forceToast) {
+          App.showToast('Directorio de usuarios y estados sincronizados.', 'success');
+        }
+      } else {
+        if (tbody) {
+          tbody.innerHTML = `<tr><td colspan="5" style="padding: 24px; text-align: center; color: var(--accent-rose); font-size: 0.86rem;">⚠️ ${this.escapeHtml(data.error || 'Error al cargar usuarios')}</td></tr>`;
+        }
+      }
+    } catch (err) {
+      console.error('loadAdminUsers error:', err);
+      const tbody = document.getElementById('admin-users-tbody');
+      if (tbody) {
+        tbody.innerHTML = `<tr><td colspan="5" style="padding: 24px; text-align: center; color: var(--accent-rose); font-size: 0.86rem;">Error de conexión con el servidor.</td></tr>`;
+      }
+    }
+  },
+
+  setAdminUserFilter(filter) {
+    this.adminUserFilter = filter;
+    document.querySelectorAll('.admin-filter-pill').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.filter === filter);
+    });
+    this.renderAdminUsers();
+  },
+
+  filterAdminUsersTable(query) {
+    this.adminUserSearchQuery = (query || '').toLowerCase().trim();
+    this.renderAdminUsers();
+  },
+
+  renderAdminUsers() {
+    const tbody = document.getElementById('admin-users-tbody');
+    if (!tbody) return;
+
+    let filtered = [...(this.adminUsersList || [])];
+
+    // Filter by category
+    if (this.adminUserFilter === 'online') {
+      filtered = filtered.filter(u => u.is_online);
+    } else if (this.adminUserFilter === 'user') {
+      filtered = filtered.filter(u => u.role !== 'admin');
+    } else if (this.adminUserFilter === 'admin') {
+      filtered = filtered.filter(u => u.role === 'admin');
+    }
+
+    // Filter by search query
+    if (this.adminUserSearchQuery) {
+      filtered = filtered.filter(u => {
+        const name = (u.name || '').toLowerCase();
+        const email = (u.email || '').toLowerCase();
+        return name.includes(this.adminUserSearchQuery) || email.includes(this.adminUserSearchQuery);
+      });
+    }
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" style="padding: 36px; text-align: center; color: var(--text-muted); font-size: 0.88rem;">
+            No se encontraron usuarios con los filtros aplicados.
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    const catalog = this.adminModelsCatalog || {};
+
+    tbody.innerHTML = filtered.map(u => {
+      const roleClass = u.role === 'admin' ? 'admin' : (u.role === 'tester' ? 'tester' : 'user');
+      const roleLabel = u.role === 'admin' ? 'Administrador' : (u.role === 'tester' ? 'Tester' : 'Cliente');
+      
+      const isOnline = !!u.is_online;
+      const presenceHtml = isOnline 
+        ? `<span class="presence-badge online"><span class="presence-dot online"></span> En línea ahora</span>`
+        : `<span class="presence-badge offline"><span class="presence-dot offline"></span> ${this.formatRelativeTime(u.last_activity_at || u.last_login_at)}</span>`;
+
+      // Token calculations
+      const used = parseInt(u.used_tokens, 10) || 0;
+      const max = parseInt(u.max_tokens, 10) || 0;
+      const pct = max > 0 ? Math.min(100, Math.round((used / max) * 100)) : 0;
+      const barColorClass = pct >= 90 ? 'red' : (pct >= 70 ? 'yellow' : 'green');
+      const limitLabel = max > 0 ? `${used.toLocaleString()} / ${max.toLocaleString()}` : `${used.toLocaleString()} / Ilimitado`;
+
+      // Model Select options
+      let modelOptions = '';
+      for (const [key, meta] of Object.entries(catalog)) {
+        const isSelected = u.ai_model === key ? 'selected' : '';
+        modelOptions += `<option value="${key}" ${isSelected}>${meta.badge || ''} ${meta.name}</option>`;
+      }
+
+      const avatarSrc = u.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&background=6366f1&color=fff`;
+
+      return `
+        <tr id="admin-user-row-${u.id}">
+          <td style="padding: 14px 18px;">
+            <div class="admin-user-cell-profile">
+              <img src="${this.escapeHtml(avatarSrc)}" class="admin-user-avatar" alt="Avatar" />
+              <div>
+                <div style="font-weight: 800; color: #fff; font-size: 0.88rem; display: flex; align-items: center; gap: 6px;">
+                  <span>${this.escapeHtml(u.name)}</span>
+                  <span class="admin-role-badge ${roleClass}">${roleLabel}</span>
+                </div>
+                <div style="font-size: 0.76rem; color: var(--text-dim); margin-top: 2px;">
+                  ${this.escapeHtml(u.email)} • <span style="color: var(--text-muted);">ID #${u.id}</span>
+                </div>
+              </div>
+            </div>
+          </td>
+
+          <td style="padding: 14px 18px;">
+            ${presenceHtml}
+          </td>
+
+          <td style="padding: 14px 18px;">
+            <select class="admin-model-select" id="admin-user-model-${u.id}">
+              ${modelOptions}
+            </select>
+          </td>
+
+          <td style="padding: 14px 18px;">
+            <div class="token-progress-container">
+              <div class="token-progress-labels">
+                <span style="font-weight: 700; color: #f1f5f9;">${limitLabel}</span>
+                <span style="color: var(--text-dim);">${max > 0 ? `${pct}%` : '∞'}</span>
+              </div>
+              <div class="token-progress-bar">
+                <div class="token-progress-fill ${barColorClass}" style="width: ${max > 0 ? pct : 100}%;"></div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px; margin-top: 6px;">
+                <label style="font-size: 0.72rem; color: var(--text-dim);">Límite:</label>
+                <input type="number" min="0" step="1000" class="token-quota-input" id="admin-user-max-${u.id}" value="${max}" title="0 = Ilimitado" />
+                <span style="font-size: 0.7rem; color: var(--text-dim);">(0=Ilim.)</span>
+              </div>
+            </div>
+          </td>
+
+          <td style="padding: 14px 18px; text-align: right;">
+            <div style="display: inline-flex; gap: 6px;">
+              <button type="button" class="btn-primary-action" style="padding: 6px 12px; font-size: 0.78rem;" onclick="App.saveAdminUserConfig(${u.id})">
+                <span>💾 Guardar</span>
+              </button>
+              <button type="button" class="btn-secondary-mini" style="padding: 6px 8px; font-size: 0.76rem; color: var(--text-dim);" onclick="App.resetAdminUserTokens(${u.id})" title="Reiniciar contador de tokens consumidos a 0">
+                <span>🔄</span>
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  },
+
+  async saveAdminUserConfig(userId) {
+    if (!userId) return;
+    const modelSelect = document.getElementById(`admin-user-model-${userId}`);
+    const maxInput = document.getElementById(`admin-user-max-${userId}`);
+    if (!modelSelect || !maxInput) return;
+
+    const aiModel = modelSelect.value;
+    const maxTokens = parseInt(maxInput.value, 10) || 0;
+
+    try {
+      const res = await this.fetchWithCsrf('api/admin_users.php', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'update_user_ai',
+          user_id: userId,
+          ai_model: aiModel,
+          max_tokens: maxTokens
+        })
+      });
+      const data = await res.json();
+      if (data && data.success) {
+        App.showToast('¡Configuración de IA y tokens guardada con éxito!', 'success');
+        // Update local object
+        const u = this.adminUsersList.find(x => x.id == userId);
+        if (u) {
+          u.ai_model = aiModel;
+          u.max_tokens = maxTokens;
+        }
+        this.renderAdminUsers();
+      } else {
+        App.showToast(data.error || 'Error al guardar configuración', 'error');
+      }
+    } catch (e) {
+      console.error(e);
+      App.showToast('Error de conexión al guardar configuración', 'error');
+    }
+  },
+
+  async resetAdminUserTokens(userId) {
+    if (!userId) return;
+    if (!confirm('¿Deseas reiniciar a 0 el consumo de tokens para este usuario?')) return;
+
+    try {
+      const res = await this.fetchWithCsrf('api/admin_users.php', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'reset_tokens',
+          user_id: userId
+        })
+      });
+      const data = await res.json();
+      if (data && data.success) {
+        App.showToast('Tokens consumidos reiniciados a 0.', 'success');
+        const u = this.adminUsersList.find(x => x.id == userId);
+        if (u) {
+          u.used_tokens = 0;
+        }
+        this.renderAdminUsers();
+      } else {
+        App.showToast(data.error || 'Error al reiniciar tokens', 'error');
+      }
+    } catch (e) {
+      console.error(e);
+      App.showToast('Error de conexión', 'error');
+    }
+  },
+
+  formatRelativeTime(dateStr) {
+    if (!dateStr) return 'Desconectado';
+    try {
+      const d = new Date(dateStr.replace(' ', 'T') + 'Z');
+      const now = new Date();
+      const diffMs = now - d;
+      const diffMins = Math.floor(diffMs / 60000);
+      if (diffMins < 1) return 'Hace un instante';
+      if (diffMins < 60) return `Hace ${diffMins} min`;
+      const diffHours = Math.floor(diffMins / 60);
+      if (diffHours < 24) return `Hace ${diffHours} h`;
+      const diffDays = Math.floor(diffHours / 24);
+      if (diffDays === 1) return 'Ayer';
+      return `Hace ${diffDays} días`;
+    } catch (e) {
+      return dateStr;
+    }
   }
 };
 

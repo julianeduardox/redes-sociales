@@ -92,7 +92,7 @@ class Auth {
         }
 
         $pdo = Database::getConnection();
-        $stmt = $pdo->prepare("SELECT id, tenant_id, name, email, role, avatar_url, created_at, last_login_at FROM users WHERE id = :id LIMIT 1");
+        $stmt = $pdo->prepare("SELECT id, tenant_id, name, email, role, avatar_url, created_at, last_login_at, last_activity_at, ai_model, max_tokens, used_tokens FROM users WHERE id = :id LIMIT 1");
         $stmt->execute([':id' => self::id()]);
         $user = $stmt->fetch();
 
@@ -101,6 +101,41 @@ class Auth {
             return $user;
         }
         return null;
+    }
+
+    /**
+     * Check if authenticated user has Administrator privileges
+     * Matches role 'admin', email 'julianeduardox@gmail.com', or master ID 1
+     */
+    public static function isAdmin(): bool {
+        if (!self::check()) return false;
+        $u = self::user();
+        if (!$u) return false;
+        $role = strtolower($u['role'] ?? '');
+        $email = strtolower($u['email'] ?? '');
+        $id = (int)($u['id'] ?? 0);
+        return ($role === 'admin' || $email === 'julianeduardox@gmail.com' || $id === 1);
+    }
+
+    /**
+     * Touch user's last_activity_at timestamp for real-time online presence tracking
+     * Throttled to max 1 write every 60 seconds per session
+     */
+    public static function touchActivity(): void {
+        if (!self::check()) return;
+        $userId = self::id();
+        $now = time();
+        if (!empty($_SESSION['last_activity_touch']) && ($now - (int)$_SESSION['last_activity_touch']) < 60) {
+            return;
+        }
+        $_SESSION['last_activity_touch'] = $now;
+        try {
+            $pdo = Database::getConnection();
+            $stmt = $pdo->prepare("UPDATE users SET last_activity_at = CURRENT_TIMESTAMP WHERE id = :id");
+            $stmt->execute([':id' => $userId]);
+        } catch (Throwable $e) {
+            // Silently ignore presence tracking failure
+        }
     }
 
     /**
@@ -120,6 +155,7 @@ class Auth {
                 exit;
             }
         }
+        self::touchActivity();
     }
 
     /**

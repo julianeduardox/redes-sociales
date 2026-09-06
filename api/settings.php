@@ -456,10 +456,10 @@ try {
         }
 
         // 5. Action: save_all (Legacy & Global Engine Settings)
-        if (isset($input['ai_provider'])) {
+        if (isset($input['ai_provider']) && Auth::isAdmin()) {
             Settings::set('ai_provider', Security::validateEnum($input['ai_provider'], ['openrouter', 'heuristic'], 'openrouter'));
         }
-        if (isset($input['openrouter_model'])) {
+        if (isset($input['openrouter_model']) && Auth::isAdmin()) {
             Settings::set('openrouter_model', Security::sanitizeString($input['openrouter_model'], 150));
         }
         if (isset($input['autopilot_enabled'])) {
@@ -483,8 +483,8 @@ try {
             Settings::set('webhook_verify_token', Security::sanitizeString($input['webhook_verify_token'], 150));
         }
 
-        // Only update API keys if a new non-masked string is sent
-        if (!empty($input['openrouter_api_key']) && !str_contains($input['openrouter_api_key'], '...')) {
+        // Only update OpenRouter API key if user is admin and a new non-masked string is sent
+        if (!empty($input['openrouter_api_key']) && !str_contains($input['openrouter_api_key'], '...') && Auth::isAdmin()) {
             Settings::set('openrouter_api_key', trim(Security::sanitizeString($input['openrouter_api_key'], 250)));
         }
         if (!empty($input['meta_page_access_token']) && !str_contains($input['meta_page_access_token'], '...')) {
