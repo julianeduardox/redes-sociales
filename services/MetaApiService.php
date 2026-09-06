@@ -767,36 +767,34 @@ class MetaApiService {
                                 $existingCmt = $checkCmt->fetch();
 
                                 if (!$existingCmt) {
-                                    $analysis = AiAgentService::analyzeComment($cText, $brandVoiceId, 'instagram');
+                                    $analysis = AiAgentService::analyzeComment($cText, $caption, $cLikes);
 
                                     $stmtCmt = $pdo->prepare("
                                         INSERT INTO comments (
-                                            post_id, user_id, brand_voice_id, platform, external_comment_id, 
-                                            author_name, author_handle, author_avatar, text, sentiment, intent, 
-                                            is_highlighted, highlight_score, highlight_reason, recommended_variant, 
+                                            post_id, user_id, platform, external_comment_id, 
+                                            author_name, author_handle, author_avatar, comment_text, sentiment, intent, 
+                                            is_highlighted, highlight_score, highlight_reason, 
                                             status, likes_count, created_at
                                         ) VALUES (
-                                            :post_id, :uid, :bvid, 'instagram', :ext_id, 
-                                            :author_name, :author_handle, :author_avatar, :text, :sentiment, :intent, 
-                                            :is_highlighted, :highlight_score, :highlight_reason, :recommended_variant, 
+                                            :post_id, :uid, 'instagram', :ext_id, 
+                                            :author_name, :author_handle, :author_avatar, :comment_text, :sentiment, :intent, 
+                                            :is_highlighted, :highlight_score, :highlight_reason, 
                                             'pending', :likes_count, :created_at
                                         )
                                     ");
                                     $stmtCmt->execute([
                                         ':post_id' => $postId,
                                         ':uid' => $uid,
-                                        ':bvid' => $brandVoiceId,
                                         ':ext_id' => $extCmtId,
                                         ':author_name' => $cAuthor,
                                         ':author_handle' => '@' . ltrim($cAuthor, '@'),
                                         ':author_avatar' => "https://ui-avatars.com/api/?name=" . urlencode($cAuthor) . "&background=e1306c&color=fff",
-                                        ':text' => $cText,
+                                        ':comment_text' => $cText,
                                         ':sentiment' => $analysis['sentiment'] ?? 'neutral',
                                         ':intent' => $analysis['intent'] ?? 'general',
-                                        ':is_highlighted' => ($analysis['priority_score'] ?? 0) >= 80 ? 1 : 0,
-                                        ':highlight_score' => $analysis['priority_score'] ?? 50,
-                                        ':highlight_reason' => $analysis['summary'] ?? '',
-                                        ':recommended_variant' => $analysis['recommended_variant'] ?? 'connection',
+                                        ':is_highlighted' => ($analysis['is_highlighted'] ?? 0),
+                                        ':highlight_score' => $analysis['highlight_score'] ?? 50,
+                                        ':highlight_reason' => $analysis['highlight_reason'] ?? '',
                                         ':likes_count' => $cLikes,
                                         ':created_at' => $cCreated
                                     ]);
@@ -815,8 +813,8 @@ class MetaApiService {
                     }
                 }
             } else {
-                // Fetch Facebook Page Posts from /published_posts, /feed, and /posts IN PARALLEL for 100% complete discovery
-                $fbFields = 'id,message,story,created_time,full_picture,permalink_url,shares,attachments{type,target{id},unshimmed_url,media{image{src}},title,description},reactions.summary(true).limit(0),likes.summary(true).limit(0),comments.summary(true).limit(0)';
+                // Multi-channel Facebook Discovery: /published_posts, /feed, /posts, /photos, /videos IN PARALLEL for 100% complete discovery
+                $fbFields = 'id,message,story,created_time,full_picture,permalink_url,shares,attachments{type,target{id},unshimmed_url,media{image{src}},title,description}';
                 
                 $fbFeedQueries = [
                     'published' => self::BASE_URL . '/' . urlencode($pageId) . '/published_posts?' . http_build_query([
@@ -833,12 +831,24 @@ class MetaApiService {
                         'fields' => $fbFields,
                         'limit' => '50',
                         'access_token' => $token
+                    ]),
+                    'photos' => self::BASE_URL . '/' . urlencode($pageId) . '/photos?' . http_build_query([
+                        'type' => 'uploaded',
+                        'fields' => 'id,name,created_time,images,picture,link',
+                        'limit' => '50',
+                        'access_token' => $token
+                    ]),
+                    'videos' => self::BASE_URL . '/' . urlencode($pageId) . '/videos?' . http_build_query([
+                        'type' => 'uploaded',
+                        'fields' => 'id,description,title,created_time,picture,permalink_url',
+                        'limit' => '50',
+                        'access_token' => $token
                     ])
                 ];
 
                 $fbFeedsData = self::makeMultiGetRequests($fbFeedQueries, 25, 8);
 
-                // Merge and deduplicate all posts across published_posts, feed, and posts
+                // Merge and deduplicate all posts across all discovery channels
                 $mergedPosts = [];
                 $fbPermissionError = null;
 
@@ -860,6 +870,76 @@ class MetaApiService {
                     }
                 }
 
+                // Merge uploaded photos
+                if (!empty($fbFeedsData['photos']['data']) && is_array($fbFeedsData['photos']['data'])) {
+                    foreach ($fbFeedsData['photos']['data'] as $photoItem) {
+                        $photoId = $photoItem['id'] ?? '';
+                        if (empty($photoId)) continue;
+                        
+                        $alreadyExists = false;
+                        foreach ($mergedPosts as $existing) {
+                            $targetId = $existing['attachments']['data'][0]['target']['id'] ?? '';
+                            if ($existing['id'] === $photoId || $targetId === $photoId) {
+                                $alreadyExists = true;
+                                break;
+                            }
+                        }
+                        if (!$alreadyExists && !isset($mergedPosts[$photoId])) {
+                            $highResImg = !empty($photoItem['images'][0]['source']) ? $photoItem['images'][0]['source'] : ($photoItem['picture'] ?? '');
+                            $mergedPosts[$photoId] = [
+                                'id' => $photoId,
+                                'message' => $photoItem['name'] ?? '',
+                                'created_time' => $photoItem['created_time'] ?? '',
+                                'full_picture' => $highResImg,
+                                'permalink_url' => $photoItem['link'] ?? "https://www.facebook.com/{$photoId}",
+                                'attachments' => [
+                                    'data' => [
+                                        [
+                                            'type' => 'photo',
+                                            'target' => ['id' => $photoId],
+                                            'media' => ['image' => ['src' => $highResImg]]
+                                        ]
+                                    ]
+                                ]
+                            ];
+                        }
+                    }
+                }
+
+                // Merge uploaded videos
+                if (!empty($fbFeedsData['videos']['data']) && is_array($fbFeedsData['videos']['data'])) {
+                    foreach ($fbFeedsData['videos']['data'] as $videoItem) {
+                        $vidId = $videoItem['id'] ?? '';
+                        if (empty($vidId)) continue;
+                        $alreadyExists = false;
+                        foreach ($mergedPosts as $existing) {
+                            $targetId = $existing['attachments']['data'][0]['target']['id'] ?? '';
+                            if ($existing['id'] === $vidId || $targetId === $vidId) {
+                                $alreadyExists = true;
+                                break;
+                            }
+                        }
+                        if (!$alreadyExists && !isset($mergedPosts[$vidId])) {
+                            $mergedPosts[$vidId] = [
+                                'id' => $vidId,
+                                'message' => $videoItem['description'] ?? ($videoItem['title'] ?? ''),
+                                'created_time' => $videoItem['created_time'] ?? '',
+                                'full_picture' => $videoItem['picture'] ?? '',
+                                'permalink_url' => $videoItem['permalink_url'] ?? "https://www.facebook.com/{$vidId}",
+                                'attachments' => [
+                                    'data' => [
+                                        [
+                                            'type' => 'video_inline',
+                                            'target' => ['id' => $vidId],
+                                            'media' => ['image' => ['src' => $videoItem['picture'] ?? '']]
+                                        ]
+                                    ]
+                                ]
+                            ];
+                        }
+                    }
+                }
+
                 if (empty($mergedPosts) && !empty($fbPermissionError)) {
                     $errors[] = $fbPermissionError;
                 }
@@ -876,16 +956,16 @@ class MetaApiService {
                     $accPostsFound = count($mergedPostsList);
                     $totalPostsFoundOnMeta += $accPostsFound;
 
-                    // 1. Prepare Parallel Requests for Top 20 Posts (Insights, Comments, Photo Object Reactions, Direct Reactions)
+                    // 1. Prepare Parallel Requests for Top 30 Posts (Reactions, Likes, Comments Summary, Shares & Insights)
                     $multiUrls = [];
-                    $recentPosts = array_slice($mergedPostsList, 0, 20);
+                    $recentPosts = array_slice($mergedPostsList, 0, 30);
                     foreach ($recentPosts as $fbPost) {
                         $pIdExt = $fbPost['id'];
                         $objId = !empty($fbPost['attachments']['data'][0]['target']['id']) ? (string)$fbPost['attachments']['data'][0]['target']['id'] : null;
                         $attachType = strtolower($fbPost['attachments']['data'][0]['type'] ?? '');
                         $isVideo = str_contains($attachType, 'video') || str_contains($attachType, 'reel');
 
-                        // Safe metric query based on post type to prevent #100 Param metric has invalid value
+                        // Safe metric query based on post type
                         $fbMetricString = $isVideo 
                             ? 'post_impressions,post_impressions_unique,post_engaged_users,post_video_views'
                             : 'post_impressions,post_impressions_unique,post_engaged_users';
@@ -895,25 +975,35 @@ class MetaApiService {
                             'access_token' => $token
                         ]);
 
-                        // Direct reaction and share node query
-                        $multiUrls['fb_react_' . $pIdExt] = self::BASE_URL . '/' . urlencode($pIdExt) . '?fields=reactions.summary(true).limit(0),likes.summary(true).limit(0),shares&access_token=' . urlencode($token);
+                        // Direct reaction, likes, comments count and shares node query
+                        $multiUrls['fb_react_' . $pIdExt] = self::BASE_URL . '/' . urlencode($pIdExt) . '?' . http_build_query([
+                            'fields' => 'reactions.summary(total_count).limit(0),likes.summary(total_count).limit(0),comments.summary(total_count).limit(0),shares',
+                            'access_token' => $token
+                        ]);
 
-                        $cCount = (int)($fbPost['comments']['summary']['total_count'] ?? (is_array($fbPost['comments']['data'] ?? null) ? count($fbPost['comments']['data']) : 0));
-                        if ($cCount > 0) {
-                            $multiUrls['fb_comments_' . $pIdExt] = self::BASE_URL . '/' . urlencode($pIdExt) . '/comments?' . http_build_query([
+                        // Fetch comments list directly
+                        $multiUrls['fb_comments_' . $pIdExt] = self::BASE_URL . '/' . urlencode($pIdExt) . '/comments?' . http_build_query([
+                            'fields' => 'id,message,from,created_time,like_count',
+                            'limit' => '50',
+                            'access_token' => $token
+                        ]);
+
+                        // Target photo / video object reactions and comments query
+                        if (!empty($objId) && $objId !== $pIdExt) {
+                            $multiUrls['fb_obj_' . $pIdExt] = self::BASE_URL . '/' . urlencode($objId) . '?' . http_build_query([
+                                'fields' => 'reactions.summary(total_count).limit(0),likes.summary(total_count).limit(0),comments.summary(total_count).limit(0)',
+                                'access_token' => $token
+                            ]);
+                            $multiUrls['fb_obj_comments_' . $pIdExt] = self::BASE_URL . '/' . urlencode($objId) . '/comments?' . http_build_query([
                                 'fields' => 'id,message,from,created_time,like_count',
-                                'limit' => '25',
+                                'limit' => '50',
                                 'access_token' => $token
                             ]);
                         }
-
-                        if (!empty($objId) && $objId !== $pIdExt) {
-                            $multiUrls['fb_obj_' . $pIdExt] = self::BASE_URL . '/' . urlencode($objId) . '?fields=reactions.summary(true).limit(0),likes.summary(true).limit(0)&access_token=' . urlencode($token);
-                        }
                     }
 
-                    // Execute ALL parallel requests at once
-                    $multiResponses = self::makeMultiGetRequests($multiUrls, 25, 8);
+                    // Execute ALL parallel requests at once with bulletproof cURL multi polling
+                    $multiResponses = self::makeMultiGetRequests($multiUrls, 30, 10);
 
                     foreach ($mergedPostsList as $fbPost) {
                         $postIdExt = $fbPost['id'];
@@ -952,22 +1042,12 @@ class MetaApiService {
                         if (isset($fbPost['likes']['summary']['total_count'])) {
                             $likes = max($likes, (int)$fbPost['likes']['summary']['total_count']);
                         }
-                        if ($likes === 0 && !empty($fbPost['reactions']['data']) && is_array($fbPost['reactions']['data'])) {
-                            $likes = max($likes, count($fbPost['reactions']['data']));
-                        }
-                        if ($likes === 0 && !empty($fbPost['likes']['data']) && is_array($fbPost['likes']['data'])) {
-                            $likes = max($likes, count($fbPost['likes']['data']));
-                        }
-
-                        // Check direct post reaction query from parallel response
                         if (isset($multiResponses['fb_react_' . $postIdExt]['reactions']['summary']['total_count'])) {
                             $likes = max($likes, (int)$multiResponses['fb_react_' . $postIdExt]['reactions']['summary']['total_count']);
                         }
                         if (isset($multiResponses['fb_react_' . $postIdExt]['likes']['summary']['total_count'])) {
                             $likes = max($likes, (int)$multiResponses['fb_react_' . $postIdExt]['likes']['summary']['total_count']);
                         }
-
-                        // Check photo/video attachment target reactions from parallel response
                         if (isset($multiResponses['fb_obj_' . $postIdExt]['reactions']['summary']['total_count'])) {
                             $likes = max($likes, (int)$multiResponses['fb_obj_' . $postIdExt]['reactions']['summary']['total_count']);
                         }
@@ -975,11 +1055,27 @@ class MetaApiService {
                             $likes = max($likes, (int)$multiResponses['fb_obj_' . $postIdExt]['likes']['summary']['total_count']);
                         }
 
-                        $commentsCount = (int)($fbPost['comments']['summary']['total_count'] ?? (is_array($fbPost['comments']['data'] ?? null) ? count($fbPost['comments']['data']) : 0));
+                        // Extract comments total count
+                        $commentsCount = (int)($fbPost['comments']['summary']['total_count'] ?? 0);
+                        if (isset($multiResponses['fb_react_' . $postIdExt]['comments']['summary']['total_count'])) {
+                            $commentsCount = max($commentsCount, (int)$multiResponses['fb_react_' . $postIdExt]['comments']['summary']['total_count']);
+                        }
+                        if (isset($multiResponses['fb_obj_' . $postIdExt]['comments']['summary']['total_count'])) {
+                            $commentsCount = max($commentsCount, (int)$multiResponses['fb_obj_' . $postIdExt]['comments']['summary']['total_count']);
+                        }
+                        $postCommentsList = $multiResponses['fb_comments_' . $postIdExt]['data'] ?? [];
+                        $objCommentsList = $multiResponses['fb_obj_comments_' . $postIdExt]['data'] ?? [];
+                        $combinedComments = array_merge($postCommentsList, $objCommentsList);
+                        if (!empty($combinedComments)) {
+                            $commentsCount = max($commentsCount, count($combinedComments));
+                        }
+
+                        // Extract shares
                         $shares = (int)($fbPost['shares']['count'] ?? 0);
                         if ($shares === 0 && isset($multiResponses['fb_react_' . $postIdExt]['shares']['count'])) {
                             $shares = (int)$multiResponses['fb_react_' . $postIdExt]['shares']['count'];
                         }
+
                         $postedAt = !empty($fbPost['created_time']) ? date('Y-m-d H:i:s', strtotime($fbPost['created_time'])) : date('Y-m-d H:i:s');
 
                         $impressions = 0;
@@ -1024,12 +1120,12 @@ class MetaApiService {
                             $impressions = max($impressions, (int)round($reach * 1.25));
                         }
                         if ($reach === 0 && $fbInteractions > 0) {
-                            $reach = max(20, (int)round($fbInteractions * 12));
-                            $impressions = (int)round($reach * 1.25);
+                            $reach = max(20, (int)round($fbInteractions * 3));
+                            $impressions = (int)round($reach * 1.35);
                         }
                         if ($fbInteractions > 0 && $reach < $fbInteractions) {
-                            $reach = (int)round($fbInteractions * 1.5);
-                            $impressions = max($impressions, (int)round($reach * 1.2));
+                            $reach = (int)round($fbInteractions * 1.4);
+                            $impressions = max($impressions, (int)round($reach * 1.25));
                         }
 
                         $engagementRate = ($reach > 0) ? min(100.0, round(($fbInteractions / $reach) * 100, 1)) : 0.0;
@@ -1099,49 +1195,61 @@ class MetaApiService {
                             $accNewPosts++;
                         }
 
-                        // Parse comments from parallel response
-                        $commentsData = $multiResponses['fb_comments_' . $postIdExt] ?? [];
-                        if (!empty($commentsData['data']) && is_array($commentsData['data'])) {
-                            foreach ($commentsData['data'] as $c) {
-                                $cmtExtId = $c['id'];
-                                $cText = $c['message'] ?? '';
-                                $fromName = $c['from']['name'] ?? 'Usuario de Facebook';
+                        // Parse comments from post comments and photo target comments
+                        $processedCmtIds = [];
+                        foreach ($combinedComments as $c) {
+                            $cmtExtId = $c['id'] ?? '';
+                            if (empty($cmtExtId) || isset($processedCmtIds[$cmtExtId])) continue;
+                            $processedCmtIds[$cmtExtId] = true;
 
-                                if (empty($cText)) continue;
+                            $cText = $c['message'] ?? '';
+                            $fromName = $c['from']['name'] ?? 'Usuario de Facebook';
+                            $cLikes = (int)($c['like_count'] ?? 0);
+                            $cCreated = !empty($c['created_time']) ? date('Y-m-d H:i:s', strtotime($c['created_time'])) : date('Y-m-d H:i:s');
 
-                                $checkCmt = $pdo->prepare("SELECT id FROM comments WHERE external_comment_id = :ext_id AND user_id = :uid LIMIT 1");
-                                $checkCmt->execute([':ext_id' => $cmtExtId, ':uid' => $uid]);
-                                if (!$checkCmt->fetch()) {
-                                    $analysis = AiAgentService::analyzeComment($cText, $message, $c['like_count'] ?? 0);
-                                    $stmtInsertCmt = $pdo->prepare("
-                                        INSERT INTO comments (
-                                            user_id, post_id, platform, external_comment_id, author_name, author_handle, 
-                                            author_avatar, comment_text, sentiment, intent, highlight_score, 
-                                            is_highlighted, highlight_reason, likes_count, status
-                                        ) VALUES (
-                                            :uid, :post_id, 'facebook', :ext_id, :author_name, :author_handle, 
-                                            :author_avatar, :comment_text, :sentiment, :intent, :highlight_score, 
-                                            :is_highlighted, :highlight_reason, :likes_count, 'pending'
-                                        )
-                                    ");
-                                    $stmtInsertCmt->execute([
-                                        ':uid' => $uid,
-                                        ':post_id' => $postId,
-                                        ':ext_id' => $cmtExtId,
-                                        ':author_name' => $fromName,
-                                        ':author_handle' => 'fb_' . substr($cmtExtId, 0, 8),
-                                        ':author_avatar' => 'https://ui-avatars.com/api/?name=' . urlencode($fromName) . '&background=1877f2&color=fff',
-                                        ':comment_text' => $cText,
-                                        ':sentiment' => $analysis['sentiment'],
-                                        ':intent' => $analysis['intent'],
-                                        ':highlight_score' => $analysis['highlight_score'],
-                                        ':is_highlighted' => $analysis['is_highlighted'],
-                                        ':highlight_reason' => $analysis['highlight_reason'],
-                                        ':likes_count' => (int)($c['like_count'] ?? 0)
-                                    ]);
-                                    $syncedCommentsCount++;
-                                    $accNewComments++;
-                                }
+                            if (empty($cText)) continue;
+
+                            $checkCmt = $pdo->prepare("SELECT id FROM comments WHERE external_comment_id = :ext_id AND user_id = :uid LIMIT 1");
+                            $checkCmt->execute([':ext_id' => $cmtExtId, ':uid' => $uid]);
+                            $existingCmt = $checkCmt->fetch();
+
+                            if (!$existingCmt) {
+                                $analysis = AiAgentService::analyzeComment($cText, $message, $cLikes);
+                                $stmtInsertCmt = $pdo->prepare("
+                                    INSERT INTO comments (
+                                        user_id, post_id, platform, external_comment_id, author_name, author_handle, 
+                                        author_avatar, comment_text, sentiment, intent, highlight_score, 
+                                        is_highlighted, highlight_reason, likes_count, status, created_at
+                                    ) VALUES (
+                                        :uid, :post_id, 'facebook', :ext_id, :author_name, :author_handle, 
+                                        :author_avatar, :comment_text, :sentiment, :intent, :highlight_score, 
+                                        :is_highlighted, :highlight_reason, :likes_count, 'pending', :created_at
+                                    )
+                                ");
+                                $stmtInsertCmt->execute([
+                                    ':uid' => $uid,
+                                    ':post_id' => $postId,
+                                    ':ext_id' => $cmtExtId,
+                                    ':author_name' => $fromName,
+                                    ':author_handle' => 'fb_' . substr($cmtExtId, 0, 8),
+                                    ':author_avatar' => 'https://ui-avatars.com/api/?name=' . urlencode($fromName) . '&background=1877f2&color=fff',
+                                    ':comment_text' => $cText,
+                                    ':sentiment' => $analysis['sentiment'] ?? 'neutral',
+                                    ':intent' => $analysis['intent'] ?? 'general',
+                                    ':highlight_score' => $analysis['highlight_score'] ?? 50,
+                                    ':is_highlighted' => $analysis['is_highlighted'] ?? 0,
+                                    ':highlight_reason' => $analysis['highlight_reason'] ?? '',
+                                    ':likes_count' => $cLikes,
+                                    ':created_at' => $cCreated
+                                ]);
+                                $syncedCommentsCount++;
+                                $accNewComments++;
+                            } else {
+                                $pdo->prepare("UPDATE comments SET likes_count = :likes WHERE id = :id AND user_id = :uid")->execute([
+                                    ':likes' => $cLikes,
+                                    ':id' => $existingCmt['id'],
+                                    ':uid' => $uid
+                                ]);
                             }
                         }
                     }
@@ -1437,11 +1545,17 @@ class MetaApiService {
 
         $active = null;
         do {
-            $status = curl_multi_exec($mh, $active);
-            if ($active) {
-                curl_multi_select($mh, 0.05);
+            $mrc = curl_multi_exec($mh, $active);
+        } while ($mrc == CURLM_CALL_MULTI_PERFORM);
+
+        while ($active && $mrc == CURLM_OK) {
+            if (curl_multi_select($mh, 0.5) == -1) {
+                usleep(10000);
             }
-        } while ($active && $status == CURLM_OK);
+            do {
+                $mrc = curl_multi_exec($mh, $active);
+            } while ($mrc == CURLM_CALL_MULTI_PERFORM);
+        }
 
         $results = [];
         foreach ($handles as $key => $ch) {
