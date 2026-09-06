@@ -28,6 +28,7 @@ const PlannerController = {
       btn.classList.toggle('active', btn.dataset.plannerPlatform === plat);
     });
     this.loadCalendar();
+    this.loadGoldenSlots();
   },
 
   prevMonth() {
@@ -73,10 +74,13 @@ const PlannerController = {
 
     container.innerHTML = this.cachedGoldenSlots.slice(0, 5).map(s => {
       const isOcc = s.is_occupied;
+      const safeDt = App.escapeHtml(s.full_datetime || '');
+      const safeLbl = App.escapeHtml(s.golden_label || 'Pico Dorado');
+
       return `
         <div class="golden-slot-pill-card ${isOcc ? 'occupied' : ''}">
           <div class="slot-pill-header">
-            <span class="slot-pill-rank">${App.escapeHtml(s.golden_label)}</span>
+            <span class="slot-pill-rank">${safeLbl}</span>
             <span class="slot-pill-eng">${parseFloat(s.avg_engagement_rate || 0).toFixed(1)}% Eng.</span>
           </div>
           <div class="slot-pill-datetime">
@@ -84,7 +88,7 @@ const PlannerController = {
             <span class="time">⏰ ${App.escapeHtml(s.time_label)}</span>
           </div>
           ${!isOcc ? `
-            <button class="btn-slot-use" onclick="PlannerController.openCreatorModal('${App.escapeHtml(s.full_datetime)}', '${App.escapeHtml(s.golden_label)}')">
+            <button type="button" class="btn-slot-use" onclick="PlannerController.openCreatorModal('${safeDt}', '${safeLbl}')">
               <span>+ Programar</span>
             </button>
           ` : `
@@ -180,11 +184,11 @@ const PlannerController = {
             <span class="cal-day-num">${day}</span>
             <div style="display: flex; align-items: center; gap: 4px;">
               ${goldenMatch ? `
-                <span class="cal-golden-badge" title="${App.escapeHtml(goldenMatch.golden_label)} (${goldenMatch.time_label})">
+                <span class="cal-golden-badge" style="cursor: pointer;" onclick="PlannerController.openCreatorModal('${App.escapeHtml(goldenMatch.full_datetime)}', '${App.escapeHtml(goldenMatch.golden_label)}')" title="${App.escapeHtml(goldenMatch.golden_label)} (${goldenMatch.time_label})">
                   🔥 ${goldenMatch.time_label}
                 </span>
               ` : ''}
-              <button class="cal-btn-add" onclick="PlannerController.openCreatorModal('${dateStr} 19:30:00')" title="Programar en este día">+</button>
+              <button type="button" class="cal-btn-add" onclick="PlannerController.openCreatorModal('${dateStr} 19:30:00')" title="Programar en este día">+</button>
             </div>
           </div>
 
@@ -232,11 +236,14 @@ const PlannerController = {
     if (slotSelect) {
       slotSelect.innerHTML = `
         <option value="">-- Seleccionar Franja Dorada --</option>
-        ${this.cachedGoldenSlots.map(s => `
-          <option value="${App.escapeHtml(s.full_datetime)}" data-label="${App.escapeHtml(s.golden_label)}">
-            ${App.escapeHtml(s.day_name)} ${App.escapeHtml(s.date)} a las ${App.escapeHtml(s.time_label)} (${App.escapeHtml(s.golden_label)})
-          </option>
-        `).join('')}
+        ${this.cachedGoldenSlots.map(s => {
+          const isSelected = targetDatetime && s.full_datetime.startsWith(targetDatetime.substring(0, 13));
+          return `
+            <option value="${App.escapeHtml(s.full_datetime)}" data-label="${App.escapeHtml(s.golden_label)}" ${isSelected ? 'selected' : ''}>
+              ${App.escapeHtml(s.day_name)} ${App.escapeHtml(s.date)} a las ${App.escapeHtml(s.time_label)} (${App.escapeHtml(s.golden_label)})
+            </option>
+          `;
+        }).join('')}
       `;
     }
 
@@ -254,13 +261,11 @@ const PlannerController = {
       }
     }
 
-    const modal = document.getElementById('modal-content-creator');
-    if (modal) modal.style.display = 'flex';
+    App.openModal('modal-content-creator');
   },
 
   closeCreatorModal() {
-    const modal = document.getElementById('modal-content-creator');
-    if (modal) modal.style.display = 'none';
+    App.closeModal('modal-content-creator');
   },
 
   async triggerGenerateDrafts() {
@@ -452,9 +457,8 @@ const PlannerController = {
     const post = this.cachedCalendarData.posts.find(p => parseInt(p.id, 10) === parseInt(postId, 10));
     if (!post) return;
 
-    const modal = document.getElementById('modal-post-preview');
     const content = document.getElementById('preview-modal-content');
-    if (!modal || !content) return;
+    if (!content) return;
 
     const isIG = post.platform === 'instagram';
     const safeCaption = App.escapeHtml(post.caption || '');
@@ -504,17 +508,17 @@ const PlannerController = {
 
         <!-- Modal Actions -->
         <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-subtle); padding-top: 14px; margin-top: 6px;">
-          <button class="btn-primary-action" style="background: rgba(244, 63, 94, 0.15); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.3);" onclick="PlannerController.deletePost(${parseInt(post.id, 10)})">
+          <button type="button" class="btn-primary-action" style="background: rgba(244, 63, 94, 0.15); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.3);" onclick="PlannerController.deletePost(${parseInt(post.id, 10)})">
             🗑️ Eliminar
           </button>
 
           <div style="display: flex; gap: 10px;">
             ${!isPublished ? `
-              <button class="btn-primary-action" style="background: linear-gradient(135deg, #10b981, #059669);" onclick="PlannerController.publishNow(${parseInt(post.id, 10)})">
+              <button type="button" class="btn-primary-action" style="background: linear-gradient(135deg, #10b981, #059669);" onclick="PlannerController.publishNow(${parseInt(post.id, 10)})">
                 🚀 Publicar Ahora
               </button>
             ` : ''}
-            <button class="btn-primary-action" style="background: rgba(255, 255, 255, 0.08);" onclick="PlannerController.closePreviewModal()">
+            <button type="button" class="btn-primary-action" style="background: rgba(255, 255, 255, 0.08);" onclick="PlannerController.closePreviewModal()">
               Cerrar
             </button>
           </div>
@@ -522,12 +526,11 @@ const PlannerController = {
       </div>
     `;
 
-    modal.style.display = 'flex';
+    App.openModal('modal-post-preview');
   },
 
   closePreviewModal() {
-    const modal = document.getElementById('modal-post-preview');
-    if (modal) modal.style.display = 'none';
+    App.closeModal('modal-post-preview');
   },
 
   async publishNow(postId) {

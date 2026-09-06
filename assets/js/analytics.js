@@ -318,9 +318,10 @@ const AnalyticsController = {
                       <strong>${dayName}</strong>
                     </td>
                     ${Array.from({ length: 24 }, (_, hour) => {
-                      const cell = (heatmap[dayKey] && heatmap[dayKey][hour]) ? heatmap[dayKey][hour] : { posts_count: 0, avg_engagement_rate: 0, total_reach: 0 };
+                      const cell = (heatmap[dayKey] && heatmap[dayKey][hour]) ? heatmap[dayKey][hour] : { posts_count: 0, avg_engagement_rate: 0, avg_reach: 0, total_reach: 0 };
                       const count = cell.posts_count || 0;
                       const eng = parseFloat(cell.avg_engagement_rate || 0);
+                      const avgReach = cell.avg_reach || (count > 0 && cell.total_reach ? Math.round(cell.total_reach / count) : 0);
                       
                       let lvlClass = 'lvl-0';
                       if (count > 0) {
@@ -331,7 +332,7 @@ const AnalyticsController = {
                       }
 
                       const tooltipText = count > 0 
-                        ? `${dayFullName} ${String(hour).padStart(2, '0')}:00\n• Posts: ${count}\n• Eng: ${eng.toFixed(1)}%\n• Alcance prom: ${this.formatNumber(cell.avg_reach || 0)}`
+                        ? `${dayFullName} ${String(hour).padStart(2, '0')}:00\n• Publicaciones: ${count}\n• Engagement: ${eng.toFixed(1)}%\n• Alcance prom: ${AnalyticsController.formatNumber(avgReach)}`
                         : `${dayFullName} ${String(hour).padStart(2, '0')}:00\nSin publicaciones registradas`;
 
                       return `

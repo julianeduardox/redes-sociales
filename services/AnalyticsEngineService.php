@@ -154,7 +154,19 @@ class AnalyticsEngineService {
             $interactions = $likes + $comments + $shares + $saved;
 
             if ($reach === 0 && $impressions > 0) $reach = (int)round($impressions * 0.8);
-            if ($reach === 0 && $interactions > 0) $reach = max(20, $interactions * 3);
+            if ($impressions === 0 && $reach > 0) $impressions = (int)round($reach * 1.25);
+            if ($reach === 0 && $interactions > 0) {
+                $reach = max(25, (int)round($interactions * 12));
+                $impressions = (int)round($reach * 1.25);
+            }
+            if ($reach === 0 && $impressions === 0) {
+                $reach = max(30, ($likes + $comments + 1) * 8);
+                $impressions = (int)round($reach * 1.25);
+            }
+            if ($interactions > 0 && $reach < $interactions) {
+                $reach = (int)round($interactions * 1.5);
+                $impressions = max($impressions, (int)round($reach * 1.2));
+            }
             if ($engRate === 0.0 && $reach > 0) {
                 $engRate = min(100.0, round(($interactions / $reach) * 100, 1));
             }
@@ -248,9 +260,12 @@ class AnalyticsEngineService {
                 $cell = &$heatmapMatrix[$d][$h];
                 if ($cell['posts_count'] > 0) {
                     $cell['avg_engagement_rate'] = round($cell['engagement_sum'] / $cell['posts_count'], 1);
+                    $cell['avg_reach'] = ($cell['total_reach'] > 0) ? (int)round($cell['total_reach'] / $cell['posts_count']) : 0;
                     if ($cell['avg_engagement_rate'] > $maxEngRateInCells) {
                         $maxEngRateInCells = $cell['avg_engagement_rate'];
                     }
+                } else {
+                    $cell['avg_reach'] = 0;
                 }
             }
         }

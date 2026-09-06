@@ -1600,21 +1600,24 @@ $isMetaConnected = ($activeAccountsCount > 0);
 </div>
 
 <!-- Modal: AI Content Creator & Golden Scheduler -->
-<div class="modal-overlay" id="modal-content-creator" style="display: none;">
-  <div class="modal-card modal-lg" style="max-width: 960px; max-height: 90vh; display: flex; flex-direction: column;">
-    <div class="modal-header" style="padding: 18px 24px; border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
-      <div>
-        <h4 style="font-size: 1.1rem; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px;">
-          <span>✨</span> Estudio de Creación de Contenido con IA
-        </h4>
-        <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0;">
-          Genera copys de alta conversión calibrados con tu voz de marca y programa en horarios dorados.
-        </p>
+<div class="modal-overlay" id="modal-content-creator" onclick="if(event.target===this) PlannerController.closeCreatorModal()">
+  <div class="modal-box modal-lg" style="max-width: 960px; max-height: 90vh; display: flex; flex-direction: column;">
+    <div class="modal-header">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 1.4rem;">✨</span>
+        <div>
+          <h3 style="font-size: 1.15rem; font-weight: 800; color: #fff; margin: 0;">
+            Estudio de Creación de Contenido con IA
+          </h3>
+          <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0;">
+            Genera copys de alta conversión calibrados con tu voz de marca y programa en horarios dorados.
+          </p>
+        </div>
       </div>
-      <button class="modal-close-btn" onclick="PlannerController.closeCreatorModal()">&times;</button>
+      <button type="button" class="btn-close-modal" onclick="PlannerController.closeCreatorModal()">&times;</button>
     </div>
 
-    <div class="modal-body" style="padding: 24px; overflow-y: auto; flex: 1;">
+    <div class="modal-body" style="padding: 16px 0; overflow-y: auto; flex: 1;">
       <!-- Step 1: Input Form -->
       <div id="creator-step-input" style="display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 20px;">
         <div style="grid-column: 1 / -1;">
@@ -1732,16 +1735,16 @@ $isMetaConnected = ($activeAccountsCount > 0);
 </div>
 
 <!-- Modal: Post Detail & Live Preview Modal -->
-<div class="modal-overlay" id="modal-post-preview" style="display: none;">
-  <div class="modal-card" style="max-width: 640px;">
-    <div class="modal-header" style="padding: 16px 20px; border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+<div class="modal-overlay" id="modal-post-preview" onclick="if(event.target===this) PlannerController.closePreviewModal()">
+  <div class="modal-box" style="max-width: 640px;">
+    <div class="modal-header">
       <h4 id="preview-modal-title" style="font-size: 1rem; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 6px;">
         <span>📱</span> Detalle de Publicación Programada
       </h4>
-      <button class="modal-close-btn" onclick="PlannerController.closePreviewModal()">&times;</button>
+      <button type="button" class="btn-close-modal" onclick="PlannerController.closePreviewModal()">&times;</button>
     </div>
 
-    <div class="modal-body" id="preview-modal-content" style="padding: 20px;">
+    <div class="modal-body" id="preview-modal-content" style="padding: 16px 0;">
       <!-- Rendered dynamically -->
     </div>
   </div>
