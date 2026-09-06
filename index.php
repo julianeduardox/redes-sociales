@@ -1500,25 +1500,25 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
       
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8 mb-12 sm:mb-16 pt-2">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-10 sm:gap-12 mb-14 sm:mb-18 pt-4">
         
         <!-- Col 1: Brand Info Card -->
-        <div class="sm:col-span-2 lg:col-span-1">
-          <div class="flex items-center gap-2 mb-3">
-            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 via-indigo-600 to-brand-700 flex items-center justify-center text-white font-bold text-sm shadow-sm">
+        <div class="sm:col-span-2 lg:col-span-4 pr-0 lg:pr-6">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 via-indigo-600 to-brand-700 flex items-center justify-center text-white font-extrabold text-lg shadow-md">
               ⚡
             </div>
-            <span class="text-lg font-black tracking-tight text-white gamma-wordmark">XINDRO<span class="text-brand-400">.</span></span>
+            <span class="text-2xl font-black tracking-tight text-white gamma-wordmark">XINDRO<span class="text-brand-400">.</span></span>
           </div>
-          <p data-i18n="foot_brand_desc" class="text-xs text-slate-300 leading-relaxed mb-4">
-            El sistema operativo de IA para creadores y agencias de redes sociales. Respuestas en tiempo real, Smart Timing y API oficial de Meta.
+          <p data-i18n="foot_brand_desc" class="text-sm sm:text-[0.95rem] text-slate-200 leading-relaxed mb-5 font-normal">
+            El sistema operativo de IA para creadores y agencias de redes sociales. Respuestas en tiempo real, Smart Timing y sincronización oficial con Meta Graph API.
           </p>
-          <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-700 text-xs text-emerald-400 font-semibold mb-4">
-            <span class="w-2 h-2 rounded-full bg-emerald-400 live-dot"></span>
+          <div class="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-slate-900/90 border border-emerald-500/30 text-xs sm:text-sm text-emerald-300 font-bold mb-5 shadow-inner">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 live-dot"></span>
             <span data-i18n="foot_status_pill">Meta API 100% Operativa</span>
           </div>
           <div>
-            <a href="login.php" data-i18n="nav_cta" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white gradient-button shadow-glow-sm shimmer-btn">
+            <a href="login.php" data-i18n="nav_cta" class="inline-flex items-center gap-2.5 px-6 py-3 rounded-xl text-sm sm:text-base font-bold text-white gradient-button shadow-glow-sm shimmer-btn">
               <span>Comenzar gratis</span>
               <span>🚀</span>
             </a>
@@ -1526,65 +1526,65 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         </div>
 
         <!-- Col 2: Producto -->
-        <div>
-          <h4 data-i18n="foot_c2_t" class="text-xs font-extrabold text-white uppercase tracking-wider mb-4">Producto</h4>
-          <ul class="space-y-2.5 text-xs text-slate-300 font-medium">
-            <li><a href="#funciones" data-i18n="nav_products" class="hover:text-white hover:underline transition-colors">Funciones y Beneficios</a></li>
-            <li><a href="#como-empezar" data-i18n="nav_steps" class="hover:text-white hover:underline transition-colors">Cómo empezar</a></li>
-            <li><a href="#simulador" data-i18n="foot_c2_2" class="hover:text-white hover:underline transition-colors">Simulador en Vivo</a></li>
-            <li><a href="#calculadora-roi" data-i18n="nav_roi" class="hover:text-white hover:underline transition-colors">Calculadora de Ahorro</a></li>
-            <li><a href="#precios" data-i18n="foot_c2_1" class="hover:text-white hover:underline transition-colors">Precios y Planes</a></li>
+        <div class="lg:col-span-2">
+          <h4 data-i18n="foot_c2_t" class="text-sm sm:text-base font-extrabold text-white uppercase tracking-wider mb-5">Producto</h4>
+          <ul class="space-y-3.5 text-sm sm:text-[0.95rem] text-slate-200 font-medium">
+            <li><a href="#funciones" data-i18n="nav_products" class="hover:text-cyan-300 hover:translate-x-1 inline-block transition-all">Funciones y Beneficios</a></li>
+            <li><a href="#como-empezar" data-i18n="nav_steps" class="hover:text-cyan-300 hover:translate-x-1 inline-block transition-all">Cómo empezar</a></li>
+            <li><a href="#simulador" data-i18n="foot_c2_2" class="hover:text-cyan-300 hover:translate-x-1 inline-block transition-all">Simulador en Vivo</a></li>
+            <li><a href="#calculadora-roi" data-i18n="nav_roi" class="hover:text-cyan-300 hover:translate-x-1 inline-block transition-all">Calculadora de Ahorro</a></li>
+            <li><a href="#precios" data-i18n="foot_c2_1" class="hover:text-cyan-300 hover:translate-x-1 inline-block transition-all">Precios y Planes</a></li>
           </ul>
         </div>
 
         <!-- Col 3: Empresa -->
-        <div>
-          <h4 data-i18n="foot_c3_t" class="text-xs font-extrabold text-white uppercase tracking-wider mb-4">Empresa</h4>
-          <ul class="space-y-2.5 text-xs text-slate-300 font-medium">
-            <li><a href="#por-que-xindro" data-i18n="foot_c3_1" class="hover:text-white hover:underline transition-colors">¿Por qué Xindro?</a></li>
-            <li><a href="#faq" data-i18n="nav_faq" class="hover:text-white hover:underline transition-colors">Preguntas Frecuentes</a></li>
-            <li><a href="privacy-policy.php" data-i18n="foot_c3_7" class="hover:text-white hover:underline transition-colors">Seguridad y Privacidad</a></li>
-            <li><a href="data-deletion.php" class="hover:text-white hover:underline transition-colors">Eliminación de Datos (Meta)</a></li>
+        <div class="lg:col-span-2">
+          <h4 data-i18n="foot_c3_t" class="text-sm sm:text-base font-extrabold text-white uppercase tracking-wider mb-5">Empresa</h4>
+          <ul class="space-y-3.5 text-sm sm:text-[0.95rem] text-slate-200 font-medium">
+            <li><a href="#por-que-xindro" data-i18n="foot_c3_1" class="hover:text-cyan-300 hover:translate-x-1 inline-block transition-all">¿Por qué Xindro?</a></li>
+            <li><a href="#faq" data-i18n="nav_faq" class="hover:text-cyan-300 hover:translate-x-1 inline-block transition-all">Preguntas Frecuentes</a></li>
+            <li><a href="privacy-policy.php" data-i18n="foot_c3_7" class="hover:text-cyan-300 hover:translate-x-1 inline-block transition-all">Seguridad y Privacidad</a></li>
+            <li><a href="data-deletion.php" class="hover:text-cyan-300 hover:translate-x-1 inline-block transition-all">Eliminación de Datos (Meta)</a></li>
           </ul>
         </div>
 
         <!-- Col 4: Redes sociales -->
-        <div>
-          <h4 data-i18n="foot_c4_t" class="text-xs font-extrabold text-white uppercase tracking-wider mb-4">Redes sociales</h4>
-          <ul class="space-y-2.5 text-xs text-slate-300 font-medium">
-            <li><a href="https://instagram.com" target="_blank" rel="noopener noreferrer" class="hover:text-white hover:underline transition-colors">Instagram</a></li>
-            <li><a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" class="hover:text-white hover:underline transition-colors">LinkedIn</a></li>
-            <li><a href="https://tiktok.com" target="_blank" rel="noopener noreferrer" class="hover:text-white hover:underline transition-colors">TikTok</a></li>
-            <li><a href="https://x.com" target="_blank" rel="noopener noreferrer" class="hover:text-white hover:underline transition-colors">X (Twitter)</a></li>
+        <div class="lg:col-span-2">
+          <h4 data-i18n="foot_c4_t" class="text-sm sm:text-base font-extrabold text-white uppercase tracking-wider mb-5">Redes sociales</h4>
+          <ul class="space-y-3.5 text-sm sm:text-[0.95rem] text-slate-200 font-medium">
+            <li><a href="https://instagram.com" target="_blank" rel="noopener noreferrer" class="hover:text-cyan-300 hover:translate-x-1 inline-block transition-all">Instagram</a></li>
+            <li><a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" class="hover:text-cyan-300 hover:translate-x-1 inline-block transition-all">LinkedIn</a></li>
+            <li><a href="https://tiktok.com" target="_blank" rel="noopener noreferrer" class="hover:text-cyan-300 hover:translate-x-1 inline-block transition-all">TikTok</a></li>
+            <li><a href="https://x.com" target="_blank" rel="noopener noreferrer" class="hover:text-cyan-300 hover:translate-x-1 inline-block transition-all">X (Twitter)</a></li>
           </ul>
         </div>
 
         <!-- Col 5: Información legal -->
-        <div>
-          <h4 data-i18n="foot_c5_t" class="text-xs font-extrabold text-white uppercase tracking-wider mb-4">Información legal</h4>
-          <ul class="space-y-2.5 text-xs text-slate-300 font-medium">
-            <li><a href="terms-of-service.php" class="hover:text-white hover:underline transition-colors">Términos de Servicio</a></li>
-            <li><a href="privacy-policy.php" class="hover:text-white hover:underline transition-colors">Política de Privacidad</a></li>
-            <li><a href="javascript:void(0)" onclick="CookieConsent.openSettings()" data-i18n="cookie_btn_pref" class="hover:text-white hover:underline transition-colors text-brand-300 font-semibold">Preferencias de cookies</a></li>
-            <li><a href="data-deletion.php" class="hover:text-white hover:underline transition-colors">Instrucciones de Eliminación</a></li>
+        <div class="lg:col-span-2">
+          <h4 data-i18n="foot_c5_t" class="text-sm sm:text-base font-extrabold text-white uppercase tracking-wider mb-5">Información legal</h4>
+          <ul class="space-y-3.5 text-sm sm:text-[0.95rem] text-slate-200 font-medium">
+            <li><a href="terms-of-service.php" class="hover:text-cyan-300 hover:translate-x-1 inline-block transition-all">Términos de Servicio</a></li>
+            <li><a href="privacy-policy.php" class="hover:text-cyan-300 hover:translate-x-1 inline-block transition-all">Política de Privacidad</a></li>
+            <li><a href="javascript:void(0)" onclick="CookieConsent.openSettings()" data-i18n="cookie_btn_pref" class="text-brand-300 hover:text-cyan-300 hover:underline font-semibold inline-block transition-all">Preferencias de cookies</a></li>
+            <li><a href="data-deletion.php" class="hover:text-cyan-300 hover:translate-x-1 inline-block transition-all">Instrucciones de Eliminación</a></li>
           </ul>
         </div>
 
       </div>
 
       <!-- Bottom Bar -->
-      <div class="border-t border-slate-800/80 pt-6 sm:pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-300">
-        <div class="flex items-center gap-2 text-center sm:text-left">
-          <span class="font-bold text-white">XINDRO</span>
+      <div class="border-t border-slate-800/80 pt-8 pb-4 flex flex-col sm:flex-row items-center justify-between gap-5 text-sm text-slate-300">
+        <div class="flex items-center gap-2.5 text-center sm:text-left flex-wrap justify-center sm:justify-start">
+          <span class="font-extrabold text-white text-base">XINDRO</span>
           <span>•</span>
-          <span>© <?= date('Y') ?> Xindro Tech, Inc. <span data-i18n="foot_rights">Todos los derechos reservados.</span></span>
+          <span class="text-slate-300 font-normal">© <?= date('Y') ?> Xindro Tech, Inc. <span data-i18n="foot_rights">Todos los derechos reservados.</span></span>
         </div>
-        <div class="flex items-center gap-4">
-          <span class="flex items-center gap-1.5 text-emerald-400 font-medium">
-            <span class="w-2 h-2 rounded-full bg-emerald-400 live-dot"></span>
+        <div class="flex items-center gap-6 flex-wrap justify-center">
+          <span class="flex items-center gap-2 text-emerald-400 font-semibold text-sm">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 live-dot"></span>
             Meta Graph API Verified
           </span>
-          <a href="javascript:void(0)" onclick="CookieConsent.openSettings()" data-i18n="cookie_btn_pref" class="text-slate-300 hover:text-white underline">Ajustes de Cookies</a>
+          <a href="javascript:void(0)" onclick="CookieConsent.openSettings()" data-i18n="cookie_btn_pref" class="text-slate-300 hover:text-white underline font-medium text-sm transition-colors">Ajustes de Cookies</a>
         </div>
       </div>
 
