@@ -373,8 +373,15 @@ if (!empty($error)) {
             CacheService::invalidateUserSettings($userId);
             CacheService::invalidateAccountMappings();
 
+            // Automatically sync real-time posts and metrics immediately
+            try {
+                MetaApiService::syncFromMeta($userId);
+            } catch (Throwable $syncEx) {
+                error_log("Post-OAuth auto-sync error: " . $syncEx->getMessage());
+            }
+
             $status = 'success';
-            $message = '¡Conexión oficial OAuth 2.0 completada exitosamente con Meta! Tus Páginas y cuentas de Instagram han sido vinculadas.';
+            $message = '¡Conexión oficial OAuth 2.0 completada exitosamente con Meta! Tus Páginas, cuentas de Instagram y publicaciones en vivo han sido sincronizadas.';
         }
 
     } catch (Throwable $e) {

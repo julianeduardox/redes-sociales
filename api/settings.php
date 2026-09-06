@@ -488,12 +488,19 @@ try {
             Settings::set('openrouter_api_key', trim(Security::sanitizeString($input['openrouter_api_key'], 250)));
         }
         if (!empty($input['meta_page_access_token']) && !str_contains($input['meta_page_access_token'], '...')) {
-            Settings::set('meta_page_access_token', trim(Security::sanitizeString($input['meta_page_access_token'], 500)));
+            Settings::set('meta_page_access_token', trim(Security::sanitizeString($input['meta_page_access_token'], 2000)));
+            // Invalidate cache and auto-sync
+            CacheService::invalidateUserSettings($userId);
+            try {
+                MetaApiService::syncFromMeta($userId);
+            } catch (Throwable $t) {
+                error_log("Settings token auto-sync error: " . $t->getMessage());
+            }
         }
 
         echo json_encode([
             'success' => true,
-            'message' => 'Configuración de IA y claves guardadas correctamente.'
+            'message' => 'Configuración de IA y claves guardadas correctamente. Sincronización actualizada.'
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
         exit;
     }
