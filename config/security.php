@@ -255,6 +255,13 @@ class Security {
     }
 
     /**
+     * Alias for sanitizeString for unified API input sanitization
+     */
+    public static function sanitizeInput(?string $input, int $maxLength = 2000): string {
+        return self::sanitizeString($input, $maxLength);
+    }
+
+    /**
      * Validate an input value against an allowed whitelist enum
      */
     public static function validateEnum(string $value, array $allowed, string $default): string {

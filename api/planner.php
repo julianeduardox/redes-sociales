@@ -69,6 +69,7 @@ try {
         exit;
 
     } elseif ($method === 'POST') {
+        Security::requireCsrf();
         $data = json_decode(file_get_contents('php://input'), true) ?: $_POST;
         $action = Security::validateEnum($data['action'] ?? '', ['generate', 'save', 'delete', 'publish_now'], '');
 
@@ -77,7 +78,7 @@ try {
         }
 
         if ($action === 'generate') {
-            $topic = Security::sanitizeInput($data['topic'] ?? '');
+            $topic = Security::sanitizeString($data['topic'] ?? '', 1000);
             if (empty($topic)) {
                 Security::sendJsonError("Por favor introduce una idea o tema para el contenido.", null, 422);
             }

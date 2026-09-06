@@ -143,7 +143,7 @@ class AiAgentService {
         $autopilotStatus = 'ready';
         $autopilotReason = '✅ Respuesta verificada apta para publicación en Autopilot';
 
-        // 1. Philosophical, Stoic, Conceptual & Mentorship QA (Dicotomía del control, mentalidad, disciplina, conceptos)
+        // 1. Philosophical, Stoic, Conceptual & Mentorship QA (Dicotomía del control, mentalidad, disciplina, conceptos, virtud)
         $conceptPatterns = [
             'dicotomia', 'dicotomía', 'dicotomia del control', 'dicotomía del control', 'estoicismo', 'estoico', 'estoica',
             'marco aurelio', 'seneca', 'séneca', 'epicteto', 'epícteto', 'amor fati', 'memento mori', 'autodominio',
@@ -151,7 +151,10 @@ class AiAgentService {
             'qué significa', 'miedo al fracaso', 'procrastino', 'procrastinar', 'procrastinacion', 'procrastinación',
             'sin motivacion', 'sin motivación', 'falta de motivacion', 'falta de motivación', 'consejo', 'reflexion',
             'reflexión', 'filosofia', 'filosofía', 'sabiduria', 'sabiduría', 'crecimiento personal', 'mentalidad',
-            'obstaculo es el camino', 'obstáculo es el camino', 'el obstaculo', 'el obstáculo', 'habito', 'hábito'
+            'obstaculo es el camino', 'obstáculo es el camino', 'el obstaculo', 'el obstáculo', 'habito', 'hábito',
+            'virtud', 'virtudes', 'momento', 'momentos', 'decidimos', 'decidir', 'decisión', 'decisiones', 'perfecto',
+            'perfecta', 'perfección', 'perfeccion', 'tiempo', 'presente', 'propósito', 'proposito', 'carácter', 'caracter',
+            'alma', 'mente', 'serenidad', 'voluntad', 'constancia', 'verdad', 'destino', 'lección', 'leccion'
         ];
 
         // 2. Commercial Leads / Course / Product / Pricing / Access / Buying Intent
@@ -235,10 +238,13 @@ class AiAgentService {
 
         // Priority Classification
         if (!empty($foundConcepts)) {
-            $sentiment = 'question';
+            $isQuestion = str_contains($commentText, '?') || str_contains($textLower, 'cómo') || str_contains($textLower, 'como') || str_contains($textLower, 'qué') || str_contains($textLower, 'que') || str_contains($textLower, 'cuál') || str_contains($textLower, 'cual');
+            $sentiment = $isQuestion ? 'question' : 'positive';
             $intent = 'knowledge_concept';
-            $score = 92;
-            $highlightReason = '🧠 Consulta Conceptual & Mentoría: Pregunta filosófica o metodológica para aportar autoridad de marca';
+            $score = 95;
+            $highlightReason = $isQuestion 
+                ? '🧠 Consulta Conceptual & Mentoría: Pregunta sobre principios, disciplina y aplicación práctica'
+                : '🧠 Reflexión Filosófica de la Comunidad: Aporte de alto valor sobre virtud, presencia y mentalidad';
             $keywords = $foundConcepts;
             $autopilotReady = true;
             $autopilotStatus = 'ready';
@@ -424,7 +430,11 @@ class AiAgentService {
         array $forbiddenPhrases = [],
         array $fewShotExamples = []
     ): array {
-        $firstName = explode(' ', trim($authorName))[0] ?: 'amigo';
+        // Clean author name: extract handle/first name without '@' for friendly conversation
+        $rawFirst = explode(' ', trim($authorName))[0] ?: 'amigo';
+        $displayName = ltrim($rawFirst, '@');
+        if (empty($displayName)) $displayName = 'amigo';
+
         $analysis = self::analyzeComment($commentText, $postCaption);
         $intent = $analysis['intent'];
         $textLower = mb_strtolower($commentText, 'UTF-8');
@@ -438,15 +448,15 @@ class AiAgentService {
         $eLight = ($emojiStyle === 'minimal') ? '💡' : (($emojiStyle === 'expressive') ? '💡 🌟' : '💡');
         $ePillar = ($emojiStyle === 'minimal') ? '🏛️' : (($emojiStyle === 'expressive') ? '🏛️ ✨' : '🏛️');
 
-        // Warmth greetings
+        // Warmth greetings (Name is included here, NEVER repeated inside sentences)
         if ($warmthLevel >= 80) {
-            $greetEngage = "¡Hola $firstName! $eHeart";
-            $greetConvert = "¡Qué tal $firstName! $eRocket";
-            $greetSupport = "¡Hola $firstName! Con gusto te apoyo. $eLight";
+            $greetEngage = "¡Hola $displayName! $eHeart";
+            $greetConvert = "¡Qué tal $displayName! $eRocket";
+            $greetSupport = "¡Hola $displayName! Con gusto te apoyo. $eLight";
         } elseif ($warmthLevel >= 50) {
-            $greetEngage = "Hola $firstName $eHeart";
-            $greetConvert = "Hola $firstName $eRocket";
-            $greetSupport = "Hola $firstName $eLight";
+            $greetEngage = "Hola $displayName $eHeart";
+            $greetConvert = "Hola $displayName $eRocket";
+            $greetSupport = "Hola $displayName $eLight";
         } else {
             $greetEngage = "$eHeart";
             $greetConvert = "$eRocket";
@@ -462,24 +472,35 @@ class AiAgentService {
         if ($matchedExample) {
             return [
                 'source' => 'heuristic_few_shot_trained',
-                'engagement' => "$greetEngage " . self::adaptFewShotReply($matchedExample['reply'], $firstName) . ($closingQuestionRule === 'always' ? " " . $questionGeneral : ''),
-                'conversion' => "$greetConvert " . self::adaptFewShotReply($matchedExample['reply'], $firstName),
-                'support' => "$greetSupport " . self::adaptFewShotReply($matchedExample['reply'], $firstName),
+                'engagement' => "$greetEngage " . self::adaptFewShotReply($matchedExample['reply'], $displayName) . ($closingQuestionRule === 'always' ? " " . $questionGeneral : ''),
+                'conversion' => "$greetConvert " . self::adaptFewShotReply($matchedExample['reply'], $displayName),
+                'support' => "$greetSupport " . self::adaptFewShotReply($matchedExample['reply'], $displayName),
                 'engagement_tips' => '🧠 Respuesta enriquecida por el Ejemplo Maestro entrenado para este patrón.'
             ];
         }
 
-        // Case 1: Knowledge / Philosophical / Stoic / Concept Explanation
+        // Case 1: Knowledge / Philosophical / Stoic / Concept Explanation & Virtue Reflections
         if ($intent === 'knowledge_concept') {
+            $isVirtueReflection = str_contains($textLower, 'virtud') || str_contains($textLower, 'momento') || str_contains($textLower, 'decid') || str_contains($textLower, 'crear') || str_contains($textLower, 'perfect') || str_contains($textLower, 'presente') || str_contains($textLower, 'tiempo') || str_contains($textLower, 'alma') || str_contains($textLower, 'sabidur') || str_contains($textLower, 'serenidad');
             $isDichotomy = str_contains($textLower, 'dicotomia') || str_contains($textLower, 'dicotomía') || str_contains($textLower, 'control');
             $isDiscipline = str_contains($textLower, 'disciplina') || str_contains($textLower, 'motivacion') || str_contains($textLower, 'motivación') || str_contains($textLower, 'procrastin');
+
+            if ($isVirtueReflection) {
+                return [
+                    'source' => 'heuristic_calibrated',
+                    'engagement' => "¡Totalmente de acuerdo, $displayName! $eHeart La verdadera virtud no reside en buscar condiciones perfectas, sino en actuar con excelencia en el momento presente con los recursos que disponemos. ¡Gracias por aportar una reflexión tan lúcida y valiosa a la comunidad! ✨",
+                    'conversion' => "¡Qué gran perspectiva, $displayName! $eRocket Justamente esa filosofía de crecimiento, autodominio y presencia es el núcleo de lo que compartimos. Si deseas profundizar en nuestras lecturas y guías prácticas sobre mentalidad, en el enlace de nuestra biografía tienes todo el material recomendado 📖",
+                    'support' => "Una gran verdad, $displayName. $ePillar Como nos enseñan los principios estoicos, el carácter se forja decidiendo hacer propio cada instante sin buscar la perfección externa. Un honor contar con aportes de tanto nivel en esta comunidad 🏛️",
+                    'engagement_tips' => '🏛️ Reconocer y validar reflexiones profundas de la comunidad consolida la autoridad y lealtad de marca.'
+                ];
+            }
 
             if ($isDichotomy) {
                 return [
                     'source' => 'heuristic_calibrated',
-                    'engagement' => "¡Hola $firstName! $ePillar La dicotomía del control consiste en enfocar el 100% de nuestra energía en lo que sí depende de nosotros (nuestras decisiones, acciones y actitud) y aceptar con serenidad lo externo. " . (($closingQuestionRule !== 'never') ? "¿En qué situación de tu día te gustaría empezar a aplicarlo? 👇" : "Un principio clave para el autodominio."),
-                    'conversion' => "¡Qué gran tema, $firstName! $eRocket Dominar la dicotomía del control transforma por completo tu enfoque y claridad mental. En el enlace de nuestra biografía compartimos guías y recursos prácticos sobre mentalidad estoica si deseas profundizar. ¿Qué aspecto de tu rutina buscas fortalecer hoy?",
-                    'support' => "Excelente consulta, $firstName. $eLight Para aplicarlo en lo cotidiano: ante cualquier obstáculo pregúntate '¿Está bajo mi control directo?'. Si lo está, actúa con determinación; si no, canaliza tu energía en tu propia respuesta y suelta lo demás. ¿Qué reto estás gestionando actualmente?",
+                    'engagement' => "$greetEngage La dicotomía del control consiste en enfocar el 100% de nuestra energía en lo que sí depende de nosotros (nuestras decisiones, acciones y actitud) y aceptar con serenidad lo externo. " . (($closingQuestionRule !== 'never') ? "¿En qué situación de tu día te gustaría empezar a aplicarlo? 👇" : "Un principio clave para el autodominio."),
+                    'conversion' => "$greetConvert Dominar la dicotomía del control transforma por completo tu enfoque y claridad mental. En el enlace de nuestra biografía compartimos guías y recursos prácticos sobre mentalidad estoica si deseas profundizar. ¿Qué aspecto de tu rutina buscas fortalecer hoy?",
+                    'support' => "$greetSupport Para aplicarlo en lo cotidiano: ante cualquier obstáculo pregúntate '¿Está bajo mi control directo?'. Si lo está, actúa con determinación; si no, canaliza tu energía en tu propia respuesta y suelta lo demás.",
                     'engagement_tips' => '🧠 Las respuestas fundamentadas en sabiduría y autoridad consolidan a tu marca como referente de valor.'
                 ];
             }
@@ -487,18 +508,18 @@ class AiAgentService {
             if ($isDiscipline) {
                 return [
                     'source' => 'heuristic_calibrated',
-                    'engagement' => "¡Hola $firstName! $eHeart La motivación es pasajera, pero la disciplina diaria se construye con pequeñas victorias cotidianas de 5 minutos. No busques perfección inmediata, sino consistencia. " . (($closingQuestionRule !== 'never') ? "¿Cuál es esa pequeña acción que puedes completar hoy? 👇" : "El progreso diario lo cambia todo."),
-                    'conversion' => "¡Totalmente de acuerdo, $firstName! $eRocket Cuando aplicas un método estructurado, la disciplina se vuelve natural. Puedes consultar nuestras herramientas y metodologías en el enlace de la bio para dar el siguiente paso. ¿Te gustaría conocer más sobre el método?",
-                    'support' => "¡Hola $firstName! $eLight La clave para vencer la procrastinación es dividir el objetivo en una sola micro-tarea que puedas empezar de inmediato. ¿En qué meta estás enfocado esta semana?",
+                    'engagement' => "$greetEngage La motivación es pasajera, pero la disciplina diaria se construye con pequeñas victorias cotidianas de 5 minutos. No busques perfección inmediata, sino consistencia diaria. " . (($closingQuestionRule !== 'never') ? "¿Cuál es esa pequeña acción que puedes completar hoy? 👇" : "El progreso diario lo cambia todo."),
+                    'conversion' => "$greetConvert Cuando aplicas un método estructurado, la disciplina se vuelve un hábito natural. Puedes consultar nuestras herramientas y metodologías en el enlace de la bio para dar el siguiente paso. ¿Te gustaría conocer más sobre el método?",
+                    'support' => "$greetSupport La clave para vencer la procrastinación es dividir el objetivo en una sola micro-tarea que puedas empezar de inmediato. ¿En qué meta estás enfocado esta semana?",
                     'engagement_tips' => '💡 Aportar consejos prácticos y accionables fomenta conversaciones de alto engagement.'
                 ];
             }
 
             return [
                 'source' => 'heuristic_calibrated',
-                'engagement' => "¡Hola $firstName! $ePillar Los principios sólidos nos permiten mantener el rumbo sin importar las circunstancias externas. " . (($closingQuestionRule !== 'never') ? "¿Qué concepto o hábito te ha resultado más transformador? 💬" : "Un gusto reflexionar juntos en comunidad."),
-                'conversion' => "¡Excelente reflexión, $firstName! $eRocket Profundizar en estos fundamentos marca la diferencia en cualquier proyecto. Te invitamos a revisar los recursos formativos en el enlace de nuestra biografía. ¿En qué área estás buscando evolucionar hoy?",
-                'support' => "¡Hola $firstName! $eLight La claridad mental surge de la práctica constante y el pensamiento reflexivo. Con gusto seguimos compartiendo contenidos sobre este tema. ¿Qué duda puntual te gustaría que abordemos en el próximo post?",
+                'engagement' => "$greetEngage Los principios sólidos nos permiten mantener el rumbo sin importar las circunstancias externas. " . (($closingQuestionRule !== 'never') ? "¿Qué concepto o hábito te ha resultado más transformador? 💬" : "Un gusto reflexionar juntos en comunidad."),
+                'conversion' => "$greetConvert Profundizar en estos fundamentos marca la diferencia en cualquier proyecto. Te invitamos a revisar los recursos formativos en el enlace de nuestra biografía. ¿En qué área estás buscando evolucionar hoy?",
+                'support' => "$greetSupport La claridad mental surge de la práctica constante y el pensamiento reflexivo. Con gusto seguimos compartiendo contenidos sobre este tema. ¿Qué duda puntual te gustaría que abordemos en el próximo post?",
                 'engagement_tips' => '🏛️ El contenido de valor y reflexión genera seguidores altamente fidelizados.'
             ];
         }
@@ -510,17 +531,17 @@ class AiAgentService {
             if ($isCourseStructure) {
                 return [
                     'source' => 'heuristic_calibrated',
-                    'engagement' => "¡Hola $firstName! $eHeart Sí, el programa incluye acceso flexible a clases grabadas para que avances a tu propio ritmo con acceso continuo y material de apoyo. " . $questionLead,
-                    'conversion' => "¡Hola $firstName! $eRocket Efectivamente, cuentas con acceso a todas las clases grabadas, recursos prácticos y actualizaciones del curso. Puedes consultar el temario completo y registrarte directamente en el enlace de nuestra biografía o enviarnos un DM si tienes alguna pregunta puntual.",
-                    'support' => "¡Con gusto, $firstName! $eLight El contenido formativo está estructurado en módulos grabados de alta calidad para repasar cuantas veces necesites. Encuentras la información oficial y los módulos en el enlace de nuestro perfil. ¿Tienes alguna duda sobre los temas incluidos?",
+                    'engagement' => "$greetEngage Sí, el programa incluye acceso flexible a clases grabadas para que avances a tu propio ritmo con acceso continuo y material de apoyo. " . $questionLead,
+                    'conversion' => "$greetConvert Cuentas con acceso a todas las clases grabadas, recursos prácticos y actualizaciones del curso. Puedes consultar el temario completo y registrarte directamente en el enlace de nuestra biografía o enviarnos un DM si tienes alguna duda puntual.",
+                    'support' => "$greetSupport El contenido formativo está estructurado en módulos grabados de alta calidad para repasar cuantas veces necesites. Encuentras la información oficial y los módulos en el enlace de nuestro perfil.",
                     'engagement_tips' => '🎯 Responder directamente a dudas técnicas del curso genera confianza inmediata y acelera la decisión de compra.'
                 ];
             }
 
             return [
                 'source' => 'heuristic_calibrated',
-                'engagement' => "$greetEngage ¡Qué gusto que te interese! Manejamos opciones adaptadas a tus objetivos y necesidades. Puedes consultar todos los detalles en el enlace de nuestra bio o escribirnos por DM. $questionLead",
-                'conversion' => "$greetConvert ¡Claro que sí, $firstName! Puedes ver la información completa, planes y disponibilidad directamente en el enlace de nuestra biografía, o si prefieres envíanos un DM y con gusto te orientamos.",
+                'engagement' => "$greetEngage ¡Qué gusto tu interés! Manejamos opciones adaptadas a tus objetivos y necesidades. Puedes consultar todos los detalles en el enlace de nuestra bio o escribirnos por DM. $questionLead",
+                'conversion' => "$greetConvert Puedes ver la información completa, planes y disponibilidad directamente en el enlace de nuestra biografía, o si prefieres envíanos un DM y con gusto te orientamos.",
                 'support' => "$greetSupport Toda la información de inversión, metodología y opciones disponibles está detallada en el link de nuestro perfil. Si deseas una recomendación personalizada, déjanos un mensaje privado.",
                 'engagement_tips' => '🎯 Responder con claridad e invitar a los canales oficiales eleva la conversión sin crear falsas expectativas.'
             ];
@@ -530,8 +551,8 @@ class AiAgentService {
         if ($intent === 'sales_objection') {
             return [
                 'source' => 'heuristic_calibrated',
-                'engagement' => "$greetEngage Es totalmente comprensible tu consulta, $firstName. Todo nuestro trabajo cuenta con garantía de satisfacción y soporte dedicado para que tengas total tranquilidad. $questionLead",
-                'conversion' => "$greetConvert ¡Excelente pregunta! Respaldamos cada programa y servicio con políticas claras de garantía y atención 1 a 1. Además, puedes revisar testimonios verificados en nuestras historias destacadas y en el enlace de la bio. ¿Te gustaría conocer más detalles?",
+                'engagement' => "$greetEngage Es totalmente comprensible tu consulta. Todo nuestro trabajo cuenta con garantía de satisfacción y soporte dedicado para que tengas total tranquilidad. $questionLead",
+                'conversion' => "$greetConvert Respaldamos cada programa y servicio con políticas claras de garantía y atención 1 a 1. Además, puedes revisar testimonios verificados en nuestras historias destacadas y en el enlace de la bio. ¿Te gustaría conocer más detalles?",
                 'support' => "$greetSupport Tu seguridad y satisfacción son nuestra máxima prioridad. Puedes revisar los términos de satisfacción y respuestas frecuentes en el enlace de nuestro perfil, o escribirnos un DM si deseas resolver dudas específicas.",
                 'engagement_tips' => '🛡️ Atender dudas con transparencia y rapidez disipa la fricción de compra y genera confianza inmediata.'
             ];
@@ -541,9 +562,9 @@ class AiAgentService {
         if ($intent === 'customer_support') {
             return [
                 'source' => 'heuristic_calibrated',
-                'engagement' => "$greetEngage ¡Hola $firstName! Queremos ayudarte de inmediato. Por favor envíanos un mensaje directo (DM) con los datos de tu cuenta o correo registrado para que nuestro equipo lo revise de forma prioritaria.",
+                'engagement' => "$greetEngage Queremos ayudarte de inmediato. Por favor envíanos un mensaje directo (DM) con los datos de tu cuenta o correo registrado para que nuestro equipo lo revise de forma prioritaria.",
                 'conversion' => "$greetConvert Por favor escríbenos por mensaje privado (DM) indicándonos tu correo de registro para que nuestro equipo técnico atienda tu caso de inmediato. ¡Estamos atentos para resolverlo!",
-                'support' => "$greetSupport Lamentamos cualquier inconveniente, $firstName. Ya mismo nuestro equipo de asistencia está disponible. Por favor contáctanos por mensaje directo para verificar tu acceso o caso hoy mismo.",
+                'support' => "$greetSupport Lamentamos cualquier inconveniente. Ya mismo nuestro equipo de asistencia está disponible: por favor contáctanos por mensaje directo para verificar tu acceso o caso hoy mismo.",
                 'engagement_tips' => '🛠️ Una atención al cliente empática y ágil transforma una incidencia en una oportunidad de fidelización.'
             ];
         }
@@ -552,7 +573,7 @@ class AiAgentService {
         if ($intent === 'gratitude_praise') {
             return [
                 'source' => 'heuristic_calibrated',
-                'engagement' => "$greetEngage ¡Muchísimas gracias por tus palabras, $firstName! Saber que te ha sido de gran valor es nuestra mayor satisfacción. $questionPraise",
+                'engagement' => "$greetEngage ¡Muchísimas gracias por tus palabras! Saber que te ha sido de gran valor es nuestra mayor satisfacción. $questionPraise",
                 'conversion' => "$greetConvert ¡Qué gran alegría leer tu comentario! Nos motiva muchísimo a seguir creando lo mejor para ustedes. ¡Un fuerte abrazo!",
                 'support' => "$greetSupport ¡Gracias de corazón por tu confianza y por formar parte de esta comunidad! $questionPraise",
                 'engagement_tips' => '✨ Responder a los elogios con preguntas abiertas estimula la conversación e incrementa el alcance orgánico.'
@@ -562,9 +583,9 @@ class AiAgentService {
         // Case 6: General Comment
         return [
             'source' => 'heuristic_calibrated',
-            'engagement' => "$greetEngage ¡Gracias por compartir tu opinión con nosotros, $firstName! $questionGeneral",
-            'conversion' => "$greetConvert ¡Totalmente de acuerdo, $firstName! Si deseas conocer más sobre lo que hacemos, en el enlace de nuestra biografía tienes toda la información.",
-            'support' => "$greetSupport ¡Un gran saludo $firstName! Encantados de leerte en nuestra comunidad. 🙌",
+            'engagement' => "$greetEngage ¡Gracias por compartir tu opinión con la comunidad! $questionGeneral",
+            'conversion' => "$greetConvert ¡Totalmente de acuerdo! Si deseas conocer más sobre lo que hacemos y recursos formativos, en el enlace de nuestra biografía tienes toda la información.",
+            'support' => "$greetSupport ¡Un gran saludo! Encantados de leerte y tener tu participación en nuestra comunidad. 🙌",
             'engagement_tips' => '💬 Las respuestas dinámicas y personalizadas mantienen a tu audiencia activa y comprometida.'
         ];
     }
