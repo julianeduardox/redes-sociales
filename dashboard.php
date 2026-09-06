@@ -50,7 +50,8 @@ $isMetaConnected = ($activeAccountsCount > 0);
   <link rel="preconnect" href="https://ui-avatars.com" crossorigin>
   
   <link rel="stylesheet" href="assets/css/style.css?v=<?= time() ?>">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏛️</text></svg>">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="alternate icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%20100%20100%22%3E%3Cdefs%3E%3ClinearGradient%20id=%22g%22%20x1=%220%25%22%20y1=%220%25%22%20x2=%22100%25%22%20y2=%22100%25%22%3E%3Cstop%20offset=%220%25%22%20stop-color=%22%239353FF%22/%3E%3Cstop%20offset=%2250%25%22%20stop-color=%22%237C3AED%22/%3E%3Cstop%20offset=%22100%25%22%20stop-color=%22%234F46E5%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width=%22100%22%20height=%22100%22%20rx=%2226%22%20fill=%22url(%23g)%22/%3E%3Cpath%20d=%22M54%2016%20L25%2053%20H47%20L43%2084%20L75%2047%20H53%20Z%22%20fill=%22%23FFFFFF%22%20stroke=%22%23FFFFFF%22%20stroke-width=%224%22%20stroke-linejoin=%22round%22%20stroke-linecap=%22round%22/%3E%3C/svg%3E">
 </head>
 <body>
 
@@ -62,7 +63,11 @@ $isMetaConnected = ($activeAccountsCount > 0);
   <!-- Sidebar Navigation -->
   <aside class="app-sidebar" id="app-sidebar">
     <div class="sidebar-header">
-      <div class="brand-icon-box" style="background: linear-gradient(135deg, #7c3aed, #4f46e5); color: #fff;">⚡</div>
+      <div class="brand-icon-box" style="background: linear-gradient(135deg, #7c3aed, #4f46e5); display: flex; align-items: center; justify-content: center;">
+        <svg width="20" height="20" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M54 16 L25 53 H47 L43 84 L75 47 H53 Z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
+        </svg>
+      </div>
       <div class="brand-text">
         <div style="display: flex; align-items: center; gap: 7px;">
           <h1 style="font-family: 'Syne', sans-serif; font-weight: 900; letter-spacing: -0.02em; margin: 0; font-size: 1.15rem;">XINDRO Copilot</h1>
