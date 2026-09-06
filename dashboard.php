@@ -373,6 +373,9 @@ $isMetaConnected = ($activeAccountsCount > 0);
           <button class="subtab-btn active" data-subtab="overview" onclick="AnalyticsController.switchSubtab('overview')">
             <span>📊 Visión General</span>
           </button>
+          <button class="subtab-btn" data-subtab="timing" onclick="AnalyticsController.switchSubtab('timing')">
+            <span>⏰ Horarios & Mejores Posts</span>
+          </button>
           <button class="subtab-btn" data-subtab="posts" onclick="AnalyticsController.switchSubtab('posts')">
             <span>📱 Rendimiento por Publicación</span>
           </button>
@@ -386,7 +389,14 @@ $isMetaConnected = ($activeAccountsCount > 0);
         </div>
       </div>
 
-      <!-- Subview 2: Post-by-Post Insights -->
+      <!-- Subview 2: Smart Timing, Heatmap & Hall of Fame -->
+      <div id="analytics-timing-subview" style="display: none;">
+        <div id="analytics-timing-content">
+          <!-- Rendered dynamically by AnalyticsController.renderTimingSubtab() -->
+        </div>
+      </div>
+
+      <!-- Subview 3: Post-by-Post Insights -->
       <div id="analytics-posts-subview" style="display: none;">
         <!-- Post Filter Toolbar -->
         <div class="post-filter-toolbar">

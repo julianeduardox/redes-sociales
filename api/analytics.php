@@ -6,6 +6,7 @@
 require_once __DIR__ . '/../config/security.php';
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../services/AnalyticsEngineService.php';
 
 Security::applySecurityHeaders(true);
 Auth::requireAuth(true);
@@ -265,6 +266,10 @@ try {
         }
     }
 
+    // 7. Advanced Analytics Engine (Optimal Timings, 7x24 Heatmap, Podium & Top Performers)
+    $timingAnalysis = AnalyticsEngineService::getTimingAnalysis($userId, $platform, $accountId);
+    $topPerformers = AnalyticsEngineService::getTopPerformersAnalysis($userId, $platform, $accountId);
+
     echo json_encode([
         'success' => true,
         'stats' => $stats,
@@ -272,7 +277,9 @@ try {
         'platform_distribution' => $platformRows,
         'variant_distribution' => $variantRows,
         'posts' => $allPosts,
-        'drill_post' => $drillPostData
+        'drill_post' => $drillPostData,
+        'timing_analysis' => $timingAnalysis,
+        'top_performers' => $topPerformers
     ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
     Security::sendJsonError('Error al generar métricas de analítica y publicaciones.', $e);
