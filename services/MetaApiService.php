@@ -583,13 +583,13 @@ class MetaApiService {
             $accError = null;
 
             if ($platform === 'instagram') {
-                // Fetch Instagram Media
+                // Fetch Instagram Media (High limit for complete recent coverage)
                 $mediaUrl = self::BASE_URL . '/' . urlencode($pageId) . '/media?' . http_build_query([
                     'fields' => 'id,caption,media_type,media_url,thumbnail_url,permalink,like_count,comments_count,timestamp',
-                    'limit' => '25',
+                    'limit' => '50',
                     'access_token' => $token
                 ]);
-                $mediaData = self::makeGetRequest($mediaUrl, 3, 1);
+                $mediaData = self::makeGetRequest($mediaUrl, 25, 8);
 
                 if (isset($mediaData['error'])) {
                     $accError = $mediaData['error']['message'] ?? 'Error de permisos al leer publicaciones de Instagram';
@@ -598,9 +598,9 @@ class MetaApiService {
                     $accPostsFound = count($mediaData['data']);
                     $totalPostsFoundOnMeta += $accPostsFound;
 
-                    // 1. Prepare Parallel Requests for Top 6 Posts (Insights & Comments)
+                    // 1. Prepare Parallel Requests for Top 20 Recent Posts (Insights & Comments)
                     $multiUrls = [];
-                    $recentPosts = array_slice($mediaData['data'], 0, 6);
+                    $recentPosts = array_slice($mediaData['data'], 0, 20);
                     foreach ($recentPosts as $media) {
                         $mId = $media['id'];
                         $mType = strtolower($media['media_type'] ?? 'image');
@@ -616,14 +616,14 @@ class MetaApiService {
                         if ($cCount > 0) {
                             $multiUrls['comments_' . $mId] = self::BASE_URL . '/' . urlencode($mId) . '/comments?' . http_build_query([
                                 'fields' => 'id,text,username,timestamp,like_count',
-                                'limit' => '15',
+                                'limit' => '25',
                                 'access_token' => $token
                             ]);
                         }
                     }
 
-                    // Execute ALL parallel requests at once (< 400ms)
-                    $multiResponses = self::makeMultiGetRequests($multiUrls, 3, 1);
+                    // Execute parallel requests with robust timeout
+                    $multiResponses = self::makeMultiGetRequests($multiUrls, 25, 8);
 
                     foreach ($mediaData['data'] as $media) {
                         $mediaId = $media['id'];
@@ -766,7 +766,7 @@ class MetaApiService {
                                     $analysis = AiAgentService::analyzeComment($cText, $caption, $c['like_count'] ?? 0);
                                     $stmtInsertCmt = $pdo->prepare("
                                         INSERT INTO comments (
-                                            user_id, post_id, platform, external_comment_id, author_name, author_handle, 
+                                             user_id, post_id, platform, external_comment_id, author_name, author_handle, 
                                             author_avatar, comment_text, sentiment, intent, highlight_score, 
                                             is_highlighted, highlight_reason, likes_count, status
                                         ) VALUES (
@@ -799,27 +799,27 @@ class MetaApiService {
                 }
             } else {
                 // Fetch Facebook Page Posts from /published_posts, /feed, and /posts IN PARALLEL for 100% complete discovery
-                $fbFields = 'id,message,story,created_time,full_picture,permalink_url,shares,attachments{media,type,target{id},unshimmed_url},reactions.summary(true).limit(1),likes.summary(true).limit(1),comments.summary(true).limit(1)';
+                $fbFields = 'id,message,story,created_time,full_picture,permalink_url,shares,attachments{media,type,target{id},unshimmed_url},reactions.summary(true).limit(0),likes.summary(true).limit(0),comments.summary(true).limit(0)';
                 
                 $fbFeedQueries = [
                     'published' => self::BASE_URL . '/' . urlencode($pageId) . '/published_posts?' . http_build_query([
                         'fields' => $fbFields,
-                        'limit' => '30',
+                        'limit' => '50',
                         'access_token' => $token
                     ]),
                     'feed' => self::BASE_URL . '/' . urlencode($pageId) . '/feed?' . http_build_query([
                         'fields' => $fbFields,
-                        'limit' => '30',
+                        'limit' => '50',
                         'access_token' => $token
                     ]),
                     'posts' => self::BASE_URL . '/' . urlencode($pageId) . '/posts?' . http_build_query([
                         'fields' => $fbFields,
-                        'limit' => '30',
+                        'limit' => '50',
                         'access_token' => $token
                     ])
                 ];
 
-                $fbFeedsData = self::makeMultiGetRequests($fbFeedQueries, 3, 1);
+                $fbFeedsData = self::makeMultiGetRequests($fbFeedQueries, 25, 8);
 
                 // Merge and deduplicate all posts across published_posts, feed, and posts
                 $mergedPosts = [];
@@ -859,15 +859,22 @@ class MetaApiService {
                     $accPostsFound = count($mergedPostsList);
                     $totalPostsFoundOnMeta += $accPostsFound;
 
-                    // 1. Prepare Parallel Requests for Top 8 Posts (Insights, Comments, Photo Object Reactions)
+                    // 1. Prepare Parallel Requests for Top 20 Posts (Insights, Comments, Photo Object Reactions)
                     $multiUrls = [];
-                    $recentPosts = array_slice($mergedPostsList, 0, 8);
+                    $recentPosts = array_slice($mergedPostsList, 0, 20);
                     foreach ($recentPosts as $fbPost) {
                         $pIdExt = $fbPost['id'];
                         $objId = !empty($fbPost['attachments']['data'][0]['target']['id']) ? (string)$fbPost['attachments']['data'][0]['target']['id'] : null;
+                        $attachType = strtolower($fbPost['attachments']['data'][0]['type'] ?? '');
+                        $isVideo = str_contains($attachType, 'video') || str_contains($attachType, 'reel');
+
+                        // Safe metric query based on post type to prevent #100 Param metric has invalid value
+                        $fbMetricString = $isVideo 
+                            ? 'post_impressions,post_impressions_unique,post_engaged_users,post_video_views'
+                            : 'post_impressions,post_impressions_unique,post_engaged_users';
 
                         $multiUrls['fb_insights_' . $pIdExt] = self::BASE_URL . '/' . urlencode($pIdExt) . '/insights?' . http_build_query([
-                            'metric' => 'post_impressions,post_impressions_unique,post_engaged_users,post_reactions_by_type_total,post_video_views,post_clicks',
+                            'metric' => $fbMetricString,
                             'access_token' => $token
                         ]);
 
@@ -875,18 +882,18 @@ class MetaApiService {
                         if ($cCount > 0) {
                             $multiUrls['fb_comments_' . $pIdExt] = self::BASE_URL . '/' . urlencode($pIdExt) . '/comments?' . http_build_query([
                                 'fields' => 'id,message,from,created_time,like_count',
-                                'limit' => '20',
+                                'limit' => '25',
                                 'access_token' => $token
                             ]);
                         }
 
                         if (!empty($objId) && is_numeric($objId) && $objId !== $pIdExt) {
-                            $multiUrls['fb_obj_' . $pIdExt] = self::BASE_URL . '/' . urlencode($objId) . '?fields=reactions.summary(true).limit(1),likes.summary(true).limit(1)&access_token=' . urlencode($token);
+                            $multiUrls['fb_obj_' . $pIdExt] = self::BASE_URL . '/' . urlencode($objId) . '?fields=reactions.summary(true).limit(0),likes.summary(true).limit(0)&access_token=' . urlencode($token);
                         }
                     }
 
-                    // Execute ALL parallel requests at once (< 400ms)
-                    $multiResponses = self::makeMultiGetRequests($multiUrls, 3, 1);
+                    // Execute ALL parallel requests at once
+                    $multiResponses = self::makeMultiGetRequests($multiUrls, 25, 8);
 
                     foreach ($mergedPostsList as $fbPost) {
                         $postIdExt = $fbPost['id'];
@@ -933,7 +940,7 @@ class MetaApiService {
                         }
 
                         // Check photo object reactions from parallel response
-                        if ($likes === 0 && isset($multiResponses['fb_obj_' . $postIdExt])) {
+                        if (isset($multiResponses['fb_obj_' . $postIdExt])) {
                             $objData = $multiResponses['fb_obj_' . $postIdExt];
                             if (isset($objData['reactions']['summary']['total_count'])) {
                                 $likes = max($likes, (int)$objData['reactions']['summary']['total_count']);
@@ -969,8 +976,6 @@ class MetaApiService {
                                     $reach = max($reach, $val);
                                 } elseif ($name === 'post_engaged_users') {
                                     $engagedUsers = max($engagedUsers, $val);
-                                } elseif ($name === 'post_reactions_by_type_total') {
-                                    $likes = max($likes, $val);
                                 } elseif ($name === 'post_video_views') {
                                     $impressions = max($impressions, $val);
                                 }
@@ -1378,7 +1383,7 @@ class MetaApiService {
         ];
     }
 
-    public static function makeMultiGetRequests(array $urls, int $timeout = 3, int $connectTimeout = 1): array {
+    public static function makeMultiGetRequests(array $urls, int $timeout = 25, int $connectTimeout = 8): array {
         if (empty($urls)) return [];
         $mh = curl_multi_init();
         $handles = [];
@@ -1419,7 +1424,7 @@ class MetaApiService {
         return $results;
     }
 
-    private static function makeGetRequest(string $url, int $timeout = 3, int $connectTimeout = 1): array {
+    private static function makeGetRequest(string $url, int $timeout = 25, int $connectTimeout = 8): array {
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
