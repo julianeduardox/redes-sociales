@@ -1646,6 +1646,700 @@ class MetaApiService {
         ];
     }
 
+    /**
+     * Autonomous Quick-Sync (Heartbeat Engine)
+     * Ultra-optimized lightweight sync designed to run automatically every 3 minutes.
+     * Skips heavy demo data cleanup and account re-discovery.
+     * Fetches top 10 posts per account, updates metrics with SQLite MAX protection,
+     * ingests comments, and auto-replies when Autopilot is enabled.
+     */
+    public static function quickSync(?int $userId = null): array {
+        $startTime = microtime(true);
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(60);
+        }
+        $uid = ($userId !== null && $userId > 0) ? $userId : (class_exists('Auth') && Auth::check() ? Auth::id() : 1);
+        $pdo = Database::getConnection();
+
+        $userToken = Settings::get('meta_user_access_token', '', $uid);
+        $pageToken = Settings::get('meta_page_access_token', '', $uid);
+        $defaultToken = !empty($userToken) ? $userToken : $pageToken;
+        $defaultBrandVoiceId = Database::ensureDefaultBrandVoice($pdo, $uid);
+        $autopilotEnabled = Settings::get('autopilot_enabled', '0', $uid) === '1';
+
+        // 1. Fetch all active connected accounts for this user
+        $stmtAccounts = $pdo->prepare("
+            SELECT a.*, bv.brand_name as brand_voice_name 
+            FROM accounts a 
+            LEFT JOIN brand_voices bv ON a.brand_voice_id = bv.id 
+            WHERE a.user_id = :uid AND a.is_active = 1
+            ORDER BY a.platform ASC, a.id ASC
+        ");
+        $stmtAccounts->execute([':uid' => $uid]);
+        $accounts = $stmtAccounts->fetchAll();
+
+        if (empty($accounts) && empty($defaultToken)) {
+            return [
+                'success' => false,
+                'mode' => 'quick_sync',
+                'message' => 'Sin cuentas ni credenciales configuradas para sincronización automática.',
+                'synced_accounts' => 0,
+                'synced_new_posts' => 0,
+                'synced_new_comments' => 0,
+                'autopilot_replies' => 0
+            ];
+        }
+
+        $syncedAccountsCount = 0;
+        $syncedPostsCount = 0;
+        $syncedCommentsCount = 0;
+        $repliesPostedCount = 0;
+        $totalPostsChecked = 0;
+        $errors = [];
+
+        foreach ($accounts as $acc) {
+            $accId = (int)$acc['id'];
+            $platform = $acc['platform'] ?? 'facebook';
+            $pageId = trim($acc['page_id'] ?? '');
+            $token = !empty($acc['access_token']) ? $acc['access_token'] : $defaultToken;
+            $accHandle = $acc['account_handle'] ?? '';
+            $brandVoiceId = !empty($acc['brand_voice_id']) ? (int)$acc['brand_voice_id'] : $defaultBrandVoiceId;
+
+            if (empty($token) || empty($pageId) || !is_numeric($pageId)) continue;
+            $syncedAccountsCount++;
+
+            try {
+                if ($platform === 'instagram') {
+                    // Fetch top 10 Instagram media
+                    $mediaUrl = self::BASE_URL . '/' . urlencode($pageId) . '/media?' . http_build_query([
+                        'fields' => 'id,caption,media_type,media_url,thumbnail_url,permalink,like_count,comments_count,timestamp',
+                        'limit' => '10',
+                        'access_token' => $token
+                    ]);
+                    $mediaData = self::makeGetRequest($mediaUrl, 15, 5);
+
+                    if (isset($mediaData['error'])) {
+                        $errors[] = "Instagram ({$accHandle}): " . ($mediaData['error']['message'] ?? 'Error de lectura');
+                    } elseif (!empty($mediaData['data']) && is_array($mediaData['data'])) {
+                        $totalPostsChecked += count($mediaData['data']);
+                        $multiUrls = [];
+                        foreach ($mediaData['data'] as $media) {
+                            $mId = $media['id'];
+                            $mType = strtolower($media['media_type'] ?? 'image');
+                            $isReel = in_array($mType, ['video', 'reel', 'reels', 'clips'], true);
+                            $metricSet = $isReel ? 'plays,reach,saved,total_interactions' : 'impressions,reach,saved,total_interactions';
+
+                            $multiUrls['insights_' . $mId] = self::BASE_URL . '/' . urlencode($mId) . '/insights?' . http_build_query([
+                                'metric' => $metricSet,
+                                'access_token' => $token
+                            ]);
+
+                            $cCount = (int)($media['comments_count'] ?? 0);
+                            if ($cCount > 0) {
+                                $multiUrls['comments_' . $mId] = self::BASE_URL . '/' . urlencode($mId) . '/comments?' . http_build_query([
+                                    'fields' => 'id,text,username,timestamp,like_count',
+                                    'limit' => '20',
+                                    'access_token' => $token
+                                ]);
+                            }
+                        }
+
+                        $multiResponses = self::makeMultiGetRequests($multiUrls, 15, 5);
+
+                        foreach ($mediaData['data'] as $media) {
+                            $mediaId = $media['id'];
+                            $caption = $media['caption'] ?? 'Publicación de Instagram';
+                            $mediaImg = $media['media_url'] ?? ($media['thumbnail_url'] ?? '');
+                            $mediaType = strtolower($media['media_type'] ?? 'image');
+                            $likes = (int)($media['like_count'] ?? 0);
+                            $commentsCount = (int)($media['comments_count'] ?? 0);
+                            $permalink = $media['permalink'] ?? '';
+                            $postedAt = !empty($media['timestamp']) ? date('Y-m-d H:i:s', strtotime($media['timestamp'])) : date('Y-m-d H:i:s');
+
+                            $impressions = 0;
+                            $reach = 0;
+                            $views = 0;
+                            $savedCount = 0;
+
+                            if (isset($multiResponses['insights_' . $mediaId]['data']) && is_array($multiResponses['insights_' . $mediaId]['data'])) {
+                                foreach ($multiResponses['insights_' . $mediaId]['data'] as $item) {
+                                    $name = $item['name'] ?? '';
+                                    $val = 0;
+                                    if (isset($item['total_value']['value'])) {
+                                        $val = (int)$item['total_value']['value'];
+                                    } elseif (isset($item['values'][0]['value'])) {
+                                        $val = (int)$item['values'][0]['value'];
+                                    } elseif (isset($item['value'])) {
+                                        $val = (int)$item['value'];
+                                    }
+
+                                    if ($name === 'views' || $name === 'plays') {
+                                        $views = $val;
+                                        $impressions = max($impressions, $val);
+                                    } elseif ($name === 'impressions') {
+                                        $impressions = max($impressions, $val);
+                                        if ($views === 0) $views = $val;
+                                    } elseif ($name === 'reach') {
+                                        $reach = $val;
+                                    } elseif ($name === 'saved') {
+                                        $savedCount = $val;
+                                    }
+                                }
+                            }
+
+                            if ($impressions === 0 && $reach > 0) $impressions = (int)round($reach * 1.25);
+                            if ($reach === 0 && $impressions > 0) $reach = (int)round($impressions * 0.8);
+                            if ($views === 0 && $impressions > 0) $views = $impressions;
+
+                            $igInteractions = $likes + $commentsCount + $savedCount;
+                            if ($reach === 0 && $igInteractions > 0) {
+                                $reach = max(20, (int)round($igInteractions * 12));
+                                $impressions = (int)round($reach * 1.25);
+                            }
+                            $engagementRate = ($reach > 0) ? min(100.0, round(($igInteractions / $reach) * 100, 1)) : 0.0;
+
+                            $checkPost = $pdo->prepare("SELECT id FROM posts WHERE external_post_id = :ext_id AND user_id = :uid LIMIT 1");
+                            $checkPost->execute([':ext_id' => $mediaId, ':uid' => $uid]);
+                            $existingPost = $checkPost->fetch();
+
+                            if ($existingPost) {
+                                $postId = (int)$existingPost['id'];
+                                $stmtUp = $pdo->prepare("
+                                    UPDATE posts 
+                                    SET account_id = :acc_id, brand_voice_id = :bvid, total_likes = :likes, total_comments = :comments, 
+                                        total_shares = 0, 
+                                        impressions = MAX(COALESCE(impressions, 0), CAST(:impressions AS INTEGER)), 
+                                        reach = MAX(COALESCE(reach, 0), CAST(:reach AS INTEGER)), 
+                                        saved_count = :saved, 
+                                        engagement_rate = :eng_rate, caption = :caption, media_url = :media_url, media_type = :media_type, 
+                                        permalink = :permalink, posted_at = :posted_at, last_synced_at = CURRENT_TIMESTAMP
+                                    WHERE id = :id AND user_id = :uid
+                                ");
+                                $stmtUp->execute([
+                                    ':acc_id' => $accId,
+                                    ':bvid' => $brandVoiceId,
+                                    ':likes' => $likes,
+                                    ':comments' => $commentsCount,
+                                    ':impressions' => $impressions,
+                                    ':reach' => $reach,
+                                    ':saved' => $savedCount,
+                                    ':eng_rate' => $engagementRate,
+                                    ':caption' => $caption,
+                                    ':media_url' => $mediaImg,
+                                    ':media_type' => $mediaType,
+                                    ':permalink' => $permalink,
+                                    ':posted_at' => $postedAt,
+                                    ':id' => $postId,
+                                    ':uid' => $uid
+                                ]);
+                            } else {
+                                $stmtInsert = $pdo->prepare("
+                                    INSERT INTO posts (
+                                        user_id, account_id, brand_voice_id, platform, external_post_id, caption, media_url, 
+                                        media_type, permalink, total_likes, total_comments, total_shares, 
+                                        impressions, reach, saved_count, engagement_rate, posted_at, last_synced_at
+                                    ) VALUES (
+                                        :uid, :acc_id, :bvid, 'instagram', :ext_id, :caption, :media_url, 
+                                        :media_type, :permalink, :likes, :comments, 0, 
+                                        :impressions, :reach, :saved, :eng_rate, :posted_at, CURRENT_TIMESTAMP
+                                    )
+                                ");
+                                $stmtInsert->execute([
+                                    ':uid' => $uid,
+                                    ':acc_id' => $accId,
+                                    ':bvid' => $brandVoiceId,
+                                    ':ext_id' => $mediaId,
+                                    ':caption' => $caption,
+                                    ':media_url' => $mediaImg,
+                                    ':media_type' => $mediaType,
+                                    ':permalink' => $permalink,
+                                    ':likes' => $likes,
+                                    ':comments' => $commentsCount,
+                                    ':impressions' => $impressions,
+                                    ':reach' => $reach,
+                                    ':saved' => $savedCount,
+                                    ':eng_rate' => $engagementRate,
+                                    ':posted_at' => $postedAt
+                                ]);
+                                $postId = (int)$pdo->lastInsertId();
+                                $syncedPostsCount++;
+                            }
+
+                            // Process comments
+                            $commentsResponse = $multiResponses['comments_' . $mediaId] ?? null;
+                            if (!empty($commentsResponse['data']) && is_array($commentsResponse['data'])) {
+                                foreach ($commentsResponse['data'] as $cmt) {
+                                    $extCmtId = $cmt['id'];
+                                    $cText = $cmt['text'] ?? '';
+                                    $cAuthor = $cmt['username'] ?? 'Usuario IG';
+                                    $cCreated = !empty($cmt['timestamp']) ? date('Y-m-d H:i:s', strtotime($cmt['timestamp'])) : date('Y-m-d H:i:s');
+                                    $cLikes = (int)($cmt['like_count'] ?? 0);
+
+                                    if (empty($cText)) continue;
+
+                                    $checkCmt = $pdo->prepare("SELECT id FROM comments WHERE external_comment_id = :ext_id AND user_id = :uid LIMIT 1");
+                                    $checkCmt->execute([':ext_id' => $extCmtId, ':uid' => $uid]);
+                                    $existingCmt = $checkCmt->fetch();
+
+                                    if (!$existingCmt) {
+                                        $analysis = AiAgentService::analyzeComment($cText, $caption, $cLikes);
+
+                                        $stmtCmt = $pdo->prepare("
+                                            INSERT INTO comments (
+                                                post_id, user_id, platform, external_comment_id, 
+                                                author_name, author_handle, author_avatar, comment_text, sentiment, intent, 
+                                                is_highlighted, highlight_score, highlight_reason, 
+                                                status, likes_count, created_at
+                                            ) VALUES (
+                                                :post_id, :uid, 'instagram', :ext_id, 
+                                                :author_name, :author_handle, :author_avatar, :comment_text, :sentiment, :intent, 
+                                                :is_highlighted, :highlight_score, :highlight_reason, 
+                                                'pending', :likes_count, :created_at
+                                            )
+                                        ");
+                                        $stmtCmt->execute([
+                                            ':post_id' => $postId,
+                                            ':uid' => $uid,
+                                            ':ext_id' => $extCmtId,
+                                            ':author_name' => $cAuthor,
+                                            ':author_handle' => '@' . ltrim($cAuthor, '@'),
+                                            ':author_avatar' => "https://ui-avatars.com/api/?name=" . urlencode($cAuthor) . "&background=e1306c&color=fff",
+                                            ':comment_text' => $cText,
+                                            ':sentiment' => $analysis['sentiment'] ?? 'neutral',
+                                            ':intent' => $analysis['intent'] ?? 'general',
+                                            ':is_highlighted' => ($analysis['is_highlighted'] ?? 0),
+                                            ':highlight_score' => $analysis['highlight_score'] ?? 50,
+                                            ':highlight_reason' => $analysis['highlight_reason'] ?? '',
+                                            ':likes_count' => $cLikes,
+                                            ':created_at' => $cCreated
+                                        ]);
+
+                                        $syncedCommentsCount++;
+                                        $newCommentId = (int)$pdo->lastInsertId();
+
+                                        // Autonomous Autopilot Response
+                                        if ($autopilotEnabled && $newCommentId > 0) {
+                                            $suitability = AiAgentService::evaluateCommentSuitability($cText);
+                                            if ($suitability['status'] === 'spam') {
+                                                $pdo->prepare("UPDATE comments SET status = 'spam', sentiment = 'spam', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
+                                                    ->execute([':reason' => $suitability['reason'], ':id' => $newCommentId, ':uid' => $uid]);
+                                            } elseif ($suitability['status'] === 'ignored') {
+                                                $pdo->prepare("UPDATE comments SET status = 'ignored', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
+                                                    ->execute([':reason' => $suitability['reason'], ':id' => $newCommentId, ':uid' => $uid]);
+                                            } else {
+                                                $replies = AiAgentService::generateReplies($cAuthor, $cText, 'instagram', $caption, '', ['brand_voice_id' => $brandVoiceId]);
+                                                $chosenVariant = 'engagement';
+                                                if (($analysis['sentiment'] ?? '') === 'lead' || str_starts_with(($analysis['intent'] ?? ''), 'lead_')) {
+                                                    $chosenVariant = 'conversion';
+                                                } elseif (($analysis['sentiment'] ?? '') === 'urgent' || ($analysis['intent'] ?? '') === 'support') {
+                                                    $chosenVariant = 'support';
+                                                }
+                                                $chosenReply = $replies[$chosenVariant] ?? $replies['engagement'];
+
+                                                $metaRes = self::postReplyToMeta($newCommentId, $chosenReply, $uid);
+                                                $isPosted = !empty($metaRes['success']) ? 1 : 0;
+
+                                                $pdo->prepare("
+                                                    INSERT INTO replies (user_id, comment_id, reply_text, reply_type, tone_used, variant_type, is_posted_to_platform)
+                                                    VALUES (:uid, :cid, :reply, 'autopilot', 'auto_selected', :variant, :is_posted)
+                                                ")->execute([
+                                                    ':uid' => $uid,
+                                                    ':cid' => $newCommentId,
+                                                    ':reply' => $chosenReply,
+                                                    ':variant' => $chosenVariant,
+                                                    ':is_posted' => $isPosted
+                                                ]);
+
+                                                $pdo->prepare("UPDATE comments SET status = 'replied' WHERE id = :id AND user_id = :uid")
+                                                    ->execute([':id' => $newCommentId, ':uid' => $uid]);
+                                                $repliesPostedCount++;
+                                            }
+                                        }
+                                    } else {
+                                        $pdo->prepare("UPDATE comments SET likes_count = :likes WHERE id = :id AND user_id = :uid")->execute([
+                                            ':likes' => $cLikes,
+                                            ':id' => $existingCmt['id'],
+                                            ':uid' => $uid
+                                        ]);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // Facebook Page: Fetch top 10 published posts
+                    $fbFields = 'id,message,story,created_time,full_picture,permalink_url,shares,reactions.summary(total_count).limit(0),likes.summary(total_count).limit(0),comments.summary(total_count).limit(0),attachments{type,target{id},unshimmed_url,media{image{src}},title,description}';
+                    $fbUrl = self::BASE_URL . '/' . urlencode($pageId) . '/published_posts?' . http_build_query([
+                        'fields' => $fbFields,
+                        'limit' => '10',
+                        'access_token' => $token
+                    ]);
+                    $fbData = self::makeGetRequest($fbUrl, 15, 5);
+
+                    // Fallback to /feed if published_posts is empty
+                    if (empty($fbData['data']) && !isset($fbData['error'])) {
+                        $fbUrlFeed = self::BASE_URL . '/' . urlencode($pageId) . '/feed?' . http_build_query([
+                            'fields' => $fbFields,
+                            'limit' => '10',
+                            'access_token' => $token
+                        ]);
+                        $fbData = self::makeGetRequest($fbUrlFeed, 15, 5);
+                    }
+
+                    if (isset($fbData['error'])) {
+                        $errors[] = "Facebook ({$accHandle}): " . ($fbData['error']['message'] ?? 'Error de lectura');
+                    } elseif (!empty($fbData['data']) && is_array($fbData['data'])) {
+                        $totalPostsChecked += count($fbData['data']);
+                        $multiUrls = [];
+                        foreach ($fbData['data'] as $fbPost) {
+                            $pIdExt = $fbPost['id'];
+                            $objId = !empty($fbPost['attachments']['data'][0]['target']['id']) ? (string)$fbPost['attachments']['data'][0]['target']['id'] : null;
+                            $attachType = strtolower($fbPost['attachments']['data'][0]['type'] ?? '');
+                            $isVideo = str_contains($attachType, 'video') || str_contains($attachType, 'reel');
+
+                            $fbMetricString = $isVideo 
+                                ? 'post_impressions,post_impressions_unique,post_engaged_users,post_video_views'
+                                : 'post_impressions,post_impressions_unique,post_engaged_users';
+
+                            $multiUrls['fb_insights_' . $pIdExt] = self::BASE_URL . '/' . urlencode($pIdExt) . '/insights?' . http_build_query([
+                                'metric' => $fbMetricString,
+                                'access_token' => $token
+                            ]);
+
+                            $multiUrls['fb_react_' . $pIdExt] = self::BASE_URL . '/' . urlencode($pIdExt) . '?' . http_build_query([
+                                'fields' => 'reactions.summary(total_count).limit(0),likes.summary(total_count).limit(0),comments.summary(total_count).limit(0),shares',
+                                'access_token' => $token
+                            ]);
+
+                            $multiUrls['fb_comments_' . $pIdExt] = self::BASE_URL . '/' . urlencode($pIdExt) . '/comments?' . http_build_query([
+                                'fields' => 'id,message,from,created_time,like_count',
+                                'limit' => '25',
+                                'access_token' => $token
+                            ]);
+
+                            if (!empty($objId) && $objId !== $pIdExt) {
+                                $multiUrls['fb_obj_' . $pIdExt] = self::BASE_URL . '/' . urlencode($objId) . '?' . http_build_query([
+                                    'fields' => 'reactions.summary(total_count).limit(0),likes.summary(total_count).limit(0),comments.summary(total_count).limit(0)',
+                                    'access_token' => $token
+                                ]);
+                                $multiUrls['fb_obj_comments_' . $pIdExt] = self::BASE_URL . '/' . urlencode($objId) . '/comments?' . http_build_query([
+                                    'fields' => 'id,message,from,created_time,like_count',
+                                    'limit' => '25',
+                                    'access_token' => $token
+                                ]);
+                            }
+                        }
+
+                        $multiResponses = self::makeMultiGetRequests($multiUrls, 15, 5);
+
+                        foreach ($fbData['data'] as $fbPost) {
+                            $postIdExt = $fbPost['id'];
+                            $message = $fbPost['message'] ?? ($fbPost['story'] ?? 'Publicación de Facebook');
+                            $fullPic = $fbPost['full_picture'] ?? ($fbPost['attachments']['data'][0]['media']['image']['src'] ?? '');
+                            $permalink = $fbPost['permalink_url'] ?? "https://www.facebook.com/{$postIdExt}";
+                            $postedAt = !empty($fbPost['created_time']) ? date('Y-m-d H:i:s', strtotime($fbPost['created_time'])) : date('Y-m-d H:i:s');
+                            
+                            $attachType = strtolower($fbPost['attachments']['data'][0]['type'] ?? '');
+                            $mediaType = 'status';
+                            if (str_contains($attachType, 'video') || str_contains($attachType, 'reel')) {
+                                $mediaType = 'video';
+                            } elseif (str_contains($attachType, 'photo') || !empty($fullPic)) {
+                                $mediaType = 'image';
+                            }
+
+                            $postReactions = (int)($multiResponses['fb_react_' . $postIdExt]['reactions']['summary']['total_count'] ?? ($fbPost['reactions']['summary']['total_count'] ?? 0));
+                            $postLikes = (int)($multiResponses['fb_react_' . $postIdExt]['likes']['summary']['total_count'] ?? ($fbPost['likes']['summary']['total_count'] ?? 0));
+                            $objReactions = (int)($multiResponses['fb_obj_' . $postIdExt]['reactions']['summary']['total_count'] ?? 0);
+                            $objLikes = (int)($multiResponses['fb_obj_' . $postIdExt]['likes']['summary']['total_count'] ?? 0);
+                            $likes = max($postReactions, $postLikes, $objReactions, $objLikes);
+
+                            $postComments = (int)($multiResponses['fb_react_' . $postIdExt]['comments']['summary']['total_count'] ?? ($fbPost['comments']['summary']['total_count'] ?? 0));
+                            $objComments = (int)($multiResponses['fb_obj_' . $postIdExt]['comments']['summary']['total_count'] ?? 0);
+                            
+                            $feedCommentsList = $multiResponses['fb_comments_' . $postIdExt]['data'] ?? [];
+                            $objCommentsList = $multiResponses['fb_obj_comments_' . $postIdExt]['data'] ?? [];
+                            $combinedComments = array_merge(
+                                is_array($feedCommentsList) ? $feedCommentsList : [],
+                                is_array($objCommentsList) ? $objCommentsList : []
+                            );
+                            $commentsCount = max($postComments, $objComments, count($combinedComments));
+
+                            $shares = (int)($multiResponses['fb_react_' . $postIdExt]['shares']['count'] ?? ($fbPost['shares']['count'] ?? 0));
+
+                            $impressions = 0;
+                            $reach = 0;
+                            if (isset($multiResponses['fb_insights_' . $postIdExt]['data']) && is_array($multiResponses['fb_insights_' . $postIdExt]['data'])) {
+                                foreach ($multiResponses['fb_insights_' . $postIdExt]['data'] as $item) {
+                                    $n = $item['name'] ?? '';
+                                    $v = (int)($item['values'][0]['value'] ?? 0);
+                                    if ($n === 'post_impressions' || $n === 'post_video_views') {
+                                        $impressions = max($impressions, $v);
+                                    } elseif ($n === 'post_impressions_unique') {
+                                        $reach = max($reach, $v);
+                                    }
+                                }
+                            }
+
+                            if ($reach === 0 && $impressions > 0) $reach = (int)round($impressions * 0.82);
+                            if ($impressions === 0 && $reach > 0) $impressions = (int)round($reach * 1.25);
+
+                            $fbInteractions = $likes + $commentsCount + $shares;
+                            if ($reach === 0 && $fbInteractions > 0) {
+                                $reach = max(25, (int)round($fbInteractions * 14));
+                                $impressions = (int)round($reach * 1.25);
+                            }
+                            $engagementRate = ($reach > 0) ? min(100.0, round(($fbInteractions / $reach) * 100, 1)) : 0.0;
+
+                            $checkPost = $pdo->prepare("SELECT id FROM posts WHERE external_post_id = :ext_id AND user_id = :uid LIMIT 1");
+                            $checkPost->execute([':ext_id' => $postIdExt, ':uid' => $uid]);
+                            $existingPost = $checkPost->fetch();
+
+                            if ($existingPost) {
+                                $postId = (int)$existingPost['id'];
+                                $stmtUp = $pdo->prepare("
+                                    UPDATE posts 
+                                    SET account_id = :acc_id, brand_voice_id = :bvid, total_likes = :likes, total_comments = :comments, 
+                                        total_shares = :shares, 
+                                        impressions = MAX(COALESCE(impressions, 0), CAST(:impressions AS INTEGER)), 
+                                        reach = MAX(COALESCE(reach, 0), CAST(:reach AS INTEGER)), 
+                                        engagement_rate = :eng_rate, 
+                                        caption = :caption, 
+                                        media_url = :media_url, 
+                                        media_type = :media_type, 
+                                        permalink = :permalink, 
+                                        posted_at = :posted_at, 
+                                        last_synced_at = CURRENT_TIMESTAMP
+                                    WHERE id = :id AND user_id = :uid
+                                ");
+                                $stmtUp->execute([
+                                    ':acc_id' => $accId,
+                                    ':bvid' => $brandVoiceId,
+                                    ':likes' => $likes,
+                                    ':comments' => $commentsCount,
+                                    ':shares' => $shares,
+                                    ':impressions' => $impressions,
+                                    ':reach' => $reach,
+                                    ':eng_rate' => $engagementRate,
+                                    ':caption' => $message,
+                                    ':media_url' => $fullPic,
+                                    ':media_type' => $mediaType,
+                                    ':permalink' => $permalink,
+                                    ':posted_at' => $postedAt,
+                                    ':id' => $postId,
+                                    ':uid' => $uid
+                                ]);
+                            } else {
+                                $stmtInsert = $pdo->prepare("
+                                    INSERT INTO posts (
+                                        user_id, account_id, brand_voice_id, platform, external_post_id, caption, media_url, 
+                                        media_type, permalink, total_likes, total_comments, total_shares, 
+                                        impressions, reach, saved_count, engagement_rate, posted_at, last_synced_at
+                                    ) VALUES (
+                                        :uid, :acc_id, :bvid, 'facebook', :ext_id, :caption, :media_url, 
+                                        :media_type, :permalink, :likes, :comments, :shares, 
+                                        :impressions, :reach, 0, :eng_rate, :posted_at, CURRENT_TIMESTAMP
+                                    )
+                                ");
+                                $stmtInsert->execute([
+                                    ':uid' => $uid,
+                                    ':acc_id' => $accId,
+                                    ':bvid' => $brandVoiceId,
+                                    ':ext_id' => $postIdExt,
+                                    ':caption' => $message,
+                                    ':media_url' => $fullPic,
+                                    ':media_type' => $mediaType,
+                                    ':permalink' => $permalink,
+                                    ':likes' => $likes,
+                                    ':comments' => $commentsCount,
+                                    ':shares' => $shares,
+                                    ':impressions' => $impressions,
+                                    ':reach' => $reach,
+                                    ':eng_rate' => $engagementRate,
+                                    ':posted_at' => $postedAt
+                                ]);
+                                $postId = (int)$pdo->lastInsertId();
+                                $syncedPostsCount++;
+                            }
+
+                            // Process Facebook comments
+                            $processedCmtIds = [];
+                            foreach ($combinedComments as $c) {
+                                $cmtExtId = $c['id'] ?? '';
+                                if (empty($cmtExtId) || isset($processedCmtIds[$cmtExtId])) continue;
+                                $processedCmtIds[$cmtExtId] = true;
+
+                                $cText = $c['message'] ?? '';
+                                $fromName = $c['from']['name'] ?? 'Usuario de Facebook';
+                                $cLikes = (int)($c['like_count'] ?? 0);
+                                $cCreated = !empty($c['created_time']) ? date('Y-m-d H:i:s', strtotime($c['created_time'])) : date('Y-m-d H:i:s');
+
+                                if (empty($cText)) continue;
+
+                                $checkCmt = $pdo->prepare("SELECT id FROM comments WHERE external_comment_id = :ext_id AND user_id = :uid LIMIT 1");
+                                $checkCmt->execute([':ext_id' => $cmtExtId, ':uid' => $uid]);
+                                $existingCmt = $checkCmt->fetch();
+
+                                if (!$existingCmt) {
+                                    $analysis = AiAgentService::analyzeComment($cText, $message, $cLikes);
+                                    $stmtInsertCmt = $pdo->prepare("
+                                        INSERT INTO comments (
+                                            user_id, post_id, platform, external_comment_id, author_name, author_handle, 
+                                            author_avatar, comment_text, sentiment, intent, highlight_score, 
+                                            is_highlighted, highlight_reason, likes_count, status, created_at
+                                        ) VALUES (
+                                            :uid, :post_id, 'facebook', :ext_id, :author_name, :author_handle, 
+                                            :author_avatar, :comment_text, :sentiment, :intent, :highlight_score, 
+                                            :is_highlighted, :highlight_reason, :likes_count, 'pending', :created_at
+                                        )
+                                    ");
+                                    $stmtInsertCmt->execute([
+                                        ':uid' => $uid,
+                                        ':post_id' => $postId,
+                                        ':ext_id' => $cmtExtId,
+                                        ':author_name' => $fromName,
+                                        ':author_handle' => 'fb_' . substr($cmtExtId, 0, 8),
+                                        ':author_avatar' => 'https://ui-avatars.com/api/?name=' . urlencode($fromName) . '&background=1877f2&color=fff',
+                                        ':comment_text' => $cText,
+                                        ':sentiment' => $analysis['sentiment'] ?? 'neutral',
+                                        ':intent' => $analysis['intent'] ?? 'general',
+                                        ':highlight_score' => $analysis['highlight_score'] ?? 50,
+                                        ':is_highlighted' => $analysis['is_highlighted'] ?? 0,
+                                        ':highlight_reason' => $analysis['highlight_reason'] ?? '',
+                                        ':likes_count' => $cLikes,
+                                        ':created_at' => $cCreated
+                                    ]);
+                                    $syncedCommentsCount++;
+                                    $newCommentId = (int)$pdo->lastInsertId();
+
+                                    // Autonomous Autopilot Response
+                                    if ($autopilotEnabled && $newCommentId > 0) {
+                                        $suitability = AiAgentService::evaluateCommentSuitability($cText);
+                                        if ($suitability['status'] === 'spam') {
+                                            $pdo->prepare("UPDATE comments SET status = 'spam', sentiment = 'spam', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
+                                                ->execute([':reason' => $suitability['reason'], ':id' => $newCommentId, ':uid' => $uid]);
+                                        } elseif ($suitability['status'] === 'ignored') {
+                                            $pdo->prepare("UPDATE comments SET status = 'ignored', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
+                                                ->execute([':reason' => $suitability['reason'], ':id' => $newCommentId, ':uid' => $uid]);
+                                        } else {
+                                            $replies = AiAgentService::generateReplies($fromName, $cText, 'facebook', $message, '', ['brand_voice_id' => $brandVoiceId]);
+                                            $chosenVariant = 'engagement';
+                                            if (($analysis['sentiment'] ?? '') === 'lead' || str_starts_with(($analysis['intent'] ?? ''), 'lead_')) {
+                                                $chosenVariant = 'conversion';
+                                            } elseif (($analysis['sentiment'] ?? '') === 'urgent' || ($analysis['intent'] ?? '') === 'support') {
+                                                $chosenVariant = 'support';
+                                            }
+                                            $chosenReply = $replies[$chosenVariant] ?? $replies['engagement'];
+
+                                            $metaRes = self::postReplyToMeta($newCommentId, $chosenReply, $uid);
+                                            $isPosted = !empty($metaRes['success']) ? 1 : 0;
+
+                                            $pdo->prepare("
+                                                INSERT INTO replies (user_id, comment_id, reply_text, reply_type, tone_used, variant_type, is_posted_to_platform)
+                                                VALUES (:uid, :cid, :reply, 'autopilot', 'auto_selected', :variant, :is_posted)
+                                            ")->execute([
+                                                ':uid' => $uid,
+                                                ':cid' => $newCommentId,
+                                                ':reply' => $chosenReply,
+                                                ':variant' => $chosenVariant,
+                                                ':is_posted' => $isPosted
+                                            ]);
+
+                                            $pdo->prepare("UPDATE comments SET status = 'replied' WHERE id = :id AND user_id = :uid")
+                                                ->execute([':id' => $newCommentId, ':uid' => $uid]);
+                                            $repliesPostedCount++;
+                                        }
+                                    }
+                                } else {
+                                    $pdo->prepare("UPDATE comments SET likes_count = :likes WHERE id = :id AND user_id = :uid")->execute([
+                                        ':likes' => $cLikes,
+                                        ':id' => $existingCmt['id'],
+                                        ':uid' => $uid
+                                    ]);
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (Throwable $e) {
+                $errors[] = "Error procesando cuenta {$accHandle}: " . $e->getMessage();
+            }
+        }
+
+        // 3. Autonomous Autopilot Sweep: Process any pending comments for this user
+        if ($autopilotEnabled) {
+            try {
+                $pendingSweepStmt = $pdo->prepare("
+                    SELECT c.*, p.caption as post_caption, p.account_id,
+                           COALESCE(p.brand_voice_id, a.brand_voice_id, :default_bvid) as effective_bvid
+                    FROM comments c
+                    JOIN posts p ON c.post_id = p.id
+                    LEFT JOIN accounts a ON p.account_id = a.id
+                    WHERE c.user_id = :uid AND c.status = 'pending'
+                    ORDER BY c.id DESC
+                    LIMIT 10
+                ");
+                $pendingSweepStmt->execute([':uid' => $uid, ':default_bvid' => $defaultBrandVoiceId]);
+                $pendingComments = $pendingSweepStmt->fetchAll();
+
+                foreach ($pendingComments as $pCmt) {
+                    $suitability = AiAgentService::evaluateCommentSuitability($pCmt['comment_text']);
+                    if ($suitability['status'] === 'spam') {
+                        $pdo->prepare("UPDATE comments SET status = 'spam', sentiment = 'spam', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
+                            ->execute([':reason' => $suitability['reason'], ':id' => $pCmt['id'], ':uid' => $uid]);
+                    } elseif ($suitability['status'] === 'ignored') {
+                        $pdo->prepare("UPDATE comments SET status = 'ignored', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
+                            ->execute([':reason' => $suitability['reason'], ':id' => $pCmt['id'], ':uid' => $uid]);
+                    } else {
+                        $bvid = (int)($pCmt['effective_bvid'] ?: $defaultBrandVoiceId);
+                        $replies = AiAgentService::generateReplies($pCmt['author_name'], $pCmt['comment_text'], $pCmt['platform'], $pCmt['post_caption'], '', ['brand_voice_id' => $bvid]);
+                        $chosenVariant = 'engagement';
+                        if ($pCmt['sentiment'] === 'lead' || str_starts_with($pCmt['intent'], 'lead_')) {
+                            $chosenVariant = 'conversion';
+                        } elseif ($pCmt['sentiment'] === 'urgent' || $pCmt['intent'] === 'support') {
+                            $chosenVariant = 'support';
+                        }
+                        $chosenReply = $replies[$chosenVariant] ?? $replies['engagement'];
+
+                        $metaRes = self::postReplyToMeta((int)$pCmt['id'], $chosenReply, $uid);
+                        $isPosted = !empty($metaRes['success']) ? 1 : 0;
+
+                        $pdo->prepare("
+                            INSERT INTO replies (user_id, comment_id, reply_text, reply_type, tone_used, variant_type, is_posted_to_platform)
+                            VALUES (:uid, :cid, :reply, 'autopilot', 'auto_selected', :variant, :is_posted)
+                        ")->execute([
+                            ':uid' => $uid,
+                            ':cid' => $pCmt['id'],
+                            ':reply' => $chosenReply,
+                            ':variant' => $chosenVariant,
+                            ':is_posted' => $isPosted
+                        ]);
+
+                        $pdo->prepare("UPDATE comments SET status = 'replied' WHERE id = :id AND user_id = :uid")
+                            ->execute([':id' => $pCmt['id'], ':uid' => $uid]);
+                        $repliesPostedCount++;
+                    }
+                }
+            } catch (Throwable $t) {
+                error_log("QuickSync autopilot sweep error: " . $t->getMessage());
+            }
+        }
+
+        $elapsed = round((microtime(true) - $startTime) * 1000, 2);
+
+        return [
+            'success' => true,
+            'mode' => 'quick_sync',
+            'synced_accounts' => $syncedAccountsCount,
+            'synced_new_posts' => $syncedPostsCount,
+            'synced_new_comments' => $syncedCommentsCount,
+            'autopilot_replies' => $repliesPostedCount,
+            'total_posts_checked' => $totalPostsChecked,
+            'errors' => $errors,
+            'execution_time_ms' => $elapsed,
+            'timestamp' => date('Y-m-d H:i:s')
+        ];
+    }
+
     public static function makeMultiGetRequests(array $urls, int $timeout = 25, int $connectTimeout = 8): array {
         if (empty($urls)) return [];
         $mh = curl_multi_init();

@@ -78,8 +78,32 @@ if ($method === 'POST') {
         ]);
         $queueId = (int)$pdo->lastInsertId();
 
+        // Register immediate background processing after sending 200 OK to Meta
+        register_shutdown_function(function() use ($queueId) {
+            if (function_exists('fastcgi_finish_request')) {
+                fastcgi_finish_request();
+            } else {
+                if (ob_get_level() > 0) {
+                    @ob_end_flush();
+                }
+                @flush();
+            }
+
+            try {
+                if (!defined('PROCESS_QUEUE_LIB_ONLY')) {
+                    define('PROCESS_QUEUE_LIB_ONLY', true);
+                }
+                require_once __DIR__ . '/../cron/process_queue.php';
+                $workerPdo = Database::getConnection();
+                processWebhookQueue($workerPdo, 1, $queueId, true);
+            } catch (Throwable $t) {
+                error_log("Webhook shutdown worker error [Queue ID {$queueId}]: " . $t->getMessage());
+            }
+        });
+
         // Ultra-fast HTTP 200 response to Meta in < 30ms
         http_response_code(200);
+        header('Content-Type: application/json; charset=utf-8');
         echo json_encode([
             'status' => 'EVENT_RECEIVED',
             'queued' => true,

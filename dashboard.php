@@ -219,6 +219,13 @@ $isMetaConnected = ($activeAccountsCount > 0);
           <div class="dot"></div>
           <span id="count-pill-urgent">0 Soporte</span>
         </div>
+
+        <!-- Autonomous Auto-Sync Heartbeat Indicator -->
+        <div id="heartbeat-sync-badge" class="stat-pill sync-indicator" title="Sincronización autónoma en vivo (cada 3 min). Clic para sincronizar ahora." onclick="App.executeHeartbeat(true)">
+          <div class="heartbeat-dot" id="heartbeat-dot"></div>
+          <span id="heartbeat-status-text">Auto-Sync: Activo (3m)</span>
+        </div>
+
         <button class="btn-primary-action" onclick="App.openModal('modal-simulate')">
           <span>+ Simular Comentario</span>
         </button>

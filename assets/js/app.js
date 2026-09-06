@@ -16,6 +16,12 @@ const App = {
   currentPage: 1,
   pageSize: 6,
 
+  // Autonomous Background Heartbeat State
+  heartbeatIntervalMs: 180000, // 3 minutes
+  heartbeatTimer: null,
+  isHeartbeatSyncing: false,
+  lastHeartbeatTimestamp: null,
+
   // Brand Voice Studio State
   keyPhrases: ['Dicotomía del control', 'Amor Fati', 'Memento Mori', 'Autodominio', 'Fortaleza mental', 'Disciplina diaria'],
   forbiddenPhrases: ['Estimado cliente', 'Compra ya', 'Oferta imperdible', 'Somos un bot', 'Haz clic aquí'],
@@ -66,6 +72,7 @@ const App = {
     this.renderTagChips();
     this.renderFewShotExamples();
     this.checkOnboardingBanner();
+    this.initBackgroundSync();
   },
 
   dismissOnboarding() {
@@ -1965,6 +1972,7 @@ const App = {
         if (typeof AnalyticsController !== 'undefined' && AnalyticsController.loadAnalytics) {
           AnalyticsController.loadAnalytics();
         }
+        this.lastHeartbeatTimestamp = Date.now();
       } else {
         const errMsg = res && res.message ? res.message : (res && res.error ? res.error : 'No se pudo sincronizar con Meta.');
         App.showToast(`⚠️ ${errMsg}`, 'error', 7000);
@@ -1987,6 +1995,111 @@ const App = {
           btn.innerHTML = '<span>🔄 Sincronizar con Meta</span>';
         }
       });
+    }
+  },
+
+  // ----------------------------------------------------
+  // Autonomous Background Heartbeat & Sync Engine (3 min)
+  // ----------------------------------------------------
+  initBackgroundSync() {
+    this.startBackgroundSync();
+
+    // Listen for tab visibility changes (catches up immediately upon returning if 3+ min passed)
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        const now = Date.now();
+        if (!this.lastHeartbeatTimestamp || (now - this.lastHeartbeatTimestamp) >= this.heartbeatIntervalMs) {
+          this.executeHeartbeat(false);
+        }
+      }
+    });
+
+    // Initial background heartbeat 10s after dashboard initialization
+    setTimeout(() => {
+      this.executeHeartbeat(false);
+    }, 10000);
+  },
+
+  startBackgroundSync() {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+    }
+    this.heartbeatTimer = setInterval(() => {
+      this.executeHeartbeat(false);
+    }, this.heartbeatIntervalMs);
+  },
+
+  stopBackgroundSync() {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
+  },
+
+  async executeHeartbeat(force = false) {
+    if (this.isHeartbeatSyncing) return;
+    this.isHeartbeatSyncing = true;
+
+    const badge = document.getElementById('heartbeat-sync-badge');
+    const statusText = document.getElementById('heartbeat-status-text');
+    if (badge) badge.classList.add('syncing');
+    if (statusText) statusText.textContent = 'Auto-Sync: Sincronizando...';
+
+    try {
+      const response = await this.fetchWithCsrf('api/heartbeat.php', {
+        method: 'POST',
+        body: JSON.stringify({ force: force ? 1 : 0 })
+      });
+
+      const res = await response.json();
+      this.lastHeartbeatTimestamp = Date.now();
+
+      if (res && res.success) {
+        const d = res.data || {};
+        const qReplies = d.webhook_queue?.autopilot_replies || 0;
+        const qComments = d.webhook_queue?.comments_ingested || 0;
+        const qsNewPosts = d.quick_sync?.synced_new_posts || 0;
+        const qsNewComments = d.quick_sync?.synced_new_comments || 0;
+        const qsReplies = d.quick_sync?.autopilot_replies || 0;
+
+        const totalNewComments = qComments + qsNewComments;
+        const totalReplies = qReplies + qsReplies;
+
+        // Refresh UI smoothly if new data arrived or auto-replies occurred
+        if (totalNewComments > 0 || totalReplies > 0 || qsNewPosts > 0 || force) {
+          await this.loadComments();
+          if (typeof AnalyticsController !== 'undefined' && AnalyticsController.loadAnalytics) {
+            AnalyticsController.loadAnalytics();
+          }
+        }
+
+        if (totalReplies > 0) {
+          App.showToast(`🤖 Copiloto Autónomo: Se respondieron ${totalReplies} comentario${totalReplies === 1 ? '' : 's'} automáticamente sin intervención humana.`, 'success', 5000);
+        } else if (force) {
+          App.showToast('✅ Sincronización rápida completada sin novedades.', 'info', 3000);
+        }
+
+        const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        if (statusText) {
+          statusText.textContent = `Auto-Sync: OK (${nowTime})`;
+        }
+        if (badge) {
+          badge.title = `Sincronización autónoma completada a las ${nowTime}. Clic para sincronizar ahora.`;
+        }
+      } else {
+        if (statusText) statusText.textContent = 'Auto-Sync: Activo (3m)';
+      }
+    } catch (err) {
+      console.warn('Heartbeat background warning:', err);
+      if (statusText) statusText.textContent = 'Auto-Sync: Reintentando...';
+    } finally {
+      this.isHeartbeatSyncing = false;
+      if (badge) badge.classList.remove('syncing');
+      setTimeout(() => {
+        if (statusText && statusText.textContent.includes('OK')) {
+          statusText.textContent = 'Auto-Sync: Activo (3m)';
+        }
+      }, 15000);
     }
   },
 
