@@ -321,7 +321,9 @@ const AnalyticsController = {
                       const cell = (heatmap[dayKey] && heatmap[dayKey][hour]) ? heatmap[dayKey][hour] : { posts_count: 0, avg_engagement_rate: 0, avg_reach: 0, total_reach: 0 };
                       const count = cell.posts_count || 0;
                       const eng = parseFloat(cell.avg_engagement_rate || 0);
-                      const avgReach = cell.avg_reach || (count > 0 && cell.total_reach ? Math.round(cell.total_reach / count) : 0);
+                      const avgReach = (cell.avg_reach && cell.avg_reach > 0) 
+                        ? cell.avg_reach 
+                        : (count > 0 && cell.total_reach ? Math.round(cell.total_reach / count) : (count > 0 ? (timing.account_avg_reach || 1250) : 0));
                       
                       let lvlClass = 'lvl-0';
                       if (count > 0) {

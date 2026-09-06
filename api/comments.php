@@ -18,7 +18,7 @@ $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
 try {
     if ($method === 'GET') {
         $allowedPlatforms = ['all', 'instagram', 'facebook'];
-        $allowedFilters = ['all', 'highlighted', 'leads', 'urgent', 'pending', 'replied'];
+        $allowedFilters = ['all', 'highlighted', 'leads', 'highlighted_leads', 'urgent', 'pending', 'replied', 'spam'];
 
         $platform = Security::validateEnum($_GET['platform'] ?? 'all', $allowedPlatforms, 'all');
         $filter = Security::validateEnum($_GET['filter'] ?? 'all', $allowedFilters, 'all');
@@ -75,6 +75,8 @@ try {
             $sql .= " AND (c.is_highlighted = 1 OR c.highlight_score >= 80)";
         } elseif ($filter === 'leads') {
             $sql .= " AND (c.sentiment = 'lead' OR c.intent LIKE 'lead_%')";
+        } elseif ($filter === 'highlighted_leads') {
+            $sql .= " AND (c.is_highlighted = 1 OR c.highlight_score >= 80 OR c.sentiment = 'lead' OR c.intent LIKE 'lead_%')";
         } elseif ($filter === 'urgent') {
             $sql .= " AND (c.sentiment = 'urgent' OR c.intent = 'support')";
         } elseif ($filter === 'pending') {

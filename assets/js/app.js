@@ -484,13 +484,27 @@ const App = {
       });
     });
 
-    // Platform switcher pills in header
-    document.querySelectorAll('.app-topbar .platform-pill').forEach(btn => {
+    // Platform switcher pills (integrated in feed header & global)
+    document.querySelectorAll('.platform-pill-group .platform-pill').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('.app-topbar .platform-pill').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.platform-pill-group .platform-pill').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         this.activePlatform = btn.dataset.platform;
         this.loadComments();
+
+        // Synchronize with planner and analytics if initialized
+        if (typeof PlannerController !== 'undefined' && typeof PlannerController.filterPlatform === 'function') {
+          PlannerController.platform = this.activePlatform;
+          document.querySelectorAll('[data-planner-platform]').forEach(b => {
+            b.classList.toggle('active', b.dataset.plannerPlatform === this.activePlatform);
+          });
+        }
+        if (typeof AnalyticsController !== 'undefined') {
+          AnalyticsController.activePlatform = this.activePlatform;
+          document.querySelectorAll('[data-post-platform]').forEach(b => {
+            b.classList.toggle('active', b.dataset.postPlatform === this.activePlatform);
+          });
+        }
       });
     });
 
@@ -629,7 +643,7 @@ const App = {
           topbarTitle.textContent = 'Configuración de Meta Graph API & Webhooks';
           break;
         case 'highlights':
-          topbarTitle.textContent = 'Comentarios Más Resaltantes';
+          topbarTitle.textContent = 'Comentarios Destacados & Leads';
           break;
         case 'leads':
           topbarTitle.textContent = 'Leads & Consultas de Precios';
@@ -641,14 +655,14 @@ const App = {
           topbarTitle.textContent = 'Filtro Anti-Spam & Moderación';
           break;
         default:
-          topbarTitle.textContent = 'Gestor de Comunidad & Conversión';
+          topbarTitle.textContent = 'Comentarios & Conversación';
           break;
       }
     }
 
     // 7. Route and initialize view-specific behaviors
     if (activeTab === 'highlights') {
-      this.setFilterTag('highlighted');
+      this.setFilterTag('highlighted_leads');
     } else if (activeTab === 'leads') {
       this.setFilterTag('leads');
     } else if (activeTab === 'urgent') {
@@ -768,7 +782,7 @@ const App = {
     const badgeLeads = document.getElementById('badge-count-leads');
 
     if (badgeInbox) badgeInbox.textContent = counts.pending_count || '0';
-    if (badgeHigh) badgeHigh.textContent = counts.highlighted_count || '0';
+    if (badgeHigh) badgeHigh.textContent = ((counts.highlighted_count || 0) + (counts.leads_count || 0)) || '0';
     if (badgeLeads) badgeLeads.textContent = counts.leads_count || '0';
     
     const badgeSpam = document.getElementById('badge-count-spam');

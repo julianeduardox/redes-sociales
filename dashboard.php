@@ -91,96 +91,78 @@ $isMetaConnected = ($activeAccountsCount > 0);
       <button type="button" class="btn-logout-mini" onclick="App.logout()" title="Cerrar Sesión">🚪</button>
     </div>
 
-    <!-- Left Sidebar Assistant Widget -->
-    <div class="sidebar-assistant-card" onclick="AgentController.openAssistantModal()" title="Abrir Copiloto de Conversión & Respuestas">
-      <div class="sidebar-assistant-top">
-        <div class="sidebar-assistant-icon-box">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 2L14.7 8.5L21.5 9.5L16.5 14.3L17.8 21.1L12 17.8L6.2 21.1L7.5 14.3L2.5 9.5L9.3 8.5L12 2Z"/>
-          </svg>
-        </div>
-        <div class="sidebar-assistant-text">
-          <div class="sidebar-assistant-title">
-            <span>Copiloto IA</span>
-            <span class="sidebar-assistant-pill">CONVERSIÓN</span>
-          </div>
-          <div class="sidebar-assistant-sub">Respuestas inteligentes & ventas</div>
-        </div>
-      </div>
-      <div class="sidebar-assistant-actions">
-        <button type="button" class="btn-sidebar-assistant" onclick="event.stopPropagation(); AgentController.openAssistantModal()">
-          <span>Abrir Copiloto ✨</span>
-        </button>
-        <button type="button" class="sidebar-score-guide-btn" onclick="event.stopPropagation(); App.openScoreGuideModal()" title="Ver cómo se calcula el Score de IA">
-          <span>🎯 Score</span>
-        </button>
-      </div>
-    </div>
-
     <nav class="sidebar-nav">
-      <div class="nav-section-title">Comunidad & Conversación</div>
+      <div class="nav-section-title">Comunidad & Respuestas</div>
       <button class="nav-btn active" data-tab="inbox">
         <span class="icon">📥</span>
-        <span>Bandeja de Entrada</span>
+        <span>Comentarios</span>
         <span class="nav-badge" id="badge-count-inbox">0</span>
       </button>
 
-      <button class="nav-btn" data-tab="highlights">
+      <button class="nav-btn" data-tab="highlights" title="Comentarios destacados por IA y consultas comerciales (Leads)">
         <span class="icon">⭐</span>
-        <span>Más Resaltantes</span>
+        <span>Destacados & Leads</span>
         <span class="nav-badge fire" id="badge-count-highlights">0</span>
-      </button>
-
-      <button class="nav-btn" data-tab="leads">
-        <span class="icon">🎯</span>
-        <span>Consultas de Compra (Leads)</span>
-        <span class="nav-badge" id="badge-count-leads">0</span>
       </button>
 
       <button class="nav-btn" data-tab="urgent">
         <span class="icon">🛡️</span>
-        <span>Objeciones & Soporte</span>
+        <span>Soporte</span>
       </button>
 
       <button class="nav-btn" data-tab="spam">
         <span class="icon">🚫</span>
-        <span>Filtro Anti-Spam</span>
+        <span>Spam</span>
         <span class="nav-badge" id="badge-count-spam" style="background: rgba(244,63,94,0.25); color: #fb7185;">0</span>
       </button>
 
       <div class="nav-section-title" style="margin-top: 10px;">Estrategia & Crecimiento</div>
       <button class="nav-btn" data-tab="planner">
         <span class="icon">📅</span>
-        <span>Planificador & Calendario</span>
+        <span>Planificador</span>
       </button>
 
       <button class="nav-btn" data-tab="analytics">
-        <span class="icon">📈</span>
-        <span>Métricas & Horarios</span>
+        <span class="icon">📊</span>
+        <span>Estadísticas</span>
       </button>
 
       <button class="nav-btn" data-tab="settings">
-        <span class="icon">🎭</span>
-        <span>Estilo de Respuesta</span>
+        <span class="icon">🤖</span>
+        <span>Voz de Marca IA</span>
       </button>
 
       <button class="nav-btn" data-tab="meta">
         <span class="icon">🔗</span>
-        <span>Conectar Redes</span>
+        <span>Conexión Meta</span>
       </button>
     </nav>
+
+    <!-- Compact Copilot Quick Trigger -->
+    <div class="sidebar-assistant-compact">
+      <button type="button" class="btn-sidebar-assistant-compact" onclick="AgentController.openAssistantModal()" title="Abrir Copiloto de Conversión & Respuestas">
+        <span>✨ Copiloto IA</span>
+      </button>
+      <button type="button" class="sidebar-score-guide-btn" onclick="App.openScoreGuideModal()" title="Ver cómo se calcula el Score de IA">
+        <span>🎯 Score</span>
+      </button>
+    </div>
 
     <div class="sidebar-footer">
       <div class="autopilot-widget">
         <div class="autopilot-info">
           <span class="autopilot-title">⚡ Auto-Responder</span>
-          <span class="autopilot-sub">Comentarios destacados</span>
+          <span class="autopilot-sub">Respuestas inteligentes</span>
         </div>
         <label class="switch">
           <input type="checkbox" id="autopilot-sidebar-toggle">
           <span class="slider"></span>
         </label>
       </div>
+
+      <button type="button" class="btn-sidebar-autopilot-run" onclick="AgentController.runAutopilotBatch()" title="Ejecutar respuestas automáticas pendientes ahora">
+        <span>⚡ Ejecutar Auto-responder</span>
+      </button>
 
       <div style="margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--border-subtle); display: flex; flex-direction: column; gap: 3px; font-size: 0.7rem; color: var(--text-dim);">
         <div style="font-weight: 700; color: var(--text-muted); margin-bottom: 1px;">Legal & Meta Compliance:</div>
@@ -196,11 +178,11 @@ $isMetaConnected = ($activeAccountsCount > 0);
   <!-- Main Area -->
   <main class="app-main">
 
-    <!-- Topbar -->
+    <!-- Topbar (Streamlined & Clean) -->
     <header class="app-topbar">
       <div class="topbar-left">
         <button type="button" class="btn-mobile-menu" id="btn-mobile-menu" onclick="App.toggleMobileSidebar(true)" aria-label="Abrir Menú">☰</button>
-        <h2 class="page-title" id="topbar-page-title">Gestor de Comunidad & Conversión</h2>
+        <h2 class="page-title" id="topbar-page-title">Comentarios & Conversación</h2>
 
         <!-- Agency Multi-Brand Switcher (Styled as Capsule Pill Group) -->
         <div class="topbar-brand-switcher" id="topbar-brand-switcher" title="Cambiar de marca o cliente activo">
@@ -222,45 +204,23 @@ $isMetaConnected = ($activeAccountsCount > 0);
             <span>+ Nueva Marca</span>
           </button>
         </div>
-
-        <div class="platform-pill-group">
-          <button class="platform-pill active" data-platform="all">🌐 Todos</button>
-          <button class="platform-pill ig-active" data-platform="instagram">📸 IG</button>
-          <button class="platform-pill fb-active" data-platform="facebook">📘 FB</button>
-        </div>
-
-        <!-- Account Filter Selector -->
-        <div class="topbar-account-filter-wrap" title="Filtrar comentarios por cuenta conectada">
-          <div class="brand-select-pill account-select-pill">
-            <span class="brand-pill-icon">📱</span>
-            <select id="topbar-account-select" class="topbar-brand-select topbar-account-select" onchange="App.filterByAccount(this.value)">
-              <option value="all">🌐 Todas las Cuentas</option>
-            </select>
-          </div>
-        </div>
       </div>
 
       <div class="topbar-stats">
-        <div class="stat-pill score">
+        <div class="stat-pill score" title="Comentarios destacados por IA">
           <div class="dot"></div>
           <span id="count-pill-highlighted">0 Destacados</span>
         </div>
-        <div class="stat-pill leads">
+        <div class="stat-pill leads" title="Consultas de compra y precio">
           <div class="dot"></div>
           <span id="count-pill-leads">0 Leads</span>
         </div>
-        <div class="stat-pill urgent">
+        <div class="stat-pill urgent" title="Objeciones y soporte prioritario">
           <div class="dot"></div>
           <span id="count-pill-urgent">0 Soporte</span>
         </div>
         <button class="btn-primary-action" onclick="App.openModal('modal-simulate')">
           <span>+ Simular Comentario</span>
-        </button>
-        <button class="btn-primary-action" style="background: linear-gradient(135deg, #10b981, #047857);" onclick="AgentController.runAutopilotBatch()">
-          <span>⚡ Auto-responder</span>
-        </button>
-        <button class="btn-logout-topbar" onclick="App.logout()" title="Cerrar Sesión">
-          <span>Salir 🚪</span>
         </button>
       </div>
     </header>
@@ -326,9 +286,28 @@ $isMetaConnected = ($activeAccountsCount > 0);
         </div>
 
         <div class="feed-header">
-          <div class="search-box">
-            <span class="search-icon">🔍</span>
-            <input type="text" id="feed-search-input" placeholder="Buscar por usuario, pregunta de precio, producto o palabra clave..." />
+          <!-- Integrated Search & Platform Controls Row -->
+          <div class="feed-controls-primary-row">
+            <div class="search-box">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="feed-search-input" placeholder="Buscar por usuario, pregunta de precio, producto o palabra clave..." />
+            </div>
+
+            <div class="platform-pill-group">
+              <button class="platform-pill active" data-platform="all">🌐 Todos</button>
+              <button class="platform-pill ig-active" data-platform="instagram">📸 IG</button>
+              <button class="platform-pill fb-active" data-platform="facebook">📘 FB</button>
+            </div>
+
+            <!-- Account Filter Selector -->
+            <div class="feed-account-filter-wrap" title="Filtrar comentarios por cuenta conectada">
+              <div class="brand-select-pill account-select-pill">
+                <span class="brand-pill-icon">📱</span>
+                <select id="topbar-account-select" class="topbar-brand-select topbar-account-select" onchange="App.filterByAccount(this.value)">
+                  <option value="all">🌐 Todas las Cuentas</option>
+                </select>
+              </div>
+            </div>
           </div>
 
           <div class="filter-tags">

@@ -419,6 +419,87 @@ body {
   color: #fff;
 }
 
+/* Compact Sidebar Assistant (Sleek Horizontal Hub) */
+.sidebar-assistant-compact {
+  display: grid;
+  grid-template-columns: 1.4fr 0.8fr;
+  gap: 6px;
+  margin: 10px 12px 6px;
+  flex-shrink: 0;
+}
+
+.btn-sidebar-assistant-compact {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.25) 0%, rgba(124, 58, 237, 0.3) 100%);
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.74rem;
+  font-weight: 800;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 10px rgba(124, 58, 237, 0.25);
+}
+
+.btn-sidebar-assistant-compact:hover {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.45) 0%, rgba(124, 58, 237, 0.5) 100%);
+  border-color: rgba(167, 139, 250, 0.7);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35);
+}
+
+/* Sidebar Autopilot Run Action Button */
+.btn-sidebar-autopilot-run {
+  width: 100%;
+  margin-top: 8px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.18) 0%, rgba(5, 150, 105, 0.24) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34d399;
+  font-family: inherit;
+  font-size: 0.74rem;
+  font-weight: 800;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: all 0.2s ease;
+}
+
+.btn-sidebar-autopilot-run:hover {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.32) 0%, rgba(5, 150, 105, 0.4) 100%);
+  border-color: #34d399;
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+}
+
+/* Integrated Feed Primary Controls Row */
+.feed-controls-primary-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.feed-controls-primary-row .search-box {
+  flex: 1;
+  min-width: 240px;
+}
+
+.feed-account-filter-wrap {
+  display: flex;
+  align-items: center;
+}
+
 .sidebar-nav {
   padding: 6px 10px 10px;
   display: flex;
