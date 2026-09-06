@@ -92,7 +92,7 @@ class Auth {
         }
 
         $pdo = Database::getConnection();
-        $stmt = $pdo->prepare("SELECT id, tenant_id, name, email, role, avatar_url, created_at, last_login_at, last_activity_at, ai_model, max_tokens, used_tokens FROM users WHERE id = :id LIMIT 1");
+        $stmt = $pdo->prepare("SELECT id, tenant_id, name, email, role, avatar_url, created_at, last_login_at, last_activity_at, ai_model, max_tokens, used_tokens, plan, max_accounts FROM users WHERE id = :id LIMIT 1");
         $stmt->execute([':id' => self::id()]);
         $user = $stmt->fetch();
 
@@ -236,9 +236,9 @@ class Auth {
     }
 
     /**
-     * Register new tenant user with multi-tenant isolation and workspace setup
+     * Register a new user and create their initial tenant workspace
      */
-    public static function register(string $name, string $email, string $password): array {
+    public static function register(string $name, string $email, string $password, string $plan = 'starter'): array {
         self::initSession();
         $name = Security::sanitizeString($name, 80);
         $email = trim(mb_strtolower($email, 'UTF-8'));
@@ -267,6 +267,15 @@ class Auth {
             return ['success' => false, 'field' => 'password', 'error' => 'La contraseña no puede exceder los 256 caracteres.'];
         }
 
+        $allowedPlans = ['starter', 'creator', 'pro', 'agency'];
+        $plan = strtolower(trim($plan));
+        if (!in_array($plan, $allowedPlans, true)) {
+            $plan = 'starter';
+        }
+        $planInfo = Database::getPlanDetails($plan);
+        $maxAccounts = (int)($planInfo['accounts'] ?? 1);
+        $maxTokens = (int)($planInfo['max_tokens'] ?? 50000);
+
         $pdo = Database::getConnection();
 
         // Check if email already registered
@@ -281,15 +290,18 @@ class Auth {
         $avatarUrl = 'https://ui-avatars.com/api/?name=' . urlencode($name) . '&background=7c3aed&color=fff&size=96';
 
         $stmtIns = $pdo->prepare("
-            INSERT INTO users (tenant_id, name, email, password_hash, role, avatar_url, last_login_at)
-            VALUES (:tenant_id, :name, :email, :hash, 'user', :avatar, CURRENT_TIMESTAMP)
+            INSERT INTO users (tenant_id, name, email, password_hash, role, avatar_url, plan, max_accounts, max_tokens, last_login_at)
+            VALUES (:tenant_id, :name, :email, :hash, 'user', :avatar, :plan, :max_accounts, :max_tokens, CURRENT_TIMESTAMP)
         ");
         $stmtIns->execute([
             ':tenant_id' => $tenantId,
             ':name' => $name,
             ':email' => $email,
             ':hash' => $passwordHash,
-            ':avatar' => $avatarUrl
+            ':avatar' => $avatarUrl,
+            ':plan' => $plan,
+            ':max_accounts' => $maxAccounts,
+            ':max_tokens' => $maxTokens
         ]);
 
         $newUserId = (int)$pdo->lastInsertId();
@@ -313,7 +325,9 @@ class Auth {
                 'name' => htmlspecialchars($name, ENT_QUOTES, 'UTF-8'),
                 'email' => htmlspecialchars($email, ENT_QUOTES, 'UTF-8'),
                 'role' => 'user',
-                'avatar_url' => $avatarUrl
+                'avatar_url' => $avatarUrl,
+                'plan' => $plan,
+                'max_accounts' => $maxAccounts
             ]
         ];
     }

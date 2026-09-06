@@ -6223,19 +6223,134 @@ details.advanced-dev-details[open] summary {
 }
 
 .token-quota-input {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--border-subtle);
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: var(--radius-sm);
   color: #fff;
-  padding: 4px 8px;
-  font-size: 0.76rem;
+  padding: 5px 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
   width: 90px;
   text-align: right;
+  transition: all 0.2s ease;
 }
 
 .token-quota-input:focus {
   outline: none;
-  border-color: var(--primary);
+  border-color: #818cf8;
+  box-shadow: 0 0 0 2px rgba(129, 140, 248, 0.2);
+}
+
+/* Redesigned Admin User Row Buttons */
+.btn-save-user-config {
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.35);
+  transition: all 0.2s ease;
+}
+
+.btn-save-user-config:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.55);
+  background: linear-gradient(135deg, #818cf8, #6366f1);
+}
+
+.btn-save-user-config:active {
+  transform: translateY(0);
+}
+
+/* Beautiful dark-glass Reset Tokens Button (Zero ugly white boxes) */
+.btn-reset-tokens {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #94a3b8;
+  border-radius: 8px;
+  padding: 7px 11px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.btn-reset-tokens:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #f87171;
+  transform: rotate(45deg);
+}
+
+.btn-reset-tokens:active {
+  transform: scale(0.95);
+}
+
+/* Admin Plan Selector */
+.admin-plan-select {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  color: #e0e7ff;
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.admin-plan-select:focus {
+  border-color: #818cf8;
+}
+
+.admin-plan-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.admin-plan-badge.starter { background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.25); }
+.admin-plan-badge.creator { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+.admin-plan-badge.pro { background: rgba(124, 58, 237, 0.2); color: #c084fc; border: 1px solid rgba(124, 58, 237, 0.4); }
+.admin-plan-badge.agency { background: rgba(245, 158, 11, 0.18); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35); }
+
+/* Upgrade Plan Modal Styles */
+.plan-upgrade-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 20px;
+  transition: all 0.25s ease;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.plan-upgrade-card:hover {
+  border-color: rgba(124, 58, 237, 0.5);
+  background: rgba(124, 58, 237, 0.05);
+  transform: translateY(-2px);
+}
+
+.plan-upgrade-card.featured {
+  border: 2px solid #7c3aed;
+  background: linear-gradient(180deg, rgba(124, 58, 237, 0.12) 0%, rgba(17, 24, 39, 0.6) 100%);
 }
 
 

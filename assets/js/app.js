@@ -65,6 +65,25 @@ const App = {
       }
     });
 
+    // 3. Listen for Meta OAuth Popup completion events
+    window.addEventListener('message', (event) => {
+      if (event.data && event.data.type === 'META_OAUTH_RESULT') {
+        if (event.data.status === 'success') {
+          this.showToast(event.data.message || '¡Conexión con Meta completada exitosamente!', 'success', 6000);
+          this.loadConnectedAccounts();
+          this.loadComments();
+          if (typeof AnalyticsController !== 'undefined' && AnalyticsController.loadAnalytics) {
+            AnalyticsController.loadAnalytics();
+          }
+        } else if (event.data.status === 'warning') {
+          this.showToast(event.data.message || 'Conectado con permisos parciales.', 'warning', 6000);
+          this.loadConnectedAccounts();
+        } else if (event.data.status === 'error') {
+          this.showToast(event.data.message || 'Error durante la conexión con Meta', 'error', 7000);
+        }
+      }
+    });
+
     try { await this.loadBrands(); } catch (e) { console.error('loadBrands error:', e); }
     try { await this.loadConnectedAccounts(); } catch (e) { console.error('loadConnectedAccounts error:', e); }
     try { await this.loadSettings(); } catch (e) { console.error('loadSettings error:', e); }
@@ -114,10 +133,13 @@ const App = {
           topbarAccountSelect.innerHTML = opts;
         }
 
-        // 2. Update badge count
+        // 2. Update badge count with plan capacity
         const badgeCount = document.getElementById('badge-total-connected-accounts');
         if (badgeCount) {
-          badgeCount.textContent = `${this.connectedAccounts.length} cuenta${this.connectedAccounts.length === 1 ? '' : 's'}`;
+          const activeCount = data.active_accounts_count !== undefined ? data.active_accounts_count : this.connectedAccounts.length;
+          const maxAcc = data.max_accounts || (data.plan_info ? data.plan_info.accounts : 1);
+          const planName = data.plan_info ? data.plan_info.name : 'Plan Inicial';
+          badgeCount.textContent = `${activeCount} / ${maxAcc} cuentas • ${planName}`;
         }
 
         // 3. Update sidebar connection status pill (ON / OFF)
@@ -1973,6 +1995,46 @@ const App = {
     return toast;
   },
 
+  openMetaOAuthPopup() {
+    const width = 640;
+    const height = 740;
+    const left = window.screenLeft !== undefined 
+      ? window.screenLeft + (window.innerWidth - width) / 2 
+      : (screen.width - width) / 2;
+    const top = window.screenTop !== undefined 
+      ? window.screenTop + (window.innerHeight - height) / 2 
+      : (screen.height - height) / 2;
+
+    const popupUrl = 'api/meta-oauth.php';
+    const popup = window.open(
+      popupUrl,
+      'MetaOAuthLogin',
+      `width=${width},height=${height},top=${top},left=${left},status=no,toolbar=no,menubar=no,location=yes,resizable=yes`
+    );
+
+    if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+      // Browser blocked popup - fallback to direct redirect
+      window.location.href = popupUrl;
+      return;
+    }
+
+    if (window.focus) {
+      popup.focus();
+    }
+
+    this.showToast('🚀 Abriendo ventana de conexión oficial con Facebook & Instagram...', 'info', 4000);
+
+    // Watch for popup close in case user cancels or finishes without postMessage
+    const closedPoller = setInterval(() => {
+      if (popup.closed) {
+        clearInterval(closedPoller);
+        setTimeout(() => {
+          this.loadConnectedAccounts();
+        }, 800);
+      }
+    }, 1000);
+  },
+
   async triggerMetaSync() {
     // 1. Locate all sync buttons and show active loading spinner state
     const syncButtons = document.querySelectorAll('[onclick*="triggerMetaSync"]');
@@ -2360,6 +2422,7 @@ const App = {
     tbody.innerHTML = filtered.map(u => {
       const roleClass = u.role === 'admin' ? 'admin' : (u.role === 'tester' ? 'tester' : 'user');
       const roleLabel = u.role === 'admin' ? 'Administrador' : (u.role === 'tester' ? 'Tester' : 'Cliente');
+      const planKey = (u.plan || 'starter').toLowerCase();
       
       const isOnline = !!u.is_online;
       const presenceHtml = isOnline 
@@ -2388,11 +2451,12 @@ const App = {
             <div class="admin-user-cell-profile">
               <img src="${this.escapeHtml(avatarSrc)}" class="admin-user-avatar" alt="Avatar" />
               <div>
-                <div style="font-weight: 800; color: #fff; font-size: 0.88rem; display: flex; align-items: center; gap: 6px;">
+                <div style="font-weight: 800; color: #fff; font-size: 0.88rem; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                   <span>${this.escapeHtml(u.name)}</span>
                   <span class="admin-role-badge ${roleClass}">${roleLabel}</span>
+                  <span class="admin-plan-badge ${planKey}">${planKey.toUpperCase()}</span>
                 </div>
-                <div style="font-size: 0.76rem; color: var(--text-dim); margin-top: 2px;">
+                <div style="font-size: 0.76rem; color: var(--text-dim); margin-top: 3px;">
                   ${this.escapeHtml(u.email)} • <span style="color: var(--text-muted);">ID #${u.id}</span>
                 </div>
               </div>
@@ -2404,34 +2468,48 @@ const App = {
           </td>
 
           <td style="padding: 14px 18px;">
-            <select class="admin-model-select" id="admin-user-model-${u.id}">
-              ${modelOptions}
-            </select>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <select class="admin-model-select" id="admin-user-model-${u.id}">
+                ${modelOptions}
+              </select>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
+                <span style="font-size: 0.72rem; color: var(--text-dim); font-weight: 700;">Plan:</span>
+                <select class="admin-plan-select" id="admin-user-plan-${u.id}" onchange="App.onAdminUserPlanChange(${u.id}, this.value)">
+                  <option value="starter" ${planKey === 'starter' ? 'selected' : ''}>Inicial (1 cta)</option>
+                  <option value="creator" ${planKey === 'creator' ? 'selected' : ''}>Creador (2 ctas)</option>
+                  <option value="pro" ${planKey === 'pro' ? 'selected' : ''}>Pro (5 ctas)</option>
+                  <option value="agency" ${planKey === 'agency' ? 'selected' : ''}>Agencia (20 ctas)</option>
+                </select>
+              </div>
+            </div>
           </td>
 
           <td style="padding: 14px 18px;">
             <div class="token-progress-container">
               <div class="token-progress-labels">
-                <span style="font-weight: 700; color: #f1f5f9;">${limitLabel}</span>
-                <span style="color: var(--text-dim);">${max > 0 ? `${pct}%` : '∞'}</span>
+                <span style="font-weight: 800; color: #f1f5f9; font-size: 0.84rem;">${limitLabel}</span>
+                <span style="font-size: 0.76rem; font-weight: 700; color: ${pct >= 90 ? '#f87171' : (pct >= 70 ? '#fbbf24' : '#34d399')};">${max > 0 ? `${pct}%` : '∞'}</span>
               </div>
               <div class="token-progress-bar">
                 <div class="token-progress-fill ${barColorClass}" style="width: ${max > 0 ? pct : 100}%;"></div>
               </div>
-              <div style="display: flex; align-items: center; gap: 8px; margin-top: 6px;">
-                <label style="font-size: 0.72rem; color: var(--text-dim);">Límite:</label>
-                <input type="number" min="0" step="1000" class="token-quota-input" id="admin-user-max-${u.id}" value="${max}" title="0 = Ilimitado" />
-                <span style="font-size: 0.7rem; color: var(--text-dim);">(0=Ilim.)</span>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px;">
+                <label style="font-size: 0.72rem; color: #94a3b8; font-weight: 600;">Límite mensual:</label>
+                <div style="display: flex; align-items: center; gap: 4px;">
+                  <input type="number" min="0" step="1000" class="token-quota-input" id="admin-user-max-${u.id}" value="${max}" title="0 = Ilimitado" />
+                  <span style="font-size: 0.7rem; color: var(--text-dim);">(0=Ilim.)</span>
+                </div>
               </div>
             </div>
           </td>
 
           <td style="padding: 14px 18px; text-align: right;">
-            <div style="display: inline-flex; gap: 6px;">
-              <button type="button" class="btn-primary-action" style="padding: 6px 12px; font-size: 0.78rem;" onclick="App.saveAdminUserConfig(${u.id})">
-                <span>💾 Guardar</span>
+            <div style="display: inline-flex; align-items: center; gap: 8px;">
+              <button type="button" class="btn-save-user-config" id="btn-save-user-${u.id}" onclick="App.saveAdminUserConfig(${u.id})" title="Guardar cambios de IA, tokens y plan">
+                <span>💾</span>
+                <span>Guardar</span>
               </button>
-              <button type="button" class="btn-secondary-mini" style="padding: 6px 8px; font-size: 0.76rem; color: var(--text-dim);" onclick="App.resetAdminUserTokens(${u.id})" title="Reiniciar contador de tokens consumidos a 0">
+              <button type="button" class="btn-reset-tokens" onclick="App.resetAdminUserTokens(${u.id})" title="Reiniciar tokens consumidos a 0">
                 <span>🔄</span>
               </button>
             </div>
@@ -2441,14 +2519,36 @@ const App = {
     }).join('');
   },
 
+  onAdminUserPlanChange(userId, plan) {
+    const maxInput = document.getElementById(`admin-user-max-${userId}`);
+    if (!maxInput) return;
+    const defaultTokens = {
+      starter: 50000,
+      creator: 150000,
+      pro: 500000,
+      agency: 2000000
+    };
+    if (defaultTokens[plan]) {
+      maxInput.value = defaultTokens[plan];
+    }
+  },
+
   async saveAdminUserConfig(userId) {
     if (!userId) return;
     const modelSelect = document.getElementById(`admin-user-model-${userId}`);
+    const planSelect = document.getElementById(`admin-user-plan-${userId}`);
     const maxInput = document.getElementById(`admin-user-max-${userId}`);
+    const saveBtn = document.getElementById(`btn-save-user-${userId}`);
     if (!modelSelect || !maxInput) return;
 
     const aiModel = modelSelect.value;
+    const plan = planSelect ? planSelect.value : 'starter';
     const maxTokens = parseInt(maxInput.value, 10) || 0;
+
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = '<span>⏳ Guardando...</span>';
+    }
 
     try {
       const res = await this.fetchWithCsrf('api/admin_users.php', {
@@ -2457,25 +2557,43 @@ const App = {
           action: 'update_user_ai',
           user_id: userId,
           ai_model: aiModel,
+          plan: plan,
           max_tokens: maxTokens
         })
       });
       const data = await res.json();
       if (data && data.success) {
-        App.showToast('¡Configuración de IA y tokens guardada con éxito!', 'success');
+        App.showToast('¡Configuración de IA, tokens y plan guardada con éxito!', 'success');
         // Update local object
         const u = this.adminUsersList.find(x => x.id == userId);
         if (u) {
           u.ai_model = aiModel;
+          u.plan = plan;
           u.max_tokens = maxTokens;
+          if (data.max_accounts) u.max_accounts = data.max_accounts;
         }
-        this.renderAdminUsers();
+        if (saveBtn) {
+          saveBtn.innerHTML = '<span>✓ Guardado</span>';
+          setTimeout(() => {
+            this.renderAdminUsers();
+          }, 600);
+        } else {
+          this.renderAdminUsers();
+        }
       } else {
         App.showToast(data.error || 'Error al guardar configuración', 'error');
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = '<span>💾 Guardar</span>';
+        }
       }
     } catch (e) {
       console.error(e);
       App.showToast('Error de conexión al guardar configuración', 'error');
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<span>💾 Guardar</span>';
+      }
     }
   },
 
@@ -2505,6 +2623,20 @@ const App = {
     } catch (e) {
       console.error(e);
       App.showToast('Error de conexión', 'error');
+    }
+  },
+
+  showUpgradePlanModal() {
+    const modal = document.getElementById('modal-upgrade-plan');
+    if (modal) {
+      modal.style.display = 'flex';
+    }
+  },
+
+  closeUpgradePlanModal() {
+    const modal = document.getElementById('modal-upgrade-plan');
+    if (modal) {
+      modal.style.display = 'none';
     }
   },
 

@@ -1039,14 +1039,73 @@ class Database {
                         $pdo->exec("ALTER TABLE users ADD COLUMN last_activity_at DATETIME");
                         $pdo->exec("UPDATE users SET last_activity_at = CURRENT_TIMESTAMP WHERE last_activity_at IS NULL");
                     }
+                    if (!in_array('plan', $uColNames)) {
+                        $pdo->exec("ALTER TABLE users ADD COLUMN plan TEXT DEFAULT 'starter'");
+                    }
+                    if (!in_array('max_accounts', $uColNames)) {
+                        $pdo->exec("ALTER TABLE users ADD COLUMN max_accounts INTEGER DEFAULT 1");
+                    }
+
+                    // Admin user 1 gets unlimited agency plan
+                    $pdo->exec("UPDATE users SET plan = 'agency', max_accounts = 999 WHERE id = 1 OR role = 'admin' OR email = 'julianeduardox@gmail.com'");
                 }
             } catch (Throwable $e) {
-                error_log("Users AI columns migration notice: " . $e->getMessage());
+                error_log("Users AI and Plan columns migration notice: " . $e->getMessage());
             }
 
         } catch (Throwable $e) {
             error_log("Schema migration notice: " . $e->getMessage());
         }
+    }
+
+    /**
+     * Plan specifications and quotas
+     */
+    public static function getPlanDetails(?string $plan): array {
+        $plans = [
+            'starter' => [
+                'slug' => 'starter',
+                'name' => 'Plan Inicial',
+                'accounts' => 1,
+                'max_accounts' => 1,
+                'max_tokens' => 50000,
+                'price' => '0 €',
+                'period' => '/ mes gratis',
+                'badge' => 'Gratis'
+            ],
+            'creator' => [
+                'slug' => 'creator',
+                'name' => 'Plan Creador',
+                'accounts' => 2,
+                'max_accounts' => 2,
+                'max_tokens' => 150000,
+                'price' => '9.99 €',
+                'period' => '/ mes',
+                'badge' => 'Económico'
+            ],
+            'pro' => [
+                'slug' => 'pro',
+                'name' => 'Pro / Negocio',
+                'accounts' => 5,
+                'max_accounts' => 5,
+                'max_tokens' => 500000,
+                'price' => '20.99 €',
+                'period' => '/ mes',
+                'badge' => '⭐ Recomendado'
+            ],
+            'agency' => [
+                'slug' => 'agency',
+                'name' => 'Plan Agencia',
+                'accounts' => 20,
+                'max_accounts' => 20,
+                'max_tokens' => 2000000,
+                'price' => '79.99 €',
+                'period' => '/ mes',
+                'badge' => 'Escala'
+            ]
+        ];
+        $key = strtolower(trim($plan ?? 'starter'));
+        return $plans[$key] ?? $plans['starter'];
     }
 
     /**

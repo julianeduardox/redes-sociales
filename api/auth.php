@@ -37,7 +37,9 @@ try {
                         'name' => htmlspecialchars($user['name'], ENT_QUOTES, 'UTF-8'),
                         'email' => htmlspecialchars($user['email'], ENT_QUOTES, 'UTF-8'),
                         'role' => $user['role'],
-                        'avatar_url' => $user['avatar_url']
+                        'avatar_url' => $user['avatar_url'],
+                        'plan' => $user['plan'] ?? 'starter',
+                        'max_accounts' => (int)($user['max_accounts'] ?? 1)
                     ],
                     'csrf_token' => Security::getCsrfToken()
                 ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
@@ -78,7 +80,8 @@ try {
             $name = $input['name'] ?? '';
             $email = $input['email'] ?? '';
             $password = $input['password'] ?? '';
-            $result = Auth::register($name, $email, $password);
+            $plan = Security::sanitizeString($input['plan'] ?? 'starter', 50);
+            $result = Auth::register($name, $email, $password, $plan);
 
             if (!$result['success']) {
                 http_response_code(400);

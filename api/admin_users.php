@@ -87,6 +87,8 @@ if ($method === 'GET') {
                     COALESCE(u.ai_model, 'anthropic/claude-3.5-sonnet') AS ai_model,
                     COALESCE(u.max_tokens, 50000) AS max_tokens,
                     COALESCE(u.used_tokens, 0) AS used_tokens,
+                    COALESCE(u.plan, 'starter') AS plan,
+                    COALESCE(u.max_accounts, 1) AS max_accounts,
                     (SELECT COUNT(*) FROM accounts a WHERE a.user_id = u.id AND a.is_active = 1) AS connected_accounts_count,
                     (SELECT COUNT(*) FROM brand_voices bv WHERE bv.user_id = u.id) AS brand_voices_count,
                     CASE 
@@ -111,6 +113,9 @@ if ($method === 'GET') {
                 }
                 $u['used_tokens'] = (int)$u['used_tokens'];
                 $u['max_tokens'] = (int)$u['max_tokens'];
+                $u['max_accounts'] = (int)$u['max_accounts'];
+                $u['connected_accounts_count'] = (int)$u['connected_accounts_count'];
+                $u['brand_voices_count'] = (int)$u['brand_voices_count'];
                 $totalTokensConsumed += $u['used_tokens'];
 
                 $model = $u['ai_model'];
@@ -125,7 +130,13 @@ if ($method === 'GET') {
             echo json_encode([
                 'success' => true,
                 'users' => $users,
-                'models_catalog' => $allowedModels,
+                'allowed_models' => $allowedModels,
+                'plans' => [
+                    'starter' => Database::getPlanDetails('starter'),
+                    'creator' => Database::getPlanDetails('creator'),
+                    'pro' => Database::getPlanDetails('pro'),
+                    'agency' => Database::getPlanDetails('agency')
+                ],
                 'kpis' => [
                     'total_users' => $totalUsers,
                     'online_users' => $onlineCount,
@@ -166,20 +177,40 @@ if ($method === 'POST') {
             $maxTokens = 0; // 0 represents unlimited tokens
         }
 
+        $plan = strtolower(trim((string)($input['plan'] ?? '')));
+        $maxAccounts = isset($input['max_accounts']) ? (int)$input['max_accounts'] : null;
+
         try {
-            $stmt = $pdo->prepare("UPDATE users SET ai_model = :model, max_tokens = :max WHERE id = :id");
-            $stmt->execute([
-                ':model' => $aiModel,
-                ':max' => $maxTokens,
-                ':id' => $targetUserId
-            ]);
+            if (!empty($plan) && in_array($plan, ['starter', 'creator', 'pro', 'agency'], true)) {
+                $pInfo = Database::getPlanDetails($plan);
+                if ($maxAccounts === null || $maxAccounts <= 0) {
+                    $maxAccounts = (int)$pInfo['accounts'];
+                }
+                $stmt = $pdo->prepare("UPDATE users SET ai_model = :model, max_tokens = :max, plan = :plan, max_accounts = :max_acc WHERE id = :id");
+                $stmt->execute([
+                    ':model' => $aiModel,
+                    ':max' => $maxTokens,
+                    ':plan' => $plan,
+                    ':max_acc' => $maxAccounts,
+                    ':id' => $targetUserId
+                ]);
+            } else {
+                $stmt = $pdo->prepare("UPDATE users SET ai_model = :model, max_tokens = :max WHERE id = :id");
+                $stmt->execute([
+                    ':model' => $aiModel,
+                    ':max' => $maxTokens,
+                    ':id' => $targetUserId
+                ]);
+            }
 
             echo json_encode([
                 'success' => true,
-                'message' => 'Configuración de Inteligencia Artificial y tokens actualizada con éxito.',
+                'message' => 'Configuración de usuario, modelo IA, tokens y plan actualizada con éxito.',
                 'user_id' => $targetUserId,
                 'ai_model' => $aiModel,
-                'max_tokens' => $maxTokens
+                'max_tokens' => $maxTokens,
+                'plan' => $plan,
+                'max_accounts' => $maxAccounts
             ], JSON_UNESCAPED_UNICODE);
             exit;
 

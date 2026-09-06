@@ -1736,7 +1736,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
               <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan1_f5">Soporte estándar</span></li>
             </ul>
           </div>
-          <a href="login.php" data-i18n="plan1_btn" class="w-full py-2.5 sm:py-3 rounded-xl text-center text-xs sm:text-sm font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition-colors shadow-sm">
+          <a href="login.php?tab=register&plan=starter" data-i18n="plan1_btn" class="w-full py-2.5 sm:py-3 rounded-xl text-center text-xs sm:text-sm font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition-colors shadow-sm">
             Comenzar Gratis
           </a>
         </div>
@@ -1759,7 +1759,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
               <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan2_f5">Soporte prioritario por email</span></li>
             </ul>
           </div>
-          <a href="login.php" data-i18n="plan2_btn" class="w-full py-2.5 sm:py-3 rounded-xl text-center text-xs sm:text-sm font-bold text-brand-700 bg-brand-50 border border-brand-200 hover:bg-brand-100 transition-colors shadow-sm">
+          <a href="login.php?tab=register&plan=creator" data-i18n="plan2_btn" class="w-full py-2.5 sm:py-3 rounded-xl text-center text-xs sm:text-sm font-bold text-brand-700 bg-brand-50 border border-brand-200 hover:bg-brand-100 transition-colors shadow-sm">
             Elegir Plan Creador
           </a>
         </div>
@@ -1786,7 +1786,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
               <li class="flex items-start gap-2"><span class="text-brand-600 font-bold">✔</span> <span data-i18n="plan3_f6">Soporte prioritario 24/7</span></li>
             </ul>
           </div>
-          <a href="login.php" data-i18n="plan3_btn" class="w-full py-2.5 sm:py-3 rounded-xl text-center text-xs sm:text-sm font-bold text-white gradient-button shadow-glow-sm shimmer-btn">
+          <a href="login.php?tab=register&plan=pro" data-i18n="plan3_btn" class="w-full py-2.5 sm:py-3 rounded-xl text-center text-xs sm:text-sm font-bold text-white gradient-button shadow-glow-sm shimmer-btn">
             Comenzar con Pro
           </a>
         </div>
@@ -1809,7 +1809,7 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
               <li class="flex items-start gap-2"><span class="text-emerald-500 font-bold">✔</span> <span data-i18n="plan4_f5">Soporte dedicado & Onboarding</span></li>
             </ul>
           </div>
-          <a href="login.php" data-i18n="plan4_btn" class="w-full py-2.5 sm:py-3 rounded-xl text-center text-xs sm:text-sm font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition-colors shadow-sm">
+          <a href="login.php?tab=register&plan=agency" data-i18n="plan4_btn" class="w-full py-2.5 sm:py-3 rounded-xl text-center text-xs sm:text-sm font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition-colors shadow-sm">
             Acceso para Agencias
           </a>
         </div>

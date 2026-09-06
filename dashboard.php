@@ -32,10 +32,17 @@ try {
     $stmtAccCount = $pdo->prepare("SELECT COUNT(*) FROM accounts WHERE user_id = ? AND is_active = 1");
     $stmtAccCount->execute([$userId]);
     $activeAccountsCount = (int)$stmtAccCount->fetchColumn();
+
+    $userPlan = $currentUser['plan'] ?? 'starter';
+    $planDetails = Database::getPlanDetails($userPlan);
+    $maxAccounts = (int)($currentUser['max_accounts'] ?? $planDetails['accounts'] ?? 1);
 } catch (Throwable $e) {
     error_log("Brand pre-render notice: " . $e->getMessage());
     $userBrands = [];
     $activeAccountsCount = 0;
+    $userPlan = 'starter';
+    $planDetails = Database::getPlanDetails('starter');
+    $maxAccounts = 1;
 }
 $isMetaConnected = ($activeAccountsCount > 0);
 ?>
@@ -846,11 +853,11 @@ $isMetaConnected = ($activeAccountsCount > 0);
                 Genera automáticamente <strong>Tokens de Larga Duración (60 días / Permanentes de Página)</strong> sin tener que copiar y pegar tokens manualmente desde Graph API Explorer.
               </p>
             </div>
-            <a href="api/meta-oauth.php" class="btn-primary-action" style="background: #1877f2; padding: 12px 20px; font-size: 0.9rem; font-weight: 800; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(24, 119, 242, 0.4);">
-              <span>📘</span>
+            <button type="button" onclick="App.openMetaOAuthPopup()" class="btn-primary-action" style="background: #1877f2; padding: 12px 20px; font-size: 0.9rem; font-weight: 800; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(24, 119, 242, 0.4); border-radius: var(--radius-sm); color: #fff;">
+              <span style="font-size: 1.1rem;">📘</span>
               <span>Continuar con Facebook & Instagram</span>
               <span>↗️</span>
-            </a>
+            </button>
           </div>
         </div>
 
@@ -858,12 +865,19 @@ $isMetaConnected = ($activeAccountsCount > 0);
         <div class="connected-accounts-card" style="background: var(--bg-card); padding: 24px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 20px;">
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
             <div>
-              <h4 style="font-size: 1.05rem; font-weight: 800; color: #fff; margin: 0; display: flex; align-items: center; gap: 8px;">
-                <span>📱 Cuentas Vinculadas & Asignación de Voz de Marca (Multi-Cuenta)</span>
-                <span class="badge-count-accounts" id="badge-total-connected-accounts" style="background: rgba(99, 102, 241, 0.2); color: #818cf8; font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; font-weight: 700;">0 cuentas</span>
+              <h4 style="font-size: 1.05rem; font-weight: 800; color: #fff; margin: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <span>📱 Cuentas Vinculadas & Asignación de Voz de Marca</span>
+                <span class="badge-count-accounts" id="badge-total-connected-accounts" style="background: rgba(99, 102, 241, 0.2); color: #818cf8; font-size: 0.75rem; padding: 3px 10px; border-radius: 12px; font-weight: 700;">
+                  <?= $activeAccountsCount ?> / <?= $maxAccounts ?> cuentas • <?= htmlspecialchars($planDetails['name'], ENT_QUOTES, 'UTF-8') ?>
+                </span>
+                <?php if ($userPlan !== 'agency'): ?>
+                <button type="button" onclick="App.showUpgradePlanModal()" class="btn-primary-action" style="padding: 4px 10px; font-size: 0.74rem; background: linear-gradient(135deg, #f59e0b, #d97706); border: none; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.35); cursor: pointer; border-radius: 6px;">
+                  ⭐ Mejorar Plan
+                </button>
+                <?php endif; ?>
               </h4>
               <p style="font-size: 0.8rem; color: var(--text-muted); margin: 4px 0 0 0;">
-                Asigna una <strong>Voz de Marca independiente</strong> a cada cuenta de Instagram o Página de Facebook vinculada. El Copiloto y Auto-responder hablarán con la voz exacta de cada cuenta.
+                Asigna una <strong>Voz de Marca independiente</strong> a cada cuenta de Instagram o Página de Facebook vinculada. Tu plan actual te permite hasta <strong><?= $maxAccounts ?> <?= $maxAccounts === 1 ? 'cuenta' : 'cuentas' ?></strong>.
               </p>
             </div>
             <div style="display: flex; gap: 8px;">
@@ -880,14 +894,15 @@ $isMetaConnected = ($activeAccountsCount > 0);
           </div>
         </div>
 
-        <!-- Advanced Developer Settings (Collapsible) -->
+        <?php if ($isAdmin): ?>
+        <!-- Advanced Developer Settings (Collapsible - Admin Only) -->
         <details class="advanced-dev-details" style="background: var(--bg-card); border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 20px; overflow: hidden;">
           <summary style="padding: 18px 24px; font-size: 0.95rem; font-weight: 800; color: var(--text-main); cursor: pointer; display: flex; align-items: center; justify-content: space-between; user-select: none;">
             <div style="display: flex; align-items: center; gap: 8px;">
               <span>🛠️</span>
               <span>Configuración Avanzada / Desarrolladores (Webhooks, Tokens Manuales & App Review)</span>
             </div>
-            <span style="font-size: 0.75rem; color: var(--text-dim); background: rgba(255,255,255,0.05); padding: 3px 8px; border-radius: 4px;">Opcional ▼</span>
+            <span style="font-size: 0.75rem; color: var(--text-dim); background: rgba(255,255,255,0.05); padding: 3px 8px; border-radius: 4px;">Solo Admin ▼</span>
           </summary>
 
           <div style="padding: 0 24px 24px 24px; border-top: 1px solid var(--border-subtle);">
@@ -1011,6 +1026,7 @@ $isMetaConnected = ($activeAccountsCount > 0);
 
           </div>
         </details>
+        <?php endif; ?>
 
       </div>
     </div>
@@ -1846,6 +1862,96 @@ $isMetaConnected = ($activeAccountsCount > 0);
 
     <div class="modal-body" id="preview-modal-content" style="padding: 16px 0;">
       <!-- Rendered dynamically -->
+    </div>
+  </div>
+<!-- Modal: Upgrade Plan / Comparador de Planes -->
+<div class="modal-overlay" id="modal-upgrade-plan" style="display: none;" onclick="if(event.target===this) App.closeUpgradePlanModal()">
+  <div class="modal-box" style="max-width: 860px; background: #0f172a; border: 1px solid rgba(99, 102, 241, 0.35); box-shadow: 0 25px 60px rgba(0,0,0,0.85);">
+    <div class="modal-header" style="border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 16px;">
+      <div>
+        <h4 style="font-size: 1.2rem; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px; margin: 0;">
+          <span>⭐</span> Planes & Capacidad de Cuentas Conectadas
+        </h4>
+        <p style="font-size: 0.84rem; color: var(--text-muted); margin: 4px 0 0 0;">
+          Escala tu plan para vincular más canales de Instagram y Páginas de Facebook con respuestas automáticas.
+        </p>
+      </div>
+      <button type="button" class="btn-close-modal" onclick="App.closeUpgradePlanModal()">&times;</button>
+    </div>
+
+    <div class="modal-body" style="padding: 22px 0 10px 0;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px;">
+        
+        <!-- Inicial -->
+        <div class="plan-upgrade-card <?= ($userPlan === 'starter') ? 'current-active' : '' ?>" style="background: rgba(255,255,255,0.02); border: 1px solid <?= ($userPlan === 'starter') ? '#10b981' : 'rgba(255,255,255,0.08)' ?>; border-radius: 14px; padding: 16px;">
+          <div style="font-size: 0.72rem; font-weight: 800; color: #94a3b8; text-transform: uppercase;">Entrada</div>
+          <h5 style="font-size: 1rem; font-weight: 800; color: #fff; margin: 4px 0;">Plan Inicial</h5>
+          <div style="font-size: 1.3rem; font-weight: 900; color: #fff; margin: 8px 0 12px 0;">0 € <span style="font-size: 0.72rem; color: #94a3b8; font-weight: 600;">/ mes gratis</span></div>
+          <ul style="font-size: 0.76rem; color: #cbd5e1; list-style: none; padding: 0; margin: 0 0 16px 0; line-height: 1.8;">
+            <li>✔ <strong>1 cuenta conectada</strong></li>
+            <li>✔ 50.000 tokens / mes</li>
+            <li>✔ 1 Voz de Marca</li>
+          </ul>
+          <?php if ($userPlan === 'starter'): ?>
+            <span style="display: block; text-align: center; padding: 7px; font-size: 0.75rem; font-weight: 800; color: #10b981; background: rgba(16,185,129,0.1); border-radius: 8px;">Tu Plan Actual</span>
+          <?php else: ?>
+            <span style="display: block; text-align: center; padding: 7px; font-size: 0.75rem; font-weight: 700; color: #64748b;">Plan Base</span>
+          <?php endif; ?>
+        </div>
+
+        <!-- Creador -->
+        <div class="plan-upgrade-card <?= ($userPlan === 'creator') ? 'current-active' : '' ?>" style="background: rgba(59,130,246,0.04); border: 1px solid <?= ($userPlan === 'creator') ? '#3b82f6' : 'rgba(59,130,246,0.3)' ?>; border-radius: 14px; padding: 16px;">
+          <div style="font-size: 0.72rem; font-weight: 800; color: #60a5fa; text-transform: uppercase;">Económico</div>
+          <h5 style="font-size: 1rem; font-weight: 800; color: #fff; margin: 4px 0;">Plan Creador</h5>
+          <div style="font-size: 1.3rem; font-weight: 900; color: #60a5fa; margin: 8px 0 12px 0;">9.99 € <span style="font-size: 0.72rem; color: #94a3b8; font-weight: 600;">/ mes</span></div>
+          <ul style="font-size: 0.76rem; color: #cbd5e1; list-style: none; padding: 0; margin: 0 0 16px 0; line-height: 1.8;">
+            <li>✔ <strong>2 cuentas conectadas</strong></li>
+            <li>✔ 150.000 tokens / mes</li>
+            <li>✔ Ventana de oro algoritmo</li>
+          </ul>
+          <?php if ($userPlan === 'creator'): ?>
+            <span style="display: block; text-align: center; padding: 7px; font-size: 0.75rem; font-weight: 800; color: #3b82f6; background: rgba(59,130,246,0.1); border-radius: 8px;">Tu Plan Actual</span>
+          <?php else: ?>
+            <a href="https://wa.me/?text=<?= urlencode('Hola, quiero actualizar mi cuenta al Plan Creador (2 cuentas)') ?>" target="_blank" class="btn-primary-action" style="display: block; text-align: center; padding: 8px; font-size: 0.75rem; background: #2563eb; text-decoration: none;">Elegir Creador</a>
+          <?php endif; ?>
+        </div>
+
+        <!-- Pro / Negocio -->
+        <div class="plan-upgrade-card featured <?= ($userPlan === 'pro') ? 'current-active' : '' ?>" style="background: rgba(124,58,237,0.08); border: 2px solid #7c3aed; border-radius: 14px; padding: 16px; position: relative;">
+          <div style="position: absolute; top: -10px; right: 12px; background: #7c3aed; color: #fff; font-size: 0.65rem; font-weight: 800; padding: 2px 8px; border-radius: 10px; text-transform: uppercase;">Popular</div>
+          <div style="font-size: 0.72rem; font-weight: 800; color: #c084fc; text-transform: uppercase;">Recomendado</div>
+          <h5 style="font-size: 1rem; font-weight: 800; color: #fff; margin: 4px 0;">Pro / Negocio</h5>
+          <div style="font-size: 1.3rem; font-weight: 900; color: #a78bfa; margin: 8px 0 12px 0;">20.99 € <span style="font-size: 0.72rem; color: #94a3b8; font-weight: 600;">/ mes</span></div>
+          <ul style="font-size: 0.76rem; color: #cbd5e1; list-style: none; padding: 0; margin: 0 0 16px 0; line-height: 1.8;">
+            <li>✔ <strong>Hasta 5 cuentas conectadas</strong></li>
+            <li>✔ 500.000 tokens / mes</li>
+            <li>✔ Detección leads & timing</li>
+          </ul>
+          <?php if ($userPlan === 'pro'): ?>
+            <span style="display: block; text-align: center; padding: 7px; font-size: 0.75rem; font-weight: 800; color: #a78bfa; background: rgba(124,58,237,0.15); border-radius: 8px;">Tu Plan Actual</span>
+          <?php else: ?>
+            <a href="https://wa.me/?text=<?= urlencode('Hola, quiero actualizar mi cuenta al Plan Pro / Negocio (5 cuentas)') ?>" target="_blank" class="btn-primary-action" style="display: block; text-align: center; padding: 8px; font-size: 0.75rem; background: linear-gradient(135deg, #7c3aed, #4f46e5); text-decoration: none;">Comenzar con Pro</a>
+          <?php endif; ?>
+        </div>
+
+        <!-- Agencia -->
+        <div class="plan-upgrade-card <?= ($userPlan === 'agency') ? 'current-active' : '' ?>" style="background: rgba(245,158,11,0.04); border: 1px solid <?= ($userPlan === 'agency') ? '#f59e0b' : 'rgba(245,158,11,0.3)' ?>; border-radius: 14px; padding: 16px;">
+          <div style="font-size: 0.72rem; font-weight: 800; color: #fbbf24; text-transform: uppercase;">Escala</div>
+          <h5 style="font-size: 1rem; font-weight: 800; color: #fff; margin: 4px 0;">Plan Agencia</h5>
+          <div style="font-size: 1.3rem; font-weight: 900; color: #fbbf24; margin: 8px 0 12px 0;">79.99 € <span style="font-size: 0.72rem; color: #94a3b8; font-weight: 600;">/ mes</span></div>
+          <ul style="font-size: 0.76rem; color: #cbd5e1; list-style: none; padding: 0; margin: 0 0 16px 0; line-height: 1.8;">
+            <li>✔ <strong>Hasta 20 cuentas conectadas</strong></li>
+            <li>✔ 2.000.000 tokens / mes</li>
+            <li>✔ Hasta 20 marcas multi-tenant</li>
+          </ul>
+          <?php if ($userPlan === 'agency'): ?>
+            <span style="display: block; text-align: center; padding: 7px; font-size: 0.75rem; font-weight: 800; color: #fbbf24; background: rgba(245,158,11,0.1); border-radius: 8px;">Tu Plan Actual</span>
+          <?php else: ?>
+            <a href="https://wa.me/?text=<?= urlencode('Hola, quiero actualizar mi cuenta al Plan Agencia (20 cuentas)') ?>" target="_blank" class="btn-primary-action" style="display: block; text-align: center; padding: 8px; font-size: 0.75rem; background: #d97706; text-decoration: none;">Acceso Agencia</a>
+          <?php endif; ?>
+        </div>
+
+      </div>
     </div>
   </div>
 </div>

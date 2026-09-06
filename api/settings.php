@@ -88,10 +88,20 @@ try {
             $stmtBrands->execute([':uid' => $userId]);
             $brands = $stmtBrands->fetchAll();
 
+            $currentUser = Auth::user();
+            $plan = $currentUser['plan'] ?? 'starter';
+            $planInfo = Database::getPlanDetails($plan);
+            $maxAccounts = (int)($currentUser['max_accounts'] ?? $planInfo['accounts'] ?? 1);
+            $activeCount = count(array_filter($accounts, fn($a) => (int)$a['is_active'] === 1));
+
             echo json_encode([
                 'success' => true,
                 'accounts' => $accounts,
-                'brands' => $brands
+                'brands' => $brands,
+                'plan' => $plan,
+                'plan_info' => $planInfo,
+                'max_accounts' => $maxAccounts,
+                'active_accounts_count' => $activeCount
             ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
             exit;
         }

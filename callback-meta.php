@@ -246,6 +246,20 @@ if (!empty($error)) {
             $pdo = Database::getConnection();
             $primaryPageToken = '';
             $primaryIgId = '';
+            $skippedAccountsCount = 0;
+
+            // Fetch user plan and max_accounts
+            $uStmt = $pdo->prepare("SELECT plan, max_accounts FROM users WHERE id = :uid LIMIT 1");
+            $uStmt->execute([':uid' => $userId]);
+            $uRow = $uStmt->fetch(PDO::FETCH_ASSOC);
+            $userPlan = $uRow['plan'] ?? 'starter';
+            $planInfo = Database::getPlanDetails($userPlan);
+            $maxAllowedAccounts = (int)($uRow['max_accounts'] ?? $planInfo['accounts'] ?? 1);
+
+            // Count currently active accounts
+            $stmtCur = $pdo->prepare("SELECT COUNT(*) FROM accounts WHERE user_id = :uid AND is_active = 1");
+            $stmtCur->execute([':uid' => $userId]);
+            $curActiveCount = (int)$stmtCur->fetchColumn();
 
             foreach ($pages as $page) {
                 $pageId = $page['id'];
@@ -266,18 +280,8 @@ if (!empty($error)) {
                     $primaryIgId = $igId;
                 }
 
-                // Add Facebook Page to display list
-                $detectedAccounts[] = [
-                    'id' => $pageId,
-                    'name' => $pageName,
-                    'platform' => 'facebook',
-                    'handle' => 'fb_' . $pageId,
-                    'avatar' => $pageAvatar,
-                    'is_ig' => false
-                ];
-
                 // 1. Upsert Facebook Page account
-                $stmtCheckFb = $pdo->prepare("SELECT id FROM accounts WHERE user_id = :uid AND page_id = :pid AND platform = 'facebook' LIMIT 1");
+                $stmtCheckFb = $pdo->prepare("SELECT id, is_active FROM accounts WHERE user_id = :uid AND page_id = :pid AND platform = 'facebook' LIMIT 1");
                 $stmtCheckFb->execute([':uid' => $userId, ':pid' => $pageId]);
                 $existingFb = $stmtCheckFb->fetch();
 
@@ -293,7 +297,18 @@ if (!empty($error)) {
                         ':avatar' => $pageAvatar,
                         ':id' => $existingFb['id']
                     ]);
-                } else {
+                    if ((int)$existingFb['is_active'] === 0) {
+                        $curActiveCount++;
+                    }
+                    $detectedAccounts[] = [
+                        'id' => $pageId,
+                        'name' => $pageName,
+                        'platform' => 'facebook',
+                        'handle' => 'fb_' . $pageId,
+                        'avatar' => $pageAvatar,
+                        'is_ig' => false
+                    ];
+                } elseif ($curActiveCount < $maxAllowedAccounts) {
                     $stmtIns = $pdo->prepare("
                         INSERT INTO accounts (user_id, platform, account_name, account_handle, page_id, avatar_url, access_token, is_active)
                         VALUES (:uid, 'facebook', :name, :handle, :pid, :avatar, :token, 1)
@@ -306,22 +321,24 @@ if (!empty($error)) {
                         ':avatar' => $pageAvatar,
                         ':token' => $pageToken
                     ]);
+                    $curActiveCount++;
+                    $detectedAccounts[] = [
+                        'id' => $pageId,
+                        'name' => $pageName,
+                        'platform' => 'facebook',
+                        'handle' => 'fb_' . $pageId,
+                        'avatar' => $pageAvatar,
+                        'is_ig' => false
+                    ];
+                } else {
+                    $skippedAccountsCount++;
                 }
 
                 // 2. Upsert Instagram Business Account if linked to this Page
                 if (!empty($igId)) {
                     $igDisplayName = $igAccount['name'] ?? ($igUsername ? "@{$igUsername}" : $pageName);
 
-                    // Add Instagram account to display list
-                    $detectedAccounts[] = [
-                        'id' => $igId,
-                        'name' => $igDisplayName,
-                        'platform' => 'instagram',
-                        'handle' => $igUsername ? "@{$igUsername}" : '@ig_' . $igId,
-                        'is_ig' => true
-                    ];
-
-                    $stmtCheckIg = $pdo->prepare("SELECT id FROM accounts WHERE user_id = :uid AND page_id = :igid AND platform = 'instagram' LIMIT 1");
+                    $stmtCheckIg = $pdo->prepare("SELECT id, is_active FROM accounts WHERE user_id = :uid AND page_id = :igid AND platform = 'instagram' LIMIT 1");
                     $stmtCheckIg->execute([':uid' => $userId, ':igid' => $igId]);
                     $existingIg = $stmtCheckIg->fetch();
 
@@ -338,7 +355,17 @@ if (!empty($error)) {
                             ':avatar' => $igAvatar,
                             ':id' => $existingIg['id']
                         ]);
-                    } else {
+                        if ((int)$existingIg['is_active'] === 0) {
+                            $curActiveCount++;
+                        }
+                        $detectedAccounts[] = [
+                            'id' => $igId,
+                            'name' => $igDisplayName,
+                            'platform' => 'instagram',
+                            'handle' => $igUsername ? "@{$igUsername}" : '@ig_' . $igId,
+                            'is_ig' => true
+                        ];
+                    } elseif ($curActiveCount < $maxAllowedAccounts) {
                         $stmtInsIg = $pdo->prepare("
                             INSERT INTO accounts (user_id, platform, account_name, account_handle, page_id, avatar_url, access_token, is_active)
                             VALUES (:uid, 'instagram', :name, :handle, :igid, :avatar, :token, 1)
@@ -351,6 +378,16 @@ if (!empty($error)) {
                             ':avatar' => $igAvatar,
                             ':token' => $pageToken
                         ]);
+                        $curActiveCount++;
+                        $detectedAccounts[] = [
+                            'id' => $igId,
+                            'name' => $igDisplayName,
+                            'platform' => 'instagram',
+                            'handle' => $igUsername ? "@{$igUsername}" : '@ig_' . $igId,
+                            'is_ig' => true
+                        ];
+                    } else {
+                        $skippedAccountsCount++;
                     }
                 }
             }
@@ -381,7 +418,11 @@ if (!empty($error)) {
             }
 
             $status = 'success';
-            $message = '¡Conexión oficial OAuth 2.0 completada exitosamente con Meta! Tus Páginas, cuentas de Instagram y publicaciones en vivo han sido sincronizadas.';
+            if ($skippedAccountsCount > 0) {
+                $message = "¡Conexión completada! Se vincularon {$curActiveCount} cuenta(s) permitidas en tu {$planInfo['name']}. Has alcanzado el límite de tu plan ({$maxAllowedAccounts} cuentas). Para activar las {$skippedAccountsCount} cuenta(s) adicionales, mejora tu suscripción.";
+            } else {
+                $message = '¡Conexión oficial OAuth 2.0 completada exitosamente con Meta! Tus Páginas, cuentas de Instagram y publicaciones en vivo han sido sincronizadas.';
+            }
         }
 
     } catch (Throwable $e) {
@@ -494,28 +535,86 @@ if (!empty($error)) {
         </div>
       <?php endif; ?>
 
-      <a href="dashboard.php" class="btn-return">
-        <span>Ir al Panel de Control</span>
-        <span>→</span>
-      </a>
+      <div id="popup-notice" style="display: none; margin-top: 20px; font-size: 0.85rem; color: #a5b4fc; background: rgba(99, 102, 241, 0.12); padding: 10px 16px; border-radius: 10px; border: 1px solid rgba(99, 102, 241, 0.25);">
+        ✨ Conexión completada. Esta ventana se cerrará automáticamente en <strong id="popup-timer" style="color: #fff;">2</strong>s...
+      </div>
+
+      <div style="display: flex; justify-content: center; gap: 12px; margin-top: 20px; flex-wrap: wrap;">
+        <button type="button" id="btn-close-popup" onclick="window.close()" class="btn-return" style="display: none; cursor: pointer; border: none;">
+          <span>Cerrar Ventana</span>
+          <span>✓</span>
+        </button>
+        <a href="dashboard.php" id="btn-return-dashboard" class="btn-return" style="margin-top: 0;">
+          <span>Ir al Panel de Control</span>
+          <span>→</span>
+        </a>
+      </div>
 
     <?php elseif ($status === 'warning'): ?>
       <div class="status-icon warning">⚠️</div>
       <h2 style="font-size: 1.6rem; font-weight: 800; color: #fff; margin-bottom: 12px;">Autenticado con Permisos Parciales</h2>
       <p style="font-size: 0.92rem; color: #cbd5e1; line-height: 1.6; margin-bottom: 24px;"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></p>
-      <a href="dashboard.php" class="btn-return">
-        <span>Volver a la Configuración</span>
-      </a>
+      <div style="display: flex; justify-content: center; gap: 12px; margin-top: 20px;">
+        <button type="button" id="btn-close-popup" onclick="window.close()" class="btn-return" style="display: none; cursor: pointer; border: none;">
+          <span>Cerrar Ventana</span>
+        </button>
+        <a href="dashboard.php" class="btn-return" style="margin-top: 0;">
+          <span>Volver a la Configuración</span>
+        </a>
+      </div>
 
     <?php else: ?>
       <div class="status-icon error">✕</div>
       <h2 style="font-size: 1.6rem; font-weight: 800; color: #fff; margin-bottom: 12px;">Error en la Conexión</h2>
       <p style="font-size: 0.92rem; color: #fca5a5; line-height: 1.6; margin-bottom: 24px;"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></p>
-      <a href="dashboard.php" class="btn-return" style="background: #374151;">
-        <span>Volver a Intentar</span>
-      </a>
+      <div style="display: flex; justify-content: center; gap: 12px; margin-top: 20px;">
+        <button type="button" id="btn-close-popup" onclick="window.close()" class="btn-return" style="display: none; cursor: pointer; border: none; background: #374151;">
+          <span>Cerrar Ventana</span>
+        </button>
+        <a href="dashboard.php" class="btn-return" style="background: #374151; margin-top: 0;">
+          <span>Volver a Intentar</span>
+        </a>
+      </div>
     <?php endif; ?>
   </div>
 
+  <script>
+    (function() {
+      const isPopup = window.opener && !window.opener.closed;
+      if (isPopup) {
+        // Show close buttons in popup mode
+        document.querySelectorAll('#btn-close-popup').forEach(btn => btn.style.display = 'inline-flex');
+        
+        // Notify parent window via postMessage
+        try {
+          window.opener.postMessage({
+            type: 'META_OAUTH_RESULT',
+            status: '<?= $status ?>',
+            message: <?= json_encode($message, JSON_UNESCAPED_UNICODE) ?>,
+            accountsCount: <?= count($detectedAccounts) ?>
+          }, '*');
+        } catch (err) {
+          console.warn('postMessage to opener failed:', err);
+        }
+
+        <?php if ($status === 'success'): ?>
+        // Show auto-close notice and countdown
+        const noticeEl = document.getElementById('popup-notice');
+        const timerEl = document.getElementById('popup-timer');
+        if (noticeEl) noticeEl.style.display = 'block';
+
+        let secondsLeft = 2;
+        const countdownInterval = setInterval(function() {
+          secondsLeft--;
+          if (timerEl) timerEl.textContent = secondsLeft;
+          if (secondsLeft <= 0) {
+            clearInterval(countdownInterval);
+            window.close();
+          }
+        }, 1000);
+        <?php endif; ?>
+      }
+    })();
+  </script>
 </body>
 </html>

@@ -594,6 +594,27 @@ if (Auth::check()) {
 
     <!-- Form 2: Register -->
     <form id="form-register" style="display: none;" onsubmit="AuthUI.submitRegister(event)" novalidate>
+      
+      <!-- Selected Plan Banner & Selector -->
+      <div class="auth-plan-selector" style="background: rgba(124, 58, 237, 0.08); border: 1px solid rgba(124, 58, 237, 0.25); border-radius: var(--radius-sm); padding: 14px 16px; margin-bottom: 18px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <span style="font-size: 0.76rem; font-weight: 700; color: #a78bfa; text-transform: uppercase; letter-spacing: 0.5px;">Plan Seleccionado</span>
+          <span id="plan-badge-price" style="font-size: 0.8rem; font-weight: 800; color: #34d399;">0 € / mes gratis</span>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+          <div>
+            <div id="plan-display-name" style="font-size: 0.95rem; font-weight: 800; color: #fff;">Plan Inicial</div>
+            <div id="plan-display-features" style="font-size: 0.75rem; color: #94a3b8; margin-top: 2px;">1 cuenta conectada • 50.000 tokens/mes</div>
+          </div>
+          <select id="reg-plan-select" onchange="AuthUI.onPlanChange(this.value)" style="background: #111827; border: 1px solid rgba(124, 58, 237, 0.4); color: #fff; border-radius: 8px; padding: 6px 10px; font-size: 0.78rem; font-weight: 700; cursor: pointer; outline: none;">
+            <option value="starter">Plan Inicial (1 cuenta)</option>
+            <option value="creator">Plan Creador (2 cuentas)</option>
+            <option value="pro">Pro / Negocio (5 cuentas)</option>
+            <option value="agency">Plan Agencia (20 cuentas)</option>
+          </select>
+        </div>
+      </div>
+
       <div class="auth-form-group">
         <label for="reg-name">Nombre Completo o de Marca:</label>
         <div class="auth-input-wrapper">
@@ -708,6 +729,42 @@ if (Auth::check()) {
 <script>
 const AuthUI = {
   activeTab: 'login',
+  currentPlan: 'starter',
+  plansData: {
+    starter: { name: 'Plan Inicial', accounts: 1, tokens: '50.000', price: '0 € / mes gratis', badge: 'Gratis' },
+    creator: { name: 'Plan Creador', accounts: 2, tokens: '150.000', price: '9.99 € / mes', badge: 'Económico' },
+    pro:     { name: 'Pro / Negocio', accounts: 5, tokens: '500.000', price: '20.99 € / mes', badge: '⭐ Recomendado' },
+    agency:  { name: 'Plan Agencia', accounts: 20, tokens: '2.000.000', price: '79.99 € / mes', badge: 'Escala' }
+  },
+
+  setPlan(planKey) {
+    const key = (planKey || 'starter').toLowerCase();
+    if (this.plansData[key]) {
+      this.currentPlan = key;
+      const select = document.getElementById('reg-plan-select');
+      if (select) select.value = key;
+      this.updatePlanDisplay();
+    }
+  },
+
+  onPlanChange(planKey) {
+    this.setPlan(planKey);
+  },
+
+  updatePlanDisplay() {
+    const p = this.plansData[this.currentPlan] || this.plansData.starter;
+    const nameEl = document.getElementById('plan-display-name');
+    const featEl = document.getElementById('plan-display-features');
+    const priceEl = document.getElementById('plan-badge-price');
+    const btnSubmit = document.getElementById('btn-submit-register');
+
+    if (nameEl) nameEl.textContent = p.name;
+    if (featEl) featEl.textContent = `${p.accounts} ${p.accounts === 1 ? 'cuenta conectada' : 'cuentas conectadas'} • ${p.tokens} tokens/mes`;
+    if (priceEl) priceEl.textContent = p.price;
+    if (btnSubmit) {
+      btnSubmit.innerHTML = `<span>Crear Cuenta con ${p.name} 🚀</span>`;
+    }
+  },
 
   getCsrfToken() {
     const meta = document.querySelector('meta[name="csrf-token"]');
@@ -991,7 +1048,8 @@ const AuthUI = {
           action: 'register',
           name: name,
           email: email,
-          password: password
+          password: password,
+          plan: this.currentPlan
         })
       });
 
@@ -1084,11 +1142,19 @@ const AuthUI = {
   }
 };
 
-// Check if URL has tab=forgot parameter
+// Check if URL has tab or plan parameters
 window.addEventListener('DOMContentLoaded', () => {
   const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.get('tab') === 'forgot') {
+  const tabParam = urlParams.get('tab');
+  const planParam = urlParams.get('plan');
+
+  if (tabParam === 'forgot') {
     AuthUI.switchTab('forgot');
+  } else if (tabParam === 'register' || planParam) {
+    AuthUI.switchTab('register');
+    if (planParam) {
+      AuthUI.setPlan(planParam);
+    }
   }
 });
 </script>
