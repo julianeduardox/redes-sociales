@@ -302,12 +302,108 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
       background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%);
       box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);
     }
+
+    /* ========================================================================= */
+    /* MEGA MENU DROPDOWN SYSTEM (Gamma.app / Stripe style)                      */
+    /* ========================================================================= */
+    .mega-menu-item {
+      position: relative;
+    }
+    .mega-menu-trigger {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.75rem;
+      font-weight: 600;
+      color: #475569;
+      transition: all 0.15s ease-in-out;
+      cursor: pointer;
+      user-select: none;
+    }
+    .mega-menu-trigger:hover,
+    .mega-menu-item:hover .mega-menu-trigger,
+    .mega-menu-item:focus-within .mega-menu-trigger {
+      color: #7C3AED;
+      background-color: rgba(241, 245, 249, 0.85);
+    }
+    .mega-chevron {
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .mega-menu-item:hover .mega-chevron,
+    .mega-menu-item:focus-within .mega-chevron {
+      transform: rotate(180deg);
+      color: #7C3AED;
+    }
+    .mega-dropdown-panel {
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%) translateY(10px);
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 60;
+    }
+    /* Invisible bridge to prevent hover loss */
+    .mega-dropdown-panel::before {
+      content: '';
+      position: absolute;
+      top: -14px;
+      left: 0;
+      right: 0;
+      height: 14px;
+    }
+    .mega-menu-item:hover .mega-dropdown-panel,
+    .mega-menu-item:focus-within .mega-dropdown-panel {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transform: translateX(-50%) translateY(0);
+    }
+    .mega-card-box {
+      background: rgba(255, 255, 255, 0.98);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.16), 0 0 0 1px rgba(226, 232, 240, 0.5);
+      border-radius: 1.25rem;
+    }
+    .mega-item-link {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.85rem;
+      padding: 0.75rem 0.85rem;
+      border-radius: 0.875rem;
+      transition: all 0.15s ease-in-out;
+      text-decoration: none;
+    }
+    .mega-item-link:hover {
+      background-color: rgba(248, 250, 252, 0.95);
+      transform: translateX(3px);
+    }
+    .mega-icon-wrap {
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 1.25rem;
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .mega-item-link:hover .mega-icon-wrap {
+      transform: scale(1.1);
+      box-shadow: 0 4px 12px rgba(124, 58, 237, 0.15);
+    }
   </style>
 </head>
 <body class="antialiased selection:bg-brand-500 selection:text-white">
 
   <!-- ========================================================================= -->
-  <!-- 1. NAVBAR FIJA RESPONSIVA (DESKTOP + MOBILE DRAWER) -->
+  <!-- 1. NAVBAR FIJA RESPONSIVA (MEGA MENUS DESKTOP + MOBILE ACCORDIONS) -->
   <!-- ========================================================================= -->
   <header class="fixed top-0 left-0 right-0 z-50 glass-nav transition-all duration-300">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-3 sm:gap-6">
@@ -324,18 +420,264 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         </span>
       </a>
 
-      <!-- Desktop Navigation Links with generous spacing -->
+      <!-- Desktop Navigation Links with Gamma-style Mega Menus -->
       <nav class="hidden lg:flex items-center gap-1 xl:gap-2 text-[13px] xl:text-sm font-semibold text-slate-600">
-        <a href="#funciones" data-i18n="nav_products" class="px-2.5 py-2 rounded-xl whitespace-nowrap hover:text-brand-600 hover:bg-slate-100/70 transition-colors">Funciones</a>
-        <a href="#como-empezar" data-i18n="nav_steps" class="px-2.5 py-2 rounded-xl whitespace-nowrap hover:text-brand-600 hover:bg-slate-100/70 transition-colors">Cómo empezar</a>
+        
+        <!-- 1. MEGA MENU: PRODUCTO -->
+        <div class="mega-menu-item">
+          <button type="button" class="mega-menu-trigger">
+            <span data-i18n="nav_menu_product">Producto</span>
+            <svg class="w-3.5 h-3.5 text-slate-400 mega-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
+            </svg>
+          </button>
+
+          <!-- Dropdown Panel (680px) -->
+          <div class="mega-dropdown-panel pt-2">
+            <div class="mega-card-box p-5 w-[680px] grid grid-cols-12 gap-5">
+              
+              <!-- Left: Features (col-span-7) -->
+              <div class="col-span-7 space-y-1">
+                <div class="text-[11px] font-black uppercase tracking-wider text-slate-400 px-3 pb-1">
+                  Funciones Clave
+                </div>
+                
+                <a href="#funciones" class="mega-item-link group/item">
+                  <div class="mega-icon-wrap bg-purple-50 text-purple-600 border border-purple-100">📥</div>
+                  <div>
+                    <div class="text-sm font-bold text-slate-900 group-hover/item:text-brand-600 transition-colors flex items-center gap-1.5" data-i18n="nav_mega_feat1_title">
+                      Bandeja Unificada
+                    </div>
+                    <div class="text-xs text-slate-500 font-normal leading-relaxed" data-i18n="nav_mega_feat1_desc">
+                      Gestiona Instagram y Facebook en tiempo real desde un solo lugar.
+                    </div>
+                  </div>
+                </a>
+
+                <a href="#funciones" class="mega-item-link group/item">
+                  <div class="mega-icon-wrap bg-indigo-50 text-indigo-600 border border-indigo-100">🎭</div>
+                  <div>
+                    <div class="text-sm font-bold text-slate-900 group-hover/item:text-brand-600 transition-colors" data-i18n="nav_mega_feat2_title">
+                      Voz de Marca Calibrada
+                    </div>
+                    <div class="text-xs text-slate-500 font-normal leading-relaxed" data-i18n="nav_mega_feat2_desc">
+                      Respuestas auténticas con datos de tu negocio y anti-alucinación.
+                    </div>
+                  </div>
+                </a>
+
+                <a href="#funciones" class="mega-item-link group/item">
+                  <div class="mega-icon-wrap bg-emerald-50 text-emerald-600 border border-emerald-100">🎯</div>
+                  <div>
+                    <div class="text-sm font-bold text-slate-900 group-hover/item:text-brand-600 transition-colors" data-i18n="nav_mega_feat3_title">
+                      Detección de Leads & Compras
+                    </div>
+                    <div class="text-xs text-slate-500 font-normal leading-relaxed" data-i18n="nav_mega_feat3_desc">
+                      Identifica oportunidades comerciales en comentarios en <180ms.
+                    </div>
+                  </div>
+                </a>
+
+                <a href="#funciones" class="mega-item-link group/item">
+                  <div class="mega-icon-wrap bg-sky-50 text-sky-600 border border-sky-100">⏱️</div>
+                  <div>
+                    <div class="text-sm font-bold text-slate-900 group-hover/item:text-brand-600 transition-colors" data-i18n="nav_mega_feat4_title">
+                      Smart Timing & Antiban
+                    </div>
+                    <div class="text-xs text-slate-500 font-normal leading-relaxed" data-i18n="nav_mega_feat4_desc">
+                      Publica en la ventana de oro oficial del algoritmo de Meta.
+                    </div>
+                  </div>
+                </a>
+              </div>
+
+              <!-- Right: Interactive Highlight Box (col-span-5) -->
+              <div class="col-span-5 flex flex-col justify-between p-4 rounded-2xl bg-gradient-to-br from-purple-50/80 via-indigo-50/50 to-slate-50 border border-purple-100/80">
+                <div>
+                  <div class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-purple-100/90 text-purple-700 text-[10px] font-black uppercase tracking-wider mb-3">
+                    <span class="w-1.5 h-1.5 rounded-full bg-brand-500 live-dot"></span>
+                    <span>Playground</span>
+                  </div>
+                  <h4 class="text-sm font-black text-slate-900 mb-1.5" data-i18n="nav_mega_card_sim_title">
+                    Simulador de IA en Vivo
+                  </h4>
+                  <p class="text-xs text-slate-600 font-normal leading-relaxed mb-4" data-i18n="nav_mega_card_sim_desc">
+                    Prueba cómo responde la IA a comentarios de tu audiencia en segundos con datos y tono reales.
+                  </p>
+                </div>
+                <a href="#simulador" class="inline-flex items-center justify-center gap-1.5 w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 shadow-sm transition-all" data-i18n="nav_mega_card_sim_btn">
+                  Probar Simulador →
+                </a>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. MEGA MENU: SOLUCIONES -->
+        <div class="mega-menu-item">
+          <button type="button" class="mega-menu-trigger">
+            <span data-i18n="nav_menu_solutions">Soluciones</span>
+            <svg class="w-3.5 h-3.5 text-slate-400 mega-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
+            </svg>
+          </button>
+
+          <!-- Dropdown Panel (660px) -->
+          <div class="mega-dropdown-panel pt-2">
+            <div class="mega-card-box p-5 w-[660px] grid grid-cols-12 gap-5">
+              
+              <!-- Left: Solutions by Profile (col-span-7) -->
+              <div class="col-span-7 space-y-1">
+                <div class="text-[11px] font-black uppercase tracking-wider text-slate-400 px-3 pb-1">
+                  Por Tipo de Negocio
+                </div>
+                
+                <a href="#por-que-xindro" class="mega-item-link group/item">
+                  <div class="mega-icon-wrap bg-pink-50 text-pink-600 border border-pink-100">🎨</div>
+                  <div>
+                    <div class="text-sm font-bold text-slate-900 group-hover/item:text-brand-600 transition-colors" data-i18n="nav_mega_sol1_title">
+                      Creadores e Influencers
+                    </div>
+                    <div class="text-xs text-slate-500 font-normal leading-relaxed" data-i18n="nav_mega_sol1_desc">
+                      Mantén tu comunidad activa y fidelizada sin pasar horas respondiendo.
+                    </div>
+                  </div>
+                </a>
+
+                <a href="#por-que-xindro" class="mega-item-link group/item">
+                  <div class="mega-icon-wrap bg-blue-50 text-blue-600 border border-blue-100">🏢</div>
+                  <div>
+                    <div class="text-sm font-bold text-slate-900 group-hover/item:text-brand-600 transition-colors" data-i18n="nav_mega_sol2_title">
+                      Agencias & Community Managers
+                    </div>
+                    <div class="text-xs text-slate-500 font-normal leading-relaxed" data-i18n="nav_mega_sol2_desc">
+                      Administra múltiples clientes y marcas con total aislamiento de datos.
+                    </div>
+                  </div>
+                </a>
+
+                <a href="#por-que-xindro" class="mega-item-link group/item">
+                  <div class="mega-icon-wrap bg-amber-50 text-amber-600 border border-amber-100">🛍️</div>
+                  <div>
+                    <div class="text-sm font-bold text-slate-900 group-hover/item:text-brand-600 transition-colors" data-i18n="nav_mega_sol3_title">
+                      Marcas & E-commerce
+                    </div>
+                    <div class="text-xs text-slate-500 font-normal leading-relaxed" data-i18n="nav_mega_sol3_desc">
+                      Convierte dudas en compras y acelera la atención al cliente.
+                    </div>
+                  </div>
+                </a>
+
+                <a href="#por-que-xindro" class="mega-item-link group/item">
+                  <div class="mega-icon-wrap bg-emerald-50 text-emerald-600 border border-emerald-100">🎓</div>
+                  <div>
+                    <div class="text-sm font-bold text-slate-900 group-hover/item:text-brand-600 transition-colors" data-i18n="nav_mega_sol4_title">
+                      Coaches & Infoproductores
+                    </div>
+                    <div class="text-xs text-slate-500 font-normal leading-relaxed" data-i18n="nav_mega_sol4_desc">
+                      Vende formaciones y cursos 24/7 respondiendo preguntas clave.
+                    </div>
+                  </div>
+                </a>
+              </div>
+
+              <!-- Right: ROI Box (col-span-5) -->
+              <div class="col-span-5 flex flex-col justify-between p-4 rounded-2xl bg-gradient-to-br from-emerald-50/70 via-teal-50/40 to-slate-50 border border-emerald-100/80">
+                <div>
+                  <div class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-100/90 text-emerald-800 text-[10px] font-black uppercase tracking-wider mb-3">
+                    <span>Ahorro & ROI</span>
+                  </div>
+                  <h4 class="text-sm font-black text-slate-900 mb-1.5" data-i18n="nav_mega_card_roi_title">
+                    Calculadora de Ahorro
+                  </h4>
+                  <p class="text-xs text-slate-600 font-normal leading-relaxed mb-4" data-i18n="nav_mega_card_roi_desc">
+                    Calcula cuánto tiempo y leads calificados puedes ganar al mes con tu volumen actual.
+                  </p>
+                </div>
+                <a href="#calculadora-roi" class="inline-flex items-center justify-center gap-1.5 w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 shadow-sm transition-all" data-i18n="nav_mega_card_roi_btn">
+                  Calcular Impacto →
+                </a>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. MEGA MENU: EMPRESA -->
+        <div class="mega-menu-item">
+          <button type="button" class="mega-menu-trigger">
+            <span data-i18n="nav_menu_company">Empresa</span>
+            <svg class="w-3.5 h-3.5 text-slate-400 mega-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
+            </svg>
+          </button>
+
+          <!-- Dropdown Panel (520px) -->
+          <div class="mega-dropdown-panel pt-2">
+            <div class="mega-card-box p-5 w-[520px] space-y-1">
+              <div class="text-[11px] font-black uppercase tracking-wider text-slate-400 px-3 pb-1">
+                Conoce XINDRO
+              </div>
+
+              <a href="about.php" class="mega-item-link group/item">
+                <div class="mega-icon-wrap bg-purple-50 text-purple-600 border border-purple-100">🏛️</div>
+                <div class="flex-1">
+                  <div class="text-sm font-bold text-slate-900 group-hover/item:text-brand-600 transition-colors flex items-center gap-2">
+                    <span data-i18n="nav_mega_comp1_title">Acerca de XINDRO</span>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-brand-100 text-brand-700 tracking-wide">Nuevo</span>
+                  </div>
+                  <div class="text-xs text-slate-500 font-normal leading-relaxed" data-i18n="nav_mega_comp1_desc">
+                    Nuestra visión, misión, tecnología de IA y equipo.
+                  </div>
+                </div>
+              </a>
+
+              <a href="privacy-policy.php" class="mega-item-link group/item">
+                <div class="mega-icon-wrap bg-emerald-50 text-emerald-600 border border-emerald-100">🛡️</div>
+                <div>
+                  <div class="text-sm font-bold text-slate-900 group-hover/item:text-brand-600 transition-colors" data-i18n="nav_mega_comp2_title">
+                    Seguridad & Privacidad
+                  </div>
+                  <div class="text-xs text-slate-500 font-normal leading-relaxed" data-i18n="nav_mega_comp2_desc">
+                    Cumplimiento estricto GDPR, Meta API oficial y cifrado de datos.
+                  </div>
+                </div>
+              </a>
+
+              <a href="terms-of-service.php" class="mega-item-link group/item">
+                <div class="mega-icon-wrap bg-slate-50 text-slate-700 border border-slate-200">📜</div>
+                <div>
+                  <div class="text-sm font-bold text-slate-900 group-hover/item:text-brand-600 transition-colors" data-i18n="nav_mega_comp3_title">
+                    Términos del Servicio
+                  </div>
+                  <div class="text-xs text-slate-500 font-normal leading-relaxed" data-i18n="nav_mega_comp3_desc">
+                    Transparencia legal, garantías y condiciones de uso.
+                  </div>
+                </div>
+              </a>
+
+              <a href="#faq" class="mega-item-link group/item">
+                <div class="mega-icon-wrap bg-amber-50 text-amber-600 border border-amber-100">❓</div>
+                <div>
+                  <div class="text-sm font-bold text-slate-900 group-hover/item:text-brand-600 transition-colors" data-i18n="nav_mega_comp4_title">
+                    Preguntas Frecuentes
+                  </div>
+                  <div class="text-xs text-slate-500 font-normal leading-relaxed" data-i18n="nav_mega_comp4_desc">
+                    Respuestas claras sobre funcionamiento, límites y planes.
+                  </div>
+                </div>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Direct Nav Links -->
         <a href="#simulador" data-i18n="nav_simulator" class="px-2.5 py-2 rounded-xl whitespace-nowrap hover:text-brand-600 hover:bg-slate-100/70 transition-colors flex items-center gap-1.5">
           <span>Simulador</span>
           <span class="inline-block w-2 h-2 rounded-full bg-brand-500 live-dot"></span>
         </a>
-        <a href="#calculadora-roi" data-i18n="nav_roi" class="px-2.5 py-2 rounded-xl whitespace-nowrap hover:text-brand-600 hover:bg-slate-100/70 transition-colors">Calculadora</a>
-        <a href="#por-que-xindro" data-i18n="nav_why" class="px-2.5 py-2 rounded-xl whitespace-nowrap hover:text-brand-600 hover:bg-slate-100/70 transition-colors">¿Por qué Xindro?</a>
         <a href="#precios" data-i18n="nav_pricing" class="px-2.5 py-2 rounded-xl whitespace-nowrap hover:text-brand-600 hover:bg-slate-100/70 transition-colors">Precios</a>
-        <a href="#faq" data-i18n="nav_faq" class="px-2.5 py-2 rounded-xl whitespace-nowrap hover:text-brand-600 hover:bg-slate-100/70 transition-colors">FAQ</a>
       </nav>
 
       <!-- Right Controls: Language Selector & Auth CTAs & Mobile Toggle -->
@@ -394,43 +736,134 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
 
     </div>
 
-    <!-- Mobile Slide-Down Navigation Menu -->
-    <div id="mobile-nav-drawer" class="lg:hidden hidden bg-white/95 backdrop-blur-2xl border-b border-slate-200 shadow-2xl px-6 py-6 transition-all">
-      <div class="flex flex-col space-y-3 font-semibold text-slate-700 text-sm">
-        <a href="#funciones" onclick="MobileNav.close()" data-i18n="nav_products" class="p-2.5 rounded-xl hover:bg-brand-50 hover:text-brand-700 transition-colors flex items-center justify-between">
-          <span>⚡ Funciones y Beneficios</span>
-          <span class="text-slate-400">→</span>
+    <!-- Mobile Slide-Down Navigation Menu with Collapsible Accordions -->
+    <div id="mobile-nav-drawer" class="lg:hidden hidden bg-white/98 backdrop-blur-2xl border-b border-slate-200 shadow-2xl px-5 py-6 transition-all max-h-[85vh] overflow-y-auto">
+      <div class="flex flex-col space-y-2.5 text-slate-700 text-sm">
+        
+        <!-- Accordion: Producto -->
+        <div class="border border-slate-100 rounded-2xl bg-slate-50/70 overflow-hidden">
+          <button type="button" onclick="MobileNav.toggleAccordion('prod')" class="w-full px-4 py-3 font-bold text-slate-800 flex items-center justify-between hover:bg-slate-100/80 transition-colors">
+            <span class="flex items-center gap-2">
+              <span class="text-base">⚡</span>
+              <span data-i18n="nav_menu_product">Producto</span>
+            </span>
+            <svg id="mob-acc-icon-prod" class="w-4 h-4 text-slate-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
+            </svg>
+          </button>
+          <div id="mob-acc-content-prod" class="hidden px-4 pb-3 pt-1 space-y-2 text-xs border-t border-slate-100">
+            <a href="#funciones" onclick="MobileNav.close()" class="flex items-center gap-2.5 py-2 px-2.5 rounded-xl hover:bg-white text-slate-700 font-semibold transition-colors">
+              <span class="text-sm">📥</span>
+              <span data-i18n="nav_mega_feat1_title">Bandeja Unificada</span>
+            </a>
+            <a href="#funciones" onclick="MobileNav.close()" class="flex items-center gap-2.5 py-2 px-2.5 rounded-xl hover:bg-white text-slate-700 font-semibold transition-colors">
+              <span class="text-sm">🎭</span>
+              <span data-i18n="nav_mega_feat2_title">Voz de Marca Calibrada</span>
+            </a>
+            <a href="#funciones" onclick="MobileNav.close()" class="flex items-center gap-2.5 py-2 px-2.5 rounded-xl hover:bg-white text-slate-700 font-semibold transition-colors">
+              <span class="text-sm">🎯</span>
+              <span data-i18n="nav_mega_feat3_title">Detección de Leads</span>
+            </a>
+            <a href="#funciones" onclick="MobileNav.close()" class="flex items-center gap-2.5 py-2 px-2.5 rounded-xl hover:bg-white text-slate-700 font-semibold transition-colors">
+              <span class="text-sm">⏱️</span>
+              <span data-i18n="nav_mega_feat4_title">Smart Timing & Antiban</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Accordion: Soluciones -->
+        <div class="border border-slate-100 rounded-2xl bg-slate-50/70 overflow-hidden">
+          <button type="button" onclick="MobileNav.toggleAccordion('sol')" class="w-full px-4 py-3 font-bold text-slate-800 flex items-center justify-between hover:bg-slate-100/80 transition-colors">
+            <span class="flex items-center gap-2">
+              <span class="text-base">💼</span>
+              <span data-i18n="nav_menu_solutions">Soluciones</span>
+            </span>
+            <svg id="mob-acc-icon-sol" class="w-4 h-4 text-slate-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
+            </svg>
+          </button>
+          <div id="mob-acc-content-sol" class="hidden px-4 pb-3 pt-1 space-y-2 text-xs border-t border-slate-100">
+            <a href="#por-que-xindro" onclick="MobileNav.close()" class="flex items-center gap-2.5 py-2 px-2.5 rounded-xl hover:bg-white text-slate-700 font-semibold transition-colors">
+              <span class="text-sm">🎨</span>
+              <span data-i18n="nav_mega_sol1_title">Para Creadores e Influencers</span>
+            </a>
+            <a href="#por-que-xindro" onclick="MobileNav.close()" class="flex items-center gap-2.5 py-2 px-2.5 rounded-xl hover:bg-white text-slate-700 font-semibold transition-colors">
+              <span class="text-sm">🏢</span>
+              <span data-i18n="nav_mega_sol2_title">Para Agencias & CMs</span>
+            </a>
+            <a href="#por-que-xindro" onclick="MobileNav.close()" class="flex items-center gap-2.5 py-2 px-2.5 rounded-xl hover:bg-white text-slate-700 font-semibold transition-colors">
+              <span class="text-sm">🛍️</span>
+              <span data-i18n="nav_mega_sol3_title">Para Marcas & E-commerce</span>
+            </a>
+            <a href="#por-que-xindro" onclick="MobileNav.close()" class="flex items-center gap-2.5 py-2 px-2.5 rounded-xl hover:bg-white text-slate-700 font-semibold transition-colors">
+              <span class="text-sm">🎓</span>
+              <span data-i18n="nav_mega_sol4_title">Para Coaches & Educadores</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Accordion: Empresa -->
+        <div class="border border-slate-100 rounded-2xl bg-slate-50/70 overflow-hidden">
+          <button type="button" onclick="MobileNav.toggleAccordion('emp')" class="w-full px-4 py-3 font-bold text-slate-800 flex items-center justify-between hover:bg-slate-100/80 transition-colors">
+            <span class="flex items-center gap-2">
+              <span class="text-base">🏛️</span>
+              <span data-i18n="nav_menu_company">Empresa</span>
+            </span>
+            <svg id="mob-acc-icon-emp" class="w-4 h-4 text-slate-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
+            </svg>
+          </button>
+          <div id="mob-acc-content-emp" class="hidden px-4 pb-3 pt-1 space-y-2 text-xs border-t border-slate-100">
+            <a href="about.php" class="flex items-center justify-between py-2 px-2.5 rounded-xl hover:bg-white text-slate-700 font-semibold transition-colors">
+              <span class="flex items-center gap-2.5">
+                <span class="text-sm">✨</span>
+                <span data-i18n="nav_mega_comp1_title">Acerca de XINDRO</span>
+              </span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-brand-100 text-brand-700">Nuevo</span>
+            </a>
+            <a href="privacy-policy.php" class="flex items-center gap-2.5 py-2 px-2.5 rounded-xl hover:bg-white text-slate-700 font-semibold transition-colors">
+              <span class="text-sm">🛡️</span>
+              <span data-i18n="nav_mega_comp2_title">Seguridad & Privacidad</span>
+            </a>
+            <a href="terms-of-service.php" class="flex items-center gap-2.5 py-2 px-2.5 rounded-xl hover:bg-white text-slate-700 font-semibold transition-colors">
+              <span class="text-sm">📜</span>
+              <span data-i18n="nav_mega_comp3_title">Términos del Servicio</span>
+            </a>
+            <a href="#faq" onclick="MobileNav.close()" class="flex items-center gap-2.5 py-2 px-2.5 rounded-xl hover:bg-white text-slate-700 font-semibold transition-colors">
+              <span class="text-sm">❓</span>
+              <span data-i18n="nav_mega_comp4_title">Preguntas Frecuentes</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Direct Links -->
+        <a href="#simulador" onclick="MobileNav.close()" class="p-3 rounded-2xl hover:bg-slate-100 font-bold text-slate-800 transition-colors flex items-center justify-between">
+          <span class="flex items-center gap-2.5">
+            <span class="text-base">✨</span>
+            <span data-i18n="nav_simulator">Simulador en Vivo</span>
+          </span>
+          <span class="w-2.5 h-2.5 rounded-full bg-brand-500 live-dot"></span>
         </a>
-        <a href="#como-empezar" onclick="MobileNav.close()" data-i18n="nav_steps" class="p-2.5 rounded-xl hover:bg-brand-50 hover:text-brand-700 transition-colors flex items-center justify-between">
-          <span>🚀 Cómo empezar en 3 pasos</span>
-          <span class="text-slate-400">→</span>
-        </a>
-        <a href="#simulador" onclick="MobileNav.close()" data-i18n="nav_simulator" class="p-2.5 rounded-xl hover:bg-brand-50 hover:text-brand-700 transition-colors flex items-center justify-between">
-          <span class="flex items-center gap-2">
-            <span>✨ Simulador en Vivo</span>
-            <span class="w-2 h-2 rounded-full bg-brand-500 live-dot"></span>
+
+        <a href="#calculadora-roi" onclick="MobileNav.close()" class="p-3 rounded-2xl hover:bg-slate-100 font-bold text-slate-800 transition-colors flex items-center justify-between">
+          <span class="flex items-center gap-2.5">
+            <span class="text-base">🧮</span>
+            <span data-i18n="nav_roi">Calculadora de Ahorro</span>
           </span>
           <span class="text-slate-400">→</span>
         </a>
-        <a href="#calculadora-roi" onclick="MobileNav.close()" data-i18n="nav_roi" class="p-2.5 rounded-xl hover:bg-brand-50 hover:text-brand-700 transition-colors flex items-center justify-between">
-          <span>🧮 Calculadora de Ahorro</span>
+
+        <a href="#precios" onclick="MobileNav.close()" class="p-3 rounded-2xl hover:bg-slate-100 font-bold text-slate-800 transition-colors flex items-center justify-between">
+          <span class="flex items-center gap-2.5">
+            <span class="text-base">💎</span>
+            <span data-i18n="nav_pricing">Precios y Planes</span>
+          </span>
           <span class="text-slate-400">→</span>
         </a>
-        <a href="#por-que-xindro" onclick="MobileNav.close()" data-i18n="nav_why" class="p-2.5 rounded-xl hover:bg-brand-50 hover:text-brand-700 transition-colors flex items-center justify-between">
-          <span>🛡️ ¿Por qué Xindro?</span>
-          <span class="text-slate-400">→</span>
-        </a>
-        <a href="#precios" onclick="MobileNav.close()" data-i18n="nav_pricing" class="p-2.5 rounded-xl hover:bg-brand-50 hover:text-brand-700 transition-colors flex items-center justify-between">
-          <span>💎 Precios y Planes</span>
-          <span class="text-slate-400">→</span>
-        </a>
-        <a href="#faq" onclick="MobileNav.close()" data-i18n="nav_faq" class="p-2.5 rounded-xl hover:bg-brand-50 hover:text-brand-700 transition-colors flex items-center justify-between">
-          <span>❓ Preguntas Frecuentes</span>
-          <span class="text-slate-400">→</span>
-        </a>
+
       </div>
 
-      <div class="mt-6 pt-5 border-t border-slate-200 flex flex-col gap-3">
+      <div class="mt-5 pt-4 border-t border-slate-200 flex flex-col gap-2.5">
         <?php if ($isLoggedIn): ?>
           <a href="dashboard.php" class="w-full py-3 rounded-xl text-center font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors">
             <span data-i18n="nav_dashboard">Ir a mi Panel</span> →
@@ -1715,6 +2148,25 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         if (drawer) drawer.classList.add('hidden');
         if (iconOpen) iconOpen.classList.remove('hidden');
         if (iconClose) iconClose.classList.add('hidden');
+      },
+      toggleAccordion(key) {
+        const content = document.getElementById('mob-acc-content-' + key);
+        const icon = document.getElementById('mob-acc-icon-' + key);
+        if (!content) return;
+        const isHidden = content.classList.contains('hidden');
+        
+        // Close other accordions
+        ['prod', 'sol', 'emp'].forEach(k => {
+          const c = document.getElementById('mob-acc-content-' + k);
+          const i = document.getElementById('mob-acc-icon-' + k);
+          if (c) c.classList.add('hidden');
+          if (i) i.style.transform = 'rotate(0deg)';
+        });
+
+        if (isHidden) {
+          content.classList.remove('hidden');
+          if (icon) icon.style.transform = 'rotate(180deg)';
+        }
       }
     };
 
@@ -1789,6 +2241,9 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         es: {
           page_title: "XINDRO — El Sistema Operativo de IA para Creadores de Contenido",
           page_desc: "Convierte los comentarios de Instagram y Facebook en conversaciones que hacen crecer tu negocio con IA contextualizada.",
+          nav_menu_product: "Producto",
+          nav_menu_solutions: "Soluciones",
+          nav_menu_company: "Empresa",
           nav_products: "Funciones",
           nav_steps: "Cómo empezar",
           nav_why: "¿Por qué Xindro?",
@@ -1799,6 +2254,36 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           nav_login: "Iniciar sesión",
           nav_cta: "Comienza gratis",
           nav_dashboard: "Ir a mi Panel",
+          nav_mega_feat1_title: "Bandeja Unificada",
+          nav_mega_feat1_desc: "Gestiona Instagram y Facebook en tiempo real desde un solo lugar.",
+          nav_mega_feat2_title: "Voz de Marca Calibrada",
+          nav_mega_feat2_desc: "Respuestas auténticas con datos de tu negocio y anti-alucinación.",
+          nav_mega_feat3_title: "Detección de Leads & Compras",
+          nav_mega_feat3_desc: "Identifica oportunidades comerciales en comentarios en <180ms.",
+          nav_mega_feat4_title: "Smart Timing & Antiban",
+          nav_mega_feat4_desc: "Publica en la ventana de oro oficial del algoritmo de Meta.",
+          nav_mega_card_sim_title: "Simulador de IA en Vivo",
+          nav_mega_card_sim_desc: "Prueba cómo responde la IA a comentarios de tu audiencia en segundos con datos y tono reales.",
+          nav_mega_card_sim_btn: "Probar Simulador →",
+          nav_mega_sol1_title: "Creadores e Influencers",
+          nav_mega_sol1_desc: "Mantén tu comunidad activa y fidelizada sin pasar horas respondiendo.",
+          nav_mega_sol2_title: "Agencias & Community Managers",
+          nav_mega_sol2_desc: "Administra múltiples clientes y marcas con total aislamiento de datos.",
+          nav_mega_sol3_title: "Marcas & E-commerce",
+          nav_mega_sol3_desc: "Convierte dudas en compras y acelera la atención al cliente.",
+          nav_mega_sol4_title: "Coaches & Infoproductores",
+          nav_mega_sol4_desc: "Vende formaciones y cursos 24/7 respondiendo preguntas clave.",
+          nav_mega_card_roi_title: "Calculadora de Ahorro",
+          nav_mega_card_roi_desc: "Calcula cuánto tiempo y leads calificados puedes ganar al mes con tu volumen actual.",
+          nav_mega_card_roi_btn: "Calcular Impacto →",
+          nav_mega_comp1_title: "Acerca de XINDRO",
+          nav_mega_comp1_desc: "Nuestra visión, misión, tecnología de IA y equipo.",
+          nav_mega_comp2_title: "Seguridad & Privacidad",
+          nav_mega_comp2_desc: "Cumplimiento estricto GDPR, Meta API oficial y cifrado de datos.",
+          nav_mega_comp3_title: "Términos del Servicio",
+          nav_mega_comp3_desc: "Transparencia legal, garantías y condiciones de uso.",
+          nav_mega_comp4_title: "Preguntas Frecuentes",
+          nav_mega_comp4_desc: "Respuestas claras sobre funcionamiento, límites y planes.",
           hero_badge: "El sistema operativo de IA para creadores de contenido y marcas",
           hero_h1_p1: "Convierte los comentarios de Instagram y Facebook",
           hero_h1_p2: "en conversaciones que hacen crecer tu negocio.",
@@ -2003,6 +2488,9 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         en: {
           page_title: "XINDRO — The AI Operating System for Content Creators",
           page_desc: "Turn Instagram and Facebook comments into conversations that grow your business with contextual AI.",
+          nav_menu_product: "Product",
+          nav_menu_solutions: "Solutions",
+          nav_menu_company: "Company",
           nav_products: "Features",
           nav_steps: "How it works",
           nav_why: "Why Xindro?",
@@ -2013,6 +2501,36 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           nav_login: "Log in",
           nav_cta: "Get started free",
           nav_dashboard: "Go to Dashboard",
+          nav_mega_feat1_title: "Unified Multi-Channel Inbox",
+          nav_mega_feat1_desc: "Manage Instagram and Facebook comments in real-time in one place.",
+          nav_mega_feat2_title: "Calibrated Brand Voice",
+          nav_mega_feat2_desc: "Authentic responses grounded in your business facts with anti-hallucination.",
+          nav_mega_feat3_title: "Lead & Purchase Detection",
+          nav_mega_feat3_desc: "Identify high-intent buyer questions in comments in under 180ms.",
+          nav_mega_feat4_title: "Smart Timing & Antiban",
+          nav_mega_feat4_desc: "Post within Meta's golden algorithmic engagement window.",
+          nav_mega_card_sim_title: "Live AI Playground",
+          nav_mega_card_sim_desc: "Test how calibrated AI crafts responses to your community in seconds.",
+          nav_mega_card_sim_btn: "Open Simulator →",
+          nav_mega_sol1_title: "Creators & Influencers",
+          nav_mega_sol1_desc: "Keep your community engaged without spending hours in comment replies.",
+          nav_mega_sol2_title: "Agencies & Community Managers",
+          nav_mega_sol2_desc: "Manage multi-brand clients with isolated knowledge bases.",
+          nav_mega_sol3_title: "Brands & E-commerce",
+          nav_mega_sol3_desc: "Convert product inquiries into sales and speed up support.",
+          nav_mega_sol4_title: "Coaches & Educators",
+          nav_mega_sol4_desc: "Sell courses and programs 24/7 by resolving high-intent questions.",
+          nav_mega_card_roi_title: "Impact Calculator",
+          nav_mega_card_roi_desc: "Calculate how many hours and qualified leads you gain every month.",
+          nav_mega_card_roi_btn: "Calculate Impact →",
+          nav_mega_comp1_title: "About XINDRO",
+          nav_mega_comp1_desc: "Our mission, AI architecture, and engineering philosophy.",
+          nav_mega_comp2_title: "Security & Privacy",
+          nav_mega_comp2_desc: "GDPR compliance, official Meta API, and cryptographic token isolation.",
+          nav_mega_comp3_title: "Terms of Service",
+          nav_mega_comp3_desc: "Legal transparency, usage conditions, and SLA.",
+          nav_mega_comp4_title: "Frequently Asked Questions",
+          nav_mega_comp4_desc: "Clear answers about platform capabilities and pricing.",
           hero_badge: "The AI operating system for content creators and brands",
           hero_h1_p1: "Turn Instagram and Facebook comments",
           hero_h1_p2: "into conversations that grow your business.",
@@ -2217,6 +2735,9 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
         pt: {
           page_title: "XINDRO — O Sistema Operacional de IA para Criadores de Conteúdo",
           page_desc: "Converta comentários do Instagram e Facebook em conversas que fazem seu negócio crescer com IA contextualizada.",
+          nav_menu_product: "Produto",
+          nav_menu_solutions: "Soluções",
+          nav_menu_company: "Empresa",
           nav_products: "Recursos",
           nav_steps: "Como começar",
           nav_why: "Por que a Xindro?",
@@ -2227,6 +2748,36 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], ['es', 'en', 'pt'])) {
           nav_login: "Entrar",
           nav_cta: "Comece grátis",
           nav_dashboard: "Ir ao Painel",
+          nav_mega_feat1_title: "Caixa de Entrada Unificada",
+          nav_mega_feat1_desc: "Centralize interações do Instagram e Facebook em tempo real.",
+          nav_mega_feat2_title: "Tom de Marca Calibrado",
+          nav_mega_feat2_desc: "Respostas autênticas com dados do seu negócio e anti-alucinação.",
+          nav_mega_feat3_title: "Detecção de Leads e Compras",
+          nav_mega_feat3_desc: "Identifique intenção comercial nos comentários em menos de 180ms.",
+          nav_mega_feat4_title: "Smart Timing & Antiban",
+          nav_mega_feat4_desc: "Publique na janela de ouro oficial do algoritmo da Meta.",
+          nav_mega_card_sim_title: "Simulador de IA ao Vivo",
+          nav_mega_card_sim_desc: "Veja como a IA responde aos seus seguidores em tempo real.",
+          nav_mega_card_sim_btn: "Abrir Simulador →",
+          nav_mega_sol1_title: "Criadores e Influenciadores",
+          nav_mega_sol1_desc: "Mantenha sua comunidade engajada sem gastar horas respondendo.",
+          nav_mega_sol2_title: "Agências & Gestores",
+          nav_mega_sol2_desc: "Gerencie múltiplos clientes com isolamento total de marcas.",
+          nav_mega_sol3_title: "Marcas & E-commerce",
+          nav_mega_sol3_desc: "Converta dúvidas em vendas e acelere o suporte ao cliente.",
+          nav_mega_sol4_title: "Coaches & Infoprodutores",
+          nav_mega_sol4_desc: "Venda cursos e mentorias 24/7 respondendo dúvidas estratégicas.",
+          nav_mega_card_roi_title: "Calculadora de Impacto",
+          nav_mega_card_roi_desc: "Calcule quantas horas e leads qualificados você ganha por mês.",
+          nav_mega_card_roi_btn: "Calcular Impacto →",
+          nav_mega_comp1_title: "Sobre a XINDRO",
+          nav_mega_comp1_desc: "Nossa visão, tecnologia de IA e filosofia de engenharia.",
+          nav_mega_comp2_title: "Segurança & Privacidade",
+          nav_mega_comp2_desc: "Conformidade LGPD, API oficial da Meta e criptografia.",
+          nav_mega_comp3_title: "Termos de Serviço",
+          nav_mega_comp3_desc: "Transparência legal, garantias e condições de uso.",
+          nav_mega_comp4_title: "Perguntas Frequentes",
+          nav_mega_comp4_desc: "Respostas claras sobre planos, recursos e funcionamento.",
           hero_badge: "O sistema operacional de IA para criadores de conteúdo e marcas",
           hero_h1_p1: "Converta comentários do Instagram e Facebook",
           hero_h1_p2: "em conversas que fazem seu negócio crescer.",
