@@ -801,6 +801,47 @@ class MetaApiService {
 
                                     $syncedCommentsCount++;
                                     $accNewComments++;
+
+                                    // Automatic Response when Auto-Responder is Active
+                                    $newCommentId = (int)$pdo->lastInsertId();
+                                    $autopilotEnabled = Settings::get('autopilot_enabled', '0', $uid) === '1';
+
+                                    if ($autopilotEnabled && $newCommentId > 0) {
+                                        $suitability = AiAgentService::evaluateCommentSuitability($cText);
+                                        if ($suitability['status'] === 'spam') {
+                                            $pdo->prepare("UPDATE comments SET status = 'spam', sentiment = 'spam', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
+                                                ->execute([':reason' => $suitability['reason'], ':id' => $newCommentId, ':uid' => $uid]);
+                                        } elseif ($suitability['status'] === 'ignored') {
+                                            $pdo->prepare("UPDATE comments SET status = 'ignored', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
+                                                ->execute([':reason' => $suitability['reason'], ':id' => $newCommentId, ':uid' => $uid]);
+                                        } else {
+                                            $replies = AiAgentService::generateReplies($cAuthor, $cText, 'instagram', $caption, '', ['brand_voice_id' => $brandVoiceId]);
+                                            $chosenVariant = 'engagement';
+                                            if (($analysis['sentiment'] ?? '') === 'lead' || str_starts_with(($analysis['intent'] ?? ''), 'lead_')) {
+                                                $chosenVariant = 'conversion';
+                                            } elseif (($analysis['sentiment'] ?? '') === 'urgent' || ($analysis['intent'] ?? '') === 'support') {
+                                                $chosenVariant = 'support';
+                                            }
+                                            $chosenReply = $replies[$chosenVariant] ?? $replies['engagement'];
+
+                                            $metaRes = self::postReplyToMeta($newCommentId, $chosenReply, $uid);
+                                            $isPosted = !empty($metaRes['success']) ? 1 : 0;
+
+                                            $pdo->prepare("
+                                                INSERT INTO replies (user_id, comment_id, reply_text, reply_type, tone_used, variant_type, is_posted_to_platform)
+                                                VALUES (:uid, :cid, :reply, 'autopilot', 'auto_selected', :variant, :is_posted)
+                                            ")->execute([
+                                                ':uid' => $uid,
+                                                ':cid' => $newCommentId,
+                                                ':reply' => $chosenReply,
+                                                ':variant' => $chosenVariant,
+                                                ':is_posted' => $isPosted
+                                            ]);
+
+                                            $pdo->prepare("UPDATE comments SET status = 'replied' WHERE id = :id AND user_id = :uid")
+                                                ->execute([':id' => $newCommentId, ':uid' => $uid]);
+                                        }
+                                    }
                                 } else {
                                     $pdo->prepare("UPDATE comments SET likes_count = :likes WHERE id = :id AND user_id = :uid")->execute([
                                         ':likes' => $cLikes,
@@ -814,7 +855,7 @@ class MetaApiService {
                 }
             } else {
                 // Multi-channel Facebook Discovery: /published_posts, /feed, /posts, /photos, /videos IN PARALLEL for 100% complete discovery
-                $fbFields = 'id,message,story,created_time,full_picture,permalink_url,shares,attachments{type,target{id},unshimmed_url,media{image{src}},title,description}';
+                $fbFields = 'id,message,story,created_time,full_picture,permalink_url,shares,reactions.summary(total_count).limit(0),likes.summary(total_count).limit(0),comments.summary(total_count).limit(0),attachments{type,target{id},unshimmed_url,media{image{src}},title,description}';
                 
                 $fbFeedQueries = [
                     'published' => self::BASE_URL . '/' . urlencode($pageId) . '/published_posts?' . http_build_query([
@@ -834,13 +875,13 @@ class MetaApiService {
                     ]),
                     'photos' => self::BASE_URL . '/' . urlencode($pageId) . '/photos?' . http_build_query([
                         'type' => 'uploaded',
-                        'fields' => 'id,name,created_time,images,picture,link',
+                        'fields' => 'id,name,created_time,images,picture,link,reactions.summary(total_count).limit(0),likes.summary(total_count).limit(0),comments.summary(total_count).limit(0)',
                         'limit' => '50',
                         'access_token' => $token
                     ]),
                     'videos' => self::BASE_URL . '/' . urlencode($pageId) . '/videos?' . http_build_query([
                         'type' => 'uploaded',
-                        'fields' => 'id,description,title,created_time,picture,permalink_url',
+                        'fields' => 'id,description,title,created_time,picture,permalink_url,reactions.summary(total_count).limit(0),likes.summary(total_count).limit(0),comments.summary(total_count).limit(0)',
                         'limit' => '50',
                         'access_token' => $token
                     ])
@@ -892,6 +933,9 @@ class MetaApiService {
                                 'created_time' => $photoItem['created_time'] ?? '',
                                 'full_picture' => $highResImg,
                                 'permalink_url' => $photoItem['link'] ?? "https://www.facebook.com/{$photoId}",
+                                'reactions' => $photoItem['reactions'] ?? null,
+                                'likes' => $photoItem['likes'] ?? null,
+                                'comments' => $photoItem['comments'] ?? null,
                                 'attachments' => [
                                     'data' => [
                                         [
@@ -926,6 +970,9 @@ class MetaApiService {
                                 'created_time' => $videoItem['created_time'] ?? '',
                                 'full_picture' => $videoItem['picture'] ?? '',
                                 'permalink_url' => $videoItem['permalink_url'] ?? "https://www.facebook.com/{$vidId}",
+                                'reactions' => $videoItem['reactions'] ?? null,
+                                'likes' => $videoItem['likes'] ?? null,
+                                'comments' => $videoItem['comments'] ?? null,
                                 'attachments' => [
                                     'data' => [
                                         [
@@ -1034,6 +1081,11 @@ class MetaApiService {
 
                         $permalink = $fbPost['permalink_url'] ?? '';
 
+                        // Retain historic database metrics if already synced
+                        $checkPost = $pdo->prepare("SELECT id, total_likes, total_comments, total_shares, impressions, reach FROM posts WHERE external_post_id = :ext_id AND user_id = :uid LIMIT 1");
+                        $checkPost->execute([':ext_id' => $postIdExt, ':uid' => $uid]);
+                        $existingPost = $checkPost->fetch();
+
                         // Multi-layer Likes & Reactions Extraction across Post and Attachment Object nodes
                         $likes = 0;
                         if (isset($fbPost['reactions']['summary']['total_count'])) {
@@ -1042,26 +1094,41 @@ class MetaApiService {
                         if (isset($fbPost['likes']['summary']['total_count'])) {
                             $likes = max($likes, (int)$fbPost['likes']['summary']['total_count']);
                         }
-                        if (isset($multiResponses['fb_react_' . $postIdExt]['reactions']['summary']['total_count'])) {
-                            $likes = max($likes, (int)$multiResponses['fb_react_' . $postIdExt]['reactions']['summary']['total_count']);
+
+                        $fbReactRes = $multiResponses['fb_react_' . $postIdExt] ?? [];
+                        if (isset($fbReactRes['error'])) {
+                            error_log("Meta Sync FB Reactions Error [post: {$postIdExt}]: " . ($fbReactRes['error']['message'] ?? 'Unknown error'));
+                        } else {
+                            if (isset($fbReactRes['reactions']['summary']['total_count'])) {
+                                $likes = max($likes, (int)$fbReactRes['reactions']['summary']['total_count']);
+                            }
+                            if (isset($fbReactRes['likes']['summary']['total_count'])) {
+                                $likes = max($likes, (int)$fbReactRes['likes']['summary']['total_count']);
+                            }
                         }
-                        if (isset($multiResponses['fb_react_' . $postIdExt]['likes']['summary']['total_count'])) {
-                            $likes = max($likes, (int)$multiResponses['fb_react_' . $postIdExt]['likes']['summary']['total_count']);
+
+                        $fbObjRes = $multiResponses['fb_obj_' . $postIdExt] ?? [];
+                        if (!isset($fbObjRes['error'])) {
+                            if (isset($fbObjRes['reactions']['summary']['total_count'])) {
+                                $likes = max($likes, (int)$fbObjRes['reactions']['summary']['total_count']);
+                            }
+                            if (isset($fbObjRes['likes']['summary']['total_count'])) {
+                                $likes = max($likes, (int)$fbObjRes['likes']['summary']['total_count']);
+                            }
                         }
-                        if (isset($multiResponses['fb_obj_' . $postIdExt]['reactions']['summary']['total_count'])) {
-                            $likes = max($likes, (int)$multiResponses['fb_obj_' . $postIdExt]['reactions']['summary']['total_count']);
-                        }
-                        if (isset($multiResponses['fb_obj_' . $postIdExt]['likes']['summary']['total_count'])) {
-                            $likes = max($likes, (int)$multiResponses['fb_obj_' . $postIdExt]['likes']['summary']['total_count']);
+
+                        // Safeguard: Never drop previously stored likes to 0
+                        if ($existingPost) {
+                            $likes = max($likes, (int)($existingPost['total_likes'] ?? 0));
                         }
 
                         // Extract comments total count
                         $commentsCount = (int)($fbPost['comments']['summary']['total_count'] ?? 0);
-                        if (isset($multiResponses['fb_react_' . $postIdExt]['comments']['summary']['total_count'])) {
-                            $commentsCount = max($commentsCount, (int)$multiResponses['fb_react_' . $postIdExt]['comments']['summary']['total_count']);
+                        if (!empty($fbReactRes['comments']['summary']['total_count'])) {
+                            $commentsCount = max($commentsCount, (int)$fbReactRes['comments']['summary']['total_count']);
                         }
-                        if (isset($multiResponses['fb_obj_' . $postIdExt]['comments']['summary']['total_count'])) {
-                            $commentsCount = max($commentsCount, (int)$multiResponses['fb_obj_' . $postIdExt]['comments']['summary']['total_count']);
+                        if (!empty($fbObjRes['comments']['summary']['total_count'])) {
+                            $commentsCount = max($commentsCount, (int)$fbObjRes['comments']['summary']['total_count']);
                         }
                         $postCommentsList = $multiResponses['fb_comments_' . $postIdExt]['data'] ?? [];
                         $objCommentsList = $multiResponses['fb_obj_comments_' . $postIdExt]['data'] ?? [];
@@ -1069,11 +1136,17 @@ class MetaApiService {
                         if (!empty($combinedComments)) {
                             $commentsCount = max($commentsCount, count($combinedComments));
                         }
+                        if ($existingPost) {
+                            $commentsCount = max($commentsCount, (int)($existingPost['total_comments'] ?? 0));
+                        }
 
                         // Extract shares
                         $shares = (int)($fbPost['shares']['count'] ?? 0);
-                        if ($shares === 0 && isset($multiResponses['fb_react_' . $postIdExt]['shares']['count'])) {
-                            $shares = (int)$multiResponses['fb_react_' . $postIdExt]['shares']['count'];
+                        if ($shares === 0 && isset($fbReactRes['shares']['count'])) {
+                            $shares = (int)$fbReactRes['shares']['count'];
+                        }
+                        if ($existingPost) {
+                            $shares = max($shares, (int)($existingPost['total_shares'] ?? 0));
                         }
 
                         $postedAt = !empty($fbPost['created_time']) ? date('Y-m-d H:i:s', strtotime($fbPost['created_time'])) : date('Y-m-d H:i:s');
@@ -1106,6 +1179,11 @@ class MetaApiService {
                             }
                         }
 
+                        if ($existingPost) {
+                            $impressions = max($impressions, (int)($existingPost['impressions'] ?? 0));
+                            $reach = max($reach, (int)($existingPost['reach'] ?? 0));
+                        }
+
                         $fbInteractions = $likes + $commentsCount + $shares;
 
                         // Ensure logical reach & views consistency with realistic fallbacks
@@ -1130,18 +1208,24 @@ class MetaApiService {
 
                         $engagementRate = ($reach > 0) ? min(100.0, round(($fbInteractions / $reach) * 100, 1)) : 0.0;
 
-                        $checkPost = $pdo->prepare("SELECT id FROM posts WHERE external_post_id = :ext_id AND user_id = :uid LIMIT 1");
-                        $checkPost->execute([':ext_id' => $postIdExt, ':uid' => $uid]);
-                        $existingPost = $checkPost->fetch();
-
                         if ($existingPost) {
                             $postId = (int)$existingPost['id'];
                             $stmtUp = $pdo->prepare("
                                 UPDATE posts 
-                                SET account_id = :acc_id, brand_voice_id = :bvid, total_likes = :likes, total_comments = :comments, 
-                                    total_shares = :shares, impressions = :impressions, reach = :reach, engagement_rate = :eng_rate, 
-                                    caption = :caption, media_url = :media_url, media_type = :media_type, permalink = :permalink, 
-                                    posted_at = :posted_at, last_synced_at = CURRENT_TIMESTAMP
+                                SET account_id = :acc_id, 
+                                    brand_voice_id = :bvid, 
+                                    total_likes = MAX(COALESCE(total_likes, 0), CAST(:likes AS INTEGER)), 
+                                    total_comments = MAX(COALESCE(total_comments, 0), CAST(:comments AS INTEGER)), 
+                                    total_shares = MAX(COALESCE(total_shares, 0), CAST(:shares AS INTEGER)), 
+                                    impressions = MAX(COALESCE(impressions, 0), CAST(:impressions AS INTEGER)), 
+                                    reach = MAX(COALESCE(reach, 0), CAST(:reach AS INTEGER)), 
+                                    engagement_rate = :eng_rate, 
+                                    caption = :caption, 
+                                    media_url = :media_url, 
+                                    media_type = :media_type, 
+                                    permalink = :permalink, 
+                                    posted_at = :posted_at, 
+                                    last_synced_at = CURRENT_TIMESTAMP
                                 WHERE id = :id AND user_id = :uid
                             ");
                             $stmtUp->execute([
@@ -1244,6 +1328,47 @@ class MetaApiService {
                                 ]);
                                 $syncedCommentsCount++;
                                 $accNewComments++;
+
+                                // Automatic Response when Auto-Responder is Active
+                                $newCommentId = (int)$pdo->lastInsertId();
+                                $autopilotEnabled = Settings::get('autopilot_enabled', '0', $uid) === '1';
+
+                                if ($autopilotEnabled && $newCommentId > 0) {
+                                    $suitability = AiAgentService::evaluateCommentSuitability($cText);
+                                    if ($suitability['status'] === 'spam') {
+                                        $pdo->prepare("UPDATE comments SET status = 'spam', sentiment = 'spam', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
+                                            ->execute([':reason' => $suitability['reason'], ':id' => $newCommentId, ':uid' => $uid]);
+                                    } elseif ($suitability['status'] === 'ignored') {
+                                        $pdo->prepare("UPDATE comments SET status = 'ignored', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
+                                            ->execute([':reason' => $suitability['reason'], ':id' => $newCommentId, ':uid' => $uid]);
+                                    } else {
+                                        $replies = AiAgentService::generateReplies($fromName, $cText, 'facebook', $message, '', ['brand_voice_id' => $brandVoiceId]);
+                                        $chosenVariant = 'engagement';
+                                        if (($analysis['sentiment'] ?? '') === 'lead' || str_starts_with(($analysis['intent'] ?? ''), 'lead_')) {
+                                            $chosenVariant = 'conversion';
+                                        } elseif (($analysis['sentiment'] ?? '') === 'urgent' || ($analysis['intent'] ?? '') === 'support') {
+                                            $chosenVariant = 'support';
+                                        }
+                                        $chosenReply = $replies[$chosenVariant] ?? $replies['engagement'];
+
+                                        $metaRes = self::postReplyToMeta($newCommentId, $chosenReply, $uid);
+                                        $isPosted = !empty($metaRes['success']) ? 1 : 0;
+
+                                        $pdo->prepare("
+                                            INSERT INTO replies (user_id, comment_id, reply_text, reply_type, tone_used, variant_type, is_posted_to_platform)
+                                            VALUES (:uid, :cid, :reply, 'autopilot', 'auto_selected', :variant, :is_posted)
+                                        ")->execute([
+                                            ':uid' => $uid,
+                                            ':cid' => $newCommentId,
+                                            ':reply' => $chosenReply,
+                                            ':variant' => $chosenVariant,
+                                            ':is_posted' => $isPosted
+                                        ]);
+
+                                        $pdo->prepare("UPDATE comments SET status = 'replied' WHERE id = :id AND user_id = :uid")
+                                            ->execute([':id' => $newCommentId, ':uid' => $uid]);
+                                    }
+                                }
                             } else {
                                 $pdo->prepare("UPDATE comments SET likes_count = :likes WHERE id = :id AND user_id = :uid")->execute([
                                     ':likes' => $cLikes,

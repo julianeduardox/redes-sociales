@@ -152,7 +152,7 @@ $isMetaConnected = ($activeAccountsCount > 0);
       <div class="autopilot-widget">
         <div class="autopilot-info">
           <span class="autopilot-title">⚡ Auto-Responder</span>
-          <span class="autopilot-sub">Respuestas inteligentes</span>
+          <span class="autopilot-sub" id="autopilot-sub-mode-text">Respuestas inteligentes</span>
         </div>
         <label class="switch">
           <input type="checkbox" id="autopilot-sidebar-toggle">

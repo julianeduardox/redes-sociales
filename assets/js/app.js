@@ -535,20 +535,37 @@ const App = {
     const autopilotCheckbox = document.getElementById('autopilot-sidebar-toggle');
     if (autopilotCheckbox) {
       autopilotCheckbox.addEventListener('change', async (e) => {
-        const isChecked = e.target.checked ? '1' : '0';
+        const isChecked = e.target.checked;
+        const valStr = isChecked ? '1' : '0';
+        this.updateAutopilotModeUi(isChecked);
         try {
           const res = await this.fetchWithCsrf('api/settings.php', {
             method: 'POST',
-            body: JSON.stringify({ autopilot_enabled: isChecked })
+            body: JSON.stringify({ autopilot_enabled: valStr })
           });
           const data = await res.json();
           if (data.success) {
-            App.showToast(isChecked === '1' ? '🤖 Piloto Automático activado' : 'Piloto Automático desactivado', 'success');
+            if (isChecked) {
+              App.showToast('🤖 Modo Auto-Responder Activado: Responderá automáticamente sin intervención humana.', 'success');
+              // Automatically execute pending comments if any exist
+              const pendingCount = App.commentsList ? App.commentsList.filter(c => c.status === 'pending').length : 0;
+              if (pendingCount > 0) {
+                setTimeout(() => {
+                  AgentController.runAutopilotBatch();
+                }, 400);
+              }
+            } else {
+              App.showToast('👆 Modo Manual Activado: Ahora puedes elegir qué respuesta quieres y enviarla con 1 clic.', 'info');
+            }
           } else {
-            App.showToast(data.error || 'Error al cambiar piloto automático', 'error');
+            App.showToast(data.error || 'Error al cambiar auto-responder', 'error');
+            autopilotCheckbox.checked = !isChecked;
+            this.updateAutopilotModeUi(!isChecked);
           }
         } catch (err) {
-          App.showToast('Error de conexión', 'error');
+          App.showToast('Error de conexión al cambiar auto-responder', 'error');
+          autopilotCheckbox.checked = !isChecked;
+          this.updateAutopilotModeUi(!isChecked);
         }
       });
     }
@@ -1117,6 +1134,14 @@ const App = {
     this.openModal('modal-score-guide');
   },
 
+  updateAutopilotModeUi(enabled) {
+    const subText = document.getElementById('autopilot-sub-mode-text');
+    if (subText) {
+      subText.textContent = enabled ? '⚡ 100% Automático' : '👆 Manual (1 Clic)';
+      subText.style.color = enabled ? '#34d399' : 'var(--text-muted, #94a3b8)';
+    }
+  },
+
   async loadSettings() {
     try {
       const response = await this.fetchWithCsrf('api/settings.php');
@@ -1125,7 +1150,9 @@ const App = {
         const d = res.data;
         // Sidebar toggle
         const toggle = document.getElementById('autopilot-sidebar-toggle');
-        if (toggle) toggle.checked = d.autopilot_enabled === '1';
+        const isAutopilotOn = d.autopilot_enabled === '1';
+        if (toggle) toggle.checked = isAutopilotOn;
+        this.updateAutopilotModeUi(isAutopilotOn);
 
         // Settings Form Inputs
         this.setInputValue('setting-brand-name', d.brand_name);

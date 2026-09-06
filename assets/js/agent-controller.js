@@ -129,6 +129,9 @@ const AgentController = {
           <button type="button" class="btn-suggestion-action" style="background: rgba(99,102,241,0.2); color: #a5b4fc;" onclick="event.stopPropagation(); AgentController.selectVariant('engagement')">
             ✏️ Usar
           </button>
+          <button type="button" class="btn-suggestion-action" style="background: rgba(16,185,129,0.25); color: #34d399; font-weight: 700;" onclick="event.stopPropagation(); AgentController.quickSendVariant('engagement')" title="Publicar directamente con 1 solo clic">
+            ⚡ Enviar
+          </button>
         </div>
       </div>
 
@@ -146,6 +149,9 @@ const AgentController = {
           <button type="button" class="btn-suggestion-action" style="background: rgba(16,185,129,0.2); color: #6ee7b7;" onclick="event.stopPropagation(); AgentController.selectVariant('conversion')">
             ✏️ Usar
           </button>
+          <button type="button" class="btn-suggestion-action" style="background: rgba(16,185,129,0.25); color: #34d399; font-weight: 700;" onclick="event.stopPropagation(); AgentController.quickSendVariant('conversion')" title="Publicar directamente con 1 solo clic">
+            ⚡ Enviar
+          </button>
         </div>
       </div>
 
@@ -162,6 +168,9 @@ const AgentController = {
           </button>
           <button type="button" class="btn-suggestion-action" style="background: rgba(168,85,247,0.2); color: #d8b4fe;" onclick="event.stopPropagation(); AgentController.selectVariant('support')">
             ✏️ Usar
+          </button>
+          <button type="button" class="btn-suggestion-action" style="background: rgba(16,185,129,0.25); color: #34d399; font-weight: 700;" onclick="event.stopPropagation(); AgentController.quickSendVariant('support')" title="Publicar directamente con 1 solo clic">
+            ⚡ Enviar
           </button>
         </div>
       </div>
@@ -199,6 +208,55 @@ const AgentController = {
     if (textarea && this.activeReplies && this.activeReplies[variantType]) {
       textarea.value = this.activeReplies[variantType];
       textarea.focus();
+    }
+  },
+
+  // Quick send a specific variant with 1 click directly from sidebar copilot
+  async quickSendVariant(variantType) {
+    if (!this.activeComment) {
+      App.showToast('Selecciona un comentario para responder.', 'error');
+      return;
+    }
+    if (!this.activeReplies || !this.activeReplies[variantType]) {
+      App.showToast('No hay una respuesta generada para esta opción.', 'error');
+      return;
+    }
+
+    const replyText = this.activeReplies[variantType];
+    this.selectVariant(variantType);
+
+    App.showToast(`⚡ Publicando opción "${variantType}" con 1 solo clic...`, 'info');
+
+    try {
+      const tone = document.getElementById('select-tone')?.value || 'friendly_engaging';
+      const response = await App.fetchWithCsrf('api/comments.php', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'reply',
+          comment_id: parseInt(this.activeComment.id, 10),
+          reply_text: replyText,
+          variant_type: variantType,
+          tone_used: tone
+        })
+      });
+
+      const res = await response.json();
+      if (res.success) {
+        App.showToast('¡Respuesta publicada y enviada con éxito! 🚀✨', 'success');
+        await App.loadComments();
+
+        // Update active comment and thread in copilot
+        const updated = App.commentsList ? App.commentsList.find(c => c.id == this.activeComment.id) : null;
+        if (updated) {
+          this.activeComment = updated;
+          this.loadSuggestions(updated);
+        }
+      } else {
+        App.showToast(`Error al enviar: ${res.error || 'No se pudo enviar'}`, 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      App.showToast('Error de red al enviar la respuesta.', 'error');
     }
   },
 
@@ -517,8 +575,8 @@ const AgentController = {
           <button type="button" class="btn-modal-sugg-action" style="background: rgba(6,182,212,0.18); color: #67e8f9;" onclick="event.stopPropagation(); AgentController.selectModalVariant('engagement')">
             ✏️ Usar
           </button>
-          <button type="button" class="btn-modal-sugg-action" style="background: rgba(99,102,241,0.25); color: #a5b4fc;" onclick="event.stopPropagation(); AgentController.quickPostModalVariant('engagement')" title="Publicar directamente esta opción">
-            ⚡ Publicar
+          <button type="button" class="btn-modal-sugg-action" style="background: rgba(16,185,129,0.25); color: #34d399; font-weight: 700;" onclick="event.stopPropagation(); AgentController.quickPostModalVariant('engagement')" title="Publicar directamente esta opción con 1 clic">
+            ⚡ Enviar (1 Clic)
           </button>
         </div>
       </div>
@@ -537,8 +595,8 @@ const AgentController = {
           <button type="button" class="btn-modal-sugg-action" style="background: rgba(16,185,129,0.18); color: #6ee7b7;" onclick="event.stopPropagation(); AgentController.selectModalVariant('conversion')">
             ✏️ Usar
           </button>
-          <button type="button" class="btn-modal-sugg-action" style="background: rgba(16,185,129,0.25); color: #34d399;" onclick="event.stopPropagation(); AgentController.quickPostModalVariant('conversion')" title="Publicar directamente esta opción">
-            ⚡ Publicar
+          <button type="button" class="btn-modal-sugg-action" style="background: rgba(16,185,129,0.25); color: #34d399; font-weight: 700;" onclick="event.stopPropagation(); AgentController.quickPostModalVariant('conversion')" title="Publicar directamente esta opción con 1 clic">
+            ⚡ Enviar (1 Clic)
           </button>
         </div>
       </div>
@@ -557,8 +615,8 @@ const AgentController = {
           <button type="button" class="btn-modal-sugg-action" style="background: rgba(168,85,247,0.18); color: #d8b4fe;" onclick="event.stopPropagation(); AgentController.selectModalVariant('support')">
             ✏️ Usar
           </button>
-          <button type="button" class="btn-modal-sugg-action" style="background: rgba(168,85,247,0.25); color: #c084fc;" onclick="event.stopPropagation(); AgentController.quickPostModalVariant('support')" title="Publicar directamente esta opción">
-            ⚡ Publicar
+          <button type="button" class="btn-modal-sugg-action" style="background: rgba(16,185,129,0.25); color: #34d399; font-weight: 700;" onclick="event.stopPropagation(); AgentController.quickPostModalVariant('support')" title="Publicar directamente esta opción con 1 clic">
+            ⚡ Enviar (1 Clic)
           </button>
         </div>
       </div>
@@ -826,6 +884,8 @@ const AgentController = {
 
   // Trigger Autopilot run (global)
   async runAutopilotBatch() {
+    this.switchModalTab('autopilot');
+    App.openModal('modal-assistant-replies');
     return this.startLiveAutopilot();
   },
 

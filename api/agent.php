@@ -6,6 +6,7 @@ require_once __DIR__ . '/../config/security.php';
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../services/AiAgentService.php';
+require_once __DIR__ . '/../services/MetaApiService.php';
 
 Security::applySecurityHeaders(true);
 Auth::requireAuth(true);
@@ -230,16 +231,21 @@ try {
 
             $chosenReply = $replies[$chosenVariant] ?? $replies['engagement'];
 
+            // Post reply directly to Meta platform (Facebook / Instagram)
+            $metaResult = MetaApiService::postReplyToMeta((int)$c['id'], $chosenReply, $userId);
+            $isPosted = !empty($metaResult['success']) ? 1 : 0;
+
             // Insert reply
             $stmtRep = $pdo->prepare("
                 INSERT INTO replies (user_id, comment_id, reply_text, reply_type, tone_used, variant_type, is_posted_to_platform)
-                VALUES (:user_id, :comment_id, :reply_text, 'autopilot', 'auto_selected', :variant_type, 1)
+                VALUES (:user_id, :comment_id, :reply_text, 'autopilot', 'auto_selected', :variant_type, :is_posted)
             ");
             $stmtRep->execute([
                 ':user_id' => $userId,
                 ':comment_id' => $c['id'],
                 ':reply_text' => $chosenReply,
-                ':variant_type' => $chosenVariant
+                ':variant_type' => $chosenVariant,
+                ':is_posted' => $isPosted
             ]);
 
             // Update status
