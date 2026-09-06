@@ -191,9 +191,12 @@ class Database {
     public static function getTableColumns(PDO $pdo, string $table): array {
         $driver = self::getDriver();
         $cols = [];
+        $cleanTable = preg_replace('/[^a-zA-Z0-9_]/', '', $table);
+        if (empty($cleanTable)) return [];
+
         try {
             if ($driver === 'sqlite') {
-                $stmt = $pdo->query("PRAGMA table_info({$table})");
+                $stmt = $pdo->query("PRAGMA table_info({$cleanTable})");
                 while ($r = $stmt->fetch()) {
                     $cols[] = strtolower($r['name']);
                 }
@@ -203,12 +206,12 @@ class Database {
                     FROM information_schema.columns 
                     WHERE table_name = :tbl AND table_schema = current_schema()
                 ");
-                $stmt->execute([':tbl' => strtolower($table)]);
+                $stmt->execute([':tbl' => strtolower($cleanTable)]);
                 while ($r = $stmt->fetch()) {
                     $cols[] = strtolower($r['column_name']);
                 }
             } elseif ($driver === 'mysql') {
-                $stmt = $pdo->query("SHOW COLUMNS FROM `{$table}`");
+                $stmt = $pdo->query("SHOW COLUMNS FROM `{$cleanTable}`");
                 while ($r = $stmt->fetch()) {
                     $cols[] = strtolower($r['Field']);
                 }
