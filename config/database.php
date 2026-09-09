@@ -638,6 +638,51 @@ class Database {
                     FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE SET NULL,
                     FOREIGN KEY (brand_voice_id) REFERENCES brand_voices(id) ON DELETE SET NULL
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+                CREATE TABLE IF NOT EXISTS trend_niches (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NOT NULL DEFAULT 1,
+                    hashtag VARCHAR(255) NOT NULL,
+                    display_name VARCHAR(255),
+                    platform VARCHAR(50) DEFAULT 'instagram',
+                    ig_hashtag_id VARCHAR(255),
+                    is_active INT DEFAULT 1,
+                    last_synced_at DATETIME,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE KEY uq_user_hashtag_platform (user_id, hashtag, platform),
+                    INDEX idx_trend_niches_user (user_id, is_active),
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+                CREATE TABLE IF NOT EXISTS trend_posts (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NOT NULL DEFAULT 1,
+                    niche_id INT NOT NULL,
+                    platform VARCHAR(50) NOT NULL,
+                    external_post_id VARCHAR(255) NOT NULL,
+                    author_handle VARCHAR(255),
+                    caption_preview TEXT,
+                    media_url TEXT,
+                    permalink TEXT,
+                    media_type VARCHAR(50) DEFAULT 'image',
+                    likes_count INT DEFAULT 0,
+                    comments_count INT DEFAULT 0,
+                    shares_count INT DEFAULT 0,
+                    saves_count INT DEFAULT 0,
+                    reach_count INT DEFAULT 0,
+                    engagement_score FLOAT DEFAULT 0.0,
+                    trend_rank INT DEFAULT 0,
+                    ai_top_pick INT DEFAULT 0,
+                    ai_pick_reason TEXT,
+                    posted_at DATETIME,
+                    fetched_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE KEY uq_trend_post (platform, external_post_id),
+                    INDEX idx_trend_posts_user_score (user_id, engagement_score),
+                    INDEX idx_trend_posts_niche (niche_id, fetched_at),
+                    INDEX idx_trend_posts_ai_pick (user_id, ai_top_pick),
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (niche_id) REFERENCES trend_niches(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             ");
 
         } else {
@@ -832,6 +877,51 @@ class Database {
                     FOREIGN KEY (brand_voice_id) REFERENCES brand_voices(id) ON DELETE SET NULL
                 );
                 CREATE INDEX IF NOT EXISTS idx_sched_user_status ON scheduled_posts(user_id, status, scheduled_for);
+
+                CREATE TABLE IF NOT EXISTS trend_niches (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL DEFAULT 1,
+                    hashtag TEXT NOT NULL,
+                    display_name TEXT,
+                    platform TEXT DEFAULT 'instagram',
+                    ig_hashtag_id TEXT,
+                    is_active INTEGER DEFAULT 1,
+                    last_synced_at DATETIME,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                );
+                CREATE UNIQUE INDEX IF NOT EXISTS uq_user_hashtag_platform ON trend_niches(user_id, hashtag, platform);
+                CREATE INDEX IF NOT EXISTS idx_trend_niches_user ON trend_niches(user_id, is_active);
+
+                CREATE TABLE IF NOT EXISTS trend_posts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL DEFAULT 1,
+                    niche_id INTEGER NOT NULL,
+                    platform TEXT NOT NULL,
+                    external_post_id TEXT NOT NULL,
+                    author_handle TEXT,
+                    caption_preview TEXT,
+                    media_url TEXT,
+                    permalink TEXT,
+                    media_type TEXT DEFAULT 'image',
+                    likes_count INTEGER DEFAULT 0,
+                    comments_count INTEGER DEFAULT 0,
+                    shares_count INTEGER DEFAULT 0,
+                    saves_count INTEGER DEFAULT 0,
+                    reach_count INTEGER DEFAULT 0,
+                    engagement_score REAL DEFAULT 0.0,
+                    trend_rank INTEGER DEFAULT 0,
+                    ai_top_pick INTEGER DEFAULT 0,
+                    ai_pick_reason TEXT,
+                    posted_at DATETIME,
+                    fetched_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (niche_id) REFERENCES trend_niches(id) ON DELETE CASCADE
+                );
+                CREATE UNIQUE INDEX IF NOT EXISTS uq_trend_post ON trend_posts(platform, external_post_id);
+                CREATE INDEX IF NOT EXISTS idx_trend_posts_user_score ON trend_posts(user_id, engagement_score);
+                CREATE INDEX IF NOT EXISTS idx_trend_posts_niche ON trend_posts(niche_id, fetched_at);
+                CREATE INDEX IF NOT EXISTS idx_trend_posts_ai_pick ON trend_posts(user_id, ai_top_pick);
             ");
         }
     }
@@ -1018,6 +1108,168 @@ class Database {
                         CREATE INDEX IF NOT EXISTS idx_sched_user_status ON scheduled_posts(user_id, status, scheduled_for);
                     ");
                 }
+            }
+
+            // 7. Ensure trend_niches and trend_posts tables exist (Trends Agent)
+            try {
+                $trendNichesCols = self::getTableColumns($pdo, 'trend_niches');
+                if (empty($trendNichesCols)) {
+                    if ($driver === 'pgsql') {
+                        $pdo->exec("
+                            CREATE TABLE IF NOT EXISTS trend_niches (
+                                id SERIAL PRIMARY KEY,
+                                user_id INTEGER NOT NULL DEFAULT 1,
+                                hashtag VARCHAR(255) NOT NULL,
+                                display_name VARCHAR(255),
+                                platform VARCHAR(50) DEFAULT 'instagram',
+                                ig_hashtag_id VARCHAR(255),
+                                is_active INTEGER DEFAULT 1,
+                                last_synced_at TIMESTAMP,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                UNIQUE (user_id, hashtag, platform),
+                                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                            );
+                            CREATE INDEX IF NOT EXISTS idx_trend_niches_user ON trend_niches(user_id, is_active);
+                        ");
+                    } elseif ($driver === 'mysql') {
+                        $pdo->exec("
+                            CREATE TABLE IF NOT EXISTS trend_niches (
+                                id INT AUTO_INCREMENT PRIMARY KEY,
+                                user_id INT NOT NULL DEFAULT 1,
+                                hashtag VARCHAR(255) NOT NULL,
+                                display_name VARCHAR(255),
+                                platform VARCHAR(50) DEFAULT 'instagram',
+                                ig_hashtag_id VARCHAR(255),
+                                is_active INT DEFAULT 1,
+                                last_synced_at DATETIME,
+                                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                                UNIQUE KEY uq_user_hashtag_platform (user_id, hashtag, platform),
+                                INDEX idx_trend_niches_user (user_id, is_active),
+                                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                        ");
+                    } else {
+                        $pdo->exec("
+                            CREATE TABLE IF NOT EXISTS trend_niches (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                user_id INTEGER NOT NULL DEFAULT 1,
+                                hashtag TEXT NOT NULL,
+                                display_name TEXT,
+                                platform TEXT DEFAULT 'instagram',
+                                ig_hashtag_id TEXT,
+                                is_active INTEGER DEFAULT 1,
+                                last_synced_at DATETIME,
+                                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                            );
+                            CREATE UNIQUE INDEX IF NOT EXISTS uq_user_hashtag_platform ON trend_niches(user_id, hashtag, platform);
+                            CREATE INDEX IF NOT EXISTS idx_trend_niches_user ON trend_niches(user_id, is_active);
+                        ");
+                    }
+                }
+
+                $trendPostsCols = self::getTableColumns($pdo, 'trend_posts');
+                if (empty($trendPostsCols)) {
+                    if ($driver === 'pgsql') {
+                        $pdo->exec("
+                            CREATE TABLE IF NOT EXISTS trend_posts (
+                                id SERIAL PRIMARY KEY,
+                                user_id INTEGER NOT NULL DEFAULT 1,
+                                niche_id INTEGER NOT NULL,
+                                platform VARCHAR(50) NOT NULL,
+                                external_post_id VARCHAR(255) NOT NULL,
+                                author_handle VARCHAR(255),
+                                caption_preview TEXT,
+                                media_url TEXT,
+                                permalink TEXT,
+                                media_type VARCHAR(50) DEFAULT 'image',
+                                likes_count INTEGER DEFAULT 0,
+                                comments_count INTEGER DEFAULT 0,
+                                shares_count INTEGER DEFAULT 0,
+                                saves_count INTEGER DEFAULT 0,
+                                reach_count INTEGER DEFAULT 0,
+                                engagement_score FLOAT DEFAULT 0.0,
+                                trend_rank INTEGER DEFAULT 0,
+                                ai_top_pick INTEGER DEFAULT 0,
+                                ai_pick_reason TEXT,
+                                posted_at TIMESTAMP,
+                                fetched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                UNIQUE (platform, external_post_id),
+                                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                                FOREIGN KEY (niche_id) REFERENCES trend_niches(id) ON DELETE CASCADE
+                            );
+                            CREATE INDEX IF NOT EXISTS idx_trend_posts_user_score ON trend_posts(user_id, engagement_score);
+                            CREATE INDEX IF NOT EXISTS idx_trend_posts_niche ON trend_posts(niche_id, fetched_at);
+                            CREATE INDEX IF NOT EXISTS idx_trend_posts_ai_pick ON trend_posts(user_id, ai_top_pick);
+                        ");
+                    } elseif ($driver === 'mysql') {
+                        $pdo->exec("
+                            CREATE TABLE IF NOT EXISTS trend_posts (
+                                id INT AUTO_INCREMENT PRIMARY KEY,
+                                user_id INT NOT NULL DEFAULT 1,
+                                niche_id INT NOT NULL,
+                                platform VARCHAR(50) NOT NULL,
+                                external_post_id VARCHAR(255) NOT NULL,
+                                author_handle VARCHAR(255),
+                                caption_preview TEXT,
+                                media_url TEXT,
+                                permalink TEXT,
+                                media_type VARCHAR(50) DEFAULT 'image',
+                                likes_count INT DEFAULT 0,
+                                comments_count INT DEFAULT 0,
+                                shares_count INT DEFAULT 0,
+                                saves_count INT DEFAULT 0,
+                                reach_count INT DEFAULT 0,
+                                engagement_score FLOAT DEFAULT 0.0,
+                                trend_rank INT DEFAULT 0,
+                                ai_top_pick INT DEFAULT 0,
+                                ai_pick_reason TEXT,
+                                posted_at DATETIME,
+                                fetched_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                                UNIQUE KEY uq_trend_post (platform, external_post_id),
+                                INDEX idx_trend_posts_user_score (user_id, engagement_score),
+                                INDEX idx_trend_posts_niche (niche_id, fetched_at),
+                                INDEX idx_trend_posts_ai_pick (user_id, ai_top_pick),
+                                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                                FOREIGN KEY (niche_id) REFERENCES trend_niches(id) ON DELETE CASCADE
+                            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                        ");
+                    } else {
+                        $pdo->exec("
+                            CREATE TABLE IF NOT EXISTS trend_posts (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                user_id INTEGER NOT NULL DEFAULT 1,
+                                niche_id INTEGER NOT NULL,
+                                platform TEXT NOT NULL,
+                                external_post_id TEXT NOT NULL,
+                                author_handle TEXT,
+                                caption_preview TEXT,
+                                media_url TEXT,
+                                permalink TEXT,
+                                media_type TEXT DEFAULT 'image',
+                                likes_count INTEGER DEFAULT 0,
+                                comments_count INTEGER DEFAULT 0,
+                                shares_count INTEGER DEFAULT 0,
+                                saves_count INTEGER DEFAULT 0,
+                                reach_count INTEGER DEFAULT 0,
+                                engagement_score REAL DEFAULT 0.0,
+                                trend_rank INTEGER DEFAULT 0,
+                                ai_top_pick INTEGER DEFAULT 0,
+                                ai_pick_reason TEXT,
+                                posted_at DATETIME,
+                                fetched_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                                FOREIGN KEY (niche_id) REFERENCES trend_niches(id) ON DELETE CASCADE
+                            );
+                            CREATE UNIQUE INDEX IF NOT EXISTS uq_trend_post ON trend_posts(platform, external_post_id);
+                            CREATE INDEX IF NOT EXISTS idx_trend_posts_user_score ON trend_posts(user_id, engagement_score);
+                            CREATE INDEX IF NOT EXISTS idx_trend_posts_niche ON trend_posts(niche_id, fetched_at);
+                            CREATE INDEX IF NOT EXISTS idx_trend_posts_ai_pick ON trend_posts(user_id, ai_top_pick);
+                        ");
+                    }
+                }
+            } catch (Throwable $e) {
+                error_log("Trends Agent table migration notice: " . $e->getMessage());
             }
 
             // Ensure AI model, token quota & presence columns in users

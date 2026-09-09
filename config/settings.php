@@ -27,6 +27,13 @@ class Settings {
     }
 
     /**
+     * Get a setting value specifically for a user ID
+     */
+    public static function getForUser(int $userId, string $key, $default = null) {
+        return self::get($key, $default, $userId);
+    }
+
+    /**
      * Get all settings dictionary for a user (Served from in-memory cache)
      */
     public static function getAll(?int $userId = null): array {

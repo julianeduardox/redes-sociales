@@ -546,7 +546,26 @@ if (!defined('PROCESS_QUEUE_LIB_ONLY')) {
     $pdo = Database::getConnection();
     $result = processWebhookQueue($pdo, 50, null, !$isCli);
 
+    // ─── Trends Agent: Sincronización automática cada 6 horas ──────────────
+    try {
+        $currentHour = (int)date('G'); // 0-23
+        if ($currentHour % 6 === 0) {
+            require_once __DIR__ . '/../services/TrendsAgentService.php';
+            cliLog("🔥 Iniciando sincronización de tendencias (hora {$currentHour})...", 'info', !$isCli);
+            TrendsAgentService::syncAllActiveUsers();
+            cliLog("✅ Tendencias sincronizadas correctamente.", 'success', !$isCli);
+            $result['trends_sync'] = 'completed';
+        } else {
+            $result['trends_sync'] = 'skipped (next at hour ' . ((intdiv($currentHour, 6) + 1) * 6) . ':00)';
+        }
+    } catch (Throwable $trendsEx) {
+        error_log("Cron TrendsAgent error: " . $trendsEx->getMessage());
+        cliLog("⚠️ Error en sync de tendencias: " . $trendsEx->getMessage(), 'warn', !$isCli);
+        $result['trends_sync'] = 'error: ' . $trendsEx->getMessage();
+    }
+
     if (!$isCli) {
         echo json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
     }
 }
+

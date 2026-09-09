@@ -11,7 +11,7 @@ const AnalyticsController = {
   cachedAnalyticsData: null,
 
   switchSubtab(subtab) {
-    const validSubtabs = ['overview', 'timing', 'posts'];
+    const validSubtabs = ['overview', 'timing', 'posts', 'trends'];
     const activeSubtab = validSubtabs.includes(subtab) ? subtab : 'overview';
     this.currentSubtab = activeSubtab;
     
@@ -26,12 +26,14 @@ const AnalyticsController = {
     });
 
     const overviewView = document.getElementById('analytics-overview-subview');
-    const timingView = document.getElementById('analytics-timing-subview');
-    const postsView = document.getElementById('analytics-posts-subview');
+    const timingView   = document.getElementById('analytics-timing-subview');
+    const postsView    = document.getElementById('analytics-posts-subview');
+    const trendsView   = document.getElementById('analytics-trends-subview');
 
     if (overviewView) overviewView.style.display = (activeSubtab === 'overview') ? 'block' : 'none';
-    if (timingView) timingView.style.display = (activeSubtab === 'timing') ? 'block' : 'none';
-    if (postsView) postsView.style.display = (activeSubtab === 'posts') ? 'block' : 'none';
+    if (timingView)   timingView.style.display   = (activeSubtab === 'timing')   ? 'block' : 'none';
+    if (postsView)    postsView.style.display    = (activeSubtab === 'posts')    ? 'block' : 'none';
+    if (trendsView)   trendsView.style.display   = (activeSubtab === 'trends')   ? 'block' : 'none';
 
     if (!this.cachedAnalyticsData) {
       this.loadAnalytics();
@@ -43,6 +45,11 @@ const AnalyticsController = {
       } else if (activeSubtab === 'posts') {
         this.renderPosts(this.cachedAnalyticsData.posts || []);
       }
+    }
+
+    // Inicializar Trends Agent al activar el tab
+    if (activeSubtab === 'trends' && typeof TrendsAgent !== 'undefined') {
+      TrendsAgent.init();
     }
   },
 

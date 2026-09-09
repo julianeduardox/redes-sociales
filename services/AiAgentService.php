@@ -124,6 +124,36 @@ class AiAgentService {
     }
 
     /**
+     * Detect if an author name is an anonymous placeholder or machine handle
+     */
+    public static function isGenericAuthorName(?string $name): bool {
+        if ($name === null) return true;
+        $clean = mb_strtolower(trim($name), 'UTF-8');
+        if (empty($clean)) return true;
+        if (str_starts_with($clean, 'usuario') || str_starts_with($clean, 'user') || str_starts_with($clean, 'fb_') || str_starts_with($clean, 'ig_')) return true;
+        if (str_contains($clean, 'facebook') || str_contains($clean, 'instagram') || str_contains($clean, 'comunidad') || str_contains($clean, 'lector')) return true;
+        if (in_array($clean, ['amigo', 'seguidor', 'cliente', 'anonimo', 'anónimo', 'fan', 'guest', 'member'])) return true;
+        if (preg_match('/^[0-9_\.\-]+$/', $clean)) return true;
+        return false;
+    }
+
+    /**
+     * Extract a clean personal first name or empty string if anonymous/generic
+     */
+    public static function extractCleanFirstName(?string $authorName): string {
+        if (empty($authorName) || self::isGenericAuthorName($authorName)) {
+            return '';
+        }
+        $raw = ltrim(trim($authorName), '@');
+        $parts = preg_split('/[\s_\.\-]+/u', $raw);
+        $first = $parts[0] ?? '';
+        if (self::isGenericAuthorName($first) || mb_strlen($first, 'UTF-8') < 2) {
+            return '';
+        }
+        return mb_convert_case($first, MB_CASE_TITLE, 'UTF-8');
+    }
+
+    /**
      * Universal Intent & Sentiment Commercial Classifier
      */
     public static function analyzeComment(string $commentText, string $postCaption = '', int $likesCount = 0): array {
@@ -170,6 +200,23 @@ class AiAgentService {
         $autopilotStatus = 'ready';
         $autopilotReason = '✅ Respuesta verificada apta para publicación en Autopilot';
 
+        // 0. Stoic Awakening & High Impact Reality Checks (Bofetada de realidad, sacudida, reflexión profunda)
+        $awakeningPatterns = [
+            'bofetada', 'guante blanco', 'mensaje brutal', 'brutal', 'me hizo reflexionar',
+            'me abrio los ojos', 'me abrió los ojos', 'me llego al alma', 'me llegó al alma',
+            'dolió pero', 'dolio pero', 'cachetada', 'sacudida', 'despertar', 'fuerte pero real',
+            'cruda verdad', 'justo lo que necesitaba', 'dio justo', 'impactante', 'me marco',
+            'me marcó', 'lección dura', 'leccion dura', 'golpe de realidad', 'bofetada de realidad'
+        ];
+
+        // 0.1 Short Affirmations of Truth / Resonance (Verdad, literal, total, 100%, así es)
+        $shortAffirmationPatterns = [
+            'verdad', 'gran verdad', 'que gran verdad', 'qué gran verdad', 'totalmente',
+            'literal', 'muy cierto', 'cierto', 'tal cual', 'exacto', 'así es', 'asi es',
+            'de acuerdo', '100%', 'amén', 'amen', 'muy real', 'sin duda', 'así mismo',
+            'asi mismo', 'correcto', 'total', 'es verdad', 'pura verdad', 'clarisimo', 'clarísimo'
+        ];
+
         // 1. Philosophical, Stoic, Conceptual & Mentorship QA (Dicotomía del control, mentalidad, disciplina, conceptos, virtud)
         $conceptPatterns = [
             'dicotomia', 'dicotomía', 'dicotomia del control', 'dicotomía del control', 'estoicismo', 'estoico', 'estoica',
@@ -181,7 +228,7 @@ class AiAgentService {
             'obstaculo es el camino', 'obstáculo es el camino', 'el obstaculo', 'el obstáculo', 'habito', 'hábito',
             'virtud', 'virtudes', 'momento', 'momentos', 'decidimos', 'decidir', 'decisión', 'decisiones', 'perfecto',
             'perfecta', 'perfección', 'perfeccion', 'tiempo', 'presente', 'propósito', 'proposito', 'carácter', 'caracter',
-            'alma', 'mente', 'serenidad', 'voluntad', 'constancia', 'verdad', 'destino', 'lección', 'leccion'
+            'alma', 'mente', 'serenidad', 'voluntad', 'constancia', 'destino'
         ];
 
         // 2. Commercial Leads / Course / Product / Pricing / Access / Buying Intent
@@ -222,6 +269,25 @@ class AiAgentService {
             'genial', 'recomiendo', 'recomendado', 'lo mejor', 'felicitaciones', 'gran trabajo', 'super',
             'súper', 'top', 'felicidades', 'gracias infinitas', 'cambio mi vida', 'cambió mi vida', 'los mejores'
         ];
+
+        // Detect Stoic Awakening / Reality Check
+        $foundAwakening = [];
+        foreach ($awakeningPatterns as $p) {
+            if (str_contains($textLower, $p)) {
+                $foundAwakening[] = $p;
+            }
+        }
+
+        // Detect Short Stoic Affirmation (Short comments of agreement/truth <= 45 chars)
+        $cleanLen = mb_strlen(trim(preg_replace('/[^\p{L}\p{N}\s]/u', '', $commentText)), 'UTF-8');
+        $foundShortAffirmation = [];
+        if ($cleanLen <= 45) {
+            foreach ($shortAffirmationPatterns as $p) {
+                if (str_contains($textLower, $p)) {
+                    $foundShortAffirmation[] = $p;
+                }
+            }
+        }
 
         // Detect Conceptual / Philosophy / Stoic / Mentorship First
         $foundConcepts = [];
@@ -264,7 +330,25 @@ class AiAgentService {
         }
 
         // Priority Classification
-        if (!empty($foundConcepts)) {
+        if (!empty($foundAwakening)) {
+            $sentiment = 'positive';
+            $intent = 'stoic_awakening_impact';
+            $score = 98;
+            $highlightReason = '🏛️ Despertar de Consciencia & Choque de Realidad: Reflexión profunda sobre el impacto del mensaje estoico';
+            $keywords = $foundAwakening;
+            $autopilotReady = true;
+            $autopilotStatus = 'ready';
+            $autopilotReason = '✔ Apto para Autopilot (Respuesta estoica de empatía y carácter)';
+        } elseif (!empty($foundShortAffirmation)) {
+            $sentiment = 'positive';
+            $intent = 'stoic_affirmation_short';
+            $score = 95;
+            $highlightReason = '🏛️ Afirmación y Validación de Verdad: Resonancia directa con el principio estoico';
+            $keywords = $foundShortAffirmation;
+            $autopilotReady = true;
+            $autopilotStatus = 'ready';
+            $autopilotReason = '✔ Apto para Autopilot (Afirmación contundente y concisa de verdad)';
+        } elseif (!empty($foundConcepts)) {
             $isQuestion = str_contains($commentText, '?') || str_contains($textLower, 'cómo') || str_contains($textLower, 'como') || str_contains($textLower, 'qué') || str_contains($textLower, 'que') || str_contains($textLower, 'cuál') || str_contains($textLower, 'cual');
             $sentiment = $isQuestion ? 'question' : 'positive';
             $intent = 'knowledge_concept';
@@ -484,10 +568,10 @@ class AiAgentService {
         array $forbiddenPhrases = [],
         array $fewShotExamples = []
     ): array {
-        // Clean author name: extract handle/first name without '@' for friendly conversation
-        $rawFirst = explode(' ', trim($authorName))[0] ?: 'amigo';
-        $displayName = ltrim($rawFirst, '@');
-        if (empty($displayName)) $displayName = 'amigo';
+        // Clean author name: verify if anonymous/generic or genuine personal name
+        $isGeneric = self::isGenericAuthorName($authorName);
+        $displayName = $isGeneric ? '' : self::extractCleanFirstName($authorName);
+        $nameVocative = !empty($displayName) ? ", $displayName" : '';
 
         $analysis = self::analyzeComment($commentText, $postCaption);
         $intent = $analysis['intent'];
@@ -502,33 +586,41 @@ class AiAgentService {
         $eLight = ($emojiStyle === 'minimal') ? '💡' : (($emojiStyle === 'expressive') ? '💡 🌟' : '💡');
         $ePillar = ($emojiStyle === 'minimal') ? '🏛️' : (($emojiStyle === 'expressive') ? '🏛️ ✨' : '🏛️');
 
-        // Warmth greetings (Name is included here, NEVER repeated inside sentences)
-        if ($warmthLevel >= 80) {
-            $greetEngage = "¡Hola $displayName! $eHeart";
-            $greetConvert = "¡Qué tal $displayName! $eRocket";
-            $greetSupport = "¡Hola $displayName! Con gusto te apoyo. $eLight";
-        } elseif ($warmthLevel >= 50) {
-            $greetEngage = "Hola $displayName $eHeart";
-            $greetConvert = "Hola $displayName $eRocket";
-            $greetSupport = "Hola $displayName $eLight";
+        // Warmth greetings (Name is included here ONLY if not generic, NEVER output "¡Hola Usuario!")
+        if (!empty($displayName)) {
+            if ($warmthLevel >= 80) {
+                $greetEngage = "¡Hola $displayName! $eHeart";
+                $greetConvert = "¡Qué tal $displayName! $eRocket";
+                $greetSupport = "¡Hola $displayName! Con gusto te apoyo. $eLight";
+            } elseif ($warmthLevel >= 50) {
+                $greetEngage = "Hola $displayName $eHeart";
+                $greetConvert = "Hola $displayName $eRocket";
+                $greetSupport = "Hola $displayName $eLight";
+            } else {
+                $greetEngage = "$eHeart";
+                $greetConvert = "$eRocket";
+                $greetSupport = "$eLight";
+            }
         } else {
-            $greetEngage = "$eHeart";
-            $greetConvert = "$eRocket";
-            $greetSupport = "$eLight";
+            // Natural human greetings when no real name is available (NEVER say "¡Hola Usuario!")
+            $greetEngage = "¡Totalmente! $eHeart";
+            $greetConvert = "¡Qué gran perspectiva! $eRocket";
+            $greetSupport = "Con gusto te apoyo. $eLight";
         }
 
         // Closing Questions based on rule
         $questionLead = ($closingQuestionRule !== 'never') ? "¿Te gustaría conocer más detalles sobre el contenido o temario? 👇" : "Estamos a tu total disposición.";
-        $questionGeneral = ($closingQuestionRule !== 'never') ? "¿En qué proyecto o idea estás trabajando hoy? 👇" : "¡Un saludo y seguimos en contacto!";
+        $questionGeneral = ($closingQuestionRule !== 'never') ? "¿En qué proyecto o hábito estás trabajando hoy? 👇" : "¡Un saludo y seguimos en contacto!";
         $questionPraise = ($closingQuestionRule !== 'never') ? "¿De qué tema te gustaría que hablemos en el próximo post? 💬" : "¡Gracias por formar parte de la comunidad!";
 
         // If a master few-shot example matches closely, adapt it!
         if ($matchedExample) {
+            $adapted = self::adaptFewShotReply($matchedExample['reply'], $displayName);
             return [
                 'source' => 'heuristic_few_shot_trained',
-                'engagement' => "$greetEngage " . self::adaptFewShotReply($matchedExample['reply'], $displayName) . ($closingQuestionRule === 'always' ? " " . $questionGeneral : ''),
-                'conversion' => "$greetConvert " . self::adaptFewShotReply($matchedExample['reply'], $displayName),
-                'support' => "$greetSupport " . self::adaptFewShotReply($matchedExample['reply'], $displayName),
+                'engagement' => (!empty($displayName) ? "$greetEngage " : '') . $adapted . ($closingQuestionRule === 'always' ? " " . $questionGeneral : ''),
+                'conversion' => (!empty($displayName) ? "$greetConvert " : '') . $adapted,
+                'support' => (!empty($displayName) ? "$greetSupport " : '') . $adapted,
                 'engagement_tips' => '🧠 Respuesta enriquecida por el Ejemplo Maestro entrenado para este patrón.'
             ];
         }
@@ -543,9 +635,9 @@ class AiAgentService {
             if ($isApplause) {
                 return [
                     'source' => 'heuristic_calibrated',
-                    'engagement' => "¡Muchas gracias por los aplausos y la buena vibra, $displayName! 👏🔥 ¡Seguimos con todo!",
-                    'conversion' => "¡Gracias por el apoyo, $displayName! 👏🚀 Si tienes cualquier duda o quieres conocer más de nuestros proyectos, déjanos un DM.",
-                    'support' => "¡Un honor contar con tu presencia en la comunidad, $displayName! 🏛️✨ ¡Un fuerte abrazo!",
+                    'engagement' => "¡Muchas gracias por los aplausos y el apoyo{$nameVocative}! 👏🔥 ¡Seguimos con todo!",
+                    'conversion' => "¡Gracias por estar presente{$nameVocative}! 👏🚀 Si tienes cualquier duda o quieres conocer más, déjanos un DM.",
+                    'support' => "¡Un honor contar con tu presencia en la comunidad{$nameVocative}! 🏛️✨ ¡Un fuerte abrazo!",
                     'engagement_tips' => '👏 Responder con rapidez a comentarios de aplausos y emojis eleva la visibilidad en el algoritmo de Meta.'
                 ];
             }
@@ -553,9 +645,9 @@ class AiAgentService {
             if ($isFire) {
                 return [
                     'source' => 'heuristic_calibrated',
-                    'engagement' => "¡A tope con esa energía, $displayName! 🔥⚡ ¡Vamos con todo!",
-                    'conversion' => "¡Esa es la actitud, $displayName! 🔥🚀 Si buscas dar el siguiente paso, tienes toda la información en el enlace de la bio.",
-                    'support' => "¡Fuerza e impulso para tus metas, $displayName! 🔥💪 ¡Seguimos firmes!",
+                    'engagement' => "¡A tope con esa energía y determinación{$nameVocative}! 🔥⚡ ¡Vamos con todo!",
+                    'conversion' => "¡Esa es la actitud imparable{$nameVocative}! 🔥🚀 En el enlace del perfil encuentras recursos para potenciar tu enfoque.",
+                    'support' => "¡Fuerza e impulso para tus metas{$nameVocative}! 🔥💪 ¡Seguimos firmes!",
                     'engagement_tips' => '🔥 La reciprocidad en comentarios de alta energía impulsa la viralidad y el alcance de la publicación.'
                 ];
             }
@@ -563,9 +655,9 @@ class AiAgentService {
             if ($isLove) {
                 return [
                     'source' => 'heuristic_calibrated',
-                    'engagement' => "¡Mucho cariño para ti, $displayName! ❤️✨ ¡Gracias de corazón por formar parte de esta comunidad!",
-                    'conversion' => "¡Gracias por tanto cariño, $displayName! ❤️🚀 Estamos a tu entera disposición por DM para lo que necesites.",
-                    'support' => "¡Un saludo muy especial para ti, $displayName! ❤️🤝 ¡Seguimos sumando valor juntos!",
+                    'engagement' => "¡Mucho aprecio para ti{$nameVocative}! ❤️✨ ¡Gracias de corazón por formar parte de esta comunidad!",
+                    'conversion' => "¡Gracias por tanto cariño{$nameVocative}! ❤️🚀 Estamos a tu entera disposición por DM para lo que necesites.",
+                    'support' => "¡Un saludo muy especial{$nameVocative}! ❤️🤝 ¡Seguimos sumando valor juntos!",
                     'engagement_tips' => '❤️ Conectar emocionalmente con las muestras de aprecio de seguidores afianza la lealtad hacia la marca.'
                 ];
             }
@@ -573,9 +665,9 @@ class AiAgentService {
             if ($isStrength) {
                 return [
                     'source' => 'heuristic_calibrated',
-                    'engagement' => "¡Disciplina y fuerza imparable, $displayName! 💪⚡ ¡Vamos por más!",
-                    'conversion' => "¡Con toda la determinación, $displayName! 💪🚀 Encuentras nuestras metodologías y recursos en el enlace del perfil.",
-                    'support' => "¡Constancia y enfoque cada día, $displayName! 🏛️💪 ¡Foco total en los objetivos!",
+                    'engagement' => "¡Disciplina, constancia y fuerza imparable{$nameVocative}! 💪⚡ ¡Vamos por más!",
+                    'conversion' => "¡Con toda la determinación{$nameVocative}! 💪🚀 Tienes metodologías y recursos prácticos en el enlace de la bio.",
+                    'support' => "¡Constancia y autodominio cada día{$nameVocative}! 🏛️💪 ¡Foco total en lo esencial!",
                     'engagement_tips' => '💪 Reafirmar la mentalidad y determinación refuerza la identidad y autoridad de la marca.'
                 ];
             }
@@ -583,10 +675,72 @@ class AiAgentService {
             // General emojis fallback
             return [
                 'source' => 'heuristic_calibrated',
-                'engagement' => "¡Muchas gracias por la gran vibra, $displayName! 🙌✨ ¡A seguir creciendo juntos!",
-                'conversion' => "¡Gracias por la buena energía, $displayName! 🚀✨ Recuerda que estamos a un DM de distancia para lo que necesites.",
-                'support' => "¡Agradecidos con tu presencia en la comunidad, $displayName! 🤝✨ ¡Un saludo enorme!",
+                'engagement' => "¡Muchas gracias por la gran vibra{$nameVocative}! 🙌✨ ¡A seguir forjando carácter juntos!",
+                'conversion' => "¡Gracias por la buena energía{$nameVocative}! 🚀✨ Recuerda que estamos a un DM de distancia para lo que necesites.",
+                'support' => "¡Agradecidos con tu presencia en la comunidad{$nameVocative}! 🤝✨ ¡Un saludo enorme!",
                 'engagement_tips' => '✨ Responder de forma automática a los comentarios de emojis asegura una tasa de respuesta cercana al 100%.'
+            ];
+        }
+
+        // Case 0.1: Stoic Awakening & Impact Reality Checks (Bofetada de realidad, me hizo reflexionar, mensaje brutal)
+        if ($intent === 'stoic_awakening_impact') {
+            $engagePool = [
+                "Las lecciones que más transforman casi nunca vienen con palabras suaves. Cuando una verdad incomoda y cala hondo, es señal inequívoca de que hay un carácter listo para evolucionar. Gracias por reflexionar con nosotros{$nameVocative}. 🏛️",
+                "A veces hace falta esa sacudida para romper la inercia del piloto automático y recordar lo que verdaderamente importa. Un honor caminar en comunidad con personas que buscan la templanza y el autodominio. 🤝",
+                "Esa 'bofetada' constructiva de realidad es la que nos despierta. El dolor de la verdad es temporal; el precio de vivir engañado es permanente. ¡Seguimos firmes forjando carácter{$nameVocative}! ⚡",
+                "De eso se trata la verdadera filosofía práctica: de incomodarnos para no estancarnos. Pocos tienen la humildad de recibir el mensaje y transformar la sacudida en crecimiento real. ¡Fuerza imparable{$nameVocative}! 🏛️"
+            ];
+
+            $convertPool = [
+                "Ese clic mental es el punto de partida hacia el autodominio. Si esta perspectiva resonó contigo, en el enlace de nuestra biografía compartimos guías y lecturas prácticas para profundizar en la mentalidad estoica aplicada. 📖",
+                "Transformar una reflexión en un cambio duradero requiere método y disciplina cotidiana. Puedes explorar nuestras herramientas y recursos formativos en el enlace del perfil para dar el siguiente paso. 🎯",
+                "La lucidez llega en el momento exacto en que dejamos de justificarnos. Si deseas estructurar este enfoque con hábitos sólidos de disciplina, tienes todo el material recomendado en la bio. 🚀"
+            ];
+
+            $supportPool = [
+                "Como enseñaba Séneca: 'No nos atrevemos a muchas cosas porque son difíciles, pero son difíciles porque no nos atrevemos.' La reflexión honesta es el primer paso hacia la templanza. 🏛️",
+                "El valor de los principios estoicos no es adular el ego, sino afilar la mente y templar el espíritu para cualquier adversidad. Un honor contar con aportes tan valiosos en esta comunidad."
+            ];
+
+            $rotKey = abs(crc32($commentText . $authorName . 'awake'));
+            return [
+                'source' => 'heuristic_calibrated',
+                'engagement' => $engagePool[$rotKey % count($engagePool)],
+                'conversion' => $convertPool[$rotKey % count($convertPool)],
+                'support' => $supportPool[$rotKey % count($supportPool)],
+                'engagement_tips' => '🏛️ Validar el despertar de consciencia con serenidad y temple afianza la autoridad y fidelidad de la comunidad.'
+            ];
+        }
+
+        // Case 0.2: Stoic Short Affirmations of Truth (Verdad, literal, total, 100%, así es)
+        if ($intent === 'stoic_affirmation_short') {
+            $engagePool = [
+                "La verdad no necesita adornos ni justificaciones; solo la determinación diaria de vivirla con coherencia. ¡Seguimos firmes{$nameVocative}! 🏛️",
+                "Pocos tienen la valentía de mirar la realidad de frente y asumirla sin excusas. De eso se trata la verdadera fortaleza. 🤝",
+                "Así es{$nameVocative}. Reconocer el principio es el primer paso; forjar la disciplina para sostenerlo cada día es el verdadero trabajo interior. ⚡",
+                "Exacto. La claridad mental empieza en el momento exacto en que dejamos de negociar con lo esencial. ¡Un honor caminar juntos en esta comunidad! 🏛️",
+                "Totalmente de acuerdo{$nameVocative}. En un mundo lleno de distracciones y excusas, mantenerse fiel a lo correcto es el mayor acto de autodominio. 💪"
+            ];
+
+            $convertPool = [
+                "Exacto{$nameVocative}. Cuando tienes claros estos fundamentos, dejas de malgastar energía en lo que no depende de ti. En el enlace de nuestra biografía compartimos recursos prácticos para seguir forjando esa mentalidad. 📖",
+                "Totalmente. Los principios correctos lo cambian todo cuando se aplican a diario. Si buscas herramientas estructuradas de mentalidad y disciplina, encuéntralas en el enlace de nuestro perfil. 🎯",
+                "Es así. La teoría sin acción no transforma vidas; por eso creamos metodologías prácticas de autodominio. Toda la información disponible en el enlace de la bio. 🚀"
+            ];
+
+            $supportPool = [
+                "Marco Aurelio lo resumió con maestría: 'Si no es correcto, no lo hagas; si no es verdad, no lo digas.' Un pilar innegociable de carácter. 🏛️",
+                "La serenidad y la fuerza interior nacen de aceptar la verdad y enfocarnos al 100% en nuestras propias decisiones. Foco en lo que está bajo nuestro control. 💪",
+                "Una gran verdad que distingue a quienes solo opinan de quienes construyen templanza en su vida cotidiana. Seguimos sumando valor juntos."
+            ];
+
+            $rotKey = abs(crc32($commentText . $authorName . 'affirm'));
+            return [
+                'source' => 'heuristic_calibrated',
+                'engagement' => $engagePool[$rotKey % count($engagePool)],
+                'conversion' => $convertPool[$rotKey % count($convertPool)],
+                'support' => $supportPool[$rotKey % count($supportPool)],
+                'engagement_tips' => '⚡ Las respuestas concisas y firmes a comentarios cortos refuerzan la autenticidad y autoridad estoica.'
             ];
         }
 
@@ -599,9 +753,9 @@ class AiAgentService {
             if ($isVirtueReflection) {
                 return [
                     'source' => 'heuristic_calibrated',
-                    'engagement' => "¡Totalmente de acuerdo, $displayName! $eHeart La verdadera virtud no reside en buscar condiciones perfectas, sino en actuar con excelencia en el momento presente con los recursos que disponemos. ¡Gracias por aportar una reflexión tan lúcida y valiosa a la comunidad! ✨",
-                    'conversion' => "¡Qué gran perspectiva, $displayName! $eRocket Justamente esa filosofía de crecimiento, autodominio y presencia es el núcleo de lo que compartimos. Si deseas profundizar en nuestras lecturas y guías prácticas sobre mentalidad, en el enlace de nuestra biografía tienes todo el material recomendado 📖",
-                    'support' => "Una gran verdad, $displayName. $ePillar Como nos enseñan los principios estoicos, el carácter se forja decidiendo hacer propio cada instante sin buscar la perfección externa. Un honor contar con aportes de tanto nivel en esta comunidad 🏛️",
+                    'engagement' => "¡Totalmente de acuerdo{$nameVocative}! $eHeart La verdadera virtud no reside en buscar condiciones perfectas, sino en actuar con rectitud en el momento presente con los recursos que disponemos. ¡Gracias por aportar una reflexión tan lúcida a la comunidad! ✨",
+                    'conversion' => "¡Qué gran perspectiva{$nameVocative}! $eRocket Justamente esa filosofía de presencia y autodominio es el pilar de lo que compartimos. Si deseas profundizar en nuestras guías prácticas sobre mentalidad, en el enlace de la bio tienes el material recomendado. 📖",
+                    'support' => "Una gran verdad{$nameVocative}. $ePillar Como enseñaban los antiguos estoicos, el carácter se forja eligiendo hacer propio cada instante sin buscar validación externa. Un honor contar con aportes de este calibre en la comunidad. 🏛️",
                     'engagement_tips' => '🏛️ Reconocer y validar reflexiones profundas de la comunidad consolida la autoridad y lealtad de marca.'
                 ];
             }
@@ -619,16 +773,23 @@ class AiAgentService {
             if ($isDiscipline) {
                 return [
                     'source' => 'heuristic_calibrated',
-                    'engagement' => "$greetEngage La motivación es pasajera, pero la disciplina diaria se construye con pequeñas victorias cotidianas de 5 minutos. No busques perfección inmediata, sino consistencia diaria. " . (($closingQuestionRule !== 'never') ? "¿Cuál es esa pequeña acción que puedes completar hoy? 👇" : "El progreso diario lo cambia todo."),
+                    'engagement' => "$greetEngage La motivación es pasajera, pero la disciplina diaria se construye con pequeñas victorias cotidianas. No busques perfección inmediata, sino consistencia innegociable. " . (($closingQuestionRule !== 'never') ? "¿Cuál es esa pequeña acción que puedes completar hoy? 👇" : "El progreso diario lo cambia todo."),
                     'conversion' => "$greetConvert Cuando aplicas un método estructurado, la disciplina se vuelve un hábito natural. Puedes consultar nuestras herramientas y metodologías en el enlace de la bio para dar el siguiente paso. ¿Te gustaría conocer más sobre el método?",
-                    'support' => "$greetSupport La clave para vencer la procrastinación es dividir el objetivo en una sola micro-tarea que puedas empezar de inmediato. ¿En qué meta estás enfocado esta semana?",
+                    'support' => "$greetSupport La clave para vencer la procrastinación es dividir el objetivo en una micro-tarea que puedas empezar de inmediato. ¿En qué meta estás enfocado esta semana?",
                     'engagement_tips' => '💡 Aportar consejos prácticos y accionables fomenta conversaciones de alto engagement.'
                 ];
             }
 
+            $conceptEngagePool = [
+                "$greetEngage Los principios sólidos nos permiten mantener el rumbo sin importar las circunstancias externas. " . (($closingQuestionRule !== 'never') ? "¿Qué concepto o hábito te ha resultado más transformador? 💬" : "Un gusto reflexionar juntos en comunidad."),
+                "Tener claridad en estos fundamentos marca el camino hacia la templanza. Gracias por enriquecer la conversación en la comunidad{$nameVocative}. 🏛️",
+                "Quien domina sus pensamientos, domina su destino. La práctica cotidiana de la virtud es el mayor refugio ante la incertidumbre{$nameVocative}."
+            ];
+            $rotConcept = abs(crc32($commentText . $authorName . 'concept'));
+
             return [
                 'source' => 'heuristic_calibrated',
-                'engagement' => "$greetEngage Los principios sólidos nos permiten mantener el rumbo sin importar las circunstancias externas. " . (($closingQuestionRule !== 'never') ? "¿Qué concepto o hábito te ha resultado más transformador? 💬" : "Un gusto reflexionar juntos en comunidad."),
+                'engagement' => $conceptEngagePool[$rotConcept % count($conceptEngagePool)],
                 'conversion' => "$greetConvert Profundizar en estos fundamentos marca la diferencia en cualquier proyecto. Te invitamos a revisar los recursos formativos en el enlace de nuestra biografía. ¿En qué área estás buscando evolucionar hoy?",
                 'support' => "$greetSupport La claridad mental surge de la práctica constante y el pensamiento reflexivo. Con gusto seguimos compartiendo contenidos sobre este tema. ¿Qué duda puntual te gustaría que abordemos en el próximo post?",
                 'engagement_tips' => '🏛️ El contenido de valor y reflexión genera seguidores altamente fidelizados.'
@@ -916,6 +1077,11 @@ PROMPT;
     }
 
     private static function adaptFewShotReply(string $replyTemplate, string $firstName): string {
+        if (empty($firstName) || self::isGenericAuthorName($firstName)) {
+            $replyTemplate = str_ireplace([', {nombre}', ', {name}', ' {nombre}', ' {name}', '{nombre},', '{name},'], '', $replyTemplate);
+            $replyTemplate = str_ireplace(['{nombre}', '{name}'], '', $replyTemplate);
+            return preg_replace('/\s+([,\.\?!])/', '$1', preg_replace('/\s+/', ' ', trim($replyTemplate)));
+        }
         return str_replace(['{nombre}', '{name}'], $firstName, $replyTemplate);
     }
 

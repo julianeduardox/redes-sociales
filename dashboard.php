@@ -465,6 +465,9 @@ $isMetaConnected = ($activeAccountsCount > 0);
           <button class="subtab-btn" data-subtab="posts" onclick="AnalyticsController.switchSubtab('posts')">
             <span>📱 Rendimiento por Publicación</span>
           </button>
+          <button class="subtab-btn" data-subtab="trends" onclick="AnalyticsController.switchSubtab('trends')">
+            <span>🔥 Tendencias del Nicho</span>
+          </button>
         </div>
       </div>
 
@@ -514,6 +517,100 @@ $isMetaConnected = ($activeAccountsCount > 0);
         <!-- Dynamic Posts Grid -->
         <div id="posts-grid-container" class="posts-grid">
           <!-- Posts rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════════
+           Subview 4: AGENTE DE TENDENCIAS DEL NICHO
+           ═══════════════════════════════════════════════════════════════════ -->
+      <div id="analytics-trends-subview" style="display: none;">
+
+        <!-- ─── Header + Controls ─────────────────────────────────────────── -->
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:14px; margin-bottom:24px;">
+          <div>
+            <h4 style="font-size:1.1rem; font-weight:800; color:#fff; margin:0 0 4px;">🔥 Tendencias del Nicho</h4>
+            <p style="font-size:0.82rem; color:var(--text-muted); margin:0;">Monitorea hashtags de tu nicho y descubre el contenido con mayor engagement. Actualización cada 6h.</p>
+          </div>
+          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+            <span id="trends-last-sync" style="font-size:0.76rem; color:var(--text-dim);">Última sync: --</span>
+            <button id="btn-trends-sync" class="btn-primary-action" style="background: linear-gradient(135deg,#7c3aed,#4f46e5); padding:8px 16px; font-size:0.8rem; display:flex; align-items:center; gap:6px;" onclick="TrendsAgent.syncNow()">
+              <svg id="trends-sync-icon" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              <span>Sincronizar Ahora</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- ─── Hashtag Manager ────────────────────────────────────────────── -->
+        <div class="analytics-section-card" style="margin-bottom:20px; padding:18px 20px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+            <div style="font-size:0.88rem; font-weight:700; color:#e2e8f0;">
+              📌 Hashtags Monitoreados <span id="trends-niche-count" style="font-size:0.75rem; color:var(--text-dim); font-weight:400;"></span>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <input id="trends-new-hashtag" type="text" placeholder="#estoicismo" maxlength="60"
+                style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:8px; padding:6px 12px; color:#e2e8f0; font-size:0.82rem; width:160px; outline:none;"
+                onkeydown="if(event.key==='Enter') TrendsAgent.addNiche()"/>
+              <button class="btn-primary-action" style="padding:6px 14px; font-size:0.8rem;" onclick="TrendsAgent.addNiche()">
+                + Agregar
+              </button>
+            </div>
+          </div>
+          <div id="trends-niche-chips" style="display:flex; flex-wrap:wrap; gap:8px; min-height:32px;">
+            <span style="color:var(--text-dim); font-size:0.8rem;">Cargando hashtags...</span>
+          </div>
+        </div>
+
+        <!-- ─── AI Top 3 Picks ─────────────────────────────────────────────── -->
+        <div id="trends-ai-picks-section" style="margin-bottom:24px; display:none;">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
+            <div style="background:linear-gradient(135deg,#f59e0b,#ef4444); border-radius:8px; padding:5px 12px; font-size:0.75rem; font-weight:800; color:#fff; letter-spacing:0.04em;">🤖 AI TOP 3 PICKS</div>
+            <span style="font-size:0.8rem; color:var(--text-dim);">Los mejores posts del nicho seleccionados por el agente</span>
+          </div>
+          <div id="trends-ai-picks-grid" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:14px;"></div>
+        </div>
+
+        <!-- ─── Insights Bar ──────────────────────────────────────────────── -->
+        <div id="trends-insights-bar" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; margin-bottom:20px;"></div>
+
+        <!-- ─── Top 20 Trending Grid ─────────────────────────────────────── -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+          <div style="font-size:0.9rem; font-weight:700; color:#e2e8f0;">📊 Top 20 Posts en Tendencia</div>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <select id="trends-filter-niche" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:8px; padding:5px 10px; color:#e2e8f0; font-size:0.79rem; outline:none;" onchange="TrendsAgent.filterByNiche(this.value)">
+              <option value="">🌐 Todos los nichos</option>
+            </select>
+          </div>
+        </div>
+        <div id="trends-posts-grid" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(310px,1fr)); gap:16px; margin-bottom:30px;">
+          <div style="grid-column:1/-1; text-align:center; padding:40px; color:var(--text-dim);">
+            <div style="font-size:2rem; margin-bottom:10px;">🔥</div>
+            <div style="font-weight:600;">Agrega hashtags para empezar a monitorear tendencias</div>
+            <div style="font-size:0.8rem; margin-top:6px;">Tus nichos de referencia aparecerán aquí con su engagement score en tiempo real</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ MODAL: Inspirarme 🤖 ════════════════════════════════════════════ -->
+    <div id="modal-inspire" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); align-items:center; justify-content:center;" onclick="if(event.target===this)TrendsAgent.closeInspireModal()">
+      <div style="background:#1a1c2e; border:1px solid rgba(124,58,237,0.3); border-radius:20px; padding:28px; max-width:600px; width:90%; max-height:85vh; overflow-y:auto; position:relative;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px;">
+          <div>
+            <div style="font-size:1rem; font-weight:800; color:#fff; margin-bottom:4px;">✨ Inspirarme con IA</div>
+            <div id="inspire-post-ref" style="font-size:0.78rem; color:var(--text-dim);"></div>
+          </div>
+          <button onclick="TrendsAgent.closeInspireModal()" style="background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:1.4rem; line-height:1; padding:0;">×</button>
+        </div>
+
+        <div id="inspire-loading" style="text-align:center; padding:30px;">
+          <div class="comment-loading" style="margin:0 auto 12px;"></div>
+          <div style="color:var(--text-muted); font-size:0.85rem;">Generando captions con tu voz de marca...</div>
+        </div>
+
+        <div id="inspire-results" style="display:none;">
+          <div style="font-size:0.82rem; font-weight:700; color:#a78bfa; margin-bottom:12px;">📝 3 Variantes de Caption Generadas:</div>
+          <div id="inspire-captions-list" style="display:flex; flex-direction:column; gap:12px;"></div>
+          <div id="inspire-source-badge" style="margin-top:14px; font-size:0.72rem; color:var(--text-dim); text-align:right;"></div>
         </div>
       </div>
     </div>
@@ -1965,6 +2062,7 @@ $isMetaConnected = ($activeAccountsCount > 0);
 <script src="assets/js/agent-controller.js?v=<?= time() ?>"></script>
 <script src="assets/js/analytics.js?v=<?= time() ?>"></script>
 <script src="assets/js/planner.js?v=<?= time() ?>"></script>
+<script src="assets/js/trends.js?v=<?= time() ?>"></script>
 <script src="assets/js/app.js?v=<?= time() ?>"></script>
 
 </body>
