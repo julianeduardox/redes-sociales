@@ -248,6 +248,9 @@ if (!empty($error)) {
             $primaryIgId = '';
             $skippedAccountsCount = 0;
 
+            // Clean up any leftover demo / mock accounts from initial seeding so they don't consume real account quota
+            $pdo->prepare("DELETE FROM accounts WHERE user_id = :uid AND (page_id LIKE 'page_stoic_%' OR page_id LIKE 'page_user_%' OR page_id LIKE 'mock_%' OR page_id IN ('12345', '67890', 'ig_10928374', 'fb_987654321'))")->execute([':uid' => $userId]);
+
             // Fetch user plan and max_accounts
             $uStmt = $pdo->prepare("SELECT plan, max_accounts FROM users WHERE id = :uid LIMIT 1");
             $uStmt->execute([':uid' => $userId]);

@@ -276,6 +276,76 @@ function processWebhookQueue(PDO $pdo, int $batchLimit = 50, ?int $specificQueue
                             }
                         }
 
+                        // CASE A2: Facebook Page New Post / Photo / Video Ingestion (Real-Time Feed Webhook)
+                        $fbPostItems = ['status', 'photo', 'video', 'post', 'share', 'album'];
+                        if ($field === 'feed' && in_array($val['item'] ?? '', $fbPostItems, true) && ($val['verb'] ?? '') === 'add') {
+                            $externalPostId = Security::sanitizeString($val['post_id'] ?? ($val['id'] ?? ''), 100);
+                            $postCaption = Security::sanitizeString($val['message'] ?? ($val['story'] ?? 'Publicación en Página de Facebook'), 2500);
+                            $rawCreated = $val['created_time'] ?? null;
+                            $postedAt = !empty($rawCreated) ? (is_numeric($rawCreated) ? date('Y-m-d H:i:s', (int)$rawCreated) : date('Y-m-d H:i:s', strtotime($rawCreated))) : date('Y-m-d H:i:s');
+                            
+                            $itemType = $val['item'] ?? 'status';
+                            $mediaType = 'status';
+                            if ($itemType === 'photo' || $itemType === 'album') $mediaType = 'image';
+                            elseif ($itemType === 'video') $mediaType = 'video';
+
+                            $mediaUrl = Security::sanitizeString($val['photos'][0] ?? ($val['link'] ?? ''), 500);
+                            $permalink = Security::sanitizeString($val['link'] ?? "https://www.facebook.com/{$externalPostId}", 500);
+
+                            if (!empty($externalPostId)) {
+                                // Find connected account ID and brand voice
+                                $accStmt = $pdo->prepare("SELECT id, brand_voice_id FROM accounts WHERE user_id = :uid AND page_id = :pid AND platform = 'facebook' LIMIT 1");
+                                $accStmt->execute([':uid' => $targetUserId, ':pid' => $entryPageId]);
+                                $accRow = $accStmt->fetch();
+                                $fbAccountId = $accRow ? (int)$accRow['id'] : null;
+                                $postBvId = !empty($accRow['brand_voice_id']) ? (int)$accRow['brand_voice_id'] : $defaultBrandVoiceId;
+
+                                // Check if post already exists
+                                $checkPostStmt = $pdo->prepare("SELECT id FROM posts WHERE external_post_id = :p_ext AND user_id = :uid LIMIT 1");
+                                $checkPostStmt->execute([':p_ext' => $externalPostId, ':uid' => $targetUserId]);
+                                $existingPostRow = $checkPostStmt->fetch();
+
+                                if ($existingPostRow) {
+                                    $pdo->prepare("
+                                        UPDATE posts 
+                                        SET caption = :caption, media_url = COALESCE(NULLIF(:media_url, ''), media_url),
+                                            media_type = :media_type, last_synced_at = CURRENT_TIMESTAMP
+                                        WHERE id = :id AND user_id = :uid
+                                    ")->execute([
+                                        ':caption' => $postCaption,
+                                        ':media_url' => $mediaUrl,
+                                        ':media_type' => $mediaType,
+                                        ':id' => $existingPostRow['id'],
+                                        ':uid' => $targetUserId
+                                    ]);
+                                    cliLog("🔄 Actualizada publicación de Facebook en tiempo real [ID: {$externalPostId}]", 'info', $silent);
+                                } else {
+                                    $pdo->prepare("
+                                        INSERT INTO posts (
+                                            user_id, account_id, brand_voice_id, platform, external_post_id,
+                                            caption, media_url, media_type, permalink, total_likes, total_comments, total_shares,
+                                            impressions, reach, saved_count, engagement_rate, posted_at, last_synced_at
+                                        ) VALUES (
+                                            :uid, :acc_id, :bvid, 'facebook', :ext_id,
+                                            :caption, :media_url, :media_type, :permalink, 0, 0, 0,
+                                            0, 0, 0, 0.0, :posted_at, CURRENT_TIMESTAMP
+                                        )
+                                    ")->execute([
+                                        ':uid' => $targetUserId,
+                                        ':acc_id' => $fbAccountId,
+                                        ':bvid' => $postBvId,
+                                        ':ext_id' => $externalPostId,
+                                        ':caption' => $postCaption,
+                                        ':media_url' => $mediaUrl,
+                                        ':media_type' => $mediaType,
+                                        ':permalink' => $permalink,
+                                        ':posted_at' => $postedAt
+                                    ]);
+                                    cliLog("📸 Ingerida nueva publicación de Facebook en tiempo real [ID: {$externalPostId}]", 'success', $silent);
+                                }
+                            }
+                        }
+
                         // CASE B: Instagram Comments Webhook
                         if (($field === 'comments' || $field === 'live_comments') && isset($val['id'])) {
                             $commentId = Security::sanitizeString($val['id'] ?? '', 100);

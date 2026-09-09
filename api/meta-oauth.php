@@ -144,7 +144,11 @@ if (!empty($requestedScopes)) {
     $scopes = [
         'pages_show_list',
         'pages_read_engagement',
+        'pages_read_user_content',
+        'read_insights',
         'pages_manage_posts',
+        'pages_manage_metadata',
+        'pages_manage_engagement',
         'instagram_basic',
         'instagram_manage_comments',
         'instagram_manage_insights'

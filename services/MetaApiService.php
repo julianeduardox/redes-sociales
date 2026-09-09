@@ -898,8 +898,8 @@ class MetaApiService {
                     if (isset($resData['error'])) {
                         $errCode = $resData['error']['code'] ?? 0;
                         $errSub = $resData['error']['message'] ?? '';
-                        if ($errCode == 10 || str_contains($errSub, 'pages_read_engagement')) {
-                            $fbPermissionError = "Facebook ({$accName}): Requiere permiso 'pages_read_engagement' en Meta.";
+                        if ($errCode == 10 || str_contains($errSub, 'pages_read_engagement') || str_contains($errSub, 'pages_read_user_content')) {
+                            $fbPermissionError = "Facebook ({$accName}): Requiere permisos 'pages_read_engagement' y 'pages_read_user_content' en Meta.";
                         }
                     } elseif (!empty($resData['data']) && is_array($resData['data'])) {
                         foreach ($resData['data'] as $postItem) {
