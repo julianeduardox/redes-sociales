@@ -163,16 +163,19 @@ const TrendsAgent = {
       });
       const json = await res.json();
 
-      if (json.success) {
-        const synced = json.data?.synced || 1;
-        this.toast(`✅ Sincronización completada — ${synced} hashtag(s) actualizados`);
+      if (json.success && (json.data?.synced > 0 || json.data?.total_saved > 0)) {
+        const synced = json.data?.synced || 0;
+        const saved  = json.data?.total_saved || 0;
+        this.toast(`✅ Sincronización completada — ${synced} hashtag(s) con ${saved} post(s) actualizados`);
         // Reload data
         await this.loadTrendingPosts();
         await this.loadAiPicks();
         await this.loadInsights();
         await this.loadNiches();
       } else {
-        this.toast(json.error || 'Error al sincronizar', 'error');
+        const errMsg = json.error || 'Meta no devolvió publicaciones para estos hashtags. Verifica la conexión.';
+        this.toast(`⚠️ ${errMsg}`, 'error');
+        await this.loadNiches();
       }
     } catch (e) {
       this.toast('Error de conexión al sincronizar', 'error');

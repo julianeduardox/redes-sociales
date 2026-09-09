@@ -17,6 +17,7 @@ class TrendsAgentService {
     private const HISTORY_DAYS       = 30;
     private const MAX_HASHTAGS_USER  = 10;
     private const API_TIMEOUT        = 15;
+    private static ?string $lastMetaError = null;
 
     // ==========================================================================
     // GESTIÓN DE NICHOS
@@ -97,10 +98,21 @@ class TrendsAgentService {
     // ==========================================================================
 
     public static function discoverHashtagId(string $hashtag, string $igUserId, string $token): ?string {
-        $url  = self::BASE_URL . '/' . $igUserId . '/ig_hashtag_search'
-              . '?q=' . urlencode($hashtag)
+        $url  = self::BASE_URL . '/ig_hashtag_search'
+              . '?user_id=' . urlencode($igUserId)
+              . '&q=' . urlencode($hashtag)
               . '&access_token=' . urlencode($token);
         $data = self::makeGetRequest($url);
+        if (!empty($data['error'])) {
+            $errCode = (int)($data['error']['code'] ?? 0);
+            $errMsg  = $data['error']['message'] ?? '';
+            error_log("TrendsAgent discoverHashtagId Meta Error [$errCode]: $errMsg");
+            if ($errCode === 190 || str_contains(strtolower($errMsg), 'access token') || str_contains(strtolower($errMsg), 'expired')) {
+                self::$lastMetaError = 'El token de acceso de Meta/Instagram ha expirado. Por favor reconecta tu cuenta.';
+            } else {
+                self::$lastMetaError = 'Meta API: ' . $errMsg;
+            }
+        }
         return !empty($data['data'][0]['id']) ? (string)$data['data'][0]['id'] : null;
     }
 
@@ -111,7 +123,11 @@ class TrendsAgentService {
                 . '&fields=' . $fields
                 . '&limit=30'
                 . '&access_token=' . urlencode($token);
-        return self::makeGetRequest($url)['data'] ?? [];
+        $data = self::makeGetRequest($url);
+        if (!empty($data['error'])) {
+            error_log("TrendsAgent fetchTopPosts Meta Error: " . json_encode($data['error']));
+        }
+        return $data['data'] ?? [];
     }
 
     public static function fetchRecentPosts(string $hashtagId, string $igUserId, string $token): array {
@@ -121,7 +137,11 @@ class TrendsAgentService {
                 . '&fields=' . $fields
                 . '&limit=20'
                 . '&access_token=' . urlencode($token);
-        return self::makeGetRequest($url)['data'] ?? [];
+        $data = self::makeGetRequest($url);
+        if (!empty($data['error'])) {
+            error_log("TrendsAgent fetchRecentPosts Meta Error: " . json_encode($data['error']));
+        }
+        return $data['data'] ?? [];
     }
 
     // ==========================================================================
@@ -145,6 +165,7 @@ class TrendsAgentService {
 
     public static function syncNicheTrends(int $userId, int $nicheId): array {
         try {
+            self::$lastMetaError = null;
             $pdo      = Database::getConnection();
             $nStmt    = $pdo->prepare("SELECT * FROM trend_niches WHERE id = ? AND user_id = ? AND is_active = 1");
             $nStmt->execute([$nicheId, $userId]);
@@ -164,7 +185,8 @@ class TrendsAgentService {
                 if ($hashtagId) {
                     $pdo->prepare("UPDATE trend_niches SET ig_hashtag_id = ? WHERE id = ?")->execute([$hashtagId, $nicheId]);
                 } else {
-                    return ['success' => false, 'error' => "No se encontró el hashtag #$hashtag en Instagram"];
+                    $errorMsg = self::$lastMetaError ?: "No se encontró el hashtag #$hashtag en Instagram";
+                    return ['success' => false, 'error' => $errorMsg];
                 }
             }
 
@@ -229,13 +251,44 @@ class TrendsAgentService {
 
     public static function syncAllNiches(int $userId): array {
         $niches  = self::getNiches($userId);
+        if (empty($niches)) {
+            return ['success' => false, 'error' => 'No tienes hashtags agregados para sincronizar', 'synced' => 0];
+        }
+
         $results = [];
+        $totalSaved = 0;
+        $firstError = null;
+
         foreach ($niches as $niche) {
-            $results[] = array_merge(['hashtag' => $niche['hashtag']], self::syncNicheTrends($userId, (int)$niche['id']));
-            usleep(500000);
+            $res = self::syncNicheTrends($userId, (int)$niche['id']);
+            $results[] = array_merge(['hashtag' => $niche['hashtag']], $res);
+            if (!empty($res['posts_saved'])) {
+                $totalSaved += (int)$res['posts_saved'];
+            }
+            if (empty($res['success']) && empty($firstError)) {
+                $firstError = $res['error'] ?? 'Error al consultar Meta Graph API';
+            }
+            usleep(400000);
         }
         self::cleanupOldTrends($userId);
-        return ['success' => true, 'synced' => count($results), 'results' => $results];
+
+        $syncedCount = count(array_filter($results, fn($r) => !empty($r['success']) && ($r['posts_saved'] ?? 0) > 0));
+
+        if ($syncedCount === 0 && !empty($firstError)) {
+            return [
+                'success' => false,
+                'error'   => $firstError,
+                'synced'  => 0,
+                'results' => $results
+            ];
+        }
+
+        return [
+            'success'     => true,
+            'synced'      => $syncedCount,
+            'total_saved' => $totalSaved,
+            'results'     => $results
+        ];
     }
 
     public static function syncAllActiveUsers(): void {
