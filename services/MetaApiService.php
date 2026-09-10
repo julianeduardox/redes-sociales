@@ -18,10 +18,20 @@ class MetaApiService {
     /**
      * Test and diagnose Meta Graph API connection & permissions
      */
-    public static function testMetaConnection(?string $token = null): array {
-        $accessToken = !empty($token) ? trim($token) : Settings::get('meta_page_access_token', '');
-        $appId = Settings::get('meta_app_id', '');
-        $configuredIgId = Settings::get('meta_instagram_account_id', '');
+    public static function testMetaConnection(?string $token = null, ?int $userId = null): array {
+        $uid = ($userId !== null && $userId > 0) ? $userId : (class_exists('Auth') && Auth::check() ? Auth::id() : 1);
+        $accessToken = !empty($token) ? trim($token) : '';
+
+        if (empty($accessToken)) {
+            $pdo = Database::getConnection();
+            $stmt = $pdo->prepare("SELECT access_token FROM accounts WHERE user_id = :uid AND access_token IS NOT NULL AND access_token != '' ORDER BY id DESC LIMIT 1");
+            $stmt->execute([':uid' => $uid]);
+            $accRow = $stmt->fetch();
+            $accessToken = !empty($accRow['access_token']) ? $accRow['access_token'] : Settings::get('meta_page_access_token', '', $uid);
+        }
+
+        $appId = Settings::get('meta_app_id', '', $uid);
+        $configuredIgId = Settings::get('meta_instagram_account_id', '', $uid);
 
         if (empty($accessToken)) {
             return [
@@ -389,7 +399,7 @@ class MetaApiService {
         $uid = ($userId !== null && $userId > 0) ? $userId : (class_exists('Auth') && Auth::check() ? Auth::id() : 1);
         $pdo = Database::getConnection();
         $stmt = $pdo->prepare("
-            SELECT c.*, p.external_post_id, p.account_id, a.access_token as account_token, a.platform as account_platform 
+            SELECT c.*, p.external_post_id, p.account_id, a.access_token as account_token, a.platform as account_platform, a.page_id as account_page_id
             FROM comments c 
             JOIN posts p ON c.post_id = p.id 
             LEFT JOIN accounts a ON p.account_id = a.id
@@ -400,22 +410,58 @@ class MetaApiService {
         $comment = $stmt->fetch();
 
         if (!$comment) {
-            return ['success' => false, 'error' => 'Comentario no encontrado en la base de datos'];
+            return [
+                'success' => false,
+                'error' => 'Comentario no encontrado en la base de datos',
+                'is_token_expired' => false
+            ];
         }
 
-        $pageAccessToken = !empty($comment['account_token']) ? $comment['account_token'] : Settings::get('meta_page_access_token', '', $uid);
-        $externalCommentId = $comment['external_comment_id'];
+        $platform = strtolower($comment['platform'] ?? 'facebook');
+        $externalCommentId = $comment['external_comment_id'] ?? '';
+
+        // Select the most appropriate token based on platform
+        $pageAccessToken = !empty($comment['account_token']) ? $comment['account_token'] : '';
+
+        // If no token from the specific post's account, try finding a token for this platform from user's accounts
+        if (empty($pageAccessToken)) {
+            $stmtAcc = $pdo->prepare("
+                SELECT access_token 
+                FROM accounts 
+                WHERE user_id = :uid AND platform = :platform AND access_token IS NOT NULL AND access_token != ''
+                ORDER BY id DESC LIMIT 1
+            ");
+            $stmtAcc->execute([':uid' => $uid, ':platform' => $platform]);
+            $accRow = $stmtAcc->fetch();
+            if ($accRow && !empty($accRow['access_token'])) {
+                $pageAccessToken = $accRow['access_token'];
+            }
+        }
+
+        // Fallback to Settings if still not set
+        if (empty($pageAccessToken)) {
+            if ($platform === 'instagram') {
+                $pageAccessToken = Settings::get('meta_instagram_token', '', $uid);
+                if (empty($pageAccessToken)) {
+                    $pageAccessToken = Settings::get('meta_page_access_token', '', $uid);
+                }
+            } else {
+                $candidate = Settings::get('meta_page_access_token', '', $uid);
+                // Ensure candidate is not an Instagram Basic Display Token (starts with IGAAP or IGQV)
+                if (!empty($candidate) && !str_starts_with($candidate, 'IGAA') && !str_starts_with($candidate, 'IGQV')) {
+                    $pageAccessToken = $candidate;
+                }
+            }
+        }
 
         // If no token is set or it's a simulated external ID (starts with cmt_), record locally and simulate success
         if (empty($pageAccessToken) || str_starts_with($externalCommentId, 'cmt_')) {
             return [
                 'success' => true,
                 'simulated' => true,
-                'message' => 'Respuesta registrada y simulada exitosamente (Modo Demo / Sin Meta Token real configurado).'
+                'message' => 'Respuesta registrada localmente (Modo Demo / Sin Meta Token real configurado).'
             ];
         }
-
-        $platform = $comment['platform'];
 
         if ($platform === 'instagram') {
             // Instagram Graph API Reply: POST /{ig-comment-id}/replies?message={message}&access_token={token}
@@ -443,25 +489,140 @@ class MetaApiService {
 
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $error = curl_error($ch);
+        $curlError = curl_error($ch);
         curl_close($ch);
 
-        if ($httpCode >= 200 && $httpCode < 300) {
-            $data = json_decode($response, true);
+        $data = json_decode($response, true);
+
+        if ($httpCode >= 200 && $httpCode < 300 && is_array($data) && !isset($data['error'])) {
             return [
                 'success' => true,
                 'simulated' => false,
+                'remote_id' => $data['id'] ?? null,
                 'meta_response' => $data
             ];
         } else {
+            $errorObj = is_array($data) && isset($data['error']) ? $data['error'] : [];
+            $errorCode = $errorObj['code'] ?? null;
+            $errorSubcode = $errorObj['error_subcode'] ?? null;
+            $rawMsg = $errorObj['message'] ?? ($curlError ?: $response ?: "HTTP Error {$httpCode}");
+
+            // Detect expired or invalidated Meta Access Token (OAuthException 190 / 463 / 467)
+            $isTokenExpired = (
+                $errorCode === 190 ||
+                $errorSubcode === 463 ||
+                $errorSubcode === 467 ||
+                stripos($rawMsg, 'Session has expired') !== false ||
+                stripos($rawMsg, 'Error validating access token') !== false ||
+                stripos($rawMsg, 'The access token could not be decrypted') !== false
+            );
+
+            $friendlyMsg = $rawMsg;
+            if ($isTokenExpired) {
+                $friendlyMsg = "La sesión del Token de Meta ha expirado (Error 190/463). Por favor renueva tu Token de Acceso de Página en Configuración.";
+            }
+
             return [
                 'success' => false,
                 'simulated' => false,
                 'http_code' => $httpCode,
-                'error' => $error ?: $response
+                'error' => $friendlyMsg,
+                'raw_error' => $rawMsg,
+                'error_code' => $errorCode,
+                'error_subcode' => $errorSubcode,
+                'is_token_expired' => $isTokenExpired,
+                'meta_response' => $data
             ];
         }
     }
+
+    /**
+     * Proactively inspect the health of connected Meta tokens for a given user
+     */
+    public static function checkTokenHealth(?int $userId = null): array {
+        $uid = ($userId !== null && $userId > 0) ? $userId : (class_exists('Auth') && Auth::check() ? Auth::id() : 1);
+        $pdo = Database::getConnection();
+
+        $result = [
+            'facebook' => [
+                'has_token' => false,
+                'is_valid' => false,
+                'error' => null,
+                'account_name' => null
+            ],
+            'instagram' => [
+                'has_token' => false,
+                'is_valid' => false,
+                'error' => null,
+                'account_name' => null
+            ]
+        ];
+
+        // Check Facebook Token
+        $stmtFb = $pdo->prepare("SELECT account_name, access_token FROM accounts WHERE user_id = :uid AND platform = 'facebook' AND access_token IS NOT NULL AND access_token != '' ORDER BY id DESC LIMIT 1");
+        $stmtFb->execute([':uid' => $uid]);
+        $fbAcc = $stmtFb->fetch();
+
+        $fbToken = $fbAcc['access_token'] ?? Settings::get('meta_page_access_token', '', $uid);
+        if (!empty($fbToken) && !str_starts_with($fbToken, 'IGAA') && !str_starts_with($fbToken, 'IGQV')) {
+            $result['facebook']['has_token'] = true;
+            $result['facebook']['account_name'] = $fbAcc['account_name'] ?? 'Facebook Page';
+
+            $ch = curl_init(self::BASE_URL . '/me?fields=id,name&access_token=' . urlencode($fbToken));
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            $res = curl_exec($ch);
+            $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            $data = json_decode($res, true);
+            if ($code === 200 && !empty($data['id'])) {
+                $result['facebook']['is_valid'] = true;
+                if (!empty($data['name'])) {
+                    $result['facebook']['account_name'] = $data['name'];
+                }
+            } else {
+                $result['facebook']['is_valid'] = false;
+                $result['facebook']['error'] = $data['error']['message'] ?? 'Token inválido o expirado';
+            }
+        }
+
+        // Check Instagram Token
+        $stmtIg = $pdo->prepare("SELECT account_name, access_token FROM accounts WHERE user_id = :uid AND platform = 'instagram' AND access_token IS NOT NULL AND access_token != '' ORDER BY id DESC LIMIT 1");
+        $stmtIg->execute([':uid' => $uid]);
+        $igAcc = $stmtIg->fetch();
+
+        $igToken = $igAcc['access_token'] ?? Settings::get('meta_instagram_token', '', $uid);
+        if (empty($igToken)) {
+            $cand = Settings::get('meta_page_access_token', '', $uid);
+            if (!empty($cand) && (str_starts_with($cand, 'IGAA') || str_starts_with($cand, 'IGQV'))) {
+                $igToken = $cand;
+            }
+        }
+
+        if (!empty($igToken)) {
+            $result['instagram']['has_token'] = true;
+            $result['instagram']['account_name'] = $igAcc['account_name'] ?? 'Instagram Account';
+
+            $ch = curl_init(self::BASE_URL . '/me?fields=id,username&access_token=' . urlencode($igToken));
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            $res = curl_exec($ch);
+            $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            $data = json_decode($res, true);
+            if ($code === 200 && !empty($data['id'])) {
+                $result['instagram']['is_valid'] = true;
+            } else {
+                $result['instagram']['is_valid'] = false;
+                $result['instagram']['error'] = $data['error']['message'] ?? 'Token inválido o expirado';
+            }
+        }
+
+        return $result;
+    }
+
 
     /**
      * Synchronize live posts, insights & comments from Meta Graph API for all connected Facebook Pages & Instagram Accounts

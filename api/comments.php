@@ -44,14 +44,21 @@ try {
                 COALESCE(p.brand_voice_id, a.brand_voice_id, 1) as brand_voice_id,
                 COALESCE(bv.brand_name, 'Voz de Marca') as brand_voice_name,
                 COALESCE(bv.tone_level, 'friendly_engaging') as brand_voice_tone,
+                r.id as reply_id,
                 r.reply_text,
                 r.variant_type as reply_variant_type,
-                r.created_at as reply_created_at
+                r.is_posted_to_platform,
+                r.created_at as reply_created_at,
+                c.highlight_reason as meta_error
             FROM comments c
             JOIN posts p ON c.post_id = p.id
             LEFT JOIN accounts a ON p.account_id = a.id
             LEFT JOIN brand_voices bv ON COALESCE(p.brand_voice_id, a.brand_voice_id) = bv.id
-            LEFT JOIN replies r ON r.comment_id = c.id
+            LEFT JOIN (
+                SELECT comment_id, id, reply_text, variant_type, is_posted_to_platform, created_at
+                FROM replies
+                WHERE id IN (SELECT MAX(id) FROM replies GROUP BY comment_id)
+            ) r ON r.comment_id = c.id
             WHERE c.user_id = :user_id
         ";
         $params = [':user_id' => $userId];
@@ -83,6 +90,8 @@ try {
             $sql .= " AND c.status = 'pending'";
         } elseif ($filter === 'replied') {
             $sql .= " AND c.status = 'replied'";
+        } elseif ($filter === 'failed') {
+            $sql .= " AND (c.status = 'failed' OR (r.is_posted_to_platform = 0 AND r.reply_text IS NOT NULL))";
         } elseif ($filter === 'spam') {
             $sql .= " AND (c.status = 'spam' OR c.sentiment = 'spam')";
         }
@@ -147,7 +156,7 @@ try {
         $rawInput = file_get_contents('php://input');
         $input = json_decode($rawInput, true) ?? $_POST;
         
-        $allowedActions = ['reply', 'toggle_highlight', 'change_status', 'create_simulated', 'delete'];
+        $allowedActions = ['reply', 'retry_reply', 'toggle_highlight', 'change_status', 'create_simulated', 'delete'];
         $action = Security::validateEnum($input['action'] ?? '', $allowedActions, '');
 
         if (empty($action)) {
@@ -170,18 +179,25 @@ try {
             }
 
             // Verify comment belongs to current user
-            $cCheck = $pdo->prepare("SELECT id FROM comments WHERE id = :id AND user_id = :uid LIMIT 1");
+            $cCheck = $pdo->prepare("SELECT id, platform, external_comment_id FROM comments WHERE id = :id AND user_id = :uid LIMIT 1");
             $cCheck->execute([':id' => $commentId, ':uid' => $userId]);
-            if (!$cCheck->fetch()) {
+            $commentData = $cCheck->fetch();
+            if (!$commentData) {
                 http_response_code(403);
                 echo json_encode(['success' => false, 'error' => 'No tienes permiso para responder a este comentario.']);
                 exit;
             }
 
-            // Save reply in database with user_id
+            $platformName = ucfirst($commentData['platform'] ?? 'red social');
+
+            // Post to Meta API first to verify if it actually publishes
+            $metaResult = MetaApiService::postReplyToMeta($commentId, $replyText, $userId);
+            $isPosted = !empty($metaResult['success']) ? 1 : 0;
+
+            // Save reply in database with user_id and actual publication flag
             $stmtReply = $pdo->prepare("
                 INSERT INTO replies (user_id, comment_id, reply_text, reply_type, tone_used, variant_type, is_posted_to_platform)
-                VALUES (:user_id, :comment_id, :reply_text, :reply_type, :tone_used, :variant_type, 1)
+                VALUES (:user_id, :comment_id, :reply_text, :reply_type, :tone_used, :variant_type, :is_posted)
             ");
             $stmtReply->execute([
                 ':user_id' => $userId,
@@ -189,22 +205,108 @@ try {
                 ':reply_text' => $replyText,
                 ':reply_type' => $replyType,
                 ':tone_used' => $toneUsed,
-                ':variant_type' => $variantType
+                ':variant_type' => $variantType,
+                ':is_posted' => $isPosted
             ]);
 
-            // Update comment status to 'replied'
-            $stmtUp = $pdo->prepare("UPDATE comments SET status = 'replied' WHERE id = :id AND user_id = :uid");
-            $stmtUp->execute([':id' => $commentId, ':uid' => $userId]);
+            if ($isPosted) {
+                // Successfully posted to Meta or simulated locally in demo mode
+                $stmtUp = $pdo->prepare("UPDATE comments SET status = 'replied', highlight_reason = NULL WHERE id = :id AND user_id = :uid");
+                $stmtUp->execute([':id' => $commentId, ':uid' => $userId]);
 
-            // Post to Meta API with user context
+                echo json_encode([
+                    'success' => true,
+                    'is_posted_to_platform' => 1,
+                    'message' => "¡Respuesta publicada y registrada con éxito en {$platformName}!",
+                    'meta_result' => $metaResult
+                ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+                exit;
+            } else {
+                // Failed to post to Meta platform
+                $errorReason = $metaResult['error'] ?? "Error desconocido al publicar en {$platformName}";
+                $stmtUp = $pdo->prepare("UPDATE comments SET status = 'failed', highlight_reason = :reason WHERE id = :id AND user_id = :uid");
+                $stmtUp->execute([':reason' => $errorReason, ':id' => $commentId, ':uid' => $userId]);
+
+                echo json_encode([
+                    'success' => false,
+                    'is_posted_to_platform' => 0,
+                    'error' => "No se pudo publicar en {$platformName}: {$errorReason}",
+                    'is_token_expired' => !empty($metaResult['is_token_expired']),
+                    'meta_result' => $metaResult
+                ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+        }
+
+        if ($action === 'retry_reply') {
+            $commentId = Security::sanitizeInt($input['comment_id'] ?? 0, 1, 10000000, 0);
+            if ($commentId <= 0) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'comment_id inválido.']);
+                exit;
+            }
+
+            // Verify comment belongs to current user
+            $cCheck = $pdo->prepare("SELECT id, platform, external_comment_id FROM comments WHERE id = :id AND user_id = :uid LIMIT 1");
+            $cCheck->execute([':id' => $commentId, ':uid' => $userId]);
+            $commentData = $cCheck->fetch();
+            if (!$commentData) {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'error' => 'Comentario no encontrado o sin permisos.']);
+                exit;
+            }
+
+            $platformName = ucfirst($commentData['platform'] ?? 'red social');
+
+            // Find existing reply text
+            $rCheck = $pdo->prepare("SELECT id, reply_text FROM replies WHERE comment_id = :cid AND user_id = :uid ORDER BY id DESC LIMIT 1");
+            $rCheck->execute([':cid' => $commentId, ':uid' => $userId]);
+            $existingReply = $rCheck->fetch();
+
+            $replyText = !empty($input['reply_text']) ? Security::sanitizeString($input['reply_text'], 2000) : ($existingReply['reply_text'] ?? '');
+
+            if (empty($replyText)) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'No hay texto de respuesta registrado para reintentar.']);
+                exit;
+            }
+
+            // Re-attempt Meta Graph API post
             $metaResult = MetaApiService::postReplyToMeta($commentId, $replyText, $userId);
 
-            echo json_encode([
-                'success' => true,
-                'message' => 'Respuesta enviada y registrada con éxito.',
-                'meta_result' => $metaResult
-            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-            exit;
+            if (!empty($metaResult['success'])) {
+                if ($existingReply) {
+                    $pdo->prepare("UPDATE replies SET reply_text = :txt, is_posted_to_platform = 1 WHERE id = :rid AND user_id = :uid")
+                        ->execute([':txt' => $replyText, ':rid' => $existingReply['id'], ':uid' => $userId]);
+                } else {
+                    $pdo->prepare("INSERT INTO replies (user_id, comment_id, reply_text, reply_type, tone_used, variant_type, is_posted_to_platform) VALUES (:uid, :cid, :txt, 'retry', 'friendly', 'engagement', 1)")
+                        ->execute([':uid' => $userId, ':cid' => $commentId, ':txt' => $replyText]);
+                }
+
+                $pdo->prepare("UPDATE comments SET status = 'replied', highlight_reason = NULL WHERE id = :id AND user_id = :uid")
+                    ->execute([':id' => $commentId, ':uid' => $userId]);
+
+                echo json_encode([
+                    'success' => true,
+                    'is_posted_to_platform' => 1,
+                    'message' => "¡Respuesta reintentada y publicada con éxito en {$platformName}!",
+                    'meta_result' => $metaResult
+                ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+                exit;
+            } else {
+                $errorReason = $metaResult['error'] ?? "Error al reintentar publicación en {$platformName}";
+                $pdo->prepare("UPDATE comments SET status = 'failed', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
+                    ->execute([':reason' => $errorReason, ':id' => $commentId, ':uid' => $userId]);
+
+                echo json_encode([
+                    'success' => false,
+                    'is_posted_to_platform' => 0,
+                    'error' => "Fallo al reintentar publicación en {$platformName}: {$errorReason}",
+                    'is_token_expired' => !empty($metaResult['is_token_expired']),
+                    'meta_result' => $metaResult
+                ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+                exit;
+            }
         }
 
         if ($action === 'toggle_highlight') {

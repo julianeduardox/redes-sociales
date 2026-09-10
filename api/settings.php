@@ -448,8 +448,17 @@ try {
         // 4. Meta Actions
         if ($action === 'test_meta') {
             $tokenToTest = !empty($input['meta_page_access_token']) && !str_contains($input['meta_page_access_token'], '...') ? trim($input['meta_page_access_token']) : null;
-            $testResult = MetaApiService::testMetaConnection($tokenToTest);
+            $testResult = MetaApiService::testMetaConnection($tokenToTest, $userId);
             echo json_encode($testResult, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        if ($action === 'check_token_health') {
+            $health = MetaApiService::checkTokenHealth($userId);
+            echo json_encode([
+                'success' => true,
+                'health' => $health
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
             exit;
         }
 
@@ -467,38 +476,46 @@ try {
 
         // 5. Action: save_all (Legacy & Global Engine Settings)
         if (isset($input['ai_provider']) && Auth::isAdmin()) {
-            Settings::set('ai_provider', Security::validateEnum($input['ai_provider'], ['openrouter', 'heuristic'], 'openrouter'));
+            Settings::set('ai_provider', Security::validateEnum($input['ai_provider'], ['openrouter', 'heuristic'], 'openrouter'), $userId);
         }
         if (isset($input['openrouter_model']) && Auth::isAdmin()) {
-            Settings::set('openrouter_model', Security::sanitizeString($input['openrouter_model'], 150));
+            Settings::set('openrouter_model', Security::sanitizeString($input['openrouter_model'], 150), $userId);
         }
         if (isset($input['autopilot_enabled'])) {
             $val = ($input['autopilot_enabled'] === '1' || $input['autopilot_enabled'] === 1 || $input['autopilot_enabled'] === true) ? '1' : '0';
-            Settings::set('autopilot_enabled', $val);
+            Settings::set('autopilot_enabled', $val, $userId);
         }
         if (isset($input['autopilot_min_score'])) {
             $score = Security::sanitizeInt($input['autopilot_min_score'], 0, 100, 60);
-            Settings::set('autopilot_min_score', (string)$score);
+            Settings::set('autopilot_min_score', (string)$score, $userId);
         }
         if (isset($input['meta_app_id'])) {
-            Settings::set('meta_app_id', Security::sanitizeString($input['meta_app_id'], 100));
+            Settings::set('meta_app_id', Security::sanitizeString($input['meta_app_id'], 100), $userId);
         }
         if (isset($input['meta_app_secret']) && !str_contains($input['meta_app_secret'], '...')) {
-            Settings::set('meta_app_secret', trim(Security::sanitizeString($input['meta_app_secret'], 150)));
+            Settings::set('meta_app_secret', trim(Security::sanitizeString($input['meta_app_secret'], 150)), $userId);
         }
         if (isset($input['meta_instagram_account_id'])) {
-            Settings::set('meta_instagram_account_id', Security::sanitizeString($input['meta_instagram_account_id'], 100));
+            Settings::set('meta_instagram_account_id', Security::sanitizeString($input['meta_instagram_account_id'], 100), $userId);
         }
         if (isset($input['webhook_verify_token'])) {
-            Settings::set('webhook_verify_token', Security::sanitizeString($input['webhook_verify_token'], 150));
+            Settings::set('webhook_verify_token', Security::sanitizeString($input['webhook_verify_token'], 150), $userId);
         }
 
         // Only update OpenRouter API key if user is admin and a new non-masked string is sent
         if (!empty($input['openrouter_api_key']) && !str_contains($input['openrouter_api_key'], '...') && Auth::isAdmin()) {
-            Settings::set('openrouter_api_key', trim(Security::sanitizeString($input['openrouter_api_key'], 250)));
+            Settings::set('openrouter_api_key', trim(Security::sanitizeString($input['openrouter_api_key'], 250)), $userId);
         }
         if (!empty($input['meta_page_access_token']) && !str_contains($input['meta_page_access_token'], '...')) {
-            Settings::set('meta_page_access_token', trim(Security::sanitizeString($input['meta_page_access_token'], 2000)));
+            $newMetaToken = trim(Security::sanitizeString($input['meta_page_access_token'], 2000));
+            Settings::set('meta_page_access_token', $newMetaToken, $userId);
+
+            // If it is a Facebook Page token (starts with EA...), update accounts for this user so posts pick it up immediately
+            if (!str_starts_with($newMetaToken, 'IGAA') && !str_starts_with($newMetaToken, 'IGQV')) {
+                $pdo->prepare("UPDATE accounts SET access_token = :token WHERE user_id = :uid AND platform = 'facebook'")
+                    ->execute([':token' => $newMetaToken, ':uid' => $userId]);
+            }
+
             // Invalidate cache and auto-sync
             CacheService::invalidateUserSettings($userId);
             try {

@@ -252,7 +252,13 @@ const AgentController = {
           this.loadSuggestions(updated);
         }
       } else {
-        App.showToast(`Error al enviar: ${res.error || 'No se pudo enviar'}`, 'error');
+        if (res.is_token_expired) {
+          App.showToast('⚠️ La respuesta se guardó pero NO se publicó en Meta: Token expirado (Error 190). Renuévalo en Configuración.', 'warning', 8000);
+          if (App.showTokenExpiredBanner) App.showTokenExpiredBanner();
+        } else {
+          App.showToast(`Error al enviar a la red social: ${res.error || 'No se pudo enviar'}`, 'error');
+        }
+        await App.loadComments();
       }
     } catch (err) {
       console.error(err);
@@ -315,7 +321,13 @@ const AgentController = {
           App.selectComment(updated);
         }
       } else {
-        App.showToast(`Error: ${res.error || 'No se pudo enviar la respuesta.'}`, 'error');
+        if (res.is_token_expired) {
+          App.showToast('⚠️ Respuesta guardada pero NO se publicó en Meta: Token expirado (Error 190). Renuévalo en Configuración.', 'warning', 8000);
+          if (App.showTokenExpiredBanner) App.showTokenExpiredBanner();
+        } else {
+          App.showToast(`Error: ${res.error || 'No se pudo enviar la respuesta.'}`, 'error');
+        }
+        await App.loadComments();
       }
     } catch (err) {
       console.error(err);
@@ -710,7 +722,14 @@ const AgentController = {
           App.selectComment(updated);
         }
       } else {
-        App.showToast(`Error: ${res.error || 'No se pudo enviar la respuesta.'}`, 'error');
+        if (res.is_token_expired) {
+          App.showToast('⚠️ Respuesta guardada pero NO se publicó en Meta: Token expirado (Error 190). Renuévalo en Configuración.', 'warning', 8000);
+          if (App.showTokenExpiredBanner) App.showTokenExpiredBanner();
+        } else {
+          App.showToast(`Error: ${res.error || 'No se pudo enviar la respuesta.'}`, 'error');
+        }
+        App.closeModal('modal-assistant-replies');
+        await App.loadComments();
       }
     } catch (err) {
       console.error(err);
@@ -842,6 +861,24 @@ const AgentController = {
             <div class="autopilot-live-reply-quote sticker">
               ${this.escapeHtml(item.reason || 'Solo emojis/stickers. Omitido para no saturar al seguidor.')}
             </div>
+          `;
+        } else if (item.action === 'failed' || item.is_posted === 0) {
+          if (progressStatus) progressStatus.textContent = `⚠️ Falló publicación para @${item.author} (${i + 1}/${items.length})...`;
+          cardEl.className = 'autopilot-live-card failed';
+          cardEl.style.borderLeft = '3px solid #ef4444';
+          cardEl.innerHTML = `
+            <div class="autopilot-live-card-header">
+              <div class="autopilot-live-author">
+                <span class="autopilot-live-avatar">⚠️</span>
+                <strong>@${this.escapeHtml(item.author)}</strong>
+                <span class="autopilot-variant-tag" style="background: rgba(239, 68, 68, 0.2); color: #f87171;">FALLÓ META</span>
+              </div>
+              <span class="autopilot-status-failed" style="color: #f87171; font-weight: 700; font-size: 0.78rem;">⚠️ Token Expirado</span>
+            </div>
+            <div class="autopilot-live-reply-quote" style="border-left-color: #ef4444;">
+              "${this.escapeHtml(item.reply)}"
+            </div>
+            <div style="font-size: 0.74rem; color: #fca5a5; margin-top: 4px;">ℹ️ ${this.escapeHtml(item.error || 'Fallo de conexión o token de Meta')}</div>
           `;
         } else {
           if (progressStatus) progressStatus.textContent = `⚡ Publicando respuesta para @${item.author} (${i + 1}/${items.length})...`;

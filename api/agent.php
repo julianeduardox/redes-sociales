@@ -172,6 +172,7 @@ try {
 
         $processed = [];
         $repliedCount = 0;
+        $failedCount = 0;
         $spamCount = 0;
         $ignoredCount = 0;
 
@@ -263,22 +264,43 @@ try {
                 ':is_posted' => $isPosted
             ]);
 
-            // Update status
-            $stmtUp = $pdo->prepare("UPDATE comments SET status = 'replied' WHERE id = :id AND user_id = :uid");
-            $stmtUp->execute([':id' => $c['id'], ':uid' => $userId]);
+            if ($isPosted) {
+                // Update status to replied
+                $stmtUp = $pdo->prepare("UPDATE comments SET status = 'replied', highlight_reason = NULL WHERE id = :id AND user_id = :uid");
+                $stmtUp->execute([':id' => $c['id'], ':uid' => $userId]);
 
-            $repliedCount++;
-            $processed[] = [
-                'comment_id' => (int)$c['id'],
-                'author' => htmlspecialchars($c['author_name'], ENT_QUOTES, 'UTF-8'),
-                'action' => 'replied',
-                'reply' => htmlspecialchars($chosenReply, ENT_QUOTES, 'UTF-8'),
-                'variant' => $chosenVariant,
-                'status' => 'replied'
-            ];
+                $repliedCount++;
+                $processed[] = [
+                    'comment_id' => (int)$c['id'],
+                    'author' => htmlspecialchars($c['author_name'], ENT_QUOTES, 'UTF-8'),
+                    'action' => 'replied',
+                    'reply' => htmlspecialchars($chosenReply, ENT_QUOTES, 'UTF-8'),
+                    'variant' => $chosenVariant,
+                    'status' => 'replied',
+                    'is_posted' => 1
+                ];
+            } else {
+                // Update status to failed and store error reason
+                $errReason = $metaResult['error'] ?? 'Fallo al publicar en Meta';
+                $stmtUp = $pdo->prepare("UPDATE comments SET status = 'failed', highlight_reason = :reason WHERE id = :id AND user_id = :uid");
+                $stmtUp->execute([':reason' => $errReason, ':id' => $c['id'], ':uid' => $userId]);
+
+                $failedCount++;
+                $processed[] = [
+                    'comment_id' => (int)$c['id'],
+                    'author' => htmlspecialchars($c['author_name'], ENT_QUOTES, 'UTF-8'),
+                    'action' => 'failed',
+                    'reply' => htmlspecialchars($chosenReply, ENT_QUOTES, 'UTF-8'),
+                    'variant' => $chosenVariant,
+                    'status' => 'failed',
+                    'error' => $errReason,
+                    'is_posted' => 0
+                ];
+            }
         }
 
-        $summaryMsg = "Se procesaron " . count($processed) . " comentarios: {$repliedCount} respondidos con IA";
+        $summaryMsg = "Se procesaron " . count($processed) . " comentarios: {$repliedCount} respondidos en red social";
+        if ($failedCount > 0) $summaryMsg .= ", {$failedCount} fallaron por token o API de Meta";
         if ($spamCount > 0) $summaryMsg .= ", {$spamCount} marcados como spam/inglés para revisión";
         if ($ignoredCount > 0) $summaryMsg .= ", {$ignoredCount} stickers omitidos";
         $summaryMsg .= ".";
@@ -287,6 +309,7 @@ try {
             'success' => true,
             'processed_count' => count($processed),
             'replied_count' => $repliedCount,
+            'failed_count' => $failedCount,
             'spam_count' => $spamCount,
             'ignored_count' => $ignoredCount,
             'items' => $processed,

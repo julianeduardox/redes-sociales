@@ -304,6 +304,22 @@ $isMetaConnected = ($activeAccountsCount > 0);
         </div>
 
         <div class="feed-header">
+          <!-- Live Meta Token Expired Warning Alert Banner -->
+          <div id="meta-token-expired-banner" class="token-alert-banner" style="display: none; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35); border-radius: 12px; padding: 12px 18px; margin-bottom: 16px; align-items: center; justify-content: space-between; gap: 14px; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.15);">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 1.6rem;">⚠️</span>
+              <div>
+                <strong style="color: #f87171; font-size: 0.94rem; display: block; font-weight: 700;">Token de Meta Expirado o Desconectado (Error 190)</strong>
+                <span class="token-alert-message" style="color: #cbd5e1; font-size: 0.82rem; line-height: 1.4;">Tus respuestas se guardan en el sistema pero no se envían a Facebook porque el token de sesión caducó. Actualiza el Token de Acceso de Página en Configuración para restablecer el envío automático.</span>
+              </div>
+            </div>
+            <div style="display: flex; gap: 8px; flex-shrink: 0;">
+              <button type="button" class="btn-renew-token" onclick="App.openModal('modal-settings')" style="padding: 8px 14px; border-radius: 8px; background: #ef4444; color: #fff; font-weight: 600; border: none; cursor: pointer; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);">
+                <span>⚙️ Renovar Token</span>
+              </button>
+            </div>
+          </div>
+
           <!-- Integrated Search & Platform Controls Row -->
           <div class="feed-controls-primary-row">
             <div class="search-box">
@@ -335,6 +351,7 @@ $isMetaConnected = ($activeAccountsCount > 0);
             <button class="filter-tag" data-filter="urgent">🛡️ Objeciones & Soporte</button>
             <button class="filter-tag" data-filter="pending">⏳ Pendientes</button>
             <button class="filter-tag" data-filter="replied">✅ Respondidos</button>
+            <button class="filter-tag" data-filter="failed" style="color: #f87171; border-color: rgba(239, 68, 68, 0.4);">⚠️ Falló Envío</button>
           </div>
 
           <div class="feed-toolbar-row">

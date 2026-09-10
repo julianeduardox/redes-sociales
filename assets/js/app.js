@@ -88,6 +88,7 @@ const App = {
     try { await this.loadConnectedAccounts(); } catch (e) { console.error('loadConnectedAccounts error:', e); }
     try { await this.loadSettings(); } catch (e) { console.error('loadSettings error:', e); }
     try { await this.loadComments(); } catch (e) { console.error('loadComments error:', e); }
+    try { this.checkMetaTokenHealth(); } catch (e) { console.error('checkMetaTokenHealth error:', e); }
     this.renderTagChips();
     this.renderFewShotExamples();
     this.checkOnboardingBanner();
@@ -934,6 +935,18 @@ const App = {
       const accName = c.account_name || (c.platform === 'facebook' ? 'Página FB' : '@cuenta_ig');
       const voiceName = c.brand_voice_name || 'Voz por Defecto';
 
+      const isReplied = c.status === 'replied' && (c.is_posted_to_platform == 1 || c.is_posted_to_platform === null || c.is_posted_to_platform === undefined);
+      const isFailed = c.status === 'failed' || (c.reply_text && c.is_posted_to_platform == 0);
+
+      let statusPillHtml = '';
+      if (isReplied) {
+        statusPillHtml = `<div class="status-pill replied" title="Respondido y publicado en ${c.platform === 'facebook' ? 'Facebook' : 'Instagram'}">✅</div>`;
+      } else if (isFailed) {
+        statusPillHtml = `<div class="status-pill failed" style="background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); font-size: 0.72rem; padding: 2px 7px;" title="${this.escapeHtml(c.meta_error || 'Falló publicación en ' + c.platform)}">⚠️ Falló</div>`;
+      } else {
+        statusPillHtml = `<div class="status-pill pending" title="Pendiente de respuesta">⏳</div>`;
+      }
+
       if (isCompact) {
         // Streamlined Compact Row
         return `
@@ -953,14 +966,18 @@ const App = {
                   <span class="assistant-btn-icon">🪄</span> Asistente
                 </button>
                 <div class="${scoreClass}" onclick="event.stopPropagation(); App.openScoreGuideModal()" style="cursor: pointer;" title="Haz clic para ver cómo funciona el Score de IA">⭐ ${safeScore} ℹ️</div>
-                <div class="status-pill ${c.status === 'replied' ? 'replied' : 'pending'}" title="${c.status === 'replied' ? 'Respondido' : 'Pendiente'}">
-                  ${c.status === 'replied' ? '✅' : '⏳'}
-                </div>
+                ${statusPillHtml}
               </div>
             </div>
             <div class="comment-body">
               ${this.escapeHtml(c.comment_text)}
             </div>
+            ${isFailed && c.reply_text ? `
+              <div style="margin-top: 6px; padding: 6px 10px; border-radius: 6px; background: rgba(239, 68, 68, 0.08); border-left: 2px solid #ef4444; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                <span style="font-size: 0.76rem; color: #f87171;">⚠️ No se publicó en ${c.platform === 'facebook' ? 'Facebook' : 'Instagram'}</span>
+                <button type="button" onclick="event.stopPropagation(); App.retryReply(${parseInt(c.id, 10)})" style="padding: 2px 7px; font-size: 0.72rem; border-radius: 4px; background: #ef4444; color: #fff; border: none; cursor: pointer;">🔄 Reintentar</button>
+              </div>
+            ` : ''}
           </div>
         `;
       }
@@ -970,6 +987,29 @@ const App = {
       const postComments = parseInt(c.post_comments_count || 0, 10).toLocaleString();
       const postReach = parseInt(c.post_reach || 0, 10).toLocaleString();
       const postCaptionText = c.post_caption || 'Publicación en redes sociales';
+
+      let replyPreviewHtml = '';
+      if (isReplied && c.reply_text) {
+        replyPreviewHtml = `
+          <div class="card-replied-preview">
+            <span class="replied-label">🏛️ Respuesta publicada en ${c.platform === 'facebook' ? 'Facebook' : 'Instagram'}:</span>
+            <span class="replied-text">"${this.escapeHtml(c.reply_text)}"</span>
+          </div>
+        `;
+      } else if (isFailed && c.reply_text) {
+        replyPreviewHtml = `
+          <div class="card-replied-preview card-replied-failed" style="border-left: 3px solid #ef4444; background: rgba(239, 68, 68, 0.08); padding: 10px; border-radius: 8px; margin-top: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; flex-wrap: wrap; gap: 6px;">
+              <span class="replied-label" style="color: #f87171; font-weight: 600; font-size: 0.8rem;">⚠️ No se publicó en ${c.platform === 'facebook' ? 'Facebook' : 'Instagram'}:</span>
+              <button type="button" class="btn-retry-reply" onclick="event.stopPropagation(); App.retryReply(${parseInt(c.id, 10)})" style="padding: 3px 9px; font-size: 0.75rem; border-radius: 6px; background: #ef4444; color: #fff; border: none; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+                🔄 Reintentar envío
+              </button>
+            </div>
+            <div class="replied-text" style="color: #cbd5e1; font-size: 0.84rem; font-style: italic;">"${this.escapeHtml(c.reply_text)}"</div>
+            ${c.meta_error ? `<div style="font-size: 0.75rem; color: #fca5a5; margin-top: 5px; display: flex; align-items: center; gap: 4px;"><span>ℹ️ Motivo:</span> <span>${this.escapeHtml(c.meta_error)}</span></div>` : ''}
+          </div>
+        `;
+      }
 
       return `
         <div class="${cardClass}" onclick="App.selectCommentById(${parseInt(c.id, 10)}, true)">
@@ -1014,9 +1054,7 @@ const App = {
                 <div class="${scoreClass}" onclick="event.stopPropagation(); App.openScoreGuideModal()" style="cursor: pointer;" title="Haz clic para ver cómo funciona el Score de IA">
                   ⭐ ${safeScore} ℹ️
                 </div>
-                <div class="status-pill ${c.status === 'replied' ? 'replied' : 'pending'}" title="${c.status === 'replied' ? 'Respondido' : 'Pendiente'}">
-                  ${c.status === 'replied' ? '✅' : '⏳'}
-                </div>
+                ${statusPillHtml}
               </div>
             </div>
 
@@ -1024,18 +1062,13 @@ const App = {
               ${this.escapeHtml(c.comment_text)}
             </div>
 
-            ${c.highlight_reason ? `
+            ${c.highlight_reason && !isFailed ? `
               <div class="highlight-reason-banner">
                 ${this.escapeHtml(c.highlight_reason)}
               </div>
             ` : ''}
 
-            ${c.status === 'replied' && c.reply_text ? `
-              <div class="card-replied-preview">
-                <span class="replied-label">🏛️ Respuesta publicada:</span>
-                <span class="replied-text">"${this.escapeHtml(c.reply_text)}"</span>
-              </div>
-            ` : ''}
+            ${replyPreviewHtml}
           </div>
 
         </div>
@@ -1164,27 +1197,149 @@ const App = {
     const replyTextBox = document.getElementById('detail-reply-text-box');
     const replyTime = document.getElementById('detail-reply-time');
     const replyVariantTag = document.getElementById('detail-reply-variant-tag');
+    const replyActionsBox = document.querySelector('.detail-reply-actions');
 
-    if (comment.status === 'replied') {
+    const isReplied = comment.status === 'replied' && (comment.is_posted_to_platform == 1 || comment.is_posted_to_platform === null || comment.is_posted_to_platform === undefined);
+    const isFailed = comment.status === 'failed' || (comment.reply_text && comment.is_posted_to_platform == 0);
+    const platName = comment.platform === 'facebook' ? 'Facebook' : 'Instagram';
+
+    if (isReplied) {
       if (statusBadge) {
         statusBadge.className = 'detail-status-badge replied';
-        statusBadge.textContent = '✅ Respondido y Publicado';
+        statusBadge.textContent = `✅ Publicado en ${platName}`;
+        statusBadge.style.backgroundColor = '';
+        statusBadge.style.color = '';
+        statusBadge.style.border = '';
       }
       if (replyContentBox) replyContentBox.style.display = 'block';
       if (pendingNoticeBox) pendingNoticeBox.style.display = 'none';
       if (replyTextBox) replyTextBox.textContent = `"${comment.reply_text || 'Respuesta publicada a la comunidad.'}"`;
       if (replyTime) replyTime.textContent = comment.replied_at || comment.reply_created_at || 'Publicado';
-      if (replyVariantTag) replyVariantTag.textContent = comment.variant_type || comment.reply_variant_type || 'Respuesta Estoica';
+      if (replyVariantTag) replyVariantTag.textContent = comment.variant_type || comment.reply_variant_type || 'Respuesta Publicada';
+      if (replyActionsBox) {
+        replyActionsBox.innerHTML = `
+          <button type="button" class="btn-detail-reopen-assistant" onclick="App.openAssistantFromDetail()">
+            <span>🪄 Abrir en Copiloto para Responder Otra Cosa</span>
+          </button>
+        `;
+      }
+    } else if (isFailed) {
+      if (statusBadge) {
+        statusBadge.className = 'detail-status-badge failed';
+        statusBadge.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
+        statusBadge.style.color = '#f87171';
+        statusBadge.style.border = '1px solid rgba(239, 68, 68, 0.5)';
+        statusBadge.textContent = `⚠️ Falló publicación en ${platName}`;
+      }
+      if (replyContentBox) replyContentBox.style.display = 'block';
+      if (pendingNoticeBox) pendingNoticeBox.style.display = 'none';
+      if (replyTextBox) replyTextBox.textContent = `"${comment.reply_text || 'Respuesta guardada pero no publicada.'}"`;
+      if (replyTime) replyTime.textContent = 'Guardado localmente (No publicado en Meta)';
+      if (replyVariantTag) replyVariantTag.textContent = '⚠️ Falló Envío Meta';
+      if (replyActionsBox) {
+        replyActionsBox.innerHTML = `
+          <div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
+            ${comment.meta_error ? `
+              <div style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35); padding: 10px 14px; border-radius: 8px; color: #fca5a5; font-size: 0.82rem;">
+                <strong>⚠️ Causa del error:</strong> ${this.escapeHtml(comment.meta_error)}
+              </div>
+            ` : ''}
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+              <button type="button" class="btn-primary-action" onclick="App.retryReply(${parseInt(comment.id, 10)})" style="background: #ef4444; flex: 1;">
+                🔄 Reintentar publicación en ${platName}
+              </button>
+              <button type="button" class="btn-detail-reopen-assistant" onclick="App.openAssistantFromDetail()" style="flex: 1;">
+                🪄 Editar respuesta en Copiloto
+              </button>
+            </div>
+          </div>
+        `;
+      }
     } else {
       if (statusBadge) {
         statusBadge.className = 'detail-status-badge pending';
         statusBadge.textContent = '⏳ Pendiente de Respuesta';
+        statusBadge.style.backgroundColor = '';
+        statusBadge.style.color = '';
+        statusBadge.style.border = '';
       }
       if (replyContentBox) replyContentBox.style.display = 'none';
       if (pendingNoticeBox) pendingNoticeBox.style.display = 'flex';
     }
 
     this.openModal('modal-comment-detail');
+  },
+
+  async retryReply(commentId) {
+    const comment = this.commentsList ? this.commentsList.find(c => c.id == commentId) : null;
+    const platName = comment && comment.platform === 'facebook' ? 'Facebook' : 'Instagram';
+
+    this.showToast(`Reintentando publicación en ${platName}... ⏳`, 'info');
+
+    try {
+      const response = await this.fetchWithCsrf('api/comments.php', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'retry_reply',
+          comment_id: parseInt(commentId, 10),
+          reply_text: comment ? (comment.reply_text || '') : ''
+        })
+      });
+
+      const res = await response.json();
+      if (res.success) {
+        this.showToast(res.message || `¡Publicado con éxito en ${platName}! 🚀`, 'success');
+        this.closeModal('modal-comment-detail');
+        await this.loadComments();
+      } else {
+        if (res.is_token_expired) {
+          this.showToast('⚠️ El Token de Meta ha expirado. Por favor renuévalo en Configuración.', 'warning');
+          this.showTokenExpiredBanner();
+        } else {
+          this.showToast(`Error al publicar: ${res.error || 'Fallo desconocido'}`, 'error');
+        }
+        await this.loadComments();
+      }
+    } catch (err) {
+      console.error(err);
+      this.showToast('Error de red al reintentar publicación.', 'error');
+    }
+  },
+
+  showTokenExpiredBanner(customMessage = null) {
+    const banner = document.getElementById('meta-token-expired-banner');
+    if (banner) {
+      banner.style.display = 'flex';
+      if (customMessage) {
+        const textEl = banner.querySelector('.token-alert-message');
+        if (textEl) textEl.textContent = customMessage;
+      }
+    }
+  },
+
+  hideTokenExpiredBanner() {
+    const banner = document.getElementById('meta-token-expired-banner');
+    if (banner) banner.style.display = 'none';
+  },
+
+  async checkMetaTokenHealth() {
+    try {
+      const res = await this.fetchWithCsrf('api/settings.php', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'check_token_health' })
+      });
+      const data = await res.json();
+      if (data.success && data.health) {
+        const fb = data.health.facebook;
+        if (fb.has_token && !fb.is_valid) {
+          this.showTokenExpiredBanner(`El token de Facebook (${fb.account_name || 'Página'}) ha expirado o no es válido: ${fb.error || 'Error 190'}. Actualízalo en Configuración para responder comentarios.`);
+        } else {
+          this.hideTokenExpiredBanner();
+        }
+      }
+    } catch (e) {
+      // Non-blocking background health check
+    }
   },
 
   openAssistantFromDetail() {

@@ -274,9 +274,15 @@ function processWebhookQueue(PDO $pdo, int $batchLimit = 50, ?int $specificQueue
                                         ':is_posted' => $isPosted
                                     ]);
 
-                                    $pdo->prepare("UPDATE comments SET status = 'replied' WHERE id = :id AND user_id = :uid")->execute([':id' => $newDbId, ':uid' => $targetUserId]);
-                                    $repliesPosted++;
-                                    cliLog("🤖 Autopilot publicó respuesta a Facebook para: {$senderName}", 'success', $silent);
+                                    if ($isPosted) {
+                                        $pdo->prepare("UPDATE comments SET status = 'replied', highlight_reason = NULL WHERE id = :id AND user_id = :uid")->execute([':id' => $newDbId, ':uid' => $targetUserId]);
+                                        $repliesPosted++;
+                                        cliLog("🤖 Autopilot publicó respuesta a Facebook para: {$senderName}", 'success', $silent);
+                                    } else {
+                                        $errReason = $metaRes['error'] ?? 'Fallo al publicar respuesta en Facebook';
+                                        $pdo->prepare("UPDATE comments SET status = 'failed', highlight_reason = :reason WHERE id = :id AND user_id = :uid")->execute([':reason' => $errReason, ':id' => $newDbId, ':uid' => $targetUserId]);
+                                        cliLog("⚠️ Autopilot no pudo publicar respuesta a Facebook para: {$senderName} ({$errReason})", 'warning', $silent);
+                                    }
                                 }
                             }
                         }
@@ -487,9 +493,15 @@ function processWebhookQueue(PDO $pdo, int $batchLimit = 50, ?int $specificQueue
                                         ':is_posted' => $isPosted
                                     ]);
 
-                                    $pdo->prepare("UPDATE comments SET status = 'replied' WHERE id = :id AND user_id = :uid")->execute([':id' => $newDbId, ':uid' => $targetUserId]);
-                                    $repliesPosted++;
-                                    cliLog("🤖 Autopilot publicó respuesta a Instagram para: @{$senderUsername}", 'success', $silent);
+                                    if ($isPosted) {
+                                        $pdo->prepare("UPDATE comments SET status = 'replied', highlight_reason = NULL WHERE id = :id AND user_id = :uid")->execute([':id' => $newDbId, ':uid' => $targetUserId]);
+                                        $repliesPosted++;
+                                        cliLog("🤖 Autopilot publicó respuesta a Instagram para: @{$senderUsername}", 'success', $silent);
+                                    } else {
+                                        $errReason = $metaRes['error'] ?? 'Fallo al publicar respuesta en Instagram';
+                                        $pdo->prepare("UPDATE comments SET status = 'failed', highlight_reason = :reason WHERE id = :id AND user_id = :uid")->execute([':reason' => $errReason, ':id' => $newDbId, ':uid' => $targetUserId]);
+                                        cliLog("⚠️ Autopilot no pudo publicar respuesta a Instagram para: @{$senderUsername} ({$errReason})", 'warning', $silent);
+                                    }
                                 }
                             }
                         }
