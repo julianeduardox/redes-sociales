@@ -50,13 +50,14 @@ try {
         if (isset($input['brand_depth_level'])) $runtimeOverrides['brand_depth_level'] = Security::sanitizeInt($input['brand_depth_level'], 1, 100, 80);
         if (isset($input['brand_energy_level'])) $runtimeOverrides['brand_energy_level'] = Security::sanitizeInt($input['brand_energy_level'], 1, 100, 75);
         if (isset($input['brand_closing_question_rule'])) $runtimeOverrides['brand_closing_question_rule'] = Security::validateEnum($input['brand_closing_question_rule'], ['always', 'relevant', 'never'], 'always');
-        if (isset($input['brand_emoji_style'])) $runtimeOverrides['brand_emoji_style'] = Security::validateEnum($input['brand_emoji_style'], ['minimal', 'moderate', 'expressive'], 'moderate');
+        if (isset($input['brand_emoji_style'])) $runtimeOverrides['brand_emoji_style'] = Security::validateEnum($input['brand_emoji_style'], ['none', 'minimal', 'moderate', 'expressive'], 'moderate');
         if (isset($input['brand_key_phrases']) && is_array($input['brand_key_phrases'])) $runtimeOverrides['brand_key_phrases'] = $input['brand_key_phrases'];
         if (isset($input['brand_forbidden_phrases']) && is_array($input['brand_forbidden_phrases'])) $runtimeOverrides['brand_forbidden_phrases'] = $input['brand_forbidden_phrases'];
         if (isset($input['brand_few_shot_examples']) && is_array($input['brand_few_shot_examples'])) $runtimeOverrides['brand_few_shot_examples'] = $input['brand_few_shot_examples'];
         if (isset($input['ai_provider'])) $runtimeOverrides['ai_provider'] = Security::validateEnum($input['ai_provider'], ['openrouter', 'heuristic'], 'heuristic');
         if (isset($input['openrouter_model'])) $runtimeOverrides['openrouter_model'] = Security::sanitizeString($input['openrouter_model'], 150);
         if (isset($input['reply_index'])) $runtimeOverrides['reply_index'] = Security::sanitizeInt($input['reply_index'], 0, 1000, 0);
+        if (isset($input['post_id'])) $runtimeOverrides['post_id'] = Security::sanitizeInt($input['post_id'], 1, 10000000, 0);
 
         $replies = AiAgentService::generateReplies($authorName, $commentText, $platform, $postCaption, $overrideTone, $runtimeOverrides);
 
@@ -122,6 +123,10 @@ try {
         if (isset($input['reply_index'])) {
             $runtimeOverrides['reply_index'] = Security::sanitizeInt($input['reply_index'], 0, 1000, 0);
         }
+        if (isset($input['post_id'])) {
+            $runtimeOverrides['post_id'] = Security::sanitizeInt($input['post_id'], 1, 10000000, 0);
+        }
+        $runtimeOverrides['user_id'] = $userId;
 
         $replies = AiAgentService::generateReplies($authorName, $commentText, $platform, $postCaption, $overrideTone, $runtimeOverrides);
 
@@ -223,7 +228,10 @@ try {
 
             // Legitimate comment in Spanish (of any score) -> Generate and Post AI Reply with account's assigned brand voice!
             $brandVoiceId = (int)($c['effective_brand_voice_id'] ?? 1);
+            $commentPostId = (int)($c['post_id'] ?? 0);
             $replies = AiAgentService::generateReplies($c['author_name'], $c['comment_text'], $c['platform'], $c['post_caption'], '', [
+                'user_id' => $userId,
+                'post_id' => $commentPostId,
                 'brand_voice_id' => $brandVoiceId,
                 'reply_index' => $processedCount
             ]);

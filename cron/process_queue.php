@@ -244,7 +244,12 @@ function processWebhookQueue(PDO $pdo, int $batchLimit = 50, ?int $specificQueue
                                     $pdo->prepare("UPDATE comments SET status = 'ignored', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
                                         ->execute([':reason' => $suitability['reason'], ':id' => $newDbId, ':uid' => $targetUserId]);
                                 } else {
-                                    $replies = AiAgentService::generateReplies($senderName, $message, 'facebook', $postCaption, '', ['brand_voice_id' => $brandVoiceId]);
+                                    $replies = AiAgentService::generateReplies($senderName, $message, 'facebook', $postCaption, '', [
+                                        'user_id' => $targetUserId,
+                                        'post_id' => $postId,
+                                        'brand_voice_id' => $brandVoiceId,
+                                        'reply_index' => $repliesPosted
+                                    ]);
                                     
                                     $chosenVariant = 'engagement';
                                     if ($analysis['sentiment'] === 'lead' || str_starts_with($analysis['intent'], 'lead_')) {
@@ -452,7 +457,12 @@ function processWebhookQueue(PDO $pdo, int $batchLimit = 50, ?int $specificQueue
                                     $pdo->prepare("UPDATE comments SET status = 'ignored', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
                                         ->execute([':reason' => $suitability['reason'], ':id' => $newDbId, ':uid' => $targetUserId]);
                                 } else {
-                                    $replies = AiAgentService::generateReplies($senderUsername, $message, 'instagram', $postCaption, '', ['brand_voice_id' => $brandVoiceId]);
+                                    $replies = AiAgentService::generateReplies($senderUsername, $message, 'instagram', $postCaption, '', [
+                                        'user_id' => $targetUserId,
+                                        'post_id' => $postId,
+                                        'brand_voice_id' => $brandVoiceId,
+                                        'reply_index' => $repliesPosted
+                                    ]);
                                     
                                     $chosenVariant = 'engagement';
                                     if ($analysis['sentiment'] === 'lead' || str_starts_with($analysis['intent'], 'lead_')) {

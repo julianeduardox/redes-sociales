@@ -804,12 +804,12 @@ class AiAgentService {
             $lengthCategory = 'medium';
         }
 
-        // 1.3 Seed rotation with reply index and daily seed (Module 5)
+        // 1.3 Seed rotation with reply index, thread memory and daily seed (Module 5 Deep)
         $replyIndex = (int)($runtimeOverrides['reply_index'] ?? 0);
-        $rotKey = abs(crc32($authorName . $replyIndex . date('Ymd')));
+        $postId = (int)($runtimeOverrides['post_id'] ?? 0);
+        $rotKey = abs(crc32($authorName . $replyIndex . $postId . date('Ymd')));
         $nameVocative = self::extractCleanFirstName($authorName);
         $nameVocative = $nameVocative ? " $nameVocative" : '';
-
 
         $brandName = $runtimeOverrides['brand_name'] ?? ($brandVoice['brand_name'] ?? Settings::get('brand_name', 'Xindro Studio'));
         $personaName = $runtimeOverrides['persona_name'] ?? ($brandVoice['persona_name'] ?? 'Alex — Asistente de Marca');
@@ -835,6 +835,13 @@ class AiAgentService {
         $fewShotExamples = self::parseJsonSetting($runtimeOverrides['brand_few_shot_examples'] ?? ($brandVoice['few_shot_examples'] ?? Settings::get('brand_few_shot_examples', '')), self::getDefaultFewShotExamples());
 
         $targetUserId = (int)($runtimeOverrides['user_id'] ?? (class_exists('Auth') && Auth::check() ? Auth::id() : ($brandVoice['user_id'] ?? 1)));
+
+        // Thread Memory: fetch recent replies to comments on this post for deduplication (Module 5 Deep)
+        $recentThreadReplies = $runtimeOverrides['recent_thread_replies'] ?? [];
+        if (empty($recentThreadReplies) && $postId > 0) {
+            $recentThreadReplies = self::fetchRecentPostReplies($pdo, $postId, $targetUserId, 15);
+        }
+
         $userAiConfig = null;
         if ($targetUserId > 0) {
             try {
@@ -879,13 +886,15 @@ class AiAgentService {
             }
         }
 
-        // Fallback / Standalone: High-Context Calibrated Zero-Token Heuristic Engine (Modules 1-5)
+        // Fallback / Standalone: High-Context Calibrated Zero-Token Heuristic Engine (Modules 1-5 Deep)
         $localResult = self::generateHeuristicReplies(
             $authorName, $commentText, $platform, $postCaption, 
             $brandName, $personaName, $brandIndustry, $brandTone, $brandDescription, $language,
             $warmthLevel, $depthLevel, $energyLevel,
             $closingQuestionRule, $emojiStyle, $keyPhrases, $forbiddenPhrases, $fewShotExamples,
-            $replyIndex
+            $replyIndex,
+            $postId,
+            $recentThreadReplies
         );
 
         return self::sanitizeRepliesWithForbidden($localResult, $forbiddenPhrases);
@@ -914,14 +923,17 @@ class AiAgentService {
         array $keyPhrases = [],
         array $forbiddenPhrases = [],
         array $fewShotExamples = [],
-        int $replyIndex = 0
+        int $replyIndex = 0,
+        int $postId = 0,
+        array $recentThreadReplies = []
     ): array {
         $cleanComment = trim($commentText);
         $analysis = self::analyzeComment($commentText, $postCaption, 0, $authorName);
         $intent = $analysis['intent'] ?? 'general_conversation';
+        $postAuthor = self::detectPostAuthor($postCaption);
 
-        // Seed for consistent yet varied rotation across identical comments & threads (Module 5)
-        $rotKey = abs(crc32($cleanComment . '|' . $authorName . '|' . $intent . '|' . $replyIndex . '|' . date('Ymd')));
+        // Seed for consistent yet varied rotation across identical comments & threads (Module 5 Deep)
+        $rotKey = abs(crc32($cleanComment . '|' . $authorName . '|' . $intent . '|' . $replyIndex . '|' . $postId . '|' . date('Ymd')));
 
         $rawReplies = self::_generateRawHeuristicReplies(
             $authorName,
@@ -944,8 +956,28 @@ class AiAgentService {
             $fewShotExamples,
             $replyIndex,
             $rotKey,
-            $analysis
+            $analysis,
+            $recentThreadReplies
         );
+
+        // Second-layer Anti-Repetition Guarantee: for short or reaction comments, if result collides with thread history, synthesize modularly
+        $isTagOnly = (bool)preg_match('/^(@[\w\.\-]+\s*)+$/u', $cleanComment);
+        $isVisualReaction = ($intent === 'visual_sticker_reaction' || $intent === 'emoji_reaction');
+        $isShort = (mb_strlen($cleanComment, 'UTF-8') <= 25) || $isTagOnly || $isVisualReaction;
+
+        if ($isShort && !empty($recentThreadReplies) && isset($rawReplies['engagement']) && self::isTooSimilarToRecent($rawReplies['engagement'], $recentThreadReplies, 0.65)) {
+            $rawReplies['engagement'] = self::generateModularCombinatorialReply(
+                $authorName,
+                $postCaption,
+                $postAuthor,
+                $warmthLevel,
+                $energyLevel,
+                $depthLevel,
+                $emojiStyle,
+                $rotKey + $replyIndex,
+                $recentThreadReplies
+            );
+        }
 
         return self::applyDynamicToneAndStyle(
             $rawReplies,
@@ -956,7 +988,8 @@ class AiAgentService {
             $closingQuestionRule,
             $commentText,
             $rotKey,
-            $intent
+            $intent,
+            $postAuthor
         );
     }
 
@@ -984,7 +1017,8 @@ class AiAgentService {
         array $fewShotExamples,
         int $replyIndex,
         int $rotKey,
-        ?array $analysis = null
+        ?array $analysis = null,
+        array $recentThreadReplies = []
     ): array {
         $cleanComment = trim($commentText);
         $isGeneric = self::isGenericAuthorName($authorName);
@@ -1032,8 +1066,21 @@ class AiAgentService {
         $namePrefix = !empty($displayName) ? "¡Muchas gracias, $displayName! " : "¡Muchas gracias! ";
         $helloName  = !empty($displayName) ? "¡Hola $displayName! " : "¡Hola! ";
 
-        // Rotation picker closure ensuring seed shift with $replyIndex (Module 5)
-        $pick = fn(array $pool) => $pool[($rotKey + $replyIndex) % count($pool)];
+        // Rotation picker closure ensuring seed shift and deduplication with $recentThreadReplies (Module 5 Deep)
+        $pick = function(array $pool, int $step = 0) use ($rotKey, $replyIndex, $recentThreadReplies): string {
+            $poolCount = count($pool);
+            if ($poolCount === 0) return '';
+            if (empty($recentThreadReplies)) {
+                return $pool[($rotKey + $replyIndex + $step) % $poolCount];
+            }
+            for ($i = 0; $i < $poolCount; $i++) {
+                $candidate = $pool[($rotKey + $replyIndex + $step + $i) % $poolCount];
+                if (!self::isTooSimilarToRecent($candidate, $recentThreadReplies, 0.65)) {
+                    return $candidate;
+                }
+            }
+            return $pool[($rotKey + $replyIndex + $step) % $poolCount];
+        };
 
         // ══════════════════════════════════════════════════════════════════════
         // CASE 0: Toxicidad Hostil / Insultos Graves (Silencio Operativo / Sobriedad)
@@ -1401,7 +1448,12 @@ class AiAgentService {
                 $engagePray = [
                     "¡Muchas gracias por la bendición y el respeto{$nameVocative}! 🤝✨ ¡Seguimos firmes!",
                     "¡Agradecidos con tu respeto fraternal{$nameVocative}! 🙏✨ Un fuerte abrazo.",
-                    "¡Muchas bendiciones para ti también{$nameVocative}! Sigamos construyendo comunidad. 🤝🙌"
+                    "¡Muchas bendiciones para ti también{$nameVocative}! Sigamos construyendo comunidad. 🤝🙌",
+                    "¡El respeto mutuo nos hace más fuertes{$nameVocative}! 🙏🏛️ Un saludo cordial.",
+                    "¡Agradecidos de corazón por tu presencia{$nameVocative}! 🙏✨ ¡Seguimos con todo!",
+                    "¡Gran bendición contar contigo{$nameVocative}! 🤝⚡ Sigamos firmes en el camino.",
+                    "¡Paz y serenidad en tu camino{$nameVocative}! 🙏🏛️ ¡Adelante!",
+                    "¡Un honor compartir estos principios contigo{$nameVocative}! 🤝✨ ¡Excelente día!"
                 ];
                 return [
                     'source' => 'heuristic_calibrated',
@@ -1417,7 +1469,13 @@ class AiAgentService {
                     "¡Muchas gracias por el apoyo{$nameVocative}! 👏✨ ¡Seguimos con todo!",
                     "¡Esa es la actitud{$nameVocative}! 👏⚡ ¡Vamos por más!",
                     "¡Gracias por los aplausos y la buena vibra{$nameVocative}! 🙌✨ Seguimos firmes.",
-                    "¡Agradecidos por el respaldo constante{$nameVocative}! 👏🚀 ¡A romperla!"
+                    "¡Agradecidos por el respaldo constante{$nameVocative}! 👏🚀 ¡A romperla!",
+                    "¡Pura buena energía{$nameVocative}! 🙌⚡ ¡A seguir construyendo juntos!",
+                    "¡Qué alegría contar con tu presencia{$nameVocative}! 👏✨ Un abrazo enorme.",
+                    "¡Así se habla{$nameVocative}! 🙌🔥 ¡Con toda la determinación!",
+                    "¡Gran actitud{$nameVocative}! 👏🏛️ Firmes en el propósito.",
+                    "¡Mucho aprecio por acompañarnos{$nameVocative}! 🙌✨ ¡Excelente jornada!",
+                    "¡Seguimos con paso firme y constancia{$nameVocative}! 👏💪 ¡Adelante!"
                 ];
                 return [
                     'source' => 'heuristic_calibrated',
@@ -1433,7 +1491,11 @@ class AiAgentService {
                     "¡A tope con esa energía y determinación{$nameVocative}! 🔥⚡ ¡Vamos con todo!",
                     "¡Fuego y enfoque total{$nameVocative}! 🔥💪 ¡A no aflojar jamás!",
                     "¡Con toda la intensidad{$nameVocative}! ⚡🔥 ¡Imparables hoy!",
-                    "¡Puro impulso{$nameVocative}! 🔥🚀 Esa es la energía que nos mueve."
+                    "¡Puro impulso{$nameVocative}! 🔥🚀 Esa es la energía que nos mueve.",
+                    "¡Esa es la chispa que lo transforma todo{$nameVocative}! 🔥✨ ¡Seguimos firmes!",
+                    "¡Determinación al máximo nivel{$nameVocative}! ⚡💪 ¡A por todas!",
+                    "¡Con la llama del propósito bien encendida{$nameVocative}! 🔥🏛️ ¡Adelante!",
+                    "¡Fuerza imparable para tu jornada{$nameVocative}! ⚡🔥 ¡Excelente actitud!"
                 ];
                 return [
                     'source' => 'heuristic_calibrated',
@@ -1448,7 +1510,9 @@ class AiAgentService {
                 $engageLove = [
                     "¡Mucho aprecio para ti{$nameVocative}! ❤️✨ ¡Gracias de corazón por formar parte de esta comunidad!",
                     "¡Gracias por el cariño y la calidez{$nameVocative}! ❤️🙌 Un abrazo muy especial.",
-                    "¡Qué alegría contar con tu presencia tan linda{$nameVocative}! ❤️✨ ¡Seguimos sumando juntos!"
+                    "¡Qué alegría contar con tu presencia tan linda{$nameVocative}! ❤️✨ ¡Seguimos sumando juntos!",
+                    "¡Agradecidos con tu cariño constante{$nameVocative}! ❤️🤝 ¡Un saludo muy fraternal!",
+                    "¡Pura calidez y gratitud para ti{$nameVocative}! ❤️✨ ¡Que tengas un día grandioso!"
                 ];
                 return [
                     'source' => 'heuristic_calibrated',
@@ -1464,7 +1528,10 @@ class AiAgentService {
                     "¡Disciplina, constancia y fuerza imparable{$nameVocative}! 💪⚡ ¡Vamos por más!",
                     "¡Fuerza y carácter{$nameVocative}! 💪🔥 No hay obstáculo que nos detenga.",
                     "¡A tope con esa determinación{$nameVocative}! 👊⚡ Firmeza en el camino.",
-                    "¡Temple de acero{$nameVocative}! 💪🏛️ Cada día más fuertes."
+                    "¡Temple de acero{$nameVocative}! 💪🏛️ Cada día más fuertes.",
+                    "¡La constancia silenciosa vence cualquier reto{$nameVocative}! 👊✨ ¡Adelante!",
+                    "¡Foco total y mente inquebrantable{$nameVocative}! 💪🎯 ¡Seguimos con todo!",
+                    "¡Construyendo carácter paso a paso{$nameVocative}! 🏛️💪 ¡Gran actitud!"
                 ];
                 return [
                     'source' => 'heuristic_calibrated',
@@ -1479,7 +1546,9 @@ class AiAgentService {
                 "¡Muchas gracias por la gran vibra{$nameVocative}! 🙌✨ ¡A seguir con todo!",
                 "¡Qué buena onda leerte por aquí{$nameVocative}! ✨🚀 ¡Vamos con fuerza!",
                 "¡Agradecidos con tu constante presencia{$nameVocative}! 🤝✨ ¡Un saludo enorme!",
-                "¡Esa es la actitud para seguir creciendo juntos{$nameVocative}! ⚡👊"
+                "¡Esa es la actitud para seguir creciendo juntos{$nameVocative}! ⚡👊",
+                "¡Pura buena energía{$nameVocative}! 🌟🤝 ¡Seguimos firmes!",
+                "¡Mucho aprecio por sumar tu apoyo{$nameVocative}! ✨🏛️ ¡Excelente jornada!"
             ];
             return [
                 'source' => 'heuristic_calibrated',
@@ -2211,7 +2280,328 @@ PROMPT;
     }
 
     /**
-     * Apply Dynamic Tone Metrics (Warmth, Depth, Energy), Emoji Style, and Closing Questions (Module 4)
+     * Fetch recent replies posted in the same post thread for deduplication (Module 5 Deep)
+     */
+    public static function fetchRecentPostReplies(PDO $pdo, int $postId, int $userId = 0, int $limit = 15): array {
+        if ($postId <= 0) return [];
+        try {
+            $sql = "
+                SELECT r.reply_text 
+                FROM replies r
+                JOIN comments c ON r.comment_id = c.id
+                WHERE c.post_id = :post_id " . ($userId > 0 ? "AND r.user_id = :uid " : "") . "
+                ORDER BY r.id DESC
+                LIMIT :limit
+            ";
+            $stmt = $pdo->prepare($sql);
+            $stmt->bindValue(':post_id', $postId, PDO::PARAM_INT);
+            if ($userId > 0) {
+                $stmt->bindValue(':uid', $userId, PDO::PARAM_INT);
+            }
+            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        } catch (Throwable $e) {
+            return [];
+        }
+    }
+
+    /**
+     * Check if candidate reply is too similar to any recent reply in the post thread (Module 5 Deep)
+     */
+    public static function isTooSimilarToRecent(string $candidate, array $recentReplies, float $threshold = 0.65): bool {
+        if (empty($recentReplies)) return false;
+
+        $candClean = mb_strtolower(trim(preg_replace('/[\x{1F600}-\x{1F64F}\x{1F300}-\x{1F5FF}\x{1F680}-\x{1F6FF}\x{1F700}-\x{1F77F}\x{1F780}-\x{1F7FF}\x{1F800}-\x{1F8FF}\x{1F900}-\x{1F9FF}\x{1FA00}-\x{1FA6F}\x{1FA70}-\x{1FAFF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}\x{2300}-\x{23FF}\x{2B50}\x{200D}\x{FE0F}\p{P}\s]+/u', ' ', $candidate)), 'UTF-8');
+
+        foreach ($recentReplies as $recent) {
+            if (!is_string($recent) || empty(trim($recent))) continue;
+            $recClean = mb_strtolower(trim(preg_replace('/[\x{1F600}-\x{1F64F}\x{1F300}-\x{1F5FF}\x{1F680}-\x{1F6FF}\x{1F700}-\x{1F77F}\x{1F780}-\x{1F7FF}\x{1F800}-\x{1F8FF}\x{1F900}-\x{1F9FF}\x{1FA00}-\x{1FA6F}\x{1FA70}-\x{1FAFF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}\x{2300}-\x{23FF}\x{2B50}\x{200D}\x{FE0F}\p{P}\s]+/u', ' ', $recent)), 'UTF-8');
+
+            if ($candClean === $recClean) {
+                return true;
+            }
+
+            similar_text($candClean, $recClean, $percent);
+            if (($percent / 100.0) >= $threshold) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Synthesize a unique 3-block combinatorial reply (Greeting + Value Core + Closing/CTA)
+     * Provides over 800 non-repetitive variations for viral posts with identical follower comments
+     */
+    public static function generateModularCombinatorialReply(
+        string $authorName,
+        string $postCaption,
+        string $postAuthor = 'general',
+        int $warmthLevel = 85,
+        int $energyLevel = 80,
+        int $depthLevel = 75,
+        string $emojiStyle = 'moderate',
+        int $seed = 0,
+        array $recentReplies = []
+    ): string {
+        $displayName = self::extractCleanFirstName($authorName);
+        $nameVocative = (!empty($displayName) && $warmthLevel >= 40) ? " $displayName" : '';
+
+        // Block A: Saludo / Reconocimiento (10 variantes)
+        if ($warmthLevel <= 35) {
+            $blockA = [
+                "Agradecemos su participación.",
+                "Muchas gracias por su comentario.",
+                "Un saludo cordial.",
+                "Totalmente de acuerdo.",
+                "Agradecemos su presencia en la comunidad.",
+                "Muchas gracias por acompañarnos.",
+                "Apreciamos su perspectiva.",
+                "Un cordial saludo.",
+                "Gracias por participar.",
+                "Estimamos su valioso comentario."
+            ];
+        } else {
+            $blockA = [
+                "¡Qué alegría leerte{$nameVocative}!",
+                "¡Totalmente de acuerdo{$nameVocative}!",
+                "¡Así es{$nameVocative}!",
+                "¡Excelente{$nameVocative}!",
+                "¡Mucho aprecio{$nameVocative}!",
+                "¡Gran verdad{$nameVocative}!",
+                "¡Exacto{$nameVocative}!",
+                "¡Un gran saludo{$nameVocative}!",
+                "¡Me encanta tu energía{$nameVocative}!",
+                "¡Gracias por estar presente{$nameVocative}!"
+            ];
+        }
+
+        // Block B: Núcleo de Valor / Afirmación (10 variantes contextualizadas por autor)
+        if ($postAuthor === 'seneca') {
+            $blockB = [
+                "El tiempo bien invertido es nuestra mayor riqueza.",
+                "La serenidad interior no se negocia con nadie.",
+                "Priorizar lo esencial es el verdadero secreto de la paz mental.",
+                "Aprovechar el presente con sabiduría lo cambia todo.",
+                "Vivir con serenidad disuelve cualquier afán externo.",
+                "Menos ruido y más presencia en cada momento.",
+                "El dominio del propio tiempo es la verdadera libertad.",
+                "Cuidar la mente es cuidar la propia vida.",
+                "Quien sabe lo que vale su tiempo no lo malgasta.",
+                "Paso a paso con templanza y sabiduría."
+            ];
+        } elseif ($postAuthor === 'marco_aurelio') {
+            $blockB = [
+                "El control sobre nuestra propia mente es el único poder real.",
+                "La disciplina diaria forja la verdadera libertad.",
+                "Enfocarse en lo que depende de uno vence cualquier obstáculo.",
+                "La constancia silenciosa supera cualquier tormenta.",
+                "Mantener el carácter inquebrantable es la mayor victoria.",
+                "Cumplir con el deber propio con serenidad y firmeza.",
+                "La fortaleza interior se demuestra en la calma.",
+                "No quejarse, actuar y seguir firmes.",
+                "El obstáculo es el camino cuando hay templanza.",
+                "Enfocados en el propósito sin distracciones."
+            ];
+        } elseif ($postAuthor === 'dostoyevski') {
+            $blockB = [
+                "La verdadera fortaleza florece cuando decidimos levantarnos.",
+                "Incluso en la prueba más difícil se forja el carácter.",
+                "Transformar la dificultad en sabiduría es la mayor victoria.",
+                "La luz siempre brilla con más fuerza en la oscuridad.",
+                "El alma se templa en los momentos de mayor desafío.",
+                "Cada reto vivido con dignidad nos hace invencibles.",
+                "La resiliencia interior es el faro que guía el camino.",
+                "Quien encuentra sentido a su lucha supera cualquier límite.",
+                "La belleza de levantarse con más determinación cada día.",
+                "Firmeza de espíritu ante cualquier adversidad."
+            ];
+        } else {
+            $blockB = [
+                "La constancia y el enfoque marcan la diferencia cada día.",
+                "Cada paso con determinación cuenta más de lo que creemos.",
+                "Mantenerse firme en el propósito abre todas las puertas.",
+                "La disciplina y la serenidad siempre dan grandes frutos.",
+                "El verdadero progreso se construye con paciencia y método.",
+                "Acción coherente y visión clara en cada etapa.",
+                "Avanzar con determinación transforma cualquier meta.",
+                "La constancia silenciosa siempre supera al entusiasmo pasajero.",
+                "Foco absoluto en lo que genera impacto real.",
+                "Seguimos comprometidos con aportar el máximo valor."
+            ];
+        }
+
+        // Block C: Cierre / Sello / Saludo final (8 variantes)
+        if ($warmthLevel <= 35) {
+            $blockC = [
+                "Un saludo cordial.",
+                "Continúe adelante.",
+                "Seguimos a su disposición.",
+                "Excelente jornada.",
+                "Agradecemos su tiempo.",
+                "Con serenidad y constancia.",
+                "Atentamente.",
+                "Paso a paso con enfoque."
+            ];
+        } elseif ($energyLevel <= 30) {
+            $blockC = [
+                "Paso a paso con serenidad y constancia.",
+                "Firmes en el camino.",
+                "Con serenidad y enfoque.",
+                "Un saludo fraterno.",
+                "Paso a paso con calma.",
+                "Enfoque en lo esencial.",
+                "Templanza y constancia.",
+                "Serenidad ante todo."
+            ];
+        } elseif ($energyLevel >= 85) {
+            $blockC = [
+                "¡Adelante con todo! ⚡",
+                "¡A romperla con fuerza! 🔥",
+                "¡Fuerza imparable! 💪",
+                "¡Vamos con toda la energía! ⚡",
+                "¡A seguir construyendo juntos! 🚀",
+                "¡Seguimos firmes e imparables! ⚡",
+                "¡Con toda la determinación! 🔥",
+                "¡A por todas! 💪"
+            ];
+        } else {
+            $blockC = [
+                "¡Adelante con todo! ✨",
+                "Firmes en el camino. 🏛️",
+                "¡A seguir construyendo con constancia! 🚀",
+                "Un fuerte abrazo. 🤝",
+                "Paso a paso con serenidad. ✨",
+                "¡Con toda la fuerza! 💪",
+                "Un saludo cordial y excelente día. ✨",
+                "¡Seguimos firmes juntos! 🤝"
+            ];
+        }
+
+        $countA = count($blockA);
+        $countB = count($blockB);
+        $countC = count($blockC);
+        $totalCombinations = $countA * $countB * $countC;
+
+        for ($offset = 0; $offset < $totalCombinations; $offset++) {
+            $k = abs($seed + $offset) % $totalCombinations;
+            $idxA = $k % $countA;
+            $idxB = intdiv($k, $countA) % $countB;
+            $idxC = intdiv($k, $countA * $countB) % $countC;
+
+            $candidate = $blockA[$idxA] . ' ' . $blockB[$idxB] . ' ' . $blockC[$idxC];
+            $candidate = self::applyGrammaticalFormality($candidate, $warmthLevel);
+
+            if (!self::isTooSimilarToRecent($candidate, $recentReplies, 0.65)) {
+                return $candidate;
+            }
+        }
+
+        $k = abs($seed) % $totalCombinations;
+        $candidate = $blockA[$k % $countA] . ' ' . $blockB[intdiv($k, $countA) % $countB] . ' ' . $blockC[intdiv($k, $countA * $countB) % $countC];
+        return self::applyGrammaticalFormality($candidate, $warmthLevel);
+    }
+
+    /**
+     * Apply Grammatical Formality / Treatment (Ustedeo vs. Tuteo vs. Neutral) (Module 4 Deep)
+     */
+    /**
+     * Apply Grammatical Formality / Treatment (Ustedeo vs. Tuteo vs. Neutral) (Module 4 Deep)
+     */
+    public static function applyGrammaticalFormality(string $text, int $warmthLevel): string {
+        if (empty($text)) return $text;
+
+        // FORMAL USTEDEO (Warmth <= 35: Corporate, institutional, serious)
+        if ($warmthLevel <= 35) {
+            $tuteoPhrases = [
+                '¿Cómo lo vives tú en tu día a día?' => '¿Cómo lo vive usted en su día a día?',
+                '¿Cómo lo vives tú?' => '¿Cómo lo vive usted?',
+                '¿Cómo lo aplicas tú?' => '¿Cómo lo aplica usted?',
+                '¿En qué situación o reto buscas aplicarlo hoy?' => '¿En qué situación o reto busca aplicarlo hoy?',
+                '¿Cuál consideras tu mayor desafío' => '¿Cuál considera su mayor desafío',
+                '¿Eso resuena más en tu faceta' => '¿Eso resuena más en su faceta',
+                '¿Qué opinas tú?' => '¿Qué opina usted?',
+                '¿Qué piensas?' => '¿Qué piensa usted?',
+                '¿Sientes que hoy priorizaste' => '¿Siente que hoy priorizó',
+                '¿Sientes que estás priorizando' => '¿Siente que está priorizando',
+                '¿Qué hábito te gustaría' => '¿Qué hábito le gustaría',
+                '¿En qué decides' => '¿En qué decide',
+                '¿Cuál es tu mayor desafío' => '¿Cuál es su mayor desafío',
+                '¿Qué reto decides' => '¿Qué reto decide',
+                '¿Cómo mantienes' => '¿Cómo mantiene',
+                '¿Cómo decides' => '¿Cómo decide',
+                '¿Te gustaría' => '¿Le gustaría',
+                'agradecemos de corazón tu presencia' => 'agradecemos sinceramente su presencia',
+                'revisa el enlace' => 'revise el enlace',
+                'Revisa el enlace' => 'Revise el enlace',
+                'cuenta con nosotros' => 'cuente con nosotros',
+                'Cuenta con nosotros' => 'Cuente con nosotros',
+                'sigue adelante' => 'continúe adelante',
+                'Sigue adelante' => 'Continúe adelante',
+                '¡Un fuerte abrazo!' => 'Un saludo cordial.',
+                '¡Un abrazo enorme!' => 'Un saludo cordial.',
+                'Un fuerte abrazo.' => 'Un saludo cordial.',
+                'Un fuerte abrazo' => 'Un saludo cordial',
+                '¡Qué alegría leerte!' => 'Agradecemos su participación.',
+                'encantados de leerte' => 'un gusto contar con su participación',
+                'Encantados de leerte' => 'Un gusto contar con su participación',
+                'con tu gente' => 'con su entorno'
+            ];
+
+            foreach ($tuteoPhrases as $search => $replace) {
+                $text = str_ireplace($search, $replace, $text);
+            }
+
+            // Word-boundary verbal and pronoun conversions
+            $wordBoundaryMap = [
+                '/\bte gustaría\b/iu' => 'le gustaría',
+                '/\bte agradecemos\b/iu' => 'le agradecemos',
+                '/\bte invitamos\b/iu' => 'le invitamos',
+                '/\bte deseamos\b/iu' => 'le deseamos',
+                '/\bte enviamos\b/iu' => 'le enviamos',
+                '/\bte esperamos\b/iu' => 'le esperamos',
+                '/\bte saludamos\b/iu' => 'le saludamos',
+                '/\bte leemos\b/iu' => 'le leemos',
+                '/\bte acompañamos\b/iu' => 'le acompañamos',
+                '/\bte ayudamos\b/iu' => 'le ayudamos',
+                '/\bcontigo\b/iu' => 'con usted',
+                '/\bpara ti\b/iu' => 'para usted',
+                '/\bde ti\b/iu' => 'de usted',
+                '/\ba ti\b/iu' => 'a usted',
+                '/\ben ti\b/iu' => 'en usted',
+                '/\bcuéntanos\b/iu' => 'cuéntenos',
+                '/\bescríbenos\b/iu' => 'escríbanos',
+                '/\bdéjanos\b/iu' => 'déjenos',
+                '/\bhaz clic\b/iu' => 'haga clic',
+                '/\brevisa\b/iu' => 'revise',
+                '/\baplica\b/iu' => 'aplique',
+                '/\brecuerda que\b/iu' => 'recuerde que',
+                '/\btu\b/iu' => 'su',
+                '/\btus\b/iu' => 'sus',
+                '/\btuyo\b/iu' => 'suyo',
+                '/\btuyos\b/iu' => 'suyos',
+                '/\btuya\b/iu' => 'suya',
+                '/\btuyas\b/iu' => 'suyas'
+            ];
+
+            foreach ($wordBoundaryMap as $pattern => $replace) {
+                $text = preg_replace($pattern, $replace, $text);
+            }
+        } elseif ($warmthLevel >= 70) {
+            // Highly warm / empathetic: ensure warm tuteo connectors
+            $text = str_ireplace(
+                ['le agradecemos', 'su comentario', 'le invitamos', 'cuéntenos', 'escríbanos', 'Un saludo cordial.'],
+                ['te agradecemos', 'tu comentario', 'te invitamos', 'cuéntanos', 'escríbenos', '¡Un fuerte abrazo!'],
+                $text
+            );
+        }
+
+        return $text;
+    }
+
+    /**
+     * Apply Dynamic Tone Metrics (Warmth, Depth, Energy), Emoji Style, and Closing Questions (Module 4 Deep)
      */
     public static function applyDynamicToneAndStyle(
         array $res,
@@ -2222,7 +2612,8 @@ PROMPT;
         string $closingQuestionRule,
         string $commentText,
         int $rotKey,
-        string $intent = ''
+        string $intent = '',
+        string $postAuthor = 'general'
     ): array {
         if (empty($res)) return $res;
 
@@ -2237,6 +2628,8 @@ PROMPT;
         $isVisualReaction = ($intent === 'visual_sticker_reaction' || $intent === 'emoji_reaction');
         $isShort = ($cleanLen <= 25) || $isTagOnly || $isVisualReaction;
 
+        $emojiRegex = '/[\x{1F600}-\x{1F64F}\x{1F300}-\x{1F5FF}\x{1F680}-\x{1F6FF}\x{1F700}-\x{1F77F}\x{1F780}-\x{1F7FF}\x{1F800}-\x{1F8FF}\x{1F900}-\x{1F9FF}\x{1FA00}-\x{1FA6F}\x{1FA70}-\x{1FAFF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}\x{2300}-\x{23FF}\x{2B50}\x{200D}\x{FE0F}]/u';
+
         foreach (['engagement', 'conversion', 'support'] as $field) {
             if (empty($res[$field]) || !is_string($res[$field])) {
                 continue;
@@ -2244,7 +2637,9 @@ PROMPT;
 
             $text = $res[$field];
 
-            // 1. WARMTH MODULATION ($warmthLevel: 0 - 100)
+            // 1. WARMTH & FORMALITY MODULATION (Module 4 Deep)
+            $text = self::applyGrammaticalFormality($text, $warmthLevel);
+
             if ($warmthLevel <= 35) {
                 // Cold / Formal Corporate: Remove informal superlatives and affectionate greetings
                 $text = str_ireplace(
@@ -2271,58 +2666,113 @@ PROMPT;
                 );
             }
 
-            // 2. ENERGY MODULATION ($energyLevel: 0 - 100)
-            if ($energyLevel <= 40) {
-                // Low Energy / Zen: grounded, contemplative stoic tone
+            // 2. ENERGY MODULATION MATRIX (Module 4 Deep)
+            if ($energyLevel <= 30) {
+                // Tier 1: Zen / Stoic Sobriety
                 $text = str_ireplace(
-                    ['¡Vamos con todo!', '¡A romperla!', '¡Con toda la determinación!', '¡A tope!', '¡Fuerza imparable!', '¡Dale con todo!'],
-                    ['Paso a paso con serenidad y constancia.', 'Enfoque continuo en lo esencial.', 'Con serenidad y determinación.', 'Firmes en el camino.', 'Paso a paso con constancia.', 'Adelante con serenidad.'],
+                    [
+                        '¡Vamos con todo!', '¡A romperla!', '¡Con toda la determinación!',
+                        '¡A tope!', '¡Fuerza imparable!', '¡Dale con todo!', '¡Vamos por más!',
+                        '¡Imparable!', '¡A romperla con todo!', '¡Con toda!', '¡Pura buena energía!'
+                    ],
+                    [
+                        'Paso a paso con serenidad y constancia.', 'Enfoque continuo en lo esencial.',
+                        'Con serenidad y determinación.', 'Firmes en el camino.', 'Paso a paso con constancia.',
+                        'Adelante con serenidad.', 'Con constancia y templanza.', 'Constancia inquebrantable.',
+                        'Con serenidad y foco.', 'Paso a paso.', 'Serenidad en cada paso.'
+                    ],
                     $text
                 );
+                // Punctuation calm: change excessive exclamations to calm periods
+                $text = preg_replace('/!+/', '.', $text);
+                $text = preg_replace('/¡/', '', $text);
                 // Replace hype emojis with calm/stoic ones
-                $text = str_replace(['🔥', '💥', '⚡'], ['🏛️', '✨', '🎯'], $text);
+                $text = str_replace(['🔥', '💥', '⚡', '🚀', '🦁', '🎉'], ['🏛️', '✨', '🎯', '🤝', '🏛️', '✨'], $text);
+            } elseif ($energyLevel <= 65) {
+                // Tier 2: Calm / Professional balance
+                $text = str_ireplace(
+                    ['¡A romperla!', '¡Fuerza imparable!', '¡A tope!'],
+                    ['¡Mucho éxito!', '¡Seguimos firmes!', '¡Adelante!'],
+                    $text
+                );
             } elseif ($energyLevel >= 85) {
-                // High Energy: ensure punchiness for short engagement responses
+                // Tier 4: High Energy / Hype
                 if ($isShort && $field === 'engagement' && !str_contains($text, '⚡') && !str_contains($text, '🔥') && !str_contains($text, '💪')) {
-                    $text = rtrim($text, ' .') . ' ¡Con toda! ⚡';
+                    $text = rtrim($text, ' .') . ' ¡Con toda la fuerza! ⚡🔥';
                 }
+                $text = str_replace(['👍', '🤝'], ['💪', '⚡'], $text);
             }
 
-            // 3. DEPTH MODULATION ($depthLevel: 0 - 100)
-            if ($depthLevel <= 35) {
-                // Low Depth: simplify long philosophical quotes to direct practical advice
+            // 3. DEPTH MODULATION MATRIX (Module 4 Deep)
+            if ($depthLevel <= 30) {
+                // Tier 1: Practical & direct (prune long quotes, deliver concise actionable advice)
                 $text = preg_replace('/Como (enseñaba|recordaba|escribía|decía)\s+[^:]+:\s*[\'"][^\'"]+[\'"]\.\s*/iu', '', $text);
+                $text = preg_replace('/El principio de [^,\.]+ nos recuerda que\s*/iu', 'Recuerda que ', $text);
             }
 
-            // 4. CLOSING QUESTION RULE ($closingQuestionRule: 'always', 'optional'/'relevant', 'never')
+            // 4. CLOSING QUESTION RULE & CONTEXTUAL BANK (Module 4 Deep)
             if ($closingQuestionRule === 'never') {
-                // Strip trailing question if any
                 $text = preg_replace('/\s*¿[^?]+\?\s*$/u', '', $text);
             } elseif (($closingQuestionRule === 'always' || ($closingQuestionRule === 'relevant' && $rotKey % 2 === 0)) && $field === 'engagement') {
-                // For engagement on medium/long comments without an existing question, append a contextual engagement question
                 if (!$isShort && !str_contains($text, '?') && !str_contains($text, '¿')) {
-                    $questions = [
-                        ' ¿En qué situación o reto buscas aplicarlo hoy? 💬',
-                        ' ¿Cómo lo vives tú en tu día a día? 🤝',
-                        ' ¿Cuál consideras tu mayor desafío respecto a esto hoy? 🎯',
-                        ' ¿Eso resuena más en tu faceta personal o profesional? ✨'
-                    ];
+                    if ($postAuthor === 'seneca') {
+                        $questions = [
+                            ' ¿Sientes que estás priorizando lo que realmente está bajo tu control hoy? ⏳',
+                            ' ¿Qué hábito te gustaría simplificar esta semana para ganar paz mental? 🏛️',
+                            ' ¿En qué decides invertir tu mejor tiempo hoy? ✨'
+                        ];
+                    } elseif ($postAuthor === 'marco_aurelio') {
+                        $questions = [
+                            ' ¿Cuál es tu mayor desafío para mantener la disciplina hoy? 🎯',
+                            ' ¿Qué obstáculo decides afrontar con serenidad esta semana? 🛡️',
+                            ' ¿Cómo mantienes el enfoque cuando todo alrededor parece caótico? 🏛️'
+                        ];
+                    } elseif ($postAuthor === 'dostoyevski') {
+                        $questions = [
+                            ' ¿Qué aprendizaje profundo te ha dejado ese momento de prueba? 🕯️',
+                            ' ¿Cómo transformas hoy la dificultad en resiliencia interior? ✨',
+                            ' ¿Qué verdad esencial descubriste en medio de la tormenta? 🤝'
+                        ];
+                    } elseif ($postAuthor === 'epicteto') {
+                        $questions = [
+                            ' ¿Qué parte de ese reto depende 100% de ti hoy? 🏛️',
+                            ' ¿Cómo decides responder con serenidad ante lo incontrolable? 🎯',
+                            ' ¿En qué acción concreta enfocas hoy tu energía? ✨'
+                        ];
+                    } else {
+                        $questions = [
+                            ' ¿En qué situación o reto buscas aplicarlo hoy? 💬',
+                            ' ¿Cómo lo vives tú en tu día a día? 🤝',
+                            ' ¿Cuál consideras tu mayor desafío respecto a esto hoy? 🎯',
+                            ' ¿Eso resuena más en tu faceta personal o profesional? ✨'
+                        ];
+                    }
                     $q = $questions[$rotKey % count($questions)];
+                    if ($warmthLevel <= 35) {
+                        $q = self::applyGrammaticalFormality($q, $warmthLevel);
+                    }
                     $text = rtrim($text, ' .') . $q;
                 }
             }
 
-            // 5. EMOJI STYLE ($emojiStyle: 'none', 'minimal', 'moderate', 'expressive')
+            // 5. EMOJI STYLE POLICIES (Module 4 Deep)
             if ($emojiStyle === 'none') {
-                // Strip all unicode emojis
-                $text = preg_replace('/[\x{1F600}-\x{1F64F}\x{1F300}-\x{1F5FF}\x{1F680}-\x{1F6FF}\x{1F700}-\x{1F77F}\x{1F780}-\x{1F7FF}\x{1F800}-\x{1F8FF}\x{1F900}-\x{1F9FF}\x{1FA00}-\x{1FA6F}\x{1FA70}-\x{1FAFF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}\x{2300}-\x{23FF}\x{2B50}\x{200D}\x{FE0F}]/u', '', $text);
+                $text = preg_replace($emojiRegex, '', $text);
             } elseif ($emojiStyle === 'minimal') {
-                // Keep only the first emoji found, strip others
-                preg_match_all('/[\x{1F600}-\x{1F64F}\x{1F300}-\x{1F5FF}\x{1F680}-\x{1F6FF}\x{1F700}-\x{1F77F}\x{1F780}-\x{1F7FF}\x{1F800}-\x{1F8FF}\x{1F900}-\x{1F9FF}\x{1FA00}-\x{1FA6F}\x{1FA70}-\x{1FAFF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}\x{2300}-\x{23FF}\x{2B50}\x{200D}\x{FE0F}]+/u', $text, $matches);
-                if (!empty($matches[0]) && count($matches[0]) > 1) {
+                preg_match_all($emojiRegex, $text, $matches);
+                if (!empty($matches[0])) {
                     $firstEmoji = $matches[0][0];
-                    $textNoEmojis = preg_replace('/[\x{1F600}-\x{1F64F}\x{1F300}-\x{1F5FF}\x{1F680}-\x{1F6FF}\x{1F700}-\x{1F77F}\x{1F780}-\x{1F7FF}\x{1F800}-\x{1F8FF}\x{1F900}-\x{1F9FF}\x{1FA00}-\x{1FA6F}\x{1FA70}-\x{1FAFF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}\x{2300}-\x{23FF}\x{2B50}\x{200D}\x{FE0F}]+/u', '', $text);
+                    $textNoEmojis = preg_replace($emojiRegex, '', $text);
                     $text = rtrim(preg_replace('/\s+/', ' ', $textNoEmojis)) . ' ' . $firstEmoji;
+                }
+            } elseif ($emojiStyle === 'moderate') {
+                preg_match_all($emojiRegex, $text, $matches);
+                if (!empty($matches[0]) && count($matches[0]) > 2) {
+                    $count = 0;
+                    $text = preg_replace_callback($emojiRegex, function($m) use (&$count) {
+                        $count++;
+                        return ($count <= 2) ? $m[0] : '';
+                    }, $text);
                 }
             }
 
