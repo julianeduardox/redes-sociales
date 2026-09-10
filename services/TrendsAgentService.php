@@ -97,7 +97,17 @@ class TrendsAgentService {
     // META GRAPH API — HASHTAG SEARCH
     // ==========================================================================
 
+    public static function isInstagramToken(string $token): bool {
+        return str_starts_with($token, 'IGAA') || str_starts_with($token, 'IG');
+    }
+
     public static function discoverHashtagId(string $hashtag, string $igUserId, string $token): ?string {
+        if (self::isInstagramToken($token)) {
+            // Instagram User tokens communicate with graph.instagram.com which does not support /ig_hashtag_search
+            self::$lastMetaError = "Meta API: (#10) To use 'Instagram Public Content Access', your use of this endpoint must be reviewed and approved by Facebook.";
+            return null;
+        }
+
         $url  = self::BASE_URL . '/ig_hashtag_search'
               . '?user_id=' . urlencode($igUserId)
               . '&q=' . urlencode($hashtag)
@@ -144,6 +154,67 @@ class TrendsAgentService {
         return $data['data'] ?? [];
     }
 
+    /**
+     * Fallback resiliente: Obtiene publicaciones relevantes del nicho desde la cuenta conectada
+     * y las clasifica por engagement score e idoneidad de nicho.
+     */
+    public static function fetchAccountNicheMedia(int $userId, string $hashtag, string $token, string $igUserId): array {
+        $isIg = self::isInstagramToken($token);
+        $url  = $isIg
+              ? "https://graph.instagram.com/v19.0/me/media?fields=id,caption,media_type,media_url,thumbnail_url,permalink,like_count,comments_count,timestamp&limit=50&access_token=" . urlencode($token)
+              : self::BASE_URL . "/{$igUserId}/media?fields=id,caption,media_type,media_url,thumbnail_url,permalink,like_count,comments_count,timestamp&limit=50&access_token=" . urlencode($token);
+
+        $data     = self::makeGetRequest($url);
+        $rawPosts = $data['data'] ?? [];
+
+        // Complementar con publicaciones locales si existen en la BD
+        try {
+            $pdo = Database::getConnection();
+            $cleanTag = mb_strtolower(trim(ltrim($hashtag, '#')));
+            $localStmt = $pdo->prepare("
+                SELECT post_id as id, content as caption, media_type, media_url, permalink, likes_count as like_count, comments_count, created_at as timestamp
+                FROM posts
+                WHERE user_id = ? AND (content LIKE ? OR content LIKE ?)
+                ORDER BY likes_count DESC LIMIT 25
+            ");
+            $localStmt->execute([$userId, "%#{$cleanTag}%", "%{$cleanTag}%"]);
+            $localPosts = $localStmt->fetchAll();
+            foreach ($localPosts as $lp) {
+                if (!empty($lp['id'])) {
+                    $rawPosts[] = $lp;
+                }
+            }
+        } catch (Throwable $e) {}
+
+        if (empty($rawPosts)) return [];
+
+        $cleanTag  = mb_strtolower(trim(ltrim($hashtag, '#')));
+        $matched   = [];
+        $unmatched = [];
+
+        foreach ($rawPosts as $p) {
+            $caption = mb_strtolower($p['caption'] ?? '');
+            if (empty($p['id'])) continue;
+
+            if (str_contains($caption, '#' . $cleanTag) || str_contains($caption, $cleanTag)) {
+                $matched[$p['id']] = $p;
+            } else {
+                $unmatched[$p['id']] = $p;
+            }
+        }
+
+        // Si hay pocas publicaciones con el hashtag exacto, enriquecer con los posts de mayor tracción
+        if (count($matched) < 10 && !empty($unmatched)) {
+            uasort($unmatched, fn($a, $b) => ((int)($b['like_count'] ?? 0)) <=> ((int)($a['like_count'] ?? 0)));
+            foreach ($unmatched as $id => $post) {
+                $matched[$id] = $post;
+                if (count($matched) >= 15) break;
+            }
+        }
+
+        return $matched;
+    }
+
     // ==========================================================================
     // SCORING
     // ==========================================================================
@@ -178,24 +249,39 @@ class TrendsAgentService {
             $token    = $creds['token'];
             $igUserId = $creds['ig_user_id'];
             $hashtag  = $niche['hashtag'];
+            $isIg     = self::isInstagramToken($token);
 
+            $allPosts = [];
             $hashtagId = $niche['ig_hashtag_id'];
-            if (empty($hashtagId)) {
-                $hashtagId = self::discoverHashtagId($hashtag, $igUserId, $token);
+
+            // 1. Intentar búsqueda de hashtag global si no es token de usuario básico
+            if (!$isIg) {
+                if (empty($hashtagId)) {
+                    $hashtagId = self::discoverHashtagId($hashtag, $igUserId, $token);
+                    if ($hashtagId) {
+                        $pdo->prepare("UPDATE trend_niches SET ig_hashtag_id = ? WHERE id = ?")->execute([$hashtagId, $nicheId]);
+                    }
+                }
+
                 if ($hashtagId) {
-                    $pdo->prepare("UPDATE trend_niches SET ig_hashtag_id = ? WHERE id = ?")->execute([$hashtagId, $nicheId]);
-                } else {
-                    $errorMsg = self::$lastMetaError ?: "No se encontró el hashtag #$hashtag en Instagram";
-                    return ['success' => false, 'error' => $errorMsg];
+                    $topPosts    = self::fetchTopPosts($hashtagId, $igUserId, $token);
+                    $recentPosts = self::fetchRecentPosts($hashtagId, $igUserId, $token);
+                    foreach (array_merge($topPosts, $recentPosts) as $p) {
+                        if (!empty($p['id'])) $allPosts[$p['id']] = $p;
+                    }
                 }
             }
 
-            $topPosts    = self::fetchTopPosts($hashtagId, $igUserId, $token);
-            $recentPosts = self::fetchRecentPosts($hashtagId, $igUserId, $token);
+            // 2. Fallback resiliente: Si Meta bloquea la búsqueda pública por falta de IPCA (#10) o es token IG
+            $isFallback = false;
+            if (empty($allPosts)) {
+                $allPosts   = self::fetchAccountNicheMedia($userId, $hashtag, $token, $igUserId);
+                $isFallback = true;
+            }
 
-            $allPosts = [];
-            foreach (array_merge($topPosts, $recentPosts) as $p) {
-                if (!empty($p['id'])) $allPosts[$p['id']] = $p;
+            if (empty($allPosts)) {
+                $errorMsg = self::$lastMetaError ?: "No se encontraron publicaciones disponibles para el hashtag #$hashtag";
+                return ['success' => false, 'error' => $errorMsg];
             }
 
             $saved = 0;
@@ -242,6 +328,7 @@ class TrendsAgentService {
                 'hashtag'     => '#' . $hashtag,
                 'posts_found' => count($allPosts),
                 'posts_saved' => $saved,
+                'is_fallback' => $isFallback
             ];
         } catch (Throwable $e) {
             error_log("TrendsAgent syncNicheTrends: " . $e->getMessage());
@@ -630,12 +717,19 @@ class TrendsAgentService {
             $igId  = '';
 
             if (!empty($account['access_token'])) {
-                $token = $account['access_token'];
-                $igId  = Settings::getForUser($userId, 'meta_instagram_account_id', '');
-                if (empty($igId) && !empty($account['page_id'])) {
-                    $url  = self::BASE_URL . '/' . $account['page_id'] . '?fields=instagram_business_account&access_token=' . urlencode($token);
-                    $data = self::makeGetRequest($url);
-                    $igId = $data['instagram_business_account']['id'] ?? '';
+                $token = trim($account['access_token']);
+                $igId  = !empty($account['page_id']) ? (string)$account['page_id'] : Settings::getForUser($userId, 'meta_instagram_account_id', '');
+
+                if (empty($igId)) {
+                    if (self::isInstagramToken($token)) {
+                        $url  = 'https://graph.instagram.com/me?fields=id,username&access_token=' . urlencode($token);
+                        $data = self::makeGetRequest($url);
+                        $igId = $data['id'] ?? '';
+                    } elseif (!empty($account['page_id'])) {
+                        $url  = self::BASE_URL . '/' . $account['page_id'] . '?fields=instagram_business_account&access_token=' . urlencode($token);
+                        $data = self::makeGetRequest($url);
+                        $igId = $data['instagram_business_account']['id'] ?? '';
+                    }
                 }
             } else {
                 $token = Settings::getForUser($userId, 'meta_page_access_token', '');
@@ -655,7 +749,7 @@ class TrendsAgentService {
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT        => self::API_TIMEOUT,
             CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYPEER => false,
             CURLOPT_HTTPHEADER     => ['Accept: application/json'],
         ]);
         $response = curl_exec($ch);

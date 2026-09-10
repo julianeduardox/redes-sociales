@@ -111,10 +111,16 @@ const TrendsAgent = {
       });
       const json = await res.json();
       if (json.success) {
-        this.toast(`✅ #${hashtag} agregado correctamente`);
+        this.toast(`✅ #${hashtag} agregado al monitoreo`);
         if (input) input.value = '';
-        this.initialized = false;
-        await this.init();
+        await this.loadNiches();
+        if (json.data?.niche_id) {
+          await this.syncNow(json.data.niche_id);
+        } else {
+          await this.loadTrendingPosts();
+          await this.loadAiPicks();
+          await this.loadInsights();
+        }
       } else {
         this.toast(json.error || 'Error al agregar hashtag', 'error');
       }
