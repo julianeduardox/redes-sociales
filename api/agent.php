@@ -56,6 +56,7 @@ try {
         if (isset($input['brand_few_shot_examples']) && is_array($input['brand_few_shot_examples'])) $runtimeOverrides['brand_few_shot_examples'] = $input['brand_few_shot_examples'];
         if (isset($input['ai_provider'])) $runtimeOverrides['ai_provider'] = Security::validateEnum($input['ai_provider'], ['openrouter', 'heuristic'], 'heuristic');
         if (isset($input['openrouter_model'])) $runtimeOverrides['openrouter_model'] = Security::sanitizeString($input['openrouter_model'], 150);
+        if (isset($input['reply_index'])) $runtimeOverrides['reply_index'] = Security::sanitizeInt($input['reply_index'], 0, 1000, 0);
 
         $replies = AiAgentService::generateReplies($authorName, $commentText, $platform, $postCaption, $overrideTone, $runtimeOverrides);
 
@@ -117,6 +118,9 @@ try {
         $runtimeOverrides = [];
         if ($commentBrandVoiceId) {
             $runtimeOverrides['brand_voice_id'] = $commentBrandVoiceId;
+        }
+        if (isset($input['reply_index'])) {
+            $runtimeOverrides['reply_index'] = Security::sanitizeInt($input['reply_index'], 0, 1000, 0);
         }
 
         $replies = AiAgentService::generateReplies($authorName, $commentText, $platform, $postCaption, $overrideTone, $runtimeOverrides);
@@ -219,7 +223,10 @@ try {
 
             // Legitimate comment in Spanish (of any score) -> Generate and Post AI Reply with account's assigned brand voice!
             $brandVoiceId = (int)($c['effective_brand_voice_id'] ?? 1);
-            $replies = AiAgentService::generateReplies($c['author_name'], $c['comment_text'], $c['platform'], $c['post_caption'], '', ['brand_voice_id' => $brandVoiceId]);
+            $replies = AiAgentService::generateReplies($c['author_name'], $c['comment_text'], $c['platform'], $c['post_caption'], '', [
+                'brand_voice_id' => $brandVoiceId,
+                'reply_index' => $processedCount
+            ]);
             
             // Select best variant
             $chosenVariant = 'engagement';
