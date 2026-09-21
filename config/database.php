@@ -970,13 +970,107 @@ class Database {
                 }
             }
 
-            // 2. Ensure user_id in accounts, comments, replies
+            // 2. Ensure user_id, is_archived & archived_at in accounts, comments, replies
             $tables = ['accounts', 'comments', 'replies'];
             foreach ($tables as $t) {
                 $tCols = self::getTableColumns($pdo, $t);
                 if (!empty($tCols) && !in_array('user_id', $tCols, true)) {
                     $tType = ($driver === 'sqlite' ? 'INTEGER DEFAULT 1' : 'INT DEFAULT 1');
                     $pdo->exec("ALTER TABLE {$t} ADD COLUMN user_id {$tType}");
+                }
+            }
+
+            // Ensure archive columns in comments
+            $commCols = self::getTableColumns($pdo, 'comments');
+            if (!empty($commCols)) {
+                if (!in_array('is_archived', $commCols, true)) {
+                    $tType = ($driver === 'sqlite' ? 'INTEGER DEFAULT 0' : 'INT DEFAULT 0');
+                    $pdo->exec("ALTER TABLE comments ADD COLUMN is_archived {$tType}");
+                }
+                if (!in_array('archived_at', $commCols, true)) {
+                    $tType = ($driver === 'sqlite' ? 'DATETIME' : ($driver === 'pgsql' ? 'TIMESTAMP' : 'DATETIME'));
+                    $pdo->exec("ALTER TABLE comments ADD COLUMN archived_at {$tType}");
+                }
+                try {
+                    $pdo->exec("CREATE INDEX IF NOT EXISTS idx_comments_archive ON comments(user_id, is_archived, status)");
+                } catch (Throwable) {}
+            }
+
+            // Ensure weekly_efficiency_reports table exists
+            $repCols = self::getTableColumns($pdo, 'weekly_efficiency_reports');
+            if (empty($repCols)) {
+                if ($driver === 'pgsql') {
+                    $pdo->exec("
+                        CREATE TABLE IF NOT EXISTS weekly_efficiency_reports (
+                            id SERIAL PRIMARY KEY,
+                            user_id INTEGER NOT NULL,
+                            week_label VARCHAR(100) NOT NULL,
+                            period_start TIMESTAMP NOT NULL,
+                            period_end TIMESTAMP NOT NULL,
+                            total_received INTEGER DEFAULT 0,
+                            total_replied INTEGER DEFAULT 0,
+                            total_pending INTEGER DEFAULT 0,
+                            copilot_replies_count INTEGER DEFAULT 0,
+                            manual_replies_count INTEGER DEFAULT 0,
+                            leads_detected_count INTEGER DEFAULT 0,
+                            urgent_resolved_count INTEGER DEFAULT 0,
+                            spam_filtered_count INTEGER DEFAULT 0,
+                            avg_response_time_seconds INTEGER DEFAULT 0,
+                            efficiency_score REAL DEFAULT 100.0,
+                            ai_insights_summary TEXT,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                        );
+                        CREATE INDEX IF NOT EXISTS idx_weekly_reports_user ON weekly_efficiency_reports(user_id, created_at);
+                    ");
+                } elseif ($driver === 'mysql') {
+                    $pdo->exec("
+                        CREATE TABLE IF NOT EXISTS weekly_efficiency_reports (
+                            id INT AUTO_INCREMENT PRIMARY KEY,
+                            user_id INT NOT NULL,
+                            week_label VARCHAR(100) NOT NULL,
+                            period_start DATETIME NOT NULL,
+                            period_end DATETIME NOT NULL,
+                            total_received INT DEFAULT 0,
+                            total_replied INT DEFAULT 0,
+                            total_pending INT DEFAULT 0,
+                            copilot_replies_count INT DEFAULT 0,
+                            manual_replies_count INT DEFAULT 0,
+                            leads_detected_count INT DEFAULT 0,
+                            urgent_resolved_count INT DEFAULT 0,
+                            spam_filtered_count INT DEFAULT 0,
+                            avg_response_time_seconds INT DEFAULT 0,
+                            efficiency_score FLOAT DEFAULT 100.0,
+                            ai_insights_summary TEXT,
+                            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+                        CREATE INDEX idx_weekly_reports_user ON weekly_efficiency_reports(user_id, created_at);
+                    ");
+                } else {
+                    $pdo->exec("
+                        CREATE TABLE IF NOT EXISTS weekly_efficiency_reports (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            user_id INTEGER NOT NULL,
+                            week_label TEXT NOT NULL,
+                            period_start DATETIME NOT NULL,
+                            period_end DATETIME NOT NULL,
+                            total_received INTEGER DEFAULT 0,
+                            total_replied INTEGER DEFAULT 0,
+                            total_pending INTEGER DEFAULT 0,
+                            copilot_replies_count INTEGER DEFAULT 0,
+                            manual_replies_count INTEGER DEFAULT 0,
+                            leads_detected_count INTEGER DEFAULT 0,
+                            urgent_resolved_count INTEGER DEFAULT 0,
+                            spam_filtered_count INTEGER DEFAULT 0,
+                            avg_response_time_seconds INTEGER DEFAULT 0,
+                            efficiency_score REAL DEFAULT 100.0,
+                            ai_insights_summary TEXT,
+                            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                        );
+                        CREATE INDEX IF NOT EXISTS idx_weekly_reports_user ON weekly_efficiency_reports(user_id, created_at);
+                    ");
                 }
             }
 

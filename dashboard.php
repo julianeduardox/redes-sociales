@@ -345,20 +345,25 @@ $isMetaConnected = ($activeAccountsCount > 0);
           </div>
 
           <div class="filter-tags">
-            <button class="filter-tag active" data-filter="all">Todos</button>
-            <button class="filter-tag" data-filter="highlighted">⭐ Más Resaltantes</button>
-            <button class="filter-tag" data-filter="leads">🎯 Consultas de Compra</button>
-            <button class="filter-tag" data-filter="urgent">🛡️ Objeciones & Soporte</button>
-            <button class="filter-tag" data-filter="pending">⏳ Pendientes</button>
-            <button class="filter-tag" data-filter="replied">✅ Respondidos</button>
-            <button class="filter-tag" data-filter="failed" style="color: #f87171; border-color: rgba(239, 68, 68, 0.4);">⚠️ Falló Envío</button>
+            <button class="filter-tag active" data-filter="all">📥 Bandeja Activa</button>
+            <button class="filter-tag" data-filter="new" style="color: #60a5fa; border-color: rgba(96, 165, 250, 0.4);">✨ Nuevos</button>
+            <button class="filter-tag" data-filter="leads" style="color: #facc15; border-color: rgba(250, 204, 21, 0.4);">🎯 Leads & Destacados</button>
+            <button class="filter-tag" data-filter="urgent" style="color: #f87171; border-color: rgba(239, 68, 68, 0.4);">🛡️ Soporte & Alertas</button>
+            <button class="filter-tag" data-filter="archived" style="color: #94a3b8; border-color: rgba(148, 163, 184, 0.35);">🗄️ Histórico / Archivados</button>
           </div>
 
           <div class="feed-toolbar-row">
-            <div class="feed-toolbar-left">
+            <div class="feed-toolbar-left" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
               <span class="feed-counter-text" id="feed-counter-display">Cargando comentarios...</span>
               <button type="button" class="btn-toolbar-assistant" onclick="AgentController.openAssistantModal()" title="Abrir Copiloto de Conversión & Respuestas">
                 <span>🪄 Copiloto IA</span>
+              </button>
+              <button type="button" class="btn-toolbar-assistant btn-toolbar-cleanup" id="btn-inbox-cleanup" onclick="App.confirmAndRunWeeklyCleanup()" title="Archivar comentarios respondidos y generar reporte de eficiencia semanal">
+                <span>🧹 Limpiar Bandeja</span>
+                <span class="badge-cleanup-count" id="badge-cleanup-count" style="display: none;">0</span>
+              </button>
+              <button type="button" class="btn-toolbar-assistant btn-toolbar-report" onclick="App.openWeeklyReportModal()" title="Ver Reporte Semanal de Eficiencia y Auditoría">
+                <span>📊 Reporte Semanal</span>
               </button>
             </div>
             <div class="density-toggle-group">
@@ -644,7 +649,7 @@ $isMetaConnected = ($activeAccountsCount > 0);
         <div class="studio-grid-layout">
           <!-- Left Column: Identity Tuning & Golden Rules -->
           <div>
-            <form onsubmit="App.saveBrandStudioForm(event)" autocomplete="off">
+            <form onsubmit="App.saveBrandStudioForm(event)" novalidate autocomplete="off">
               <input type="hidden" id="setting-brand-id" value="" />
               
               <!-- Progressive Disclosure Sub-tabs Bar -->
@@ -673,19 +678,19 @@ $isMetaConnected = ($activeAccountsCount > 0);
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
                   <div class="form-group">
                     <label>Nombre de la Marca o Cliente:</label>
-                    <input type="text" id="setting-brand-name" placeholder="Ej: Xindro Studio / Nike / Inmobiliaria Premier" required />
+                    <input type="text" id="setting-brand-name" placeholder="Ej: Xindro Studio / Nike / Inmobiliaria Premier" />
                   </div>
 
                   <div class="form-group">
                     <label>Nombre de la Persona / Asistente:</label>
-                    <input type="text" id="setting-persona-name" placeholder="Ej: Alex — Consultor Comercial / Sofía de Soporte" required />
+                    <input type="text" id="setting-persona-name" placeholder="Ej: Alex — Consultor Comercial / Sofía de Soporte" />
                   </div>
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
                   <div class="form-group">
                     <label>Industria / Nicho de Negocio:</label>
-                    <input type="text" id="setting-brand-industry" placeholder="Ej: E-commerce, Fitness, Moda, Real Estate, Servicios B2B" required />
+                    <input type="text" id="setting-brand-industry" placeholder="Ej: E-commerce, Fitness, Moda, Real Estate, Servicios B2B" />
                   </div>
 
                   <div class="form-group">
@@ -850,36 +855,42 @@ $isMetaConnected = ($activeAccountsCount > 0);
                 <!-- Block 5: OpenRouter AI Engine & Multi-Model -->
                 <div style="background: var(--bg-card); padding: 24px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 24px;">
                   <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
-                    <h4 style="font-size: 1rem; font-weight: 800; color: #fff; margin: 0;">🌐 Motor de Inteligencia Artificial (OpenRouter)</h4>
-                    <span style="font-size: 0.72rem; padding: 3px 8px; border-radius: 6px; background: rgba(99,102,241,0.15); color: #a5b4fc; font-weight: 700;">Multi-Model Hub</span>
+                    <h4 style="font-size: 1rem; font-weight: 800; color: #fff; margin: 0; display: flex; align-items: center; gap: 8px;">
+                      <span>🌐 Motor de Inteligencia Artificial (OpenRouter)</span>
+                    </h4>
+                    <span id="badge-openrouter-status" style="font-size: 0.72rem; padding: 4px 10px; border-radius: 6px; background: rgba(99,102,241,0.15); color: #a5b4fc; font-weight: 700; border: 1px solid rgba(99,102,241,0.3);">Multi-Model Hub</span>
                   </div>
 
                   <div class="form-group">
                     <label>Proveedor de Generación:</label>
                     <select id="setting-ai-provider" onchange="App.toggleAiProviderFields()">
-                      <option value="openrouter" selected>🌐 OpenRouter (Claude 3.5 Sonnet, DeepSeek V3/R1, GPT-4o, Llama 3.3)</option>
+                      <option value="openrouter" selected>🌐 OpenRouter (Claude Sonnet 4.5, DeepSeek V3/R1, GPT-4o, Gemini 2.5)</option>
                       <option value="heuristic">⚡ Motor Heurístico Calibrado Local (100% Gratuito • Cero Tokens • 0ms)</option>
                     </select>
                   </div>
 
                   <div id="openrouter-settings-fields">
                     <div class="form-group">
-                      <label>OpenRouter API Key:</label>
+                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <label style="margin-bottom: 0;">OpenRouter API Key:</label>
+                        <span id="label-openrouter-key-status" style="font-size: 0.72rem; color: #34d399; font-weight: 600; display: none;">✅ Clave Activa</span>
+                      </div>
                       <input type="text" class="masked-key-input" id="setting-openrouter-key" autocomplete="new-password" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="sk-or-v1-..." />
-                      <small style="color: var(--text-dim); font-size: 0.74rem; display: block; margin-top: 4px;">Obtén tu clave única en <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" style="color: var(--primary); text-decoration: underline;">openrouter.ai/keys</a> para acceder a más de 100 modelos con un solo saldo.</small>
+                      <small style="color: var(--text-dim); font-size: 0.74rem; display: block; margin-top: 4px;">Obtén o gestiona tu clave en <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" style="color: var(--primary); text-decoration: underline;">openrouter.ai/keys</a> para conectar cualquier LLM con un solo saldo.</small>
                     </div>
 
-                    <div class="form-group" style="margin-bottom: 0;">
+                    <div class="form-group" style="margin-bottom: 16px;">
                       <label>Modelo de Inteligencia Preferido:</label>
                       <div style="display: flex; gap: 8px;">
                         <select id="setting-openrouter-model" style="flex: 1;" onchange="App.onOpenRouterModelSelect(this.value)">
-                          <option value="anthropic/claude-3.5-sonnet" selected>⭐ Anthropic Claude 3.5 Sonnet (Recomendado • Tono más humano, empático y natural)</option>
+                          <option value="anthropic/claude-sonnet-4.5" selected>⭐ Anthropic Claude Sonnet 4.5 (Recomendado • Tono humano insuperable, empático y natural)</option>
                           <option value="deepseek/deepseek-chat">⚡ DeepSeek V3 (Ultra económico • Excelente en español y valor)</option>
-                          <option value="deepseek/deepseek-r1">🧠 DeepSeek R1 (Razonamiento profundo)</option>
-                          <option value="openai/gpt-4o-mini">🚀 OpenAI GPT-4o Mini (Rápido y eficiente)</option>
-                          <option value="openai/gpt-4o">💎 OpenAI GPT-4o (Máxima potencia multimodal)</option>
+                          <option value="openai/gpt-4o-mini">🚀 OpenAI GPT-4o Mini (Rápido, inteligente y equilibrado)</option>
+                          <option value="openai/gpt-4o">💎 OpenAI GPT-4o (Máxima potencia de razonamiento multimodal)</option>
+                          <option value="google/gemini-2.5-flash">⚡ Google Gemini 2.5 Flash (Ultrarrápido y contextual)</option>
                           <option value="meta-llama/llama-3.3-70b-instruct">🏛️ Meta Llama 3.3 70B (Open-Source líder)</option>
-                          <option value="google/gemini-2.0-flash-001">⚡ Google Gemini 2.0 Flash (Ultrarrápido)</option>
+                          <option value="anthropic/claude-3-haiku">💨 Anthropic Claude 3 Haiku (Respuestas instantáneas)</option>
+                          <option value="deepseek/deepseek-r1">🧠 DeepSeek R1 (Razonamiento profundo paso a paso)</option>
                           <option value="custom">✏️ Especificar otro modelo personalizado...</option>
                         </select>
                       </div>
@@ -887,6 +898,19 @@ $isMetaConnected = ($activeAccountsCount > 0);
                         <input type="text" id="setting-openrouter-custom-model" placeholder="ej. mistralai/mistral-large-2407" style="font-size: 0.82rem;" />
                       </div>
                     </div>
+
+                    <!-- OpenRouter Action Buttons -->
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                      <button type="button" class="btn-primary-action" id="btn-save-ai-engine" onclick="App.saveAiEngineSettings(event)" style="padding: 10px 18px; font-weight: 700;">
+                        <span>💾 Guardar Clave & Modelo IA</span>
+                      </button>
+                      <button type="button" class="btn-primary-action" id="btn-test-openrouter" onclick="App.testOpenRouterConnection()" style="background: linear-gradient(135deg, #06b6d4, #0284c7); padding: 10px 18px; font-weight: 700;">
+                        <span>⚡ Probar Conexión & Saldo</span>
+                      </button>
+                    </div>
+
+                    <!-- Live Test Results Box -->
+                    <div id="openrouter-test-result" style="display: none; margin-top: 14px;"></div>
                   </div>
                 </div>
               </div><!-- End studio-tab-model -->
@@ -1333,6 +1357,127 @@ $isMetaConnected = ($activeAccountsCount > 0);
         <button type="submit" class="btn-primary-action">Guardar Ejemplo Maestro 🧠</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- Modal: Reporte Semanal de Eficiencia & Auditoría de Bandeja -->
+<div class="modal-overlay" id="modal-weekly-report" onclick="if(event.target===this) App.closeModal('modal-weekly-report')">
+  <div class="modal-box modal-weekly-box">
+    
+    <!-- Modal Header -->
+    <div class="modal-header">
+      <div class="modal-assistant-title-group">
+        <div class="modal-assistant-icon-badge" style="background: rgba(16, 185, 129, 0.2); border-color: rgba(16, 185, 129, 0.4); color: #34d399;">📊</div>
+        <div>
+          <h3 class="modal-assistant-title">Reporte Semanal de Eficiencia & Auditoría</h3>
+          <p class="modal-assistant-subtitle">Auditoría de respuestas, SLA de atención y síntesis ejecutiva generada con IA</p>
+        </div>
+      </div>
+      <button type="button" class="btn-close-modal" onclick="App.closeModal('modal-weekly-report')" title="Cerrar">&times;</button>
+    </div>
+
+    <!-- Modal View Tabs Switcher -->
+    <div class="modal-assistant-tab-switcher">
+      <button type="button" class="modal-tab-btn active" id="modal-tab-btn-weekly-current" onclick="App.switchWeeklyReportModalTab('current')">
+        <span>📈 Reporte Semanal Actual</span>
+      </button>
+      <button type="button" class="modal-tab-btn" id="modal-tab-btn-weekly-history" onclick="App.switchWeeklyReportModalTab('history')">
+        <span>🗄️ Historial de Reportes</span>
+      </button>
+    </div>
+
+    <div class="modal-assistant-body" style="padding: 22px;">
+      
+      <!-- SUBVIEW 1: Current Report -->
+      <div id="weekly-report-view-current" class="weekly-modal-subview">
+        <!-- Top Status Banner -->
+        <div class="weekly-report-top-banner">
+          <div>
+            <span style="font-size: 0.76rem; color: #94a3b8; text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em;">Periodo Analizado</span>
+            <h4 id="weekly-report-label" style="font-size: 1.15rem; font-weight: 800; color: #fff; margin: 2px 0 0 0;">Cargando reporte...</h4>
+          </div>
+          <div class="weekly-score-pill" id="weekly-report-score-pill">
+            <span>⭐</span>
+            <span id="weekly-report-score-text">--% Eficiencia</span>
+          </div>
+        </div>
+
+        <!-- 4 Interactive Auditable KPI Cards -->
+        <div class="weekly-kpi-grid">
+          <div class="weekly-kpi-card interactive" onclick="App.showWeeklyDrilldown('replied')" style="cursor: pointer;" title="👆 Haz clic para auditar los comentarios respondidos con éxito">
+            <span class="weekly-kpi-icon">💬</span>
+            <span class="weekly-kpi-label">Respuestas Efectivas</span>
+            <span class="weekly-kpi-value" id="kpi-weekly-replied">0</span>
+            <span class="weekly-kpi-sub" id="kpi-weekly-total-sub">de 0 comentarios</span>
+            <span class="weekly-kpi-click-hint">👆 Clic para auditar</span>
+          </div>
+          <div class="weekly-kpi-card interactive" onclick="App.showWeeklyDrilldown('sla')" style="cursor: pointer;" title="👆 Haz clic para ver el desglose de velocidad y distribución SLA">
+            <span class="weekly-kpi-icon">⏱️</span>
+            <span class="weekly-kpi-label">Tiempo SLA Promedio</span>
+            <span class="weekly-kpi-value" id="kpi-weekly-time" style="color: #67e8f9;">0m</span>
+            <span class="weekly-kpi-sub">Velocidad de respuesta</span>
+            <span class="weekly-kpi-click-hint">📊 Desglose de velocidad</span>
+          </div>
+          <div class="weekly-kpi-card interactive" onclick="App.showWeeklyDrilldown('leads')" style="cursor: pointer;" title="👆 Haz clic para ver los leads y oportunidades de venta">
+            <span class="weekly-kpi-icon">🎯</span>
+            <span class="weekly-kpi-label">Leads & Ventas</span>
+            <span class="weekly-kpi-value" id="kpi-weekly-leads" style="color: #fde047;">0</span>
+            <span class="weekly-kpi-sub">Oportunidades comerciales</span>
+            <span class="weekly-kpi-click-hint">💼 Ver oportunidades</span>
+          </div>
+          <div class="weekly-kpi-card interactive" onclick="App.showWeeklyDrilldown('copilot')" style="cursor: pointer;" title="👆 Haz clic para auditar respuestas del Copiloto IA vs Manuales">
+            <span class="weekly-kpi-icon">🤖</span>
+            <span class="weekly-kpi-label">Asistencia Copiloto IA</span>
+            <span class="weekly-kpi-value" id="kpi-weekly-copilot" style="color: #c084fc;">0</span>
+            <span class="weekly-kpi-sub" id="kpi-weekly-manual-sub">0 manuales</span>
+            <span class="weekly-kpi-click-hint">⚡ Ver automatización</span>
+          </div>
+        </div>
+
+        <!-- Interactive Drilldown Panel Container -->
+        <div id="weekly-drilldown-panel" class="weekly-drilldown-panel" style="display: none;">
+          <div class="weekly-drilldown-header">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span id="weekly-drilldown-icon" style="font-size: 1.15rem;">💬</span>
+              <h4 id="weekly-drilldown-title" style="margin: 0; font-size: 0.95rem; font-weight: 800; color: #fff;">Auditoría de Comentarios</h4>
+            </div>
+            <button type="button" class="btn-close-drilldown" onclick="App.closeWeeklyDrilldown()" title="Cerrar vista">&times;</button>
+          </div>
+          <div id="weekly-drilldown-content" class="weekly-drilldown-content">
+            <!-- Contenido cargado dinámicamente -->
+          </div>
+        </div>
+
+        <!-- AI Executive Insights Box -->
+        <div class="weekly-ai-insights-box">
+          <div class="weekly-ai-insights-header">
+            <span>✨</span>
+            <span>Diagnóstico Ejecutivo & Recomendaciones de la IA</span>
+          </div>
+          <div class="weekly-ai-insights-content" id="weekly-report-ai-text">
+            Generando síntesis de rendimiento semanal...
+          </div>
+        </div>
+
+        <!-- Actions Row -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 15px;">
+          <button type="button" class="btn-primary-action" style="background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.3);" onclick="App.viewArchivedFromModal()">
+            <span>🗄️ Ver Comentarios Archivados</span>
+          </button>
+          <button type="button" class="btn-primary-action" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); border: none;" onclick="App.confirmAndRunWeeklyCleanup()">
+            <span>🧹 Ejecutar Limpieza & Actualizar Reporte</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- SUBVIEW 2: History of Reports -->
+      <div id="weekly-report-view-history" class="weekly-modal-subview" style="display: none;">
+        <div class="weekly-history-list" id="weekly-history-container">
+          <div style="text-align: center; color: #94a3b8; padding: 30px;">Cargando historial de reportes semanales...</div>
+        </div>
+      </div>
+
+    </div>
   </div>
 </div>
 

@@ -198,10 +198,105 @@ try {
         $rawInput = file_get_contents('php://input');
         $input = json_decode($rawInput, true) ?? $_POST;
         $action = Security::validateEnum($input['action'] ?? 'save_all', [
-            'save_all', 'save_brand', 'set_active_brand', 'delete_brand', 'assign_account_brand', 'disconnect_account', 'sync_meta', 'test_meta', 'audit_meta'
+            'save_all', 'save_brand', 'save_ai_engine', 'test_openrouter', 'set_active_brand', 'delete_brand', 'assign_account_brand', 'disconnect_account', 'sync_meta', 'test_meta', 'audit_meta'
         ], 'save_all');
 
-        // 0. Action: Assign Brand Voice to a Connected Account (Multi-Account Routing)
+        // 0. Action: Test OpenRouter Connection and Balance
+        if ($action === 'test_openrouter') {
+            $keyToTest = !empty($input['openrouter_api_key']) && !str_contains($input['openrouter_api_key'], '...') 
+                ? trim(Security::sanitizeString($input['openrouter_api_key'], 250))
+                : Settings::get('openrouter_api_key', '', $userId);
+
+            if (empty($keyToTest)) {
+                echo json_encode(['success' => false, 'error' => 'No hay clave de OpenRouter provista o configurada en tu cuenta para probar.']);
+                exit;
+            }
+
+            $ch = curl_init('https://openrouter.ai/api/v1/auth/key');
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_HTTPHEADER => [
+                    'Authorization: Bearer ' . $keyToTest,
+                    'Content-Type: application/json'
+                ],
+                CURLOPT_TIMEOUT => 12
+            ]);
+            $resp = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlErr = curl_error($ch);
+            curl_close($ch);
+
+            if ($httpCode === 200 && $resp) {
+                $data = json_decode($resp, true);
+                $info = $data['data'] ?? [];
+                echo json_encode([
+                    'success' => true,
+                    'status' => 'valid',
+                    'message' => '¡Clave de OpenRouter válida y activa!',
+                    'limit' => $info['limit'] ?? null,
+                    'limit_remaining' => $info['limit_remaining'] ?? null,
+                    'is_free_tier' => $info['is_free_tier'] ?? false,
+                    'expires_at' => $info['expires_at'] ?? null,
+                    'label' => $info['label'] ?? 'sk-or-v1'
+                ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+                exit;
+            } else {
+                $errData = json_decode($resp ?? '', true);
+                $errMsg = $errData['error']['message'] ?? ($curlErr ?: "Error HTTP $httpCode al validar la clave en OpenRouter.");
+                echo json_encode([
+                    'success' => false,
+                    'status' => 'invalid',
+                    'error' => $errMsg
+                ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+        }
+
+        // 0.1 Action: Save AI Engine & OpenRouter Settings directly
+        if ($action === 'save_ai_engine') {
+            $aiProvider = Security::validateEnum($input['ai_provider'] ?? 'openrouter', ['openrouter', 'heuristic'], 'openrouter');
+            $model = Security::sanitizeString($input['openrouter_model'] ?? 'anthropic/claude-sonnet-4.5', 150);
+            if (empty($model)) {
+                $model = 'anthropic/claude-sonnet-4.5';
+            }
+            if ($model === 'anthropic/claude-3.5-sonnet' || $model === 'anthropic/claude-3-5-sonnet') {
+                $model = 'anthropic/claude-sonnet-4.5';
+            }
+
+            Settings::set('ai_provider', $aiProvider, $userId);
+            Settings::set('openrouter_model', $model, $userId);
+
+            // Update OpenRouter key if a new unmasked string is sent
+            if (!empty($input['openrouter_api_key']) && !str_contains($input['openrouter_api_key'], '...')) {
+                $cleanKey = trim(Security::sanitizeString($input['openrouter_api_key'], 250));
+                Settings::set('openrouter_api_key', $cleanKey, $userId);
+            }
+
+            // Sync user's assigned ai_model in users table so it never stays locked on outdated models
+            try {
+                $upU = $pdo->prepare("UPDATE users SET ai_model = :model, last_activity_at = CURRENT_TIMESTAMP WHERE id = :id");
+                $upU->execute([':model' => $model, ':id' => $userId]);
+            } catch (Throwable $t) {
+                error_log("Failed to sync users.ai_model: " . $t->getMessage());
+            }
+
+            CacheService::invalidateUserSettings($userId);
+
+            $currentKey = Settings::get('openrouter_api_key', '', $userId);
+            $maskedKey = !empty($currentKey) ? substr($currentKey, 0, 7) . '...' . substr($currentKey, -4) : '';
+
+            echo json_encode([
+                'success' => true,
+                'message' => 'Configuración de Inteligencia Artificial y OpenRouter guardada exitosamente.',
+                'ai_provider' => $aiProvider,
+                'openrouter_model' => $model,
+                'openrouter_api_key_masked' => $maskedKey,
+                'has_openrouter_key' => !empty($currentKey)
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        // 0.2 Action: Assign Brand Voice to a Connected Account (Multi-Account Routing)
         if ($action === 'assign_account_brand') {
             $accountId = (int)($input['account_id'] ?? 0);
             $brandVoiceId = (int)($input['brand_voice_id'] ?? 0);
@@ -479,7 +574,14 @@ try {
             Settings::set('ai_provider', Security::validateEnum($input['ai_provider'], ['openrouter', 'heuristic'], 'openrouter'), $userId);
         }
         if (isset($input['openrouter_model']) && Auth::isAdmin()) {
-            Settings::set('openrouter_model', Security::sanitizeString($input['openrouter_model'], 150), $userId);
+            $model = Security::sanitizeString($input['openrouter_model'], 150);
+            if ($model === 'anthropic/claude-3.5-sonnet' || $model === 'anthropic/claude-3-5-sonnet') {
+                $model = 'anthropic/claude-sonnet-4.5';
+            }
+            Settings::set('openrouter_model', $model, $userId);
+            try {
+                $pdo->prepare("UPDATE users SET ai_model = :model WHERE id = :id")->execute([':model' => $model, ':id' => $userId]);
+            } catch (Throwable $t) {}
         }
         if (isset($input['autopilot_enabled'])) {
             $val = ($input['autopilot_enabled'] === '1' || $input['autopilot_enabled'] === 1 || $input['autopilot_enabled'] === true) ? '1' : '0';

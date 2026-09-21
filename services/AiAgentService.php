@@ -863,7 +863,12 @@ class AiAgentService {
                 $openrouterModel = $runtimeOverrides['openrouter_model'] ?? $userAssignedModel;
             }
         } else {
-            $openrouterModel = $runtimeOverrides['openrouter_model'] ?? Settings::get('openrouter_model', 'anthropic/claude-3.5-sonnet');
+            $openrouterModel = $runtimeOverrides['openrouter_model'] ?? Settings::get('openrouter_model', 'anthropic/claude-sonnet-4.5');
+        }
+
+        // Normalize obsolete slugs from OpenRouter
+        if ($openrouterModel === 'anthropic/claude-3.5-sonnet' || $openrouterModel === 'anthropic/claude-3-5-sonnet') {
+            $openrouterModel = 'anthropic/claude-sonnet-4.5';
         }
 
         // Check user token quota
@@ -2102,7 +2107,10 @@ class AiAgentService {
         );
 
         $url = 'https://openrouter.ai/api/v1/chat/completions';
-        $selectedModel = !empty($model) ? trim($model) : 'anthropic/claude-3.5-sonnet';
+        $selectedModel = !empty($model) ? trim($model) : 'anthropic/claude-sonnet-4.5';
+        if ($selectedModel === 'anthropic/claude-3.5-sonnet' || $selectedModel === 'anthropic/claude-3-5-sonnet') {
+            $selectedModel = 'anthropic/claude-sonnet-4.5';
+        }
 
         $payload = [
             'model' => $selectedModel,

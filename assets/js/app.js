@@ -869,6 +869,18 @@ const App = {
     
     const badgeSpam = document.getElementById('badge-count-spam');
     if (badgeSpam) badgeSpam.textContent = counts.spam_count || '0';
+
+    // Toolbar cleanup count badge
+    const badgeCleanup = document.getElementById('badge-cleanup-count');
+    if (badgeCleanup) {
+      const canArchive = parseInt(counts.can_archive_count || 0, 10);
+      if (canArchive > 0) {
+        badgeCleanup.textContent = canArchive;
+        badgeCleanup.style.display = 'inline-block';
+      } else {
+        badgeCleanup.style.display = 'none';
+      }
+    }
   },
 
   renderComments(comments) {
@@ -891,18 +903,43 @@ const App = {
     }
 
     if (comments.length === 0) {
-      listContainer.innerHTML = `
-        <div style="padding: 40px 20px; text-align: center; color: var(--text-dim);">
-          <div style="font-size: 2.5rem; margin-bottom: 10px;">✨</div>
-          <h4 style="font-size: 1rem; color: #fff; font-weight: 700;">No hay comentarios en este filtro</h4>
-          <p style="font-size: 0.82rem; margin-top: 4px;">Todo está al día o prueba cambiando el filtro de búsqueda.</p>
-          ${this.activePostId ? `
-            <button class="btn-primary-action" style="margin: 14px auto 0; padding: 6px 12px; font-size: 0.78rem;" onclick="App.clearPostFilter()">
-              Ver todas las publicaciones
+      if (this.activeFilter === 'archived') {
+        listContainer.innerHTML = `
+          <div style="padding: 50px 20px; text-align: center; color: var(--text-dim);">
+            <div style="font-size: 2.8rem; margin-bottom: 12px;">🗄️</div>
+            <h4 style="font-size: 1.05rem; color: #fff; font-weight: 700;">No hay comentarios archivados aún</h4>
+            <p style="font-size: 0.84rem; margin-top: 6px; color: #94a3b8; max-width: 460px; margin-left: auto; margin-right: auto;">
+              Cuando ejecutes la limpieza semanal o archives comentarios resueltos, aparecerán aquí para tu consulta histórica.
+            </p>
+            <button class="btn-primary-action" style="margin: 16px auto 0; padding: 7px 16px; font-size: 0.8rem; background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.35); color: #c7d2fe;" onclick="App.setFilterTag('all')">
+              📥 Volver a Bandeja Activa
             </button>
-          ` : ''}
-        </div>
-      `;
+          </div>
+        `;
+      } else {
+        listContainer.innerHTML = `
+          <div style="padding: 50px 20px; text-align: center; color: var(--text-dim);">
+            <div style="font-size: 3rem; margin-bottom: 12px;">✨🎉</div>
+            <h4 style="font-size: 1.15rem; color: #fff; font-weight: 800; font-family: 'Syne', sans-serif;">¡Bandeja Despejada (Inbox Zero)!</h4>
+            <p style="font-size: 0.86rem; margin-top: 6px; color: #94a3b8; max-width: 480px; margin-left: auto; margin-right: auto; line-height: 1.55;">
+              ¡Excelente trabajo! No tienes comentarios pendientes ni sin responder. Tu bandeja de trabajo está 100% limpia y tus métricas de respuesta están al día.
+            </p>
+            <div style="display: flex; justify-content: center; gap: 12px; margin-top: 18px; flex-wrap: wrap;">
+              <button type="button" class="btn-primary-action" style="padding: 8px 16px; font-size: 0.82rem; background: rgba(99, 102, 241, 0.18); border: 1px solid rgba(99, 102, 241, 0.4); color: #c7d2fe;" onclick="App.openWeeklyReportModal()">
+                📊 Ver Reporte Semanal
+              </button>
+              <button type="button" class="btn-primary-action" style="padding: 8px 16px; font-size: 0.82rem; background: rgba(148, 163, 184, 0.12); border: 1px solid rgba(148, 163, 184, 0.3); color: #cbd5e1;" onclick="App.setFilterTag('archived')">
+                🗄️ Ver Comentarios Archivados
+              </button>
+              ${this.activePostId ? `
+                <button type="button" class="btn-primary-action" style="padding: 8px 16px; font-size: 0.82rem; background: rgba(255, 255, 255, 0.08);" onclick="App.clearPostFilter()">
+                  Ver todas las publicaciones
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      }
       return;
     }
 
@@ -939,7 +976,12 @@ const App = {
       const isFailed = c.status === 'failed' || (c.reply_text && c.is_posted_to_platform == 0);
 
       let statusPillHtml = '';
-      if (isReplied) {
+      if (c.is_archived == 1) {
+        statusPillHtml = `
+          <span style="background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.3); font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 9999px;" title="Archivado en histórico semanal">🗄️ Archivado</span>
+          <button type="button" onclick="event.stopPropagation(); App.restoreComment(${parseInt(c.id, 10)})" style="background: rgba(99, 102, 241, 0.12); border: 1px solid rgba(99, 102, 241, 0.3); color: #a5b4fc; padding: 2px 7px; font-size: 0.72rem; border-radius: 6px; cursor: pointer;" title="Restaurar comentario a la bandeja activa">↩️ Restaurar</button>
+        `;
+      } else if (isReplied) {
         statusPillHtml = `<div class="status-pill replied" title="Respondido y publicado en ${c.platform === 'facebook' ? 'Facebook' : 'Instagram'}">✅</div>`;
       } else if (isFailed) {
         statusPillHtml = `<div class="status-pill failed" style="background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); font-size: 0.72rem; padding: 2px 7px;" title="${this.escapeHtml(c.meta_error || 'Falló publicación en ' + c.platform)}">⚠️ Falló</div>`;
@@ -1381,11 +1423,26 @@ const App = {
         this.setInputValue('setting-ai-provider', d.ai_provider || 'openrouter');
         this.setInputValue('setting-openrouter-key', d.openrouter_api_key_masked);
         
+        // Show active key status and badge
+        if (d.has_openrouter_key) {
+          const statusLabel = document.getElementById('label-openrouter-key-status');
+          if (statusLabel) statusLabel.style.display = 'inline-flex';
+          const badge = document.getElementById('badge-openrouter-status');
+          if (badge) {
+            badge.textContent = d.ai_provider === 'openrouter' ? 'OpenRouter Conectado' : 'Motor Heurístico';
+            badge.style.background = d.ai_provider === 'openrouter' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(99, 102, 241, 0.2)';
+            badge.style.color = d.ai_provider === 'openrouter' ? '#34d399' : '#a5b4fc';
+          }
+        }
+
         // Handle OpenRouter Model select
         const modelSelect = document.getElementById('setting-openrouter-model');
         const customInput = document.getElementById('setting-openrouter-custom-model');
         const customWrapper = document.getElementById('openrouter-custom-model-wrapper');
-        const currentModel = d.openrouter_model || 'anthropic/claude-3.5-sonnet';
+        let currentModel = d.openrouter_model || 'anthropic/claude-sonnet-4.5';
+        if (currentModel === 'anthropic/claude-3.5-sonnet' || currentModel === 'anthropic/claude-3-5-sonnet') {
+          currentModel = 'anthropic/claude-sonnet-4.5';
+        }
         
         if (modelSelect) {
           const matchingOpt = Array.from(modelSelect.options).find(o => o.value === currentModel);
@@ -1722,13 +1779,166 @@ const App = {
     }
   },
 
+  async saveAiEngineSettings(e) {
+    if (e) e.preventDefault();
+    const btn = document.getElementById('btn-save-ai-engine');
+    const origHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span>⏳ Guardando...</span>';
+    }
+
+    const aiProvider = document.getElementById('setting-ai-provider')?.value || 'openrouter';
+    const openrouterKey = document.getElementById('setting-openrouter-key')?.value?.trim() || '';
+    const openrouterModel = this.getSelectedOpenRouterModel();
+
+    const payload = {
+      action: 'save_ai_engine',
+      ai_provider: aiProvider,
+      openrouter_api_key: openrouterKey,
+      openrouter_model: openrouterModel
+    };
+
+    try {
+      const response = await this.fetchWithCsrf('api/settings.php', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      const res = await response.json();
+
+      if (res.success) {
+        App.showToast(res.message || 'Configuración de IA guardada correctamente.', 'success');
+        if (res.openrouter_api_key_masked) {
+          const keyInput = document.getElementById('setting-openrouter-key');
+          if (keyInput) keyInput.value = res.openrouter_api_key_masked;
+        }
+        const statusLabel = document.getElementById('label-openrouter-key-status');
+        if (statusLabel && res.has_openrouter_key) {
+          statusLabel.style.display = 'inline-flex';
+        }
+        const badge = document.getElementById('badge-openrouter-status');
+        if (badge) {
+          badge.textContent = res.ai_provider === 'openrouter' ? 'OpenRouter Activo' : 'Motor Heurístico';
+          badge.style.background = res.ai_provider === 'openrouter' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(99, 102, 241, 0.2)';
+          badge.style.color = res.ai_provider === 'openrouter' ? '#34d399' : '#a5b4fc';
+        }
+      } else {
+        App.showToast(res.error || 'Error al guardar la configuración de IA.', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      App.showToast('Error de red al guardar la configuración de IA.', 'error');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+      }
+    }
+  },
+
+  async testOpenRouterConnection() {
+    const btn = document.getElementById('btn-test-openrouter');
+    const resultBox = document.getElementById('openrouter-test-result');
+    const origHtml = btn ? btn.innerHTML : '';
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span>⏳ Verificando en vivo...</span>';
+    }
+
+    const keyInput = document.getElementById('setting-openrouter-key');
+    const keyVal = keyInput?.value?.trim() || '';
+
+    try {
+      const response = await this.fetchWithCsrf('api/settings.php', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'test_openrouter',
+          openrouter_api_key: keyVal
+        })
+      });
+      const res = await response.json();
+
+      if (resultBox) {
+        resultBox.style.display = 'block';
+        if (res.success) {
+          const limit = res.limit !== null ? `$${parseFloat(res.limit).toFixed(2)}` : 'Ilimitado';
+          const remaining = res.limit_remaining !== null ? `$${parseFloat(res.limit_remaining).toFixed(2)}` : 'Disponible';
+          const tier = res.is_free_tier ? 'Free Tier' : 'Pro / Saldo Activo';
+          const expires = res.expires_at ? new Date(res.expires_at).toLocaleDateString() : 'Sin caducidad';
+
+          resultBox.innerHTML = `
+            <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 14px 16px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                <strong style="color: #34d399; font-size: 0.88rem;">✅ Conexión Exitosa con OpenRouter</strong>
+                <span style="font-size: 0.72rem; padding: 2px 8px; border-radius: 4px; background: rgba(52, 211, 153, 0.2); color: #34d399; font-weight: 700;">${tier}</span>
+              </div>
+              <div style="font-size: 0.8rem; color: var(--text-main); line-height: 1.6;">
+                <div>🔑 Clave verificada: <code style="color: #a5b4fc;">${res.label || 'sk-or-v1-...'}</code></div>
+                <div>💰 Saldo / Límite disponible: <strong>${remaining}</strong> (Límite mensual: ${limit})</div>
+                <div>📅 Vencimiento: <strong>${expires}</strong></div>
+              </div>
+            </div>
+          `;
+          App.showToast('¡Clave de OpenRouter válida y lista para generar respuestas!', 'success');
+
+          const statusLabel = document.getElementById('label-openrouter-key-status');
+          if (statusLabel) statusLabel.style.display = 'inline-flex';
+        } else {
+          resultBox.innerHTML = `
+            <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 14px 16px;">
+              <strong style="color: #f87171; font-size: 0.88rem; display: block; margin-bottom: 4px;">❌ Error de Verificación con OpenRouter</strong>
+              <div style="font-size: 0.8rem; color: #fca5a5;">${res.error || 'Clave inválida o sin respuesta del servidor.'}</div>
+            </div>
+          `;
+          App.showToast(res.error || 'Error al validar clave de OpenRouter.', 'error');
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      if (resultBox) {
+        resultBox.style.display = 'block';
+        resultBox.innerHTML = `
+          <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 14px 16px; color: #f87171; font-size: 0.8rem;">
+            Error de conexión al verificar con OpenRouter.
+          </div>
+        `;
+      }
+      App.showToast('Error de conexión con OpenRouter.', 'error');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+      }
+    }
+  },
+
   async saveBrandStudioForm(e) {
     if (e) e.preventDefault();
+    const brandName = document.getElementById('setting-brand-name')?.value?.trim();
+    const activeSubtab = sessionStorage.getItem('xindro_studio_tab') || 'identity';
+
+    // If on Model tab, saving the AI engine is the primary goal
+    if (activeSubtab === 'model') {
+      await this.saveAiEngineSettings();
+      // If brand name is not filled, don't block saving AI settings
+      if (!brandName) {
+        return;
+      }
+    }
+
+    if (!brandName) {
+      this.switchStudioTab('identity');
+      App.showToast('Por favor escribe el nombre de la marca en la pestaña 1.', 'warning');
+      document.getElementById('setting-brand-name')?.focus();
+      return;
+    }
+
     const brandId = document.getElementById('setting-brand-id')?.value;
     const payload = {
       action: 'save_brand',
       brand_id: brandId ? parseInt(brandId, 10) : undefined,
-      brand_name: document.getElementById('setting-brand-name')?.value,
+      brand_name: brandName,
       persona_name: document.getElementById('setting-persona-name')?.value,
       brand_industry: document.getElementById('setting-brand-industry')?.value,
       language: document.getElementById('setting-brand-language')?.value || 'es',
@@ -1744,9 +1954,9 @@ const App = {
       brand_few_shot_examples: this.fewShotExamples
     };
 
-    // Also send AI Engine settings
+    // Also persist AI Engine settings
     const globalPayload = {
-      action: 'save_all',
+      action: 'save_ai_engine',
       ai_provider: document.getElementById('setting-ai-provider')?.value || 'openrouter',
       openrouter_api_key: document.getElementById('setting-openrouter-key')?.value,
       openrouter_model: this.getSelectedOpenRouterModel()
@@ -1777,10 +1987,10 @@ const App = {
   },
 
   getSelectedOpenRouterModel() {
-    const sel = document.getElementById('setting-openrouter-model')?.value || 'anthropic/claude-3.5-sonnet';
+    const sel = document.getElementById('setting-openrouter-model')?.value || 'anthropic/claude-sonnet-4.5';
     if (sel === 'custom') {
       const customVal = document.getElementById('setting-openrouter-custom-model')?.value?.trim();
-      return customVal || 'anthropic/claude-3.5-sonnet';
+      return customVal || 'anthropic/claude-sonnet-4.5';
     }
     return sel;
   },
@@ -2856,6 +3066,376 @@ const App = {
     } catch (e) {
       return dateStr;
     }
+  },
+
+  // =========================================================================
+  // Weekly Efficiency Agent & Inbox Cleanup
+  // =========================================================================
+
+  async confirmAndRunWeeklyCleanup() {
+    const btn = document.getElementById('btn-inbox-cleanup');
+    const origText = btn ? btn.innerHTML : '';
+
+    if (!confirm('¿Deseas archivar los comentarios respondidos/procesados y generar el Reporte Semanal de Eficiencia con IA?\n\nTu bandeja activa quedará en Inbox Zero y los datos se conservarán en el historial.')) {
+      return;
+    }
+
+    try {
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span>⏳ Generando reporte con IA...</span>';
+      }
+
+      const res = await this.fetchWithCsrf('api/weekly_reports.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'run_cleanup', archive: true })
+      });
+      const data = await res.json();
+
+      if (data && data.success) {
+        App.showToast(`✨ ${data.message || 'Reporte generado y bandeja despejada con éxito.'}`, 'success');
+        this.loadComments();
+        this.openWeeklyReportModal(data);
+      } else {
+        App.showToast(data.error || 'Error al ejecutar la limpieza semanal.', 'error');
+      }
+    } catch (e) {
+      console.error(e);
+      App.showToast('Error al procesar la solicitud de limpieza.', 'error');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = origText;
+      }
+    }
+  },
+
+  async openWeeklyReportModal(preloaded = null) {
+    this.openModal('modal-weekly-report');
+    this.switchWeeklyReportModalTab('current');
+
+    if (preloaded && preloaded.metrics) {
+      this.populateWeeklyReportUi({
+        week_label: preloaded.week_label,
+        efficiency_score: preloaded.metrics.efficiency_score,
+        total_replied: preloaded.metrics.total_replied,
+        total_received: preloaded.metrics.total_received,
+        avg_response_time_formatted: preloaded.metrics.avg_response_time_formatted,
+        leads_detected_count: preloaded.metrics.leads_count,
+        copilot_replies_count: preloaded.metrics.copilot_count,
+        manual_replies_count: preloaded.metrics.manual_count,
+        ai_insights_summary: preloaded.ai_insights
+      });
+      return;
+    }
+
+    // Otherwise fetch latest report from API
+    try {
+      const res = await this.fetchWithCsrf('api/weekly_reports.php?action=list&limit=1');
+      const json = await res.json();
+      if (json && json.success && json.data && json.data.length > 0) {
+        this.populateWeeklyReportUi(json.data[0]);
+      } else {
+        // No report yet, suggest running one
+        const labelEl = document.getElementById('weekly-report-label');
+        const scoreEl = document.getElementById('weekly-report-score-text');
+        const repliedEl = document.getElementById('kpi-weekly-replied');
+        const totalSubEl = document.getElementById('kpi-weekly-total-sub');
+        const timeEl = document.getElementById('kpi-weekly-time');
+        const leadsEl = document.getElementById('kpi-weekly-leads');
+        const copilotEl = document.getElementById('kpi-weekly-copilot');
+        const manualSubEl = document.getElementById('kpi-weekly-manual-sub');
+        const aiTextEl = document.getElementById('weekly-report-ai-text');
+
+        if (labelEl) labelEl.textContent = 'Sin reportes generados aún';
+        if (scoreEl) scoreEl.textContent = '100% Eficiencia';
+        if (repliedEl) repliedEl.textContent = '0';
+        if (totalSubEl) totalSubEl.textContent = 'de 0 comentarios';
+        if (timeEl) timeEl.textContent = '0m';
+        if (leadsEl) leadsEl.textContent = '0';
+        if (copilotEl) copilotEl.textContent = '0';
+        if (manualSubEl) manualSubEl.textContent = '0 manuales';
+        if (aiTextEl) aiTextEl.textContent = 'Aún no se ha generado ningún reporte semanal. Haz clic en "Ejecutar Limpieza & Actualizar Reporte" para crear tu primer balance de eficiencia.';
+      }
+    } catch (e) {
+      console.error(e);
+      App.showToast('Error al cargar el último reporte semanal.', 'error');
+    }
+  },
+
+  populateWeeklyReportUi(report) {
+    if (!report) return;
+    const labelEl = document.getElementById('weekly-report-label');
+    const scoreEl = document.getElementById('weekly-report-score-text');
+    const repliedEl = document.getElementById('kpi-weekly-replied');
+    const totalSubEl = document.getElementById('kpi-weekly-total-sub');
+    const timeEl = document.getElementById('kpi-weekly-time');
+    const leadsEl = document.getElementById('kpi-weekly-leads');
+    const copilotEl = document.getElementById('kpi-weekly-copilot');
+    const manualSubEl = document.getElementById('kpi-weekly-manual-sub');
+    const aiTextEl = document.getElementById('weekly-report-ai-text');
+
+    if (labelEl) labelEl.textContent = report.week_label || 'Reporte Semanal';
+    if (scoreEl) scoreEl.textContent = `${report.efficiency_score || 100}% Eficiencia`;
+    if (repliedEl) repliedEl.textContent = (report.total_replied ?? 0).toLocaleString();
+    if (totalSubEl) totalSubEl.textContent = `de ${(report.total_received ?? 0).toLocaleString()} interacciones`;
+    if (timeEl) timeEl.textContent = report.avg_response_time_formatted || '4m';
+    if (leadsEl) leadsEl.textContent = (report.leads_detected_count ?? report.leads_count ?? 0).toLocaleString();
+    if (copilotEl) copilotEl.textContent = (report.copilot_replies_count ?? report.copilot_count ?? 0).toLocaleString();
+    if (manualSubEl) manualSubEl.textContent = `${report.manual_replies_count ?? report.manual_count ?? 0} manuales`;
+    
+    if (aiTextEl) {
+      aiTextEl.textContent = report.ai_insights_summary || report.ai_insights || 'Resumen no disponible.';
+    }
+  },
+
+  switchWeeklyReportModalTab(tab) {
+    const tabBtnCurrent = document.getElementById('modal-tab-btn-weekly-current');
+    const tabBtnHistory = document.getElementById('modal-tab-btn-weekly-history');
+    const viewCurrent = document.getElementById('weekly-report-view-current');
+    const viewHistory = document.getElementById('weekly-report-view-history');
+
+    if (tab === 'history') {
+      if (tabBtnCurrent) tabBtnCurrent.classList.remove('active');
+      if (tabBtnHistory) tabBtnHistory.classList.add('active');
+      if (viewCurrent) viewCurrent.style.display = 'none';
+      if (viewHistory) viewHistory.style.display = 'block';
+      this.loadWeeklyReportsHistory();
+    } else {
+      if (tabBtnHistory) tabBtnHistory.classList.remove('active');
+      if (tabBtnCurrent) tabBtnCurrent.classList.add('active');
+      if (viewHistory) viewHistory.style.display = 'none';
+      if (viewCurrent) viewCurrent.style.display = 'block';
+    }
+  },
+
+  async loadWeeklyReportsHistory() {
+    const container = document.getElementById('weekly-history-container');
+    if (!container) return;
+
+    container.innerHTML = '<div style="text-align: center; color: #94a3b8; padding: 25px;">Cargando historial de reportes...</div>';
+
+    try {
+      const res = await this.fetchWithCsrf('api/weekly_reports.php?action=list&limit=30');
+      const json = await res.json();
+      const reports = json.data || [];
+
+      if (reports.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; color: #94a3b8; padding: 30px;">
+            <div style="font-size: 2rem; margin-bottom: 8px;">🗄️</div>
+            <p>No se encontraron reportes archivados anteriores.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = reports.map(r => `
+        <div class="weekly-history-item">
+          <div>
+            <div style="font-weight: 800; color: #fff; font-size: 0.92rem;">${this.escapeHtml(r.week_label)}</div>
+            <div style="font-size: 0.78rem; color: #94a3b8; margin-top: 3px;">
+              💬 ${r.total_replied || 0} respondidos de ${r.total_received || 0} • ⏱️ SLA: ${r.avg_response_time_formatted || 'N/D'} • Generado: ${this.escapeHtml(r.created_at)}
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="font-weight: 800; color: #34d399; font-size: 0.9rem;">⭐ ${r.efficiency_score || 100}%</span>
+            <button type="button" class="btn-history-view" onclick='App.showHistoricalReportDetails(${JSON.stringify(r).replace(/'/g, "&apos;")})'>
+              Ver Detalle
+            </button>
+          </div>
+        </div>
+      `).join('');
+    } catch (e) {
+      console.error(e);
+      container.innerHTML = '<div style="text-align: center; color: #f87171; padding: 25px;">Error al cargar el historial.</div>';
+    }
+  },
+
+  showHistoricalReportDetails(report) {
+    this.populateWeeklyReportUi(report);
+    this.switchWeeklyReportModalTab('current');
+  },
+
+  viewArchivedFromModal() {
+    this.closeModal('modal-weekly-report');
+    this.setFilterTag('archived');
+  },
+
+  async restoreComment(commentId) {
+    if (!commentId) return;
+    try {
+      const res = await this.fetchWithCsrf('api/comments.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'restore_comment', comment_id: commentId })
+      });
+      const data = await res.json();
+      if (data && data.success) {
+        App.showToast('Comentario restaurado a la bandeja activa.', 'success');
+        this.loadComments();
+      } else {
+        App.showToast(data.error || 'Error al restaurar comentario.', 'error');
+      }
+    } catch (e) {
+      console.error(e);
+      App.showToast('Error de conexión al restaurar comentario.', 'error');
+    }
+  },
+
+  closeWeeklyDrilldown() {
+    const panel = document.getElementById('weekly-drilldown-panel');
+    if (panel) panel.style.display = 'none';
+  },
+
+  async showWeeklyDrilldown(kpiType) {
+    const panel = document.getElementById('weekly-drilldown-panel');
+    const content = document.getElementById('weekly-drilldown-content');
+    const titleEl = document.getElementById('weekly-drilldown-title');
+    const iconEl = document.getElementById('weekly-drilldown-icon');
+    if (!panel || !content) return;
+
+    panel.style.display = 'block';
+    content.innerHTML = '<div style="text-align: center; color: #94a3b8; padding: 25px;">⏳ Cargando auditoría detallada...</div>';
+
+    if (kpiType === 'sla') {
+      if (titleEl) titleEl.textContent = 'Velocidad de Respuesta & Desglose SLA Operativo';
+      if (iconEl) iconEl.textContent = '⏱️';
+      try {
+        const res = await this.fetchWithCsrf('api/weekly_reports.php?action=sla_breakdown');
+        const data = await res.json();
+        if (data && data.success && data.data) {
+          this.renderSlaBreakdown(data.data);
+        } else {
+          content.innerHTML = '<div style="text-align: center; color: #f87171; padding: 20px;">No se pudo calcular el desglose de velocidad.</div>';
+        }
+      } catch (e) {
+        console.error(e);
+        content.innerHTML = '<div style="text-align: center; color: #f87171; padding: 20px;">Error al consultar desglose de velocidad.</div>';
+      }
+      return;
+    }
+
+    let titleText = 'Comentarios Respondidos Exitosamente';
+    let iconText = '💬';
+    if (kpiType === 'leads') {
+      titleText = 'Leads & Consultas Comerciales';
+      iconText = '🎯';
+    } else if (kpiType === 'copilot') {
+      titleText = 'Respuestas Generadas por Copiloto IA';
+      iconText = '🤖';
+    }
+
+    if (titleEl) titleEl.textContent = titleText;
+    if (iconEl) iconEl.textContent = iconText;
+
+    try {
+      const res = await this.fetchWithCsrf(`api/weekly_reports.php?action=kpi_drilldown&kpi=${encodeURIComponent(kpiType)}&limit=60`);
+      const data = await res.json();
+      if (data && data.success) {
+        this.renderDrilldownComments(data.comments || [], titleText);
+      } else {
+        content.innerHTML = '<div style="text-align: center; color: #f87171; padding: 20px;">Error al cargar comentarios.</div>';
+      }
+    } catch (e) {
+      console.error(e);
+      content.innerHTML = '<div style="text-align: center; color: #f87171; padding: 20px;">Error de conexión al cargar comentarios.</div>';
+    }
+  },
+
+  renderDrilldownComments(comments, title) {
+    const content = document.getElementById('weekly-drilldown-content');
+    if (!content) return;
+
+    if (comments.length === 0) {
+      content.innerHTML = `
+        <div style="text-align: center; color: #94a3b8; padding: 25px;">
+          <div style="font-size: 1.8rem; margin-bottom: 6px;">✨</div>
+          <p>No se encontraron comentarios registrados para este filtro en el periodo actual.</p>
+        </div>
+      `;
+      return;
+    }
+
+    content.innerHTML = comments.map(c => {
+      const safeAvatar = this.sanitizeUrl(c.author_avatar, 'https://ui-avatars.com/api/?name=User&background=6366f1&color=fff&size=96');
+      const platformBadge = c.platform === 'facebook' ? '📘 FB' : '📸 IG';
+      const isLead = c.sentiment === 'lead' || (c.intent && c.intent.startsWith('lead_'));
+      const isArchived = c.is_archived == 1;
+
+      return `
+        <div class="drilldown-item-card">
+          <div class="drilldown-item-top">
+            <div class="drilldown-author">
+              <img src="${safeAvatar}" width="26" height="26" style="border-radius: 9999px;" alt="avatar" />
+              <span>${this.escapeHtml(c.author_name || 'Usuario')}</span>
+              <span style="font-size: 0.72rem; color: #94a3b8;">${this.escapeHtml(c.author_handle || '')}</span>
+              <span class="platform-badge-mini ${c.platform === 'facebook' ? 'facebook' : 'instagram'}">${platformBadge}</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              ${isLead ? '<span style="background: rgba(234, 179, 8, 0.2); color: #facc15; font-size: 0.7rem; font-weight: 700; padding: 1px 6px; border-radius: 4px;">🎯 Lead</span>' : ''}
+              ${isArchived ? '<span style="background: rgba(148, 163, 184, 0.15); color: #94a3b8; font-size: 0.7rem; font-weight: 700; padding: 1px 6px; border-radius: 4px;">🗄️ Archivado</span>' : '<span style="background: rgba(16, 185, 129, 0.15); color: #34d399; font-size: 0.7rem; font-weight: 700; padding: 1px 6px; border-radius: 4px;">✅ Activo</span>'}
+            </div>
+          </div>
+          <div class="drilldown-comment-text">
+            "${this.escapeHtml(c.comment_text)}"
+          </div>
+          ${c.reply_text ? `
+            <div class="drilldown-reply-box">
+              <strong style="color: #a5b4fc; font-size: 0.76rem; display: block; margin-bottom: 2px;">
+                ${c.reply_type === 'copilot' ? '🤖 Respuesta publicada por Copiloto IA:' : '👤 Respuesta del Asistente:'}
+              </strong>
+              "${this.escapeHtml(c.reply_text)}"
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }).join('');
+  },
+
+  renderSlaBreakdown(slaData) {
+    const content = document.getElementById('weekly-drilldown-content');
+    if (!content) return;
+
+    const brackets = slaData.brackets || {};
+    const opFormatted = slaData.operational_sla_formatted || '3 min';
+    const total = slaData.total_replies_analyzed || 0;
+
+    let bracketsHtml = '';
+    for (const key in brackets) {
+      const b = brackets[key];
+      const pct = b.percentage || 0;
+      bracketsHtml += `
+        <div class="sla-bracket-item">
+          <div class="sla-bracket-top">
+            <span>${this.escapeHtml(b.label)}</span>
+            <span><strong>${b.count}</strong> (${pct}%)</span>
+          </div>
+          <div class="sla-bracket-bar-track">
+            <div class="sla-bracket-bar-fill" style="width: ${pct}%;"></div>
+          </div>
+          <span style="font-size: 0.72rem; color: #94a3b8;">${this.escapeHtml(b.desc)}</span>
+        </div>
+      `;
+    }
+
+    content.innerHTML = `
+      <div class="sla-breakdown-wrap">
+        <div style="background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between;">
+          <div>
+            <span style="font-size: 0.74rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Tiempo SLA Operativo Real</span>
+            <div style="font-size: 1.25rem; font-weight: 800; color: #67e8f9; margin-top: 2px;">${opFormatted}</div>
+          </div>
+          <div style="text-align: right; font-size: 0.78rem; color: #cbd5e1;">
+            Total respuestas analizadas: <strong>${total}</strong>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 6px;">
+          ${bracketsHtml}
+        </div>
+      </div>
+    `;
   }
 };
 

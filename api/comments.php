@@ -7,6 +7,7 @@ require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../services/AiAgentService.php';
 require_once __DIR__ . '/../services/MetaApiService.php';
+require_once __DIR__ . '/../services/WeeklyReportAgentService.php';
 
 Security::applySecurityHeaders(true);
 Auth::requireAuth(true);
@@ -18,13 +19,14 @@ $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
 try {
     if ($method === 'GET') {
         $allowedPlatforms = ['all', 'instagram', 'facebook'];
-        $allowedFilters = ['all', 'highlighted', 'leads', 'highlighted_leads', 'urgent', 'pending', 'replied', 'spam'];
+        $allowedFilters = ['all', 'inbox', 'new', 'archived', 'highlighted', 'leads', 'highlighted_leads', 'urgent', 'pending', 'replied', 'spam', 'failed'];
 
         $platform = Security::validateEnum($_GET['platform'] ?? 'all', $allowedPlatforms, 'all');
         $filter = Security::validateEnum($_GET['filter'] ?? 'all', $allowedFilters, 'all');
         $search = Security::sanitizeString($_GET['search'] ?? '', 100);
         $postId = isset($_GET['post_id']) && is_numeric($_GET['post_id']) ? (int)$_GET['post_id'] : null;
         $accountId = isset($_GET['account_id']) && is_numeric($_GET['account_id']) && (int)$_GET['account_id'] > 0 ? (int)$_GET['account_id'] : null;
+        $includeArchived = !empty($_GET['include_archived']) && $_GET['include_archived'] == '1';
 
         $sql = "
             SELECT 
@@ -78,22 +80,30 @@ try {
             $params[':post_id'] = $postId;
         }
 
-        if ($filter === 'highlighted') {
-            $sql .= " AND (c.is_highlighted = 1 OR c.highlight_score >= 80)";
-        } elseif ($filter === 'leads') {
-            $sql .= " AND (c.sentiment = 'lead' OR c.intent LIKE 'lead_%')";
-        } elseif ($filter === 'highlighted_leads') {
-            $sql .= " AND (c.is_highlighted = 1 OR c.highlight_score >= 80 OR c.sentiment = 'lead' OR c.intent LIKE 'lead_%')";
-        } elseif ($filter === 'urgent') {
-            $sql .= " AND (c.sentiment = 'urgent' OR c.intent = 'support')";
-        } elseif ($filter === 'pending') {
-            $sql .= " AND c.status = 'pending'";
-        } elseif ($filter === 'replied') {
-            $sql .= " AND c.status = 'replied'";
-        } elseif ($filter === 'failed') {
-            $sql .= " AND (c.status = 'failed' OR (r.is_posted_to_platform = 0 AND r.reply_text IS NOT NULL))";
-        } elseif ($filter === 'spam') {
-            $sql .= " AND (c.status = 'spam' OR c.sentiment = 'spam')";
+        if ($filter === 'archived') {
+            $sql .= " AND c.is_archived = 1";
+        } else {
+            // All active views exclude archived comments unless explicitly requested
+            if (!$includeArchived) {
+                $sql .= " AND (c.is_archived = 0 OR c.is_archived IS NULL)";
+            }
+
+            if ($filter === 'new' || $filter === 'pending') {
+                $sql .= " AND c.status = 'pending'";
+            } elseif ($filter === 'highlighted') {
+                $sql .= " AND (c.is_highlighted = 1 OR c.highlight_score >= 80)";
+            } elseif ($filter === 'leads' || $filter === 'highlighted' || $filter === 'highlighted_leads') {
+                $sql .= " AND (c.sentiment = 'lead' OR c.intent LIKE 'lead_%' OR c.is_highlighted = 1 OR c.highlight_score >= 80)";
+            } elseif ($filter === 'urgent' || $filter === 'support') {
+                $sql .= " AND (c.sentiment = 'urgent' OR c.intent = 'support' OR c.status = 'failed')";
+            } elseif ($filter === 'replied') {
+                $sql .= " AND c.status = 'replied'";
+            } elseif ($filter === 'failed') {
+                $sql .= " AND (c.status = 'failed' OR (r.is_posted_to_platform = 0 AND r.reply_text IS NOT NULL))";
+            } elseif ($filter === 'spam') {
+                $sql .= " AND (c.status = 'spam' OR c.sentiment = 'spam')";
+            }
+            // 'all' and 'inbox' show all active unarchived comments
         }
 
         if (!empty($search)) {
@@ -117,22 +127,28 @@ try {
         }
         unset($c);
 
-        // Calculate summary counts for this specific user
+        // Calculate summary counts for this specific user (both active and total)
         $countStmt = $pdo->prepare("
             SELECT 
-                COUNT(*) as total,
-                SUM(CASE WHEN is_highlighted = 1 OR highlight_score >= 80 THEN 1 ELSE 0 END) as highlighted_count,
-                SUM(CASE WHEN sentiment = 'lead' OR intent LIKE 'lead_%' THEN 1 ELSE 0 END) as leads_count,
-                SUM(CASE WHEN sentiment = 'urgent' THEN 1 ELSE 0 END) as urgent_count,
-                SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_count,
-                SUM(CASE WHEN status = 'replied' THEN 1 ELSE 0 END) as replied_count,
-                SUM(CASE WHEN status = 'spam' OR sentiment = 'spam' THEN 1 ELSE 0 END) as spam_count
+                COUNT(*) as total_all,
+                SUM(CASE WHEN (is_archived = 0 OR is_archived IS NULL) THEN 1 ELSE 0 END) as total,
+                SUM(CASE WHEN is_archived = 1 THEN 1 ELSE 0 END) as archived_count,
+                SUM(CASE WHEN (status = 'replied' OR status = 'failed') AND (is_archived = 0 OR is_archived IS NULL) THEN 1 ELSE 0 END) as can_archive_count,
+                SUM(CASE WHEN (is_highlighted = 1 OR highlight_score >= 80) AND (is_archived = 0 OR is_archived IS NULL) THEN 1 ELSE 0 END) as highlighted_count,
+                SUM(CASE WHEN (sentiment = 'lead' OR intent LIKE 'lead_%') AND (is_archived = 0 OR is_archived IS NULL) THEN 1 ELSE 0 END) as leads_count,
+                SUM(CASE WHEN sentiment = 'urgent' AND (is_archived = 0 OR is_archived IS NULL) THEN 1 ELSE 0 END) as urgent_count,
+                SUM(CASE WHEN status = 'pending' AND (is_archived = 0 OR is_archived IS NULL) THEN 1 ELSE 0 END) as pending_count,
+                SUM(CASE WHEN status = 'replied' AND (is_archived = 0 OR is_archived IS NULL) THEN 1 ELSE 0 END) as replied_count,
+                SUM(CASE WHEN (status = 'spam' OR sentiment = 'spam') AND (is_archived = 0 OR is_archived IS NULL) THEN 1 ELSE 0 END) as spam_count
             FROM comments
             WHERE user_id = :user_id
         ");
         $countStmt->execute([':user_id' => $userId]);
         $counts = $countStmt->fetch() ?: [];
+        $counts['total_all'] = (int)($counts['total_all'] ?? 0);
         $counts['total'] = (int)($counts['total'] ?? 0);
+        $counts['archived_count'] = (int)($counts['archived_count'] ?? 0);
+        $counts['can_archive_count'] = (int)($counts['can_archive_count'] ?? 0);
         $counts['highlighted_count'] = (int)($counts['highlighted_count'] ?? 0);
         $counts['leads_count'] = (int)($counts['leads_count'] ?? 0);
         $counts['urgent_count'] = (int)($counts['urgent_count'] ?? 0);
@@ -145,7 +161,7 @@ try {
             'counts' => $counts,
             'data' => $comments
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-            exit;
+        exit;
     }
 
     if ($method === 'POST') {
@@ -156,7 +172,7 @@ try {
         $rawInput = file_get_contents('php://input');
         $input = json_decode($rawInput, true) ?? $_POST;
         
-        $allowedActions = ['reply', 'retry_reply', 'toggle_highlight', 'change_status', 'create_simulated', 'delete'];
+        $allowedActions = ['reply', 'retry_reply', 'toggle_highlight', 'change_status', 'create_simulated', 'delete', 'run_weekly_cleanup', 'archive_comment', 'restore_comment'];
         $action = Security::validateEnum($input['action'] ?? '', $allowedActions, '');
 
         if (empty($action)) {
@@ -434,6 +450,41 @@ try {
             $stmt = $pdo->prepare("DELETE FROM comments WHERE id = :id AND user_id = :uid");
             $stmt->execute([':id' => $commentId, ':uid' => $userId]);
             echo json_encode(['success' => true, 'message' => 'Comentario eliminado']);
+            exit;
+        }
+
+        if ($action === 'run_weekly_cleanup') {
+            $archive = !empty($input['archive']) || !isset($input['archive']);
+            $result = WeeklyReportAgentService::runCleanupAndReport($userId, $archive);
+            echo json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        if ($action === 'archive_comment') {
+            $commentId = Security::sanitizeInt($input['comment_id'] ?? 0, 1, 10000000, 0);
+            if ($commentId <= 0) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'comment_id inválido']);
+                exit;
+            }
+
+            $stmt = $pdo->prepare("UPDATE comments SET is_archived = 1, archived_at = CURRENT_TIMESTAMP WHERE id = :id AND user_id = :uid");
+            $stmt->execute([':id' => $commentId, ':uid' => $userId]);
+            echo json_encode(['success' => true, 'message' => 'Comentario archivado']);
+            exit;
+        }
+
+        if ($action === 'restore_comment') {
+            $commentId = Security::sanitizeInt($input['comment_id'] ?? 0, 1, 10000000, 0);
+            if ($commentId <= 0) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'comment_id inválido']);
+                exit;
+            }
+
+            $stmt = $pdo->prepare("UPDATE comments SET is_archived = 0, archived_at = NULL WHERE id = :id AND user_id = :uid");
+            $stmt->execute([':id' => $commentId, ':uid' => $userId]);
+            echo json_encode(['success' => true, 'message' => 'Comentario restaurado a la bandeja activa']);
             exit;
         }
     }
