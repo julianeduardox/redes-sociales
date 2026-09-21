@@ -167,12 +167,19 @@ class AiAgentService {
     }
 
     /**
-     * Detect if an author name is an anonymous placeholder or machine handle
+     * Detect if an author name is an anonymous placeholder, machine handle, or slang nickname
      */
     public static function isGenericAuthorName(?string $name): bool {
         if ($name === null) return true;
         $clean = mb_strtolower(trim($name), 'UTF-8');
         if (empty($clean)) return true;
+
+        // Handles with numbers are usernames/gamertags, NOT clean first names (e.g. Samuelongo380, Juan123)
+        if (preg_match('/\d/', $clean)) return true;
+
+        // Slang, gamertag or meme suffixes/words
+        if (preg_match('/(longo|gamer|master|bot|pro|play|tv|yt|tiktok|page|vip|club|team|stream|gaming|official|oficial)$/i', $clean)) return true;
+
         if (str_starts_with($clean, 'usuario') || str_starts_with($clean, 'user') || str_starts_with($clean, 'fb_') || str_starts_with($clean, 'ig_')) return true;
         if (str_contains($clean, 'facebook') || str_contains($clean, 'instagram') || str_contains($clean, 'comunidad') || str_contains($clean, 'lector')) return true;
         if (in_array($clean, ['amigo', 'seguidor', 'cliente', 'anonimo', 'anónimo', 'fan', 'guest', 'member'])) return true;
@@ -188,9 +195,17 @@ class AiAgentService {
             return '';
         }
         $raw = ltrim(trim($authorName), '@');
+        // If the handle contains numbers, it's not a verified personal first name
+        if (preg_match('/\d/', $raw)) {
+            return '';
+        }
         $parts = preg_split('/[\s_\.\-]+/u', $raw);
         $first = $parts[0] ?? '';
-        if (self::isGenericAuthorName($first) || mb_strlen($first, 'UTF-8') < 2) {
+        if (self::isGenericAuthorName($first) || mb_strlen($first, 'UTF-8') < 2 || mb_strlen($first, 'UTF-8') > 15) {
+            return '';
+        }
+        // Must contain only alphabetical characters (Spanish and Latin letters)
+        if (!preg_match('/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ]+$/u', $first)) {
             return '';
         }
         return mb_convert_case($first, MB_CASE_TITLE, 'UTF-8');
@@ -339,6 +354,15 @@ class AiAgentService {
             'el tiempo filtra', 'el tiempo pone a cada quien', 'se van solos', 'nadie elimina a nadie',
             'se caen solos', 'se caen solas', 'solos se van', 'se borran sola', 'se borran solas',
             'se borraran solo', 'se borrarán solo', 'se borraran solos', 'se borrarán solos'
+        ];
+
+        // 0.9 Humor, Banter, Memes & Sarcasm (Carnitas, al cazo, al sartén, cerdo, puerco, memes, chistes, ironía callejera)
+        $humorPatterns = [
+            'carnitas', 'al cazo', 'al sartén', 'al sarten', 'a la cazuela', 'al matadero', 'lo hubieras hecho',
+            'lo hubiera hecho', 'es un cerdo', 'al asador', 'jajaja', 'jejeje', 'jajaj', 'jaja', 'jeje', 'xd', 'lol', 'lmao',
+            'qué risa', 'que risa', 'morí de risa', 'mori de risa', 'me dio risa', 'me dió risa', 'se mamó',
+            'se mamo', 'te mamaste', 'no mames', 'no manches', 'tremendo personaje', 'chistoso', 'burlón',
+            'burlon', 'payaso', 'meme', 'sacar los prohibidos', 'se pasó', 'se paso', 'buena esa'
         ];
 
         // 1. Philosophical, Stoic, Conceptual & Mentorship QA (Dicotomía del control, mentalidad, disciplina, conceptos, virtud)
@@ -547,6 +571,15 @@ class AiAgentService {
             }
         }
 
+        // Detect Humor, Banter, Memes & Irony
+        $foundHumor = [];
+        foreach ($humorPatterns as $p) {
+            if (str_contains($textLower, $p)) {
+                $foundHumor[] = $p;
+            }
+        }
+        $hasHumorEmoji = (bool)preg_match('/[😝😜🤪😂🤣😆😹🤡]/u', $commentText);
+
         // Check if there is an explicit question or commercial buying inquiry
         $hasQuestionMark = str_contains($commentText, '?') || str_contains($commentText, '¿');
         $hasBuyingTerm   = (bool)preg_match('/\b(precio|costo|planes|comprar|cuotas|link de compra|cómo compro|donde compro)\b/iu', $textLower);
@@ -564,6 +597,15 @@ class AiAgentService {
             $autopilotReady = true;
             $autopilotStatus = 'ready';
             $autopilotReason = '✔ Apto para Autopilot (Contención estoica sobria sin validar el insulto ni usar fiesta)';
+        } elseif (!empty($foundHumor) || ($hasHumorEmoji && empty($foundVenting))) {
+            $sentiment = 'positive';
+            $intent = 'humor_banter_joke';
+            $score = 86;
+            $highlightReason = '😄 Humor, Broma o Banter: Comentario con tono cómico, meme o broma; responder con complicidad, ingenio y risa sin ponerse solemne ni hacer cuestionarios';
+            $keywords = array_merge($foundHumor, $hasHumorEmoji ? ['[emoji_humor]'] : []);
+            $autopilotReady = true;
+            $autopilotStatus = 'ready';
+            $autopilotReason = '✔ Apto para Autopilot (Respuesta fresca con complicidad y humor)';
         } elseif (!empty($foundTrustFilter)) {
             $sentiment = 'positive';
             $intent = 'life_filter_reflection';
@@ -2253,7 +2295,29 @@ class AiAgentService {
         $intent = $commentAnalysis['intent'] ?? 'general_conversation';
         $commentLower = mb_strtolower($commentText, 'UTF-8');
         $intentGuidance = "";
-        if (str_starts_with($intent, 'lead_') || $intent === 'price_lead' || str_contains($commentLower, 'precio') || str_contains($commentLower, 'costo') || str_contains($commentLower, 'mentoría') || str_contains($commentLower, 'mentoria') || str_contains($commentLower, 'curso')) {
+
+        // Detect Humor, Banter, Sarcasm or Meme
+        $isHumorBanter = ($intent === 'humor_banter_joke') 
+            || (bool)preg_match('/[😝😜🤪😂🤣😆😹🤡]/u', $commentText)
+            || (bool)preg_match('/\b(carnitas|al cazo|cazo|al sart[eé]n|matadero|jajaja|jaja|jeje|xd|lol|lmao|qu[eé] risa|mor[ií] de risa|se mam[oó]|te mamaste|no mames|no manches|chiste|broma|cerdo|puerco|al asador)\b/iu', $commentText);
+
+        if ($isHumorBanter) {
+            $intentGuidance = "DIRECTIVA DE INTENCIÓN [😄 Humor, Broma, Meme o Banter]:\n"
+                . "- El seguidor hace un comentario cómico, burlón, meme o broma informal (ej. 'hacerlo carnitas', 'al cazo', risas, emojis 😝/😂).\n"
+                . "- REGLA DE ORO DE TONO: Responde con naturalidad, complicidad, picardía y simpatía fresca. Ríete con él ('Jajaja...', '😅', '😂'), sigue el chiste o remata con humor sobre no tomarse las cosas tan a pecho. Sé humano y breve (1 sola frase contundente o máximo 2 frases breves, <25 palabras).\n"
+                . "- PROHIBICIÓN ABSOLUTA: NUNCA respondas con discursos solemnes, corporativos o de agradecimiento robótico (ej. TERMINANTEMENTE PROHIBIDO decir 'Apreciamos mucho que dediques tiempo a interactuar y reflexionar con nosotros...').\n"
+                . "- PROHIBICIÓN ABSOLUTA: NUNCA hagas preguntas existenciales o filosóficas de cierre (ej. PROHIBIDO preguntar '¿En qué situación buscas aplicarlo hoy?'). Las preguntas de cierre están TERMINANTEMENTE DESACTIVADAS para este comentario.";
+
+            $closingQuestionRule = "DESACTIVADA (Es un comentario de humor/broma. Queda ESTRICTAMENTE PROHIBIDO hacer preguntas reflexivas de cierre).";
+
+            $forbiddenPhrases[] = 'Apreciamos mucho que dediques tiempo';
+            $forbiddenPhrases[] = 'interactuar y reflexionar con nosotros';
+            $forbiddenPhrases[] = '¿En qué situación o reto buscas aplicarlo hoy?';
+            $forbiddenPhrases[] = '¿En qué buscas aplicarlo?';
+            $forbiddenPhrases[] = 'dediques tiempo a interactuar';
+            $forbiddenPhrases[] = 'reflexionar con nosotros';
+            $forbiddenPhrases[] = '¡Seguimos adelante! 🏛️ ¿En qué';
+        } elseif (str_starts_with($intent, 'lead_') || $intent === 'price_lead' || str_contains($commentLower, 'precio') || str_contains($commentLower, 'costo') || str_contains($commentLower, 'mentoría') || str_contains($commentLower, 'mentoria') || str_contains($commentLower, 'curso')) {
             $intentGuidance = "DIRECTIVA DE INTENCIÓN [Interés Comercial / Precio / Mentoría]: Destaca el valor transformador del programa o mentoría e invita amablemente a revisar el enlace en la bio o a enviar un DM para coordinar detalles. NUNCA inventes precios o cifras ficticias.";
         } elseif ($intent === 'venting_resilience' || str_contains($commentLower, 'ansiedad') || str_contains($commentLower, 'desmorona') || str_contains($commentLower, 'cuesta') || str_contains($commentLower, 'difícil') || str_contains($commentLower, 'dificil') || str_contains($commentLower, 'no puedo')) {
             $intentGuidance = "DIRECTIVA DE INTENCIÓN [Desahogo Emocional / Búsqueda de Resiliencia]: El seguidor comparte una dificultad, miedo o frustración real. Aplica profunda empatía humana: valida su desafío con respeto fraternal y enfócalo en lo que sí está bajo su control (Dicotomía del Control). NUNCA le vendas agresivamente ni uses clichés superficiales de autoayuda.";
@@ -2341,6 +2405,8 @@ REGLAS ESTRICTAS DE VERACIDAD Y ANTI-ALUCINACIÓN (OBLIGATORIAS):
 3. MANEJO DE DATOS FALTANTES: Si el seguidor pregunta por especificaciones internas, precios o accesos no descritos en el contexto, responde honestamente con los datos generales conocidos y oriéntalo amablemente al enlace de la bio o a enviar un DM para recibir asesoría personalizada.
 4. PREGUNTAS CONCEPTUALES Y FILOSÓFICAS: Si el seguidor consulta sobre un concepto, metodología o filosofía estoica (ej. Dicotomía del control), responde con fundamento, claridad y valor práctico. NUNCA desvíes preguntas conceptuales a soporte técnico de pedidos o reclamos.
 5. COMENTARIOS DE SOLO EMOJIS O REACCIONES: Si el comentario del seguidor consiste en emojis o reacciones (ej. 👏👏, 🔥, ❤️, 💪, 🙌), responde de forma rápida, agradecida y cercana utilizando también emojis expresivos y coherentes con el tono de la marca.
+6. COMENTARIOS BURLONES, CHISTES O MEMES: Si el seguidor hace un chiste, broma, ironía o comentario cómico (ej. 'al cazo', 'carnitas', risas, emojis 😝/😂), NUNCA te pongas solemne, NUNCA agradezcas como corporación formal ("Apreciamos que dediques tiempo a reflexionar...") y NUNCA hagas preguntas existenciales ("¿cómo buscas aplicarlo hoy?"). Responde con complicidad, ingenio y risa ("Jajaja...", "😅"), manteniendo la respuesta corta y humana.
+7. VOCATIVO Y NICKNAMES: Si el seguidor tiene un usuario con números (ej. Samuelongo380) o apodos no verificados, NUNCA uses ese handle como nombre de pila. Habla de tú a tú directamente y con fluidez natural sin vocativos forzados.
 
 $fewShotText
 
