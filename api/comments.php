@@ -187,6 +187,9 @@ try {
             $replyType = Security::sanitizeString($input['reply_type'] ?? 'copilot', 50);
             $toneUsed = Security::sanitizeString($input['tone_used'] ?? 'friendly', 50);
             $variantType = Security::validateEnum($input['variant_type'] ?? 'engagement', ['engagement', 'conversion', 'support', 'auto'], 'engagement');
+            $wasEdited = !empty($input['was_edited']);
+            $originalSuggestion = Security::sanitizeString($input['original_suggestion'] ?? '', 2000);
+            $isGoldExample = !empty($input['is_gold_example']);
 
             if ($commentId <= 0 || empty($replyText)) {
                 http_response_code(400);
@@ -195,7 +198,14 @@ try {
             }
 
             // Verify comment belongs to current user
-            $cCheck = $pdo->prepare("SELECT id, platform, external_comment_id FROM comments WHERE id = :id AND user_id = :uid LIMIT 1");
+            $cCheck = $pdo->prepare("
+                SELECT c.id, c.platform, c.external_comment_id, c.comment_text,
+                       COALESCE(p.brand_voice_id, a.brand_voice_id, 1) as brand_voice_id
+                FROM comments c 
+                LEFT JOIN posts p ON c.post_id = p.id
+                LEFT JOIN accounts a ON p.account_id = a.id
+                WHERE c.id = :id AND c.user_id = :uid LIMIT 1
+            ");
             $cCheck->execute([':id' => $commentId, ':uid' => $userId]);
             $commentData = $cCheck->fetch();
             if (!$commentData) {
@@ -225,6 +235,22 @@ try {
                 ':is_posted' => $isPosted
             ]);
 
+            // Human-in-the-Loop Continuous Learning: Record feedback to train Gemini's active context
+            $learnedCommentText = $commentData['comment_text'] ?? '';
+            $learnedBrandVoiceId = (int)($commentData['brand_voice_id'] ?? 1);
+            if (!empty($learnedCommentText)) {
+                AiAgentService::recordLearningFeedback(
+                    $userId,
+                    $learnedBrandVoiceId,
+                    $learnedCommentText,
+                    $replyText,
+                    $originalSuggestion,
+                    $wasEdited,
+                    $isGoldExample,
+                    $commentId
+                );
+            }
+
             if ($isPosted) {
                 // Successfully posted to Meta or simulated locally in demo mode
                 $stmtUp = $pdo->prepare("UPDATE comments SET status = 'replied', highlight_reason = NULL WHERE id = :id AND user_id = :uid");
@@ -233,7 +259,9 @@ try {
                 echo json_encode([
                     'success' => true,
                     'is_posted_to_platform' => 1,
-                    'message' => "¡Respuesta publicada y registrada con éxito en {$platformName}!",
+                    'learned' => true,
+                    'was_edited' => $wasEdited,
+                    'message' => "¡Respuesta publicada y registrada con éxito en {$platformName}! Gemini ha aprendido de esta interacción. 🧠",
                     'meta_result' => $metaResult
                 ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
                 exit;
@@ -485,6 +513,36 @@ try {
             $stmt = $pdo->prepare("UPDATE comments SET is_archived = 0, archived_at = NULL WHERE id = :id AND user_id = :uid");
             $stmt->execute([':id' => $commentId, ':uid' => $userId]);
             echo json_encode(['success' => true, 'message' => 'Comentario restaurado a la bandeja activa']);
+            exit;
+        }
+
+        if ($action === 'save_gold_example') {
+            $commentText = Security::sanitizeString($input['comment_text'] ?? '', 1500);
+            $replyText = Security::sanitizeString($input['reply_text'] ?? '', 1500);
+            $brandVoiceId = Security::sanitizeInt($input['brand_voice_id'] ?? 1, 1, 1000000, 1);
+            $commentId = Security::sanitizeInt($input['comment_id'] ?? 0, 0, 10000000, 0);
+
+            if (empty($commentText) || empty($replyText)) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'El texto del comentario y la respuesta son obligatorios.']);
+                exit;
+            }
+
+            $saved = AiAgentService::recordLearningFeedback(
+                $userId,
+                $brandVoiceId,
+                $commentText,
+                $replyText,
+                '',
+                false,
+                true,
+                $commentId > 0 ? $commentId : null
+            );
+
+            echo json_encode([
+                'success' => $saved,
+                'message' => '⭐ ¡Ejemplo de Oro guardado con éxito! Gemini lo usará como referencia de estilo en futuros comentarios.'
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
             exit;
         }
     }

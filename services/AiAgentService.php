@@ -842,6 +842,10 @@ class AiAgentService {
             $recentThreadReplies = self::fetchRecentPostReplies($pdo, $postId, $targetUserId, 15);
         }
 
+        // Dynamic Human-in-the-Loop Continuous Learning Memory
+        $brandVoiceId = (int)($brandVoice['id'] ?? 1);
+        $learningExamples = $runtimeOverrides['learning_examples'] ?? self::fetchRecentLearningExamples($pdo, $targetUserId, $brandVoiceId, 4);
+
         $userAiConfig = null;
         if ($targetUserId > 0) {
             try {
@@ -886,7 +890,7 @@ class AiAgentService {
                 $closingQuestionRule, $emojiStyle, $keyPhrases, $forbiddenPhrases, $fewShotExamples,
                 $openrouterKey, $openrouterModel,
                 $targetUserId, $pdo,
-                $postAuthor, $lengthCategory, $recentThreadReplies, $analysis
+                $postAuthor, $lengthCategory, $recentThreadReplies, $analysis, $learningExamples
             );
             if ($openrouterResult !== null && !empty($openrouterResult['engagement'])) {
                 return self::sanitizeRepliesWithForbidden($openrouterResult, $forbiddenPhrases);
@@ -2101,14 +2105,15 @@ class AiAgentService {
         string $closingQuestionRule, string $emojiStyle, array $keyPhrases, array $forbiddenPhrases, array $fewShotExamples,
         string $apiKey, string $model = 'google/gemini-2.5-flash',
         int $targetUserId = 0, ?PDO $pdo = null,
-        string $postAuthor = 'general', string $lengthCategory = 'medium', array $recentThreadReplies = [], ?array $commentAnalysis = null
+        string $postAuthor = 'general', string $lengthCategory = 'medium', array $recentThreadReplies = [], ?array $commentAnalysis = null,
+        array $learningExamples = []
     ): ?array {
         $prompt = self::buildUniversalPrompt(
             $authorName, $commentText, $platform, $postCaption,
             $brandName, $personaName, $brandIndustry, $brandTone, $brandDescription, $language,
             $warmthLevel, $depthLevel, $energyLevel,
             $closingQuestionRule, $emojiStyle, $keyPhrases, $forbiddenPhrases, $fewShotExamples,
-            $postAuthor, $lengthCategory, $recentThreadReplies, $commentAnalysis
+            $postAuthor, $lengthCategory, $recentThreadReplies, $commentAnalysis, $learningExamples
         );
 
         $url = 'https://openrouter.ai/api/v1/chat/completions';
@@ -2206,7 +2211,8 @@ class AiAgentService {
         string $brandName, string $personaName, string $brandIndustry, string $brandTone, string $brandDescription, string $language,
         int $warmthLevel, int $depthLevel, int $energyLevel,
         string $closingQuestionRule, string $emojiStyle, array $keyPhrases, array $forbiddenPhrases, array $fewShotExamples,
-        string $postAuthor = 'general', string $lengthCategory = 'medium', array $recentThreadReplies = [], ?array $commentAnalysis = null
+        string $postAuthor = 'general', string $lengthCategory = 'medium', array $recentThreadReplies = [], ?array $commentAnalysis = null,
+        array $learningExamples = []
     ): string {
         // Module 4: Clean Name Extraction & Bot Protection
         $isGeneric = self::isGenericAuthorName($authorName);
@@ -2268,6 +2274,21 @@ class AiAgentService {
             $threadMemoryBlock .= "DIRECTIVA ANTI-DUPLICACIÓN: Varía el saludo, los verbos y las preguntas de cierre. NUNCA repitas las mismas fórmulas de las respuestas recientes mostradas arriba.\n\n";
         }
 
+        // Module 6: Human-in-the-Loop Continuous Learning Memory
+        $learningBlock = "";
+        if (!empty($learningExamples)) {
+            $learningBlock = "MEMORIA DE APRENDIZAJE HUMANO (Respuestas reales aprobadas o corregidas recientemente por el administrador humano):\n";
+            foreach ($learningExamples as $idx => $lex) {
+                $cTextSnippet = mb_substr(trim($lex['comment_text'] ?? ''), 0, 100);
+                $rTextSnippet = trim($lex['final_reply'] ?? '');
+                $statusLabel = !empty($lex['is_gold_example']) ? "⭐ EJEMPLO DE ORO FAVORITO" : (!empty($lex['was_edited']) ? "✏️ HUMANO CORRIGIÓ Y PREFIRIÓ" : "✅ HUMANO APROBÓ");
+                $learningBlock .= "- Caso #" . ($idx + 1) . " [$statusLabel]:\n";
+                $learningBlock .= "  Comentario seguidor: \"$cTextSnippet\"\n";
+                $learningBlock .= "  Respuesta humana definitiva: \"$rTextSnippet\"\n";
+            }
+            $learningBlock .= "DIRECTIVA DE APRENDIZAJE CONTINUO: Observa con máxima atención el estilo, vocabulario, cercanía y nivel de síntesis que el administrador humano ha aprobado y corregido en los casos de arriba. Adapta tus 3 opciones para reflejar con absoluta precisión este estándar humano preferido.\n\n";
+        }
+
         $keyPhrasesText = !empty($keyPhrases) ? implode(', ', $keyPhrases) : 'Autodominio, Fortaleza mental, Disciplina diaria, Comunidad oficial';
         $forbiddenText = !empty($forbiddenPhrases) ? implode(', ', $forbiddenPhrases) : 'Estimado cliente, Compra ya, Oferta engañosa, Somos un bot';
 
@@ -2309,6 +2330,7 @@ $proportionalityDirective
 
 $intentGuidance
 
+$learningBlock
 $threadMemoryBlock
 CONCEPTOS CLAVE A DESTACAR: $keyPhrasesText.
 FRASES TOTALMENTE PROHIBIDAS (NUNCA LAS USES): $forbiddenText.
@@ -2932,5 +2954,109 @@ PROMPT;
                 'reply' => '¡Muchísimas gracias por tus palabras, {nombre}! Nos alegra enorme saber que te ha sido de gran valor. ¿De qué tema te gustaría que profundicemos en la siguiente publicación?'
             ]
         ];
+    }
+
+    /**
+     * Record human-approved or human-edited reply feedback for continuous learning
+     */
+    public static function recordLearningFeedback(
+        int $userId,
+        int $brandVoiceId,
+        string $commentText,
+        string $finalReply,
+        string $originalSuggestion = '',
+        bool $wasEdited = false,
+        bool $isGold = false,
+        ?int $commentId = null
+    ): bool {
+        try {
+            $pdo = Database::getConnection();
+            $stmt = $pdo->prepare("
+                INSERT INTO ai_learning_feedback (
+                    user_id, brand_voice_id, comment_id, comment_text, original_suggestion, final_reply, was_edited, is_gold_example
+                ) VALUES (
+                    :uid, :bvid, :cid, :comment, :orig, :final, :edited, :gold
+                )
+            ");
+            $stmt->execute([
+                ':uid' => $userId,
+                ':bvid' => $brandVoiceId > 0 ? $brandVoiceId : 1,
+                ':cid' => $commentId,
+                ':comment' => $commentText,
+                ':orig' => !empty($originalSuggestion) ? $originalSuggestion : null,
+                ':final' => $finalReply,
+                ':edited' => $wasEdited ? 1 : 0,
+                ':gold' => $isGold ? 1 : 0
+            ]);
+
+            // If marked as gold example, also update brand_voices.few_shot_examples
+            if ($isGold && $brandVoiceId > 0) {
+                self::addGoldExampleToBrandVoice($pdo, $brandVoiceId, $userId, $commentText, $finalReply);
+            }
+
+            return true;
+        } catch (Throwable $e) {
+            error_log("Error in recordLearningFeedback: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Add a gold example into brand_voices few_shot_examples without duplicating
+     */
+    public static function addGoldExampleToBrandVoice(PDO $pdo, int $brandVoiceId, int $userId, string $comment, string $reply): void {
+        try {
+            $stmt = $pdo->prepare("SELECT few_shot_examples FROM brand_voices WHERE id = :id AND user_id = :uid LIMIT 1");
+            $stmt->execute([':id' => $brandVoiceId, ':uid' => $userId]);
+            $raw = $stmt->fetchColumn();
+            $examples = !empty($raw) ? json_decode($raw, true) : [];
+            if (!is_array($examples)) $examples = [];
+
+            // Check if comment already exists to prevent duplication
+            foreach ($examples as $ex) {
+                if (trim($ex['comment'] ?? '') === trim($comment)) {
+                    return;
+                }
+            }
+
+            // Prepend new gold example and keep max 12
+            array_unshift($examples, [
+                'tag' => 'ejemplo_oro_humano',
+                'comment' => $comment,
+                'reply' => $reply
+            ]);
+            $examples = array_slice($examples, 0, 12);
+
+            $upStmt = $pdo->prepare("UPDATE brand_voices SET few_shot_examples = :ex WHERE id = :id AND user_id = :uid");
+            $upStmt->execute([
+                ':ex' => json_encode($examples, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT),
+                ':id' => $brandVoiceId,
+                ':uid' => $userId
+            ]);
+        } catch (Throwable $e) {
+            error_log("Error in addGoldExampleToBrandVoice: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Fetch recent human-approved / human-edited examples for dynamic few-shot learning
+     */
+    public static function fetchRecentLearningExamples(PDO $pdo, int $userId, int $brandVoiceId = 1, int $limit = 4): array {
+        try {
+            $stmt = $pdo->prepare("
+                SELECT comment_text, original_suggestion, final_reply, was_edited, is_gold_example
+                FROM ai_learning_feedback
+                WHERE user_id = :uid AND (brand_voice_id = :bvid OR brand_voice_id = 1)
+                ORDER BY is_gold_example DESC, id DESC
+                LIMIT :lim
+            ");
+            $stmt->bindValue(':uid', $userId, PDO::PARAM_INT);
+            $stmt->bindValue(':bvid', $brandVoiceId, PDO::PARAM_INT);
+            $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (Throwable $e) {
+            return [];
+        }
     }
 }

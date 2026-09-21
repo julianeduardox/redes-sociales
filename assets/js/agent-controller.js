@@ -129,6 +129,9 @@ const AgentController = {
           <button type="button" class="btn-suggestion-action" style="background: rgba(99,102,241,0.2); color: #a5b4fc;" onclick="event.stopPropagation(); AgentController.selectVariant('engagement')">
             ✏️ Usar
           </button>
+          <button type="button" class="btn-suggestion-action" style="background: rgba(245,158,11,0.2); color: #fbbf24; font-weight: 700;" onclick="event.stopPropagation(); AgentController.saveAsGoldExample('engagement', false)" title="⭐ Guardar como Ejemplo de Oro para educar a Gemini">
+            ⭐ Oro
+          </button>
           <button type="button" class="btn-suggestion-action" style="background: rgba(16,185,129,0.25); color: #34d399; font-weight: 700;" onclick="event.stopPropagation(); AgentController.quickSendVariant('engagement')" title="Publicar directamente con 1 solo clic">
             ⚡ Enviar
           </button>
@@ -149,6 +152,9 @@ const AgentController = {
           <button type="button" class="btn-suggestion-action" style="background: rgba(16,185,129,0.2); color: #6ee7b7;" onclick="event.stopPropagation(); AgentController.selectVariant('conversion')">
             ✏️ Usar
           </button>
+          <button type="button" class="btn-suggestion-action" style="background: rgba(245,158,11,0.2); color: #fbbf24; font-weight: 700;" onclick="event.stopPropagation(); AgentController.saveAsGoldExample('conversion', false)" title="⭐ Guardar como Ejemplo de Oro para educar a Gemini">
+            ⭐ Oro
+          </button>
           <button type="button" class="btn-suggestion-action" style="background: rgba(16,185,129,0.25); color: #34d399; font-weight: 700;" onclick="event.stopPropagation(); AgentController.quickSendVariant('conversion')" title="Publicar directamente con 1 solo clic">
             ⚡ Enviar
           </button>
@@ -168,6 +174,9 @@ const AgentController = {
           </button>
           <button type="button" class="btn-suggestion-action" style="background: rgba(168,85,247,0.2); color: #d8b4fe;" onclick="event.stopPropagation(); AgentController.selectVariant('support')">
             ✏️ Usar
+          </button>
+          <button type="button" class="btn-suggestion-action" style="background: rgba(245,158,11,0.2); color: #fbbf24; font-weight: 700;" onclick="event.stopPropagation(); AgentController.saveAsGoldExample('support', false)" title="⭐ Guardar como Ejemplo de Oro para educar a Gemini">
+            ⭐ Oro
           </button>
           <button type="button" class="btn-suggestion-action" style="background: rgba(16,185,129,0.25); color: #34d399; font-weight: 700;" onclick="event.stopPropagation(); AgentController.quickSendVariant('support')" title="Publicar directamente con 1 solo clic">
             ⚡ Enviar
@@ -299,6 +308,9 @@ const AgentController = {
       btn.innerHTML = `<span>Publicando...</span>`;
     }
 
+    const originalSuggestion = (this.activeReplies && this.activeReplies[this.selectedVariant]) ? this.activeReplies[this.selectedVariant].trim() : '';
+    const wasEdited = !!(originalSuggestion && originalSuggestion !== replyText);
+
     try {
       const response = await App.fetchWithCsrf('api/comments.php', {
         method: 'POST',
@@ -307,14 +319,19 @@ const AgentController = {
           comment_id: parseInt(this.activeComment.id, 10),
           reply_text: replyText,
           variant_type: this.selectedVariant,
-          tone_used: document.getElementById('select-tone')?.value || 'stoic_mentor'
+          tone_used: document.getElementById('select-tone')?.value || 'stoic_mentor',
+          was_edited: wasEdited,
+          original_suggestion: originalSuggestion
         })
       });
 
       const res = await response.json();
 
       if (res.success) {
-        App.showToast('¡Respuesta publicada y conexión comunitaria registrada! 🏛️✨', 'success');
+        const learnMsg = wasEdited 
+          ? '¡Respuesta publicada y estilo corregido aprendido por Gemini! 🧠✨' 
+          : '¡Respuesta aprobada y registrada! Gemini aprendió este éxito. 🏛️✨';
+        App.showToast(learnMsg, 'success');
         await App.loadComments();
         const updated = App.commentsList.find(c => c.id === this.activeComment.id);
         if (updated) {
@@ -587,6 +604,9 @@ const AgentController = {
           <button type="button" class="btn-modal-sugg-action" style="background: rgba(6,182,212,0.18); color: #67e8f9;" onclick="event.stopPropagation(); AgentController.selectModalVariant('engagement')">
             ✏️ Usar
           </button>
+          <button type="button" class="btn-modal-sugg-action" style="background: rgba(245,158,11,0.2); color: #fbbf24; font-weight: 700;" onclick="event.stopPropagation(); AgentController.saveAsGoldExample('engagement', true)" title="⭐ Guardar permanentemente como Ejemplo de Oro para Gemini">
+            ⭐ Oro
+          </button>
           <button type="button" class="btn-modal-sugg-action" style="background: rgba(16,185,129,0.25); color: #34d399; font-weight: 700;" onclick="event.stopPropagation(); AgentController.quickPostModalVariant('engagement')" title="Publicar directamente esta opción con 1 clic">
             ⚡ Enviar (1 Clic)
           </button>
@@ -607,6 +627,9 @@ const AgentController = {
           <button type="button" class="btn-modal-sugg-action" style="background: rgba(16,185,129,0.18); color: #6ee7b7;" onclick="event.stopPropagation(); AgentController.selectModalVariant('conversion')">
             ✏️ Usar
           </button>
+          <button type="button" class="btn-modal-sugg-action" style="background: rgba(245,158,11,0.2); color: #fbbf24; font-weight: 700;" onclick="event.stopPropagation(); AgentController.saveAsGoldExample('conversion', true)" title="⭐ Guardar permanentemente como Ejemplo de Oro para Gemini">
+            ⭐ Oro
+          </button>
           <button type="button" class="btn-modal-sugg-action" style="background: rgba(16,185,129,0.25); color: #34d399; font-weight: 700;" onclick="event.stopPropagation(); AgentController.quickPostModalVariant('conversion')" title="Publicar directamente esta opción con 1 clic">
             ⚡ Enviar (1 Clic)
           </button>
@@ -626,6 +649,9 @@ const AgentController = {
           </button>
           <button type="button" class="btn-modal-sugg-action" style="background: rgba(168,85,247,0.18); color: #d8b4fe;" onclick="event.stopPropagation(); AgentController.selectModalVariant('support')">
             ✏️ Usar
+          </button>
+          <button type="button" class="btn-modal-sugg-action" style="background: rgba(245,158,11,0.2); color: #fbbf24; font-weight: 700;" onclick="event.stopPropagation(); AgentController.saveAsGoldExample('support', true)" title="⭐ Guardar permanentemente como Ejemplo de Oro para Gemini">
+            ⭐ Oro
           </button>
           <button type="button" class="btn-modal-sugg-action" style="background: rgba(16,185,129,0.25); color: #34d399; font-weight: 700;" onclick="event.stopPropagation(); AgentController.quickPostModalVariant('support')" title="Publicar directamente esta opción con 1 clic">
             ⚡ Enviar (1 Clic)
@@ -691,6 +717,9 @@ const AgentController = {
       return;
     }
 
+    const originalSuggestion = (this.modalActiveReplies && this.modalActiveReplies[this.modalSelectedVariant]) ? this.modalActiveReplies[this.modalSelectedVariant].trim() : '';
+    const wasEdited = !!(originalSuggestion && originalSuggestion !== replyText);
+
     const btn = document.getElementById('btn-modal-submit-reply');
     if (btn) {
       btn.disabled = true;
@@ -705,14 +734,19 @@ const AgentController = {
           comment_id: parseInt(this.modalActiveComment.id, 10),
           reply_text: replyText,
           variant_type: this.modalSelectedVariant,
-          tone_used: document.getElementById('modal-select-tone')?.value || 'stoic_mentor'
+          tone_used: document.getElementById('modal-select-tone')?.value || 'stoic_mentor',
+          was_edited: wasEdited,
+          original_suggestion: originalSuggestion
         })
       });
 
       const res = await response.json();
 
       if (res.success) {
-        App.showToast('¡Respuesta publicada y conexión comunitaria registrada! 🏛️✨', 'success');
+        const learnMsg = wasEdited 
+          ? '¡Respuesta publicada y corrección aprendida por Gemini! 🧠✨' 
+          : '¡Respuesta aprobada y publicada! Gemini registró el éxito de este patrón. 🏛️✨';
+        App.showToast(learnMsg, 'success');
         App.closeModal('modal-assistant-replies');
         await App.loadComments();
         
@@ -924,6 +958,43 @@ const AgentController = {
     this.switchModalTab('autopilot');
     App.openModal('modal-assistant-replies');
     return this.startLiveAutopilot();
+  },
+
+  // Save a chosen variant as permanent Gold Example to train Gemini
+  async saveAsGoldExample(variantType, isModal = false) {
+    const comment = isModal ? this.modalActiveComment : this.activeComment;
+    const replies = isModal ? this.modalActiveReplies : this.activeReplies;
+    if (!comment || !replies || !replies[variantType]) {
+      App.showToast('No hay una sugerencia generada para guardar como Ejemplo de Oro.', 'error');
+      return;
+    }
+    const replyText = (replies[variantType] || '').trim();
+    const commentText = (comment.comment_text || '').trim();
+    const commentId = parseInt(comment.id, 10);
+
+    App.showToast('⭐ Guardando como Ejemplo de Oro para Gemini...', 'info');
+
+    try {
+      const response = await App.fetchWithCsrf('api/comments.php', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'save_gold_example',
+          comment_id: commentId,
+          comment_text: commentText,
+          reply_text: replyText,
+          brand_voice_id: comment.brand_voice_id || 1
+        })
+      });
+      const res = await response.json();
+      if (res.success) {
+        App.showToast(res.message || '⭐ ¡Ejemplo de Oro guardado! Gemini lo usará como estándar.', 'success');
+      } else {
+        App.showToast(res.error || 'No se pudo guardar el Ejemplo de Oro.', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      App.showToast('Error de conexión al guardar Ejemplo de Oro.', 'error');
+    }
   },
 
   escapeHtml(str) {

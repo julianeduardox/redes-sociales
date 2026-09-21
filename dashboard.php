@@ -1615,8 +1615,9 @@ $isMetaConnected = ($activeAccountsCount > 0);
           <textarea id="modal-reply-text-input" class="reply-textarea modal-reply-textarea" rows="3" placeholder="Selecciona una de las 3 opciones de arriba o redacta tu respuesta personalizada..."></textarea>
 
           <div class="modal-editor-footer">
-            <div style="font-size: 0.74rem; color: var(--text-dim);">
-              🛡️ Conexión empática y estoica con tu comunidad
+            <div style="font-size: 0.74rem; color: var(--text-dim); display: flex; align-items: center; gap: 6px;">
+              <span style="color: #34d399; font-weight: 700;">🧠 Gemini Learning:</span>
+              <span>Tus aprobaciones y correcciones entrenan su estilo en tiempo real</span>
             </div>
             <div style="display: flex; gap: 10px;">
               <button type="button" class="btn-modal-cancel" onclick="App.closeModal('modal-assistant-replies')">

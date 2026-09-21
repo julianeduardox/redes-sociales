@@ -152,6 +152,41 @@ try {
         exit;
     }
 
+    if ($action === 'record_feedback') {
+        $commentText = Security::sanitizeString($input['comment_text'] ?? '', 1500);
+        $finalReply = Security::sanitizeString($input['final_reply'] ?? '', 2000);
+        $originalSuggestion = Security::sanitizeString($input['original_suggestion'] ?? '', 2000);
+        $wasEdited = !empty($input['was_edited']);
+        $isGold = !empty($input['is_gold_example']);
+        $brandVoiceId = Security::sanitizeInt($input['brand_voice_id'] ?? 1, 1, 1000000, 1);
+        $commentId = Security::sanitizeInt($input['comment_id'] ?? 0, 0, 10000000, null);
+
+        if (empty($commentText) || empty($finalReply)) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => 'comment_text y final_reply son obligatorios']);
+            exit;
+        }
+
+        $recorded = AiAgentService::recordLearningFeedback(
+            $userId,
+            $brandVoiceId,
+            $commentText,
+            $finalReply,
+            $originalSuggestion,
+            $wasEdited,
+            $isGold,
+            $commentId
+        );
+
+        echo json_encode([
+            'success' => $recorded,
+            'message' => $isGold 
+                ? '⭐ ¡Ejemplo de Oro guardado permanentemente! Gemini lo imitará en próximos comentarios.' 
+                : '🧠 Aprendizaje registrado con éxito para Gemini.'
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
     if ($action === 'batch_autopilot') {
         // Rate limit for batch autopilot
         Security::requireRateLimit('ai_batch_autopilot', 10, 60);

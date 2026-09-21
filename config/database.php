@@ -1395,6 +1395,23 @@ class Database {
                     // Admin user 1 gets unlimited agency plan
                     $pdo->exec("UPDATE users SET plan = 'agency', max_accounts = 999 WHERE id = 1 OR role = 'admin' OR email = 'julianeduardox@gmail.com'");
                 }
+
+                // AI Continuous Learning & Feedback Loop table
+                $pdo->exec("
+                    CREATE TABLE IF NOT EXISTS ai_learning_feedback (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER NOT NULL,
+                        brand_voice_id INTEGER DEFAULT 1,
+                        comment_id INTEGER NULL,
+                        comment_text TEXT NOT NULL,
+                        original_suggestion TEXT NULL,
+                        final_reply TEXT NOT NULL,
+                        was_edited INTEGER DEFAULT 0,
+                        is_gold_example INTEGER DEFAULT 0,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_ai_learning_user ON ai_learning_feedback(user_id, brand_voice_id, id DESC);
+                ");
             } catch (Throwable $e) {
                 error_log("Users AI and Plan columns migration notice: " . $e->getMessage());
             }
