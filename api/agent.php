@@ -13,6 +13,9 @@ Auth::requireAuth(true);
 
 $userId = Auth::id();
 
+// Release session lock immediately so parallel background requests never hang the UI
+Auth::releaseSessionLock();
+
 $pdo = Database::getConnection();
 
 try {

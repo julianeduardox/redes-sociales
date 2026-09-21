@@ -21,6 +21,9 @@ if (!Auth::isAdmin()) {
     exit;
 }
 
+// Release session lock so admin queries never block or get blocked by other user operations
+Auth::releaseSessionLock();
+
 $pdo = Database::getConnection();
 $method = $_SERVER['REQUEST_METHOD'];
 

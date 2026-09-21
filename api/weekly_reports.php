@@ -12,6 +12,7 @@ Security::applySecurityHeaders(true);
 Auth::requireAuth(true);
 
 $userId = Auth::id();
+Auth::releaseSessionLock();
 $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
 
 try {

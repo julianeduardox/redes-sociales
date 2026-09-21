@@ -173,14 +173,31 @@ class Database {
                 }
             }
 
-            // Ensure baseline tables exist
-            self::initializeSchema(self::$pdo);
+            // Concurrency Optimization: Cache schema state with PRAGMA user_version to skip redundant DDL checks on every request
+            $targetSchemaVersion = 20260922;
+            $currentSchemaVersion = 0;
+            if ($driver === 'sqlite') {
+                try {
+                    $currentSchemaVersion = (int)self::$pdo->query("PRAGMA user_version")->fetchColumn();
+                } catch (Throwable $e) {}
+            }
 
-            // Auto-migrate tables for multi-tenant and Meta Insights
-            self::migrateMultiTenantSchema(self::$pdo);
+            if ($currentSchemaVersion < $targetSchemaVersion) {
+                // Ensure baseline tables exist
+                self::initializeSchema(self::$pdo);
 
-            // Ensure baseline seed data exists
-            self::ensureBaselineData(self::$pdo);
+                // Auto-migrate tables for multi-tenant and Meta Insights
+                self::migrateMultiTenantSchema(self::$pdo);
+
+                // Ensure baseline seed data exists
+                self::ensureBaselineData(self::$pdo);
+
+                if ($driver === 'sqlite') {
+                    try {
+                        self::$pdo->exec("PRAGMA user_version = {$targetSchemaVersion};");
+                    } catch (Throwable $e) {}
+                }
+            }
         }
         return self::$pdo;
     }

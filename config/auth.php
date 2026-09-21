@@ -159,6 +159,16 @@ class Auth {
     }
 
     /**
+     * Release PHP session file lock for non-blocking concurrent asynchronous requests.
+     * Keeps $_SESSION data readable in memory while allowing other parallel requests to run immediately.
+     */
+    public static function releaseSessionLock(): void {
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+    }
+
+    /**
      * Authenticate user with rate limiting and session fixation defense
      */
     public static function login(string $email, string $password): array {

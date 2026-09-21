@@ -3186,8 +3186,32 @@ const App = {
     if (manualSubEl) manualSubEl.textContent = `${report.manual_replies_count ?? report.manual_count ?? 0} manuales`;
     
     if (aiTextEl) {
-      aiTextEl.textContent = report.ai_insights_summary || report.ai_insights || 'Resumen no disponible.';
+      const rawText = report.ai_insights_summary || report.ai_insights || 'Resumen no disponible.';
+      aiTextEl.innerHTML = this.formatAiMarkdown(rawText);
     }
+  },
+
+  formatAiMarkdown(text) {
+    if (!text) return '';
+    let safe = text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+
+    // Bold tags
+    safe = safe.replace(/\*\*(.*?)\*\*/g, '<strong style="color: #fff; font-weight: 700;">$1</strong>');
+    
+    // Numbered sections like 1. Diagnóstico...
+    safe = safe.replace(/(?:^|<br>)(\d+\.\s+[^:<br>]+:)/g, '<div style="margin-top: 14px; margin-bottom: 4px; font-weight: 800; color: #a5b4fc; font-size: 0.94rem;">$1</div>');
+    
+    // Bullet points
+    safe = safe.replace(/(?:^|<br>)[-*]\s+([^<br>]+)/g, '<div style="padding-left: 16px; margin-bottom: 4px; color: #cbd5e1;">• $1</div>');
+    
+    // Double line breaks
+    safe = safe.replace(/\n\n+/g, '<div style="height: 10px;"></div>');
+    safe = safe.replace(/\n/g, '<br>');
+    
+    return safe;
   },
 
   switchWeeklyReportModalTab(tab) {
