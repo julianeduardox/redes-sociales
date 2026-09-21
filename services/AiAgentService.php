@@ -878,13 +878,15 @@ class AiAgentService {
 
         // Try OpenRouter API first if configured and user has remaining quota
         if ($aiProvider === 'openrouter' && !empty($openrouterKey) && !$isTokensExhausted) {
+            $analysis = self::analyzeComment($commentText, $postCaption, 0, $authorName);
             $openrouterResult = self::callOpenRouterApi(
                 $authorName, $commentText, $platform, $postCaption, 
                 $brandName, $personaName, $brandIndustry, $brandTone, $brandDescription, $language,
                 $warmthLevel, $depthLevel, $energyLevel,
                 $closingQuestionRule, $emojiStyle, $keyPhrases, $forbiddenPhrases, $fewShotExamples,
                 $openrouterKey, $openrouterModel,
-                $targetUserId, $pdo
+                $targetUserId, $pdo,
+                $postAuthor, $lengthCategory, $recentThreadReplies, $analysis
             );
             if ($openrouterResult !== null && !empty($openrouterResult['engagement'])) {
                 return self::sanitizeRepliesWithForbidden($openrouterResult, $forbiddenPhrases);
@@ -2089,25 +2091,28 @@ class AiAgentService {
     }
 
     /**
-     * OpenRouter API Dynamic Integration (Supports Claude 3.5 Sonnet, DeepSeek V3/R1, GPT-4o, Llama 3.3, etc.)
+     * OpenRouter API Dynamic Integration (Supports Gemini 2.5 Flash, Claude Sonnet 4.5, DeepSeek V3, GPT-4o Mini, etc.)
+     * Enriched with Heuristic Brain Modules 1-5 (Proportionality, Author Context, Clean Vocatives, Thread Memory, Intent Guidance)
      */
     private static function callOpenRouterApi(
         string $authorName, string $commentText, string $platform, string $postCaption,
         string $brandName, string $personaName, string $brandIndustry, string $brandTone, string $brandDescription, string $language,
         int $warmthLevel, int $depthLevel, int $energyLevel,
         string $closingQuestionRule, string $emojiStyle, array $keyPhrases, array $forbiddenPhrases, array $fewShotExamples,
-        string $apiKey, string $model = 'anthropic/claude-3.5-sonnet',
-        int $targetUserId = 0, ?PDO $pdo = null
+        string $apiKey, string $model = 'google/gemini-2.5-flash',
+        int $targetUserId = 0, ?PDO $pdo = null,
+        string $postAuthor = 'general', string $lengthCategory = 'medium', array $recentThreadReplies = [], ?array $commentAnalysis = null
     ): ?array {
         $prompt = self::buildUniversalPrompt(
             $authorName, $commentText, $platform, $postCaption,
             $brandName, $personaName, $brandIndustry, $brandTone, $brandDescription, $language,
             $warmthLevel, $depthLevel, $energyLevel,
-            $closingQuestionRule, $emojiStyle, $keyPhrases, $forbiddenPhrases, $fewShotExamples
+            $closingQuestionRule, $emojiStyle, $keyPhrases, $forbiddenPhrases, $fewShotExamples,
+            $postAuthor, $lengthCategory, $recentThreadReplies, $commentAnalysis
         );
 
         $url = 'https://openrouter.ai/api/v1/chat/completions';
-        $selectedModel = !empty($model) ? trim($model) : 'anthropic/claude-sonnet-4.5';
+        $selectedModel = !empty($model) ? trim($model) : 'google/gemini-2.5-flash';
         if ($selectedModel === 'anthropic/claude-3.5-sonnet' || $selectedModel === 'anthropic/claude-3-5-sonnet') {
             $selectedModel = 'anthropic/claude-sonnet-4.5';
         }
@@ -2189,26 +2194,95 @@ class AiAgentService {
 
     /**
      * Build Universal Dynamic Prompt for OpenRouter & Local Engine
+     * Transmits full heuristic wisdom (Modules 1-5) to Gemini / LLM:
+     * - Module 1: Proportionality and Length Enforcement
+     * - Module 2: Stoic & Cultural Post Author Detection
+     * - Module 3: Intent Classification & Tactical Guidance
+     * - Module 4: Clean First Name Extraction & Anti-Bot Sanitization
+     * - Module 5: Thread Memory & Deduplication against recent post replies
      */
     private static function buildUniversalPrompt(
         string $authorName, string $commentText, string $platform, string $postCaption,
         string $brandName, string $personaName, string $brandIndustry, string $brandTone, string $brandDescription, string $language,
         int $warmthLevel, int $depthLevel, int $energyLevel,
-        string $closingQuestionRule, string $emojiStyle, array $keyPhrases, array $forbiddenPhrases, array $fewShotExamples
+        string $closingQuestionRule, string $emojiStyle, array $keyPhrases, array $forbiddenPhrases, array $fewShotExamples,
+        string $postAuthor = 'general', string $lengthCategory = 'medium', array $recentThreadReplies = [], ?array $commentAnalysis = null
     ): string {
-        $firstName = explode(' ', trim($authorName))[0] ?: 'amigo';
-        $keyPhrasesText = !empty($keyPhrases) ? implode(', ', $keyPhrases) : 'Atención de calidad, Soluciones personalizadas';
+        // Module 4: Clean Name Extraction & Bot Protection
+        $isGeneric = self::isGenericAuthorName($authorName);
+        $cleanFirstName = $isGeneric ? '' : self::extractCleanFirstName($authorName);
+
+        $nameInstruction = "";
+        if (!empty($cleanFirstName)) {
+            $nameInstruction = "- El nombre de pila verificado del seguidor es \"$cleanFirstName\". Úsalo de forma natural y orgánica (puede ser al inicio o integrado fluidamente en la oración). NUNCA inventes nombres, ni uses caracteres raros como '@' o números de perfil.";
+        } else {
+            $nameInstruction = "- El perfil del seguidor no tiene un nombre personal reconocible (ej. cuenta comercial o pseudónimo numérico). NO inventes ningún nombre ni uses su handle de usuario. Dirígete a él de forma directa y cercana sin vocativo artificial.";
+        }
+
+        // Module 2: Philosophical & Cultural Post Context
+        $philosophyContext = "";
+        if ($postAuthor === 'marco_aurelio') {
+            $philosophyContext = "La publicación cita o aborda el pensamiento del emperador filósofo MARCO AURELIO (Meditaciones: autodominio, razón rectora, serenidad ante el caos externo, cumplimiento del deber con humildad y sin quejarse). Conecta orgánicamente con estas virtudes.";
+        } elseif ($postAuthor === 'epicteto') {
+            $philosophyContext = "La publicación cita o aborda la filosofía de EPICTETO (Enquiridion / Discursos: la Dicotomía del Control — separar con claridad quirúrgica lo que depende 100% de uno de lo incontrolable, libertad interior y templanza). Conecta con esta distinción fundamental.";
+        } elseif ($postAuthor === 'seneca') {
+            $philosophyContext = "La publicación cita o aborda el pensamiento de SÉNECA (Cartas a Lucilio / De la brevedad de la vida: el valor del tiempo presente, la serenidad ante la adversidad, la superación de la ansiedad y el dominio de las pasiones).";
+        } elseif ($postAuthor === 'dostoievski') {
+            $philosophyContext = "La publicación cita o aborda a FIÓDOR DOSTOYEVSKI (la forja del carácter en medio de la adversidad humana, la resiliencia moral y la fortaleza interior ante momentos oscuros).";
+        } else {
+            $philosophyContext = "La publicación aborda principios estoicos universales y desarrollo de carácter: autodominio, fortaleza mental, forja de hábitos inquebrantables, disciplina y templanza práctica.";
+        }
+
+        // Module 1: Proportionality & Length Directives
+        $proportionalityDirective = "";
+        if ($lengthCategory === 'short') {
+            $proportionalityDirective = "PROPORCIONALIDAD ESTRICTA: El comentario del seguidor es CORTO o de reacción (emojis / pocas palabras). Tu respuesta DEBE ser concisa, enérgica y directa (MÁXIMO 1 o 2 frases breves, entre 10 y 25 palabras). NUNCA redactes un párrafo largo o abrumador a un comentario breve.";
+        } elseif ($lengthCategory === 'long') {
+            $proportionalityDirective = "PROPORCIONALIDAD ESTRICTA: El comentario del seguidor es EXTENSO o reflexivo (>80 caracteres). Tu respuesta DEBE ser profunda, humana y estructurada (2 a 3 frases completas de alto valor), validando su situación con empatía y aportando una perspectiva práctica memorable.";
+        } else {
+            $proportionalityDirective = "PROPORCIONALIDAD ESTRICTA: El comentario tiene extensión MEDIA. Tu respuesta debe tener entre 1 y 2 frases equilibradas, claras y conversacionales (entre 20 y 45 palabras).";
+        }
+
+        // Module 3: Intent Tactical Guidance
+        $intent = $commentAnalysis['intent'] ?? 'general_conversation';
+        $commentLower = mb_strtolower($commentText, 'UTF-8');
+        $intentGuidance = "";
+        if (str_starts_with($intent, 'lead_') || $intent === 'price_lead' || str_contains($commentLower, 'precio') || str_contains($commentLower, 'costo') || str_contains($commentLower, 'mentoría') || str_contains($commentLower, 'mentoria') || str_contains($commentLower, 'curso')) {
+            $intentGuidance = "DIRECTIVA DE INTENCIÓN [Interés Comercial / Precio / Mentoría]: Destaca el valor transformador del programa o mentoría e invita amablemente a revisar el enlace en la bio o a enviar un DM para coordinar detalles. NUNCA inventes precios o cifras ficticias.";
+        } elseif ($intent === 'venting_resilience' || str_contains($commentLower, 'ansiedad') || str_contains($commentLower, 'desmorona') || str_contains($commentLower, 'cuesta') || str_contains($commentLower, 'difícil') || str_contains($commentLower, 'dificil') || str_contains($commentLower, 'no puedo')) {
+            $intentGuidance = "DIRECTIVA DE INTENCIÓN [Desahogo Emocional / Búsqueda de Resiliencia]: El seguidor comparte una dificultad, miedo o frustración real. Aplica profunda empatía humana: valida su desafío con respeto fraternal y enfócalo en lo que sí está bajo su control (Dicotomía del Control). NUNCA le vendas agresivamente ni uses clichés superficiales de autoayuda.";
+        } elseif ($intent === 'support' || $intent === 'support_request') {
+            $intentGuidance = "DIRECTIVA DE INTENCIÓN [Consulta de Soporte / Duda Técnica]: Resuelve con precisión y cortesía. Si requiere verificación interna o acceso de cuenta, oriéntalo a escribir por DM.";
+        } elseif ($intent === 'praise_positive' || $intent === 'gratitude_community') {
+            $intentGuidance = "DIRECTIVA DE INTENCIÓN [Agradecimiento / Comunidad]: Agradece con humildad fraternal y remata con una pregunta o reflexión que continúe enriqueciendo la comunidad.";
+        }
+
+        // Module 5: Thread Memory & Deduplication
+        $threadMemoryBlock = "";
+        if (!empty($recentThreadReplies)) {
+            $threadMemoryBlock = "MEMORIA DE HILO RECIENTE (Respuestas ya publicadas a otros seguidores en este mismo post):\n";
+            foreach (array_slice($recentThreadReplies, 0, 3) as $idx => $r) {
+                $snippet = mb_substr(trim($r), 0, 90);
+                $threadMemoryBlock .= "- Ya usada #" . ($idx + 1) . ": \"$snippet...\"\n";
+            }
+            $threadMemoryBlock .= "DIRECTIVA ANTI-DUPLICACIÓN: Varía el saludo, los verbos y las preguntas de cierre. NUNCA repitas las mismas fórmulas de las respuestas recientes mostradas arriba.\n\n";
+        }
+
+        $keyPhrasesText = !empty($keyPhrases) ? implode(', ', $keyPhrases) : 'Autodominio, Fortaleza mental, Disciplina diaria, Comunidad oficial';
         $forbiddenText = !empty($forbiddenPhrases) ? implode(', ', $forbiddenPhrases) : 'Estimado cliente, Compra ya, Oferta engañosa, Somos un bot';
 
         $fewShotText = '';
         if (!empty($fewShotExamples)) {
-            $fewShotText .= "EJEMPLOS DE ORO DE LA MARCA (Imita este estilo exacto):\n";
+            $fewShotText .= "EJEMPLOS DE ORO DE LA MARCA (Imita este estilo exacto y nivel de naturalidad):\n";
             foreach (array_slice($fewShotExamples, 0, 4) as $idx => $ex) {
                 $c = $ex['comment'] ?? '';
                 $r = $ex['reply'] ?? '';
                 $fewShotText .= "Ejemplo #" . ($idx + 1) . ":\n- Comentario de Seguidor: \"$c\"\n- Respuesta Maestra Ideal: \"$r\"\n\n";
             }
         }
+
+        $cleanCommentText = addslashes($commentText);
+        $cleanPostCaption = addslashes($postCaption);
 
         return <<<PROMPT
 Eres "$personaName", el estratega oficial de comunicación y gestor de comunidad de la marca "$brandName" en $platform.
@@ -2224,6 +2298,18 @@ CALIBRACIÓN DE IDENTIDAD:
 - Regla de Pregunta de Cierre: $closingQuestionRule (Si es 'always', remata con una pregunta relevante para fomentar la conversación o cerrar ventas).
 - Estilo de Emojis: $emojiStyle.
 
+TRATAMIENTO DEL NOMBRE DEL SEGUIDOR:
+$nameInstruction
+
+FILOSOFÍA Y CONTEXTO CULTURAL DEL POST:
+$philosophyContext
+
+PAUTA DE PROPORCIÓN Y LONGITUD:
+$proportionalityDirective
+
+$intentGuidance
+
+$threadMemoryBlock
 CONCEPTOS CLAVE A DESTACAR: $keyPhrasesText.
 FRASES TOTALMENTE PROHIBIDAS (NUNCA LAS USES): $forbiddenText.
 
@@ -2231,21 +2317,21 @@ REGLAS ESTRICTAS DE VERACIDAD Y ANTI-ALUCINACIÓN (OBLIGATORIAS):
 1. CERO FALSA ESCASEZ Y CERO INVENCIÓN: NUNCA inventes ofertas inexistentes, porcentajes de descuento no indicados ni cupos limitados ficticios (ej. "quedan 10 cupos").
 2. CERO ACCIONES NO REALIZADAS: NUNCA afirmes haber enviado un mensaje directo (DM), correo o realizado acciones externas ("te acabo de enviar un DM", "ya te escribí"). Si corresponde, invita cortésmente al seguidor a escribir por DM o a consultar el enlace en la bio.
 3. MANEJO DE DATOS FALTANTES: Si el seguidor pregunta por especificaciones internas, precios o accesos no descritos en el contexto, responde honestamente con los datos generales conocidos y oriéntalo amablemente al enlace de la bio o a enviar un DM para recibir asesoría personalizada.
-4. PREGUNTAS CONCEPTUALES Y FILOSÓFICAS: Si el seguidor consulta sobre un concepto, metodología, filosofía estoica (ej. Dicotomía del control) o pide un consejo, responde con fundamento, claridad y valor práctico. NUNCA desvíes preguntas conceptuales a soporte técnico de pedidos o reclamos.
-5. COMENTARIOS DE SOLO EMOJIS O REACCIONES: Si el comentario del seguidor consiste en emojis o reacciones (ej. 👏👏, 🔥, ❤️, 💪, 🙌), responde de forma rápida, agradecida y cercana utilizando también emojis expresivos y coherentes con el tono de la marca, para maximizar el engagement y responder a la mayor cantidad posible de interacciones.
+4. PREGUNTAS CONCEPTUALES Y FILOSÓFICAS: Si el seguidor consulta sobre un concepto, metodología o filosofía estoica (ej. Dicotomía del control), responde con fundamento, claridad y valor práctico. NUNCA desvíes preguntas conceptuales a soporte técnico de pedidos o reclamos.
+5. COMENTARIOS DE SOLO EMOJIS O REACCIONES: Si el comentario del seguidor consiste en emojis o reacciones (ej. 👏👏, 🔥, ❤️, 💪, 🙌), responde de forma rápida, agradecida y cercana utilizando también emojis expresivos y coherentes con el tono de la marca.
 
 $fewShotText
 
 CONTEXTO ACTUAL:
-- Publicación del feed: "$postCaption".
-- Comentario del seguidor ($firstName): "$commentText".
+- Publicación del feed: "$cleanPostCaption".
+- Comentario del seguidor: "$cleanCommentText".
 
-Genera 3 opciones de respuesta saludando a $firstName sin sonar robótico ni usar frases prohibidas:
+Genera 3 opciones de respuesta adaptadas a las directrices anteriores sin sonar robótico ni usar frases prohibidas:
 1. "engagement": [🤝 Conexión & Empatía]: Cálida, humana, conversacional y cercana.
 2. "conversion": [🎯 Conversión & Venta / CTA]: Proactiva, enfocada en valor y orientando a la acción (DM, link, compra).
 3. "support": [💡 Autoridad & Solución]: Informativa, clara y profesional, resolviendo dudas.
 
-Responde únicamente en formato JSON:
+Responde únicamente en formato JSON válido:
 {
   "engagement": "texto de respuesta 1",
   "conversion": "texto de respuesta 2",
