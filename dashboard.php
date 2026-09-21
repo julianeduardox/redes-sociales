@@ -1642,10 +1642,21 @@ $isMetaConnected = ($activeAccountsCount > 0);
                 <p>La IA analiza y responde en tiempo real a los comentarios de mayor impacto comunitario.</p>
               </div>
             </div>
-            <div class="autopilot-header-btn-wrap">
+            <div class="autopilot-header-btn-wrap" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <label for="autopilot-delay-select" style="font-size: 0.74rem; color: var(--text-dim); margin-bottom: 0; white-space: nowrap;">⏳ Cadencia:</label>
+                <select id="autopilot-delay-select" style="padding: 7px 10px; font-size: 0.76rem; border-radius: 8px; background: rgba(15,23,42,0.7); color: #34d399; border: 1px solid rgba(52,211,153,0.3); font-weight: 600;">
+                  <option value="natural" selected>🧘 Humano Natural (4-7s aleatorio • Anti-Bot)</option>
+                  <option value="safe">🛡️ Máxima Seguridad (8-14s • Cuentas Nuevas)</option>
+                  <option value="fast">⚡ Rápido (2-3s • Pruebas)</option>
+                </select>
+              </div>
               <button type="button" class="btn-run-autopilot-live" id="btn-run-autopilot-live" onclick="AgentController.startLiveAutopilot()">
                 <span class="btn-icon">⚡</span>
                 <span id="btn-run-autopilot-live-text">Ejecutar Auto-Responder Ahora</span>
+              </button>
+              <button type="button" class="btn-cancel" id="btn-pause-autopilot-live" style="display: none; padding: 9px 16px; font-size: 0.8rem; font-weight: 700; background: rgba(239, 68, 68, 0.18); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 8px; cursor: pointer;" onclick="AgentController.pauseLiveAutopilot()">
+                <span>⏸️ Pausar</span>
               </button>
             </div>
           </div>
@@ -1665,7 +1676,10 @@ $isMetaConnected = ($activeAccountsCount > 0);
           <div class="autopilot-live-stream-box">
             <div class="autopilot-stream-title-row">
               <h5>📡 Registro de Respuestas Forjadas por la IA en Tiempo Real:</h5>
-              <span class="autopilot-stream-badge" id="autopilot-pending-count-badge">Calculando pendientes...</span>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <button type="button" onclick="AgentController.resetFailedComments()" style="background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; font-size: 0.72rem; padding: 4px 8px; border-radius: 6px; cursor: pointer;" title="Restablece comentarios que hayan fallado para volver a procesarlos">🔄 Reintentar Fallidos</button>
+                <span class="autopilot-stream-badge" id="autopilot-pending-count-badge">Calculando pendientes...</span>
+              </div>
             </div>
 
             <div class="autopilot-stream-list" id="autopilot-stream-list">

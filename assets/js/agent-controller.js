@@ -800,156 +800,265 @@ const AgentController = {
   updateAutopilotPendingBadge() {
     const badge = document.getElementById('autopilot-pending-count-badge');
     if (!badge) return;
-    const pending = App.commentsList ? App.commentsList.filter(c => c.status === 'pending') : [];
+    const pending = App.commentsList ? App.commentsList.filter(c => c.status === 'pending' || c.status === 'failed') : [];
     const highPending = pending.filter(c => (c.is_highlighted == 1 || c.highlight_score >= 80));
     badge.textContent = `${highPending.length} de alto impacto listos (${pending.length} pendientes en total)`;
   },
 
-  // Live Autopilot Execution with Real-Time Step-by-Step UI
+  autopilotPaused: false,
+
+  pauseLiveAutopilot() {
+    this.autopilotPaused = true;
+    const progressStatus = document.getElementById('autopilot-progress-status');
+    if (progressStatus) progressStatus.textContent = '⏸️ Pausando el Auto-Responder tras el comentario actual...';
+    App.showToast('Pausa solicitada. Se detendrá al terminar el comentario actual.', 'info');
+  },
+
+  async resetFailedComments() {
+    if (!confirm('¿Deseas restablecer los comentarios fallidos a pendientes para volver a procesarlos con el Auto-Responder?')) return;
+    try {
+      const res = await App.fetchWithCsrf('api/agent.php', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'reset_failed_comments' })
+      }).then(r => r.json());
+      if (res.success) {
+        App.showToast(res.message, 'success');
+        await App.loadComments();
+        this.updateAutopilotPendingBadge();
+      } else {
+        App.showToast(res.error || 'Error al restablecer comentarios', 'error');
+      }
+    } catch (e) {
+      App.showToast('Error de conexión al restablecer comentarios', 'error');
+    }
+  },
+
+  // Live Autopilot Execution with Real-Time Step-by-Step UI & Anti-Bot Cadence
   async startLiveAutopilot() {
     const btn = document.getElementById('btn-run-autopilot-live');
     const btnText = document.getElementById('btn-run-autopilot-live-text');
+    const btnPause = document.getElementById('btn-pause-autopilot-live');
     const progressContainer = document.getElementById('autopilot-progress-container');
     const progressBar = document.getElementById('autopilot-progress-bar');
     const progressStatus = document.getElementById('autopilot-progress-status');
     const progressPercent = document.getElementById('autopilot-progress-percent');
     const streamList = document.getElementById('autopilot-stream-list');
 
+    this.autopilotPaused = false;
+
     if (btn) btn.disabled = true;
-    if (btnText) btnText.textContent = 'Procesando con IA...';
+    if (btnText) btnText.textContent = 'Iniciando Piloto...';
+    if (btnPause) btnPause.style.display = 'inline-flex';
     if (progressContainer) progressContainer.style.display = 'block';
-    if (progressBar) progressBar.style.width = '20%';
-    if (progressPercent) progressPercent.textContent = '20%';
-    if (progressStatus) progressStatus.textContent = '⚡ Analizando intención, score y generando respuestas estoicas...';
+    if (progressBar) progressBar.style.width = '5%';
+    if (progressPercent) progressPercent.textContent = '5%';
+    if (progressStatus) progressStatus.textContent = '🔍 Obteniendo cola de comentarios pendientes para Gemini...';
 
     try {
-      const response = await App.fetchWithCsrf('api/agent.php', {
+      // 1. Fetch queue item by item
+      const qRes = await App.fetchWithCsrf('api/agent.php', {
         method: 'POST',
-        body: JSON.stringify({ action: 'batch_autopilot' })
-      });
-      const res = await response.json();
+        body: JSON.stringify({ action: 'get_autopilot_queue', include_failed: true })
+      }).then(r => r.json());
 
-      if (!res.success) {
-        App.showToast(`Error: ${res.error || 'No se pudo procesar el auto-responder'}`, 'error');
-        if (progressStatus) progressStatus.textContent = '❌ Error durante la ejecución';
+      if (!qRes.success) {
+        App.showToast(`Error al obtener cola: ${qRes.error || 'Error de conexión'}`, 'error');
+        if (progressStatus) progressStatus.textContent = '❌ Error al consultar cola de comentarios';
         return;
       }
 
-      const items = res.items || [];
-      if (items.length === 0) {
+      const queue = qRes.queue || [];
+      if (queue.length === 0) {
         if (progressBar) progressBar.style.width = '100%';
         if (progressPercent) progressPercent.textContent = '100%';
-        if (progressStatus) progressStatus.textContent = '✅ Todos los comentarios con score alto ya están respondidos';
+        if (progressStatus) progressStatus.textContent = '✅ Todos los comentarios ya han sido procesados.';
         if (streamList) {
           streamList.innerHTML = `
             <div class="autopilot-empty-state">
               <span style="font-size: 2rem;">✨</span>
               <p style="font-weight: 700; color: #fff; margin-top: 6px;">Todo al día</p>
-              <p style="font-size: 0.78rem; color: var(--text-muted);">No hay comentarios pendientes con Score alto por responder.</p>
+              <p style="font-size: 0.78rem; color: var(--text-muted);">No hay comentarios pendientes por responder en este momento.</p>
             </div>
           `;
         }
-        App.showToast('No hay comentarios pendientes con Score alto para responder automáticamente.', 'success');
+        App.showToast('No hay comentarios pendientes para responder automáticamente.', 'success');
         return;
       }
 
-      // Animate live stream item by item
       if (streamList) streamList.innerHTML = '';
 
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        const percent = Math.round(((i + 1) / items.length) * 100);
-        if (progressBar) progressBar.style.width = `${percent}%`;
-        if (progressPercent) progressPercent.textContent = `${percent}%`;
-        
-        const cardEl = document.createElement('div');
+      let repliedCount = 0;
+      let failedCount = 0;
+      let spamCount = 0;
+      let ignoredCount = 0;
 
-        if (item.action === 'marked_spam') {
-          if (progressStatus) progressStatus.textContent = `🚫 Detectado Spam/Inglés en @${item.author} (${i + 1}/${items.length})...`;
+      // 2. Iterate comment by comment (Zero timeout, real-time live feed)
+      for (let i = 0; i < queue.length; i++) {
+        if (this.autopilotPaused) {
+          if (progressStatus) progressStatus.textContent = `⏸️ Piloto Automático pausado (${i}/${queue.length} procesados).`;
+          App.showToast(`Auto-Responder pausado. Se procesaron ${i} comentarios.`, 'info');
+          break;
+        }
+
+        const comment = queue[i];
+        const currentPercent = Math.round(((i) / queue.length) * 100);
+        if (progressBar) progressBar.style.width = `${Math.max(5, currentPercent)}%`;
+        if (progressPercent) progressPercent.textContent = `${Math.max(5, currentPercent)}%`;
+        if (progressStatus) progressStatus.textContent = `⚡ [${i + 1}/${queue.length}] Gemini analizando y respondiendo a @${this.escapeHtml(comment.author_name)}...`;
+
+        let itemResult = null;
+        try {
+          const singleRes = await App.fetchWithCsrf('api/agent.php', {
+            method: 'POST',
+            body: JSON.stringify({
+              action: 'autopilot_single_comment',
+              comment_id: parseInt(comment.id, 10),
+              reply_index: i
+            })
+          }).then(r => r.json());
+
+          if (singleRes.success && singleRes.item) {
+            itemResult = singleRes.item;
+          } else {
+            itemResult = {
+              comment_id: comment.id,
+              author: comment.author_name,
+              action: 'failed',
+              reply: 'No se pudo generar respuesta',
+              status: 'failed',
+              error: singleRes.error || 'Error desconocido'
+            };
+          }
+        } catch (itemErr) {
+          console.error(itemErr);
+          itemResult = {
+            comment_id: comment.id,
+            author: comment.author_name,
+            action: 'failed',
+            reply: 'Error de conexión puntual',
+            status: 'failed',
+            error: 'Fallo temporal de conexión'
+          };
+        }
+
+        // Render card
+        const cardEl = document.createElement('div');
+        if (itemResult.action === 'marked_spam') {
+          spamCount++;
           cardEl.className = 'autopilot-live-card spam';
           cardEl.innerHTML = `
             <div class="autopilot-live-card-header">
               <div class="autopilot-live-author">
                 <span class="autopilot-live-avatar">🚫</span>
-                <strong>@${this.escapeHtml(item.author)}</strong>
-                <span class="autopilot-variant-tag spam">SPAM / INGLÉS</span>
+                <strong>@${this.escapeHtml(itemResult.author)}</strong>
+                <span class="autopilot-variant-tag spam">SPAM / ENLACE</span>
               </div>
               <span class="autopilot-status-spam">⚠️ Por Revisar</span>
             </div>
             <div class="autopilot-live-reply-quote spam">
-              ${this.escapeHtml(item.reason || 'Comentario en idioma extranjero o enlace detectado. Guardado para revisión.')}
+              ${this.escapeHtml(itemResult.reason || 'Comentario sospechoso marcado para revisión.')}
             </div>
           `;
-        } else if (item.action === 'ignored_sticker') {
-          if (progressStatus) progressStatus.textContent = `🎨 Evaluando @${item.author} (${i + 1}/${items.length})...`;
+        } else if (itemResult.action === 'ignored_sticker') {
+          ignoredCount++;
           cardEl.className = 'autopilot-live-card sticker';
           cardEl.innerHTML = `
             <div class="autopilot-live-card-header">
               <div class="autopilot-live-author">
                 <span class="autopilot-live-avatar">🎨</span>
-                <strong>@${this.escapeHtml(item.author)}</strong>
+                <strong>@${this.escapeHtml(itemResult.author)}</strong>
                 <span class="autopilot-variant-tag sticker">STICKER / EMOJIS</span>
               </div>
               <span class="autopilot-status-ignored">Omitido</span>
             </div>
             <div class="autopilot-live-reply-quote sticker">
-              ${this.escapeHtml(item.reason || 'Solo emojis/stickers. Omitido para no saturar al seguidor.')}
+              ${this.escapeHtml(itemResult.reason || 'Solo emojis. Omitido para no saturar al seguidor.')}
             </div>
           `;
-        } else if (item.action === 'failed' || item.is_posted === 0) {
-          if (progressStatus) progressStatus.textContent = `⚠️ Falló publicación para @${item.author} (${i + 1}/${items.length})...`;
+        } else if (itemResult.action === 'failed' || itemResult.is_posted === 0) {
+          failedCount++;
           cardEl.className = 'autopilot-live-card failed';
           cardEl.style.borderLeft = '3px solid #ef4444';
+          const isExp = itemResult.is_token_expired ? '⚠️ Token de Meta Expirado' : '⚠️ Falló Meta';
           cardEl.innerHTML = `
             <div class="autopilot-live-card-header">
               <div class="autopilot-live-author">
                 <span class="autopilot-live-avatar">⚠️</span>
-                <strong>@${this.escapeHtml(item.author)}</strong>
-                <span class="autopilot-variant-tag" style="background: rgba(239, 68, 68, 0.2); color: #f87171;">FALLÓ META</span>
+                <strong>@${this.escapeHtml(itemResult.author)}</strong>
+                <span class="autopilot-variant-tag" style="background: rgba(239, 68, 68, 0.2); color: #f87171;">${isExp}</span>
               </div>
-              <span class="autopilot-status-failed" style="color: #f87171; font-weight: 700; font-size: 0.78rem;">⚠️ Token Expirado</span>
+              <span class="autopilot-status-failed" style="color: #f87171; font-weight: 700; font-size: 0.78rem;">Fallo en Meta</span>
             </div>
             <div class="autopilot-live-reply-quote" style="border-left-color: #ef4444;">
-              "${this.escapeHtml(item.reply)}"
+              "${this.escapeHtml(itemResult.reply || '')}"
             </div>
-            <div style="font-size: 0.74rem; color: #fca5a5; margin-top: 4px;">ℹ️ ${this.escapeHtml(item.error || 'Fallo de conexión o token de Meta')}</div>
+            <div style="font-size: 0.74rem; color: #fca5a5; margin-top: 4px;">ℹ️ ${this.escapeHtml(itemResult.error || 'Token de Meta expirado. Renueva en Configuración.')}</div>
           `;
         } else {
-          if (progressStatus) progressStatus.textContent = `⚡ Publicando respuesta para @${item.author} (${i + 1}/${items.length})...`;
+          repliedCount++;
           cardEl.className = 'autopilot-live-card replied';
           cardEl.innerHTML = `
             <div class="autopilot-live-card-header">
               <div class="autopilot-live-author">
                 <span class="autopilot-live-avatar">🏛️</span>
-                <strong>@${this.escapeHtml(item.author)}</strong>
-                <span class="autopilot-variant-tag">${this.escapeHtml(item.variant || 'engagement')}</span>
+                <strong>@${this.escapeHtml(itemResult.author)}</strong>
+                <span class="autopilot-variant-tag">${this.escapeHtml(itemResult.variant || 'engagement')}</span>
               </div>
               <span class="autopilot-status-success">✅ Publicada</span>
             </div>
             <div class="autopilot-live-reply-quote">
-              "${this.escapeHtml(item.reply)}"
+              "${this.escapeHtml(itemResult.reply || '')}"
             </div>
           `;
         }
 
         if (streamList) streamList.prepend(cardEl);
 
-        // Visual delay so the user watches the AI replying in real time
-        await new Promise(r => setTimeout(r, 380));
+        const donePercent = Math.round(((i + 1) / queue.length) * 100);
+        if (progressBar) progressBar.style.width = `${donePercent}%`;
+        if (progressPercent) progressPercent.textContent = `${donePercent}%`;
+
+        // 3. Humanized anti-bot cadence delay before next comment
+        if (i < queue.length - 1 && !this.autopilotPaused) {
+          const delayMode = document.getElementById('autopilot-delay-select')?.value || 'natural';
+          let delayMs = 5000;
+          if (delayMode === 'fast') {
+            delayMs = Math.floor(Math.random() * 1000) + 2000; // 2s - 3s
+          } else if (delayMode === 'safe') {
+            delayMs = Math.floor(Math.random() * 6000) + 8000; // 8s - 14s
+          } else {
+            delayMs = Math.floor(Math.random() * 3500) + 4000; // 4s - 7.5s (natural)
+          }
+
+          const startDelay = Date.now();
+          while ((Date.now() - startDelay) < delayMs && !this.autopilotPaused) {
+            const leftSecs = Math.max(1, Math.ceil((delayMs - (Date.now() - startDelay)) / 1000));
+            if (progressStatus) {
+              progressStatus.textContent = `☕ Cadencia humana anti-bot: esperando ${leftSecs}s antes del siguiente comentario...`;
+            }
+            await new Promise(r => setTimeout(r, 400));
+          }
+        }
       }
 
-      if (progressStatus) progressStatus.textContent = `✨ ¡Proceso Completado! ${res.message}`;
-      App.showToast(`✨ ${res.message}`, 'success');
+      const finishMsg = this.autopilotPaused 
+        ? `Piloto en pausa. (${repliedCount} publicados, ${failedCount} fallos, ${spamCount} spam)` 
+        : `¡Proceso completado! (${repliedCount} publicados con éxito en Meta, ${failedCount} fallos, ${spamCount} spam)`;
+      
+      if (progressStatus) progressStatus.textContent = finishMsg;
+      App.showToast(finishMsg, repliedCount > 0 ? 'success' : 'info');
       await App.loadComments();
       this.updateAutopilotPendingBadge();
 
     } catch (err) {
       console.error(err);
-      App.showToast('Error de conexión al procesar el piloto automático.', 'error');
-      if (progressStatus) progressStatus.textContent = '❌ Error de red';
+      App.showToast('Error de ejecución en el piloto automático.', 'error');
+      if (progressStatus) progressStatus.textContent = '❌ Error de ejecución';
     } finally {
       if (btn) btn.disabled = false;
       if (btnText) btnText.textContent = 'Ejecutar Auto-Responder Ahora';
+      if (btnPause) btnPause.style.display = 'none';
+      this.autopilotPaused = false;
     }
   },
 

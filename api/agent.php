@@ -187,6 +187,185 @@ try {
         exit;
     }
 
+    if ($action === 'get_autopilot_queue') {
+        $includeFailed = !empty($input['include_failed']);
+        $statusCondition = $includeFailed ? "(c.status = 'pending' OR c.status = 'failed')" : "c.status = 'pending'";
+
+        $stmt = $pdo->prepare("
+            SELECT c.id, c.platform, c.author_name, c.comment_text, c.highlight_score, c.is_highlighted, c.status,
+                   p.caption as post_caption,
+                   COALESCE(p.brand_voice_id, a.brand_voice_id, 1) as effective_brand_voice_id
+            FROM comments c
+            JOIN posts p ON c.post_id = p.id
+            LEFT JOIN accounts a ON p.account_id = a.id
+            WHERE c.user_id = :user_id AND $statusCondition
+            ORDER BY c.highlight_score DESC, c.id DESC
+            LIMIT 100
+        ");
+        $stmt->execute([':user_id' => $userId]);
+        $queue = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            'success' => true,
+            'total' => count($queue),
+            'queue' => $queue
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    if ($action === 'reset_failed_comments') {
+        $stmt = $pdo->prepare("UPDATE comments SET status = 'pending', highlight_reason = NULL WHERE status = 'failed' AND user_id = :user_id");
+        $stmt->execute([':user_id' => $userId]);
+        $affected = $stmt->rowCount();
+
+        echo json_encode([
+            'success' => true,
+            'message' => "Se han restablecido {$affected} comentarios fallidos a pendientes.",
+            'affected' => $affected
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    if ($action === 'autopilot_single_comment') {
+        $commentId = Security::sanitizeInt($input['comment_id'] ?? 0, 1, 10000000, 0);
+        if ($commentId <= 0) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => 'comment_id inválido']);
+            exit;
+        }
+
+        $stmt = $pdo->prepare("
+            SELECT c.*, p.caption as post_caption, p.account_id,
+                   COALESCE(p.brand_voice_id, a.brand_voice_id, 1) as effective_brand_voice_id
+            FROM comments c 
+            JOIN posts p ON c.post_id = p.id 
+            LEFT JOIN accounts a ON p.account_id = a.id
+            WHERE c.id = :id AND c.user_id = :user_id
+            LIMIT 1
+        ");
+        $stmt->execute([':id' => $commentId, ':user_id' => $userId]);
+        $c = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$c) {
+            http_response_code(404);
+            echo json_encode(['success' => false, 'error' => 'Comentario no encontrado o ya procesado']);
+            exit;
+        }
+
+        $suitability = AiAgentService::evaluateCommentSuitability($c['comment_text']);
+
+        if ($suitability['status'] === 'spam') {
+            $pdo->prepare("UPDATE comments SET status = 'spam', sentiment = 'spam', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
+                ->execute([':reason' => $suitability['reason'], ':id' => $c['id'], ':uid' => $userId]);
+
+            echo json_encode([
+                'success' => true,
+                'item' => [
+                    'comment_id' => (int)$c['id'],
+                    'author' => htmlspecialchars($c['author_name'], ENT_QUOTES, 'UTF-8'),
+                    'action' => 'marked_spam',
+                    'reason' => $suitability['reason'],
+                    'status' => 'spam'
+                ]
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        if ($suitability['status'] === 'ignored') {
+            $pdo->prepare("UPDATE comments SET status = 'ignored', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
+                ->execute([':reason' => $suitability['reason'], ':id' => $c['id'], ':uid' => $userId]);
+
+            echo json_encode([
+                'success' => true,
+                'item' => [
+                    'comment_id' => (int)$c['id'],
+                    'author' => htmlspecialchars($c['author_name'], ENT_QUOTES, 'UTF-8'),
+                    'action' => 'ignored_sticker',
+                    'reason' => $suitability['reason'],
+                    'status' => 'ignored'
+                ]
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        // Generate response with Gemini
+        $brandVoiceId = (int)($c['effective_brand_voice_id'] ?? 1);
+        $commentPostId = (int)($c['post_id'] ?? 0);
+        $replyIndex = Security::sanitizeInt($input['reply_index'] ?? 0, 0, 1000, 0);
+
+        $replies = AiAgentService::generateReplies($c['author_name'], $c['comment_text'], $c['platform'], $c['post_caption'], '', [
+            'user_id' => $userId,
+            'post_id' => $commentPostId,
+            'brand_voice_id' => $brandVoiceId,
+            'reply_index' => $replyIndex
+        ]);
+
+        $chosenVariant = 'engagement';
+        if ($c['sentiment'] === 'lead' || str_starts_with($c['intent'], 'lead_')) {
+            $chosenVariant = 'conversion';
+        } elseif ($c['sentiment'] === 'urgent' || $c['intent'] === 'support') {
+            $chosenVariant = 'support';
+        }
+        $chosenReply = $replies[$chosenVariant] ?? $replies['engagement'];
+
+        // Post reply to Meta
+        $metaResult = MetaApiService::postReplyToMeta((int)$c['id'], $chosenReply, $userId);
+        $isPosted = !empty($metaResult['success']) ? 1 : 0;
+
+        // Insert reply record
+        $stmtRep = $pdo->prepare("
+            INSERT INTO replies (user_id, comment_id, reply_text, reply_type, tone_used, variant_type, is_posted_to_platform)
+            VALUES (:user_id, :comment_id, :reply_text, 'autopilot', 'auto_selected', :variant_type, :is_posted)
+        ");
+        $stmtRep->execute([
+            ':user_id' => $userId,
+            ':comment_id' => $c['id'],
+            ':reply_text' => $chosenReply,
+            ':variant_type' => $chosenVariant,
+            ':is_posted' => $isPosted
+        ]);
+
+        if ($isPosted) {
+            $pdo->prepare("UPDATE comments SET status = 'replied', highlight_reason = NULL WHERE id = :id AND user_id = :uid")
+                ->execute([':id' => $c['id'], ':uid' => $userId]);
+
+            echo json_encode([
+                'success' => true,
+                'item' => [
+                    'comment_id' => (int)$c['id'],
+                    'author' => htmlspecialchars($c['author_name'], ENT_QUOTES, 'UTF-8'),
+                    'action' => 'replied',
+                    'reply' => htmlspecialchars($chosenReply, ENT_QUOTES, 'UTF-8'),
+                    'variant' => $chosenVariant,
+                    'status' => 'replied',
+                    'is_posted' => 1
+                ]
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            exit;
+        } else {
+            $errReason = $metaResult['error'] ?? 'Fallo al publicar en Meta';
+            $isTokenExpired = !empty($metaResult['is_token_expired']);
+            $pdo->prepare("UPDATE comments SET status = 'failed', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
+                ->execute([':reason' => $errReason, ':id' => $c['id'], ':uid' => $userId]);
+
+            echo json_encode([
+                'success' => true,
+                'item' => [
+                    'comment_id' => (int)$c['id'],
+                    'author' => htmlspecialchars($c['author_name'], ENT_QUOTES, 'UTF-8'),
+                    'action' => 'failed',
+                    'reply' => htmlspecialchars($chosenReply, ENT_QUOTES, 'UTF-8'),
+                    'variant' => $chosenVariant,
+                    'status' => 'failed',
+                    'error' => $errReason,
+                    'is_token_expired' => $isTokenExpired,
+                    'is_posted' => 0
+                ]
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+    }
+
     if ($action === 'batch_autopilot') {
         // Rate limit for batch autopilot
         Security::requireRateLimit('ai_batch_autopilot', 10, 60);
