@@ -883,14 +883,14 @@ $isMetaConnected = ($activeAccountsCount > 0);
                       <label>Modelo de Inteligencia Preferido:</label>
                       <div style="display: flex; gap: 8px;">
                         <select id="setting-openrouter-model" style="flex: 1;" onchange="App.onOpenRouterModelSelect(this.value)">
-                          <option value="anthropic/claude-sonnet-4.5" selected>⭐ Anthropic Claude Sonnet 4.5 (Recomendado • Tono humano insuperable, empático y natural)</option>
+                          <option value="google/gemini-2.5-flash" selected>⭐ Google Gemini 2.5 Flash (Recomendado • Ultrarrápido, económico y altamente contextual)</option>
+                          <option value="anthropic/claude-sonnet-4.5">💎 Anthropic Claude Sonnet 4.5 (Tono humano profundo y empático)</option>
                           <option value="deepseek/deepseek-chat">⚡ DeepSeek V3 (Ultra económico • Excelente en español y valor)</option>
                           <option value="openai/gpt-4o-mini">🚀 OpenAI GPT-4o Mini (Rápido, inteligente y equilibrado)</option>
-                          <option value="openai/gpt-4o">💎 OpenAI GPT-4o (Máxima potencia de razonamiento multimodal)</option>
-                          <option value="google/gemini-2.5-flash">⚡ Google Gemini 2.5 Flash (Ultrarrápido y contextual)</option>
+                          <option value="openai/gpt-4o">🧠 OpenAI GPT-4o (Máxima potencia de razonamiento)</option>
                           <option value="meta-llama/llama-3.3-70b-instruct">🏛️ Meta Llama 3.3 70B (Open-Source líder)</option>
                           <option value="anthropic/claude-3-haiku">💨 Anthropic Claude 3 Haiku (Respuestas instantáneas)</option>
-                          <option value="deepseek/deepseek-r1">🧠 DeepSeek R1 (Razonamiento profundo paso a paso)</option>
+                          <option value="deepseek/deepseek-r1">🔍 DeepSeek R1 (Razonamiento profundo paso a paso)</option>
                           <option value="custom">✏️ Especificar otro modelo personalizado...</option>
                         </select>
                       </div>

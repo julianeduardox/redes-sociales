@@ -77,7 +77,7 @@ try {
                     'openrouter_configured' => !empty($openrouterKey),
                     'tokens_used' => (int)($userQuota['used_tokens'] ?? 0),
                     'tokens_max' => (int)($userQuota['max_tokens'] ?? 50000),
-                    'model_assigned' => $userQuota['ai_model'] ?? 'anthropic/claude-3.5-sonnet'
+                    'model_assigned' => $userQuota['ai_model'] ?? 'google/gemini-2.5-flash'
                 ],
                 'linked_accounts' => $accounts
             ]

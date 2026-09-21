@@ -174,7 +174,7 @@ try {
                 'ai_provider' => $settings['ai_provider'] ?? 'openrouter',
                 'has_openrouter_key' => !empty($settings['openrouter_api_key']),
                 'openrouter_api_key_masked' => $maskedOpenRouter,
-                'openrouter_model' => htmlspecialchars($settings['openrouter_model'] ?? 'anthropic/claude-3.5-sonnet', ENT_QUOTES, 'UTF-8'),
+                'openrouter_model' => htmlspecialchars($settings['openrouter_model'] ?? 'google/gemini-2.5-flash', ENT_QUOTES, 'UTF-8'),
                 'autopilot_enabled' => ($settings['autopilot_enabled'] ?? '0') === '1' ? '1' : '0',
                 'autopilot_min_score' => (int)($settings['autopilot_min_score'] ?? 60),
                 
@@ -255,12 +255,12 @@ try {
         // 0.1 Action: Save AI Engine & OpenRouter Settings directly
         if ($action === 'save_ai_engine') {
             $aiProvider = Security::validateEnum($input['ai_provider'] ?? 'openrouter', ['openrouter', 'heuristic'], 'openrouter');
-            $model = Security::sanitizeString($input['openrouter_model'] ?? 'anthropic/claude-sonnet-4.5', 150);
+            $model = Security::sanitizeString($input['openrouter_model'] ?? 'google/gemini-2.5-flash', 150);
             if (empty($model)) {
-                $model = 'anthropic/claude-sonnet-4.5';
+                $model = 'google/gemini-2.5-flash';
             }
             if ($model === 'anthropic/claude-3.5-sonnet' || $model === 'anthropic/claude-3-5-sonnet') {
-                $model = 'anthropic/claude-sonnet-4.5';
+                $model = 'google/gemini-2.5-flash';
             }
 
             Settings::set('ai_provider', $aiProvider, $userId);
@@ -576,7 +576,7 @@ try {
         if (isset($input['openrouter_model']) && Auth::isAdmin()) {
             $model = Security::sanitizeString($input['openrouter_model'], 150);
             if ($model === 'anthropic/claude-3.5-sonnet' || $model === 'anthropic/claude-3-5-sonnet') {
-                $model = 'anthropic/claude-sonnet-4.5';
+                $model = 'google/gemini-2.5-flash';
             }
             Settings::set('openrouter_model', $model, $userId);
             try {

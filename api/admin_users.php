@@ -26,10 +26,15 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 // Allowed AI Models Catalog
 $allowedModels = [
-    'anthropic/claude-3.5-sonnet' => [
-        'name' => 'Anthropic Claude 3.5 Sonnet',
+    'google/gemini-2.5-flash' => [
+        'name' => 'Google Gemini 2.5 Flash',
         'badge' => '⭐ Recomendado',
-        'desc' => 'Tono más humano, empático, natural y persuasivo'
+        'desc' => 'Ultrarrápido, económico y altamente contextual'
+    ],
+    'anthropic/claude-sonnet-4.5' => [
+        'name' => 'Anthropic Claude Sonnet 4.5',
+        'badge' => '💎 Potencia Top',
+        'desc' => 'Tono humano insuperable, empático, natural y persuasivo'
     ],
     'deepseek/deepseek-chat' => [
         'name' => 'DeepSeek V3',
@@ -48,7 +53,7 @@ $allowedModels = [
     ],
     'openai/gpt-4o' => [
         'name' => 'OpenAI GPT-4o',
-        'badge' => '💎 Potencia Top',
+        'badge' => '💎 Multimodal',
         'desc' => 'Máxima potencia multimodal y conocimiento'
     ],
     'meta-llama/llama-3.3-70b-instruct' => [
@@ -56,10 +61,10 @@ $allowedModels = [
         'badge' => '🏛️ Open-Source',
         'desc' => 'Líder en modelos abiertos con alto rendimiento'
     ],
-    'google/gemini-2.0-flash-001' => [
-        'name' => 'Google Gemini 2.0 Flash',
-        'badge' => '⚡ Ultrarrápido',
-        'desc' => 'Latencia mínima de generación en tiempo real'
+    'anthropic/claude-3-haiku' => [
+        'name' => 'Anthropic Claude 3 Haiku',
+        'badge' => '💨 Instantáneo',
+        'desc' => 'Velocidad de generación instantánea para alto volumen'
     ],
     'heuristic' => [
         'name' => 'Motor Heurístico Local',
@@ -84,7 +89,7 @@ if ($method === 'GET') {
                     u.created_at, 
                     u.last_login_at, 
                     u.last_activity_at,
-                    COALESCE(u.ai_model, 'anthropic/claude-3.5-sonnet') AS ai_model,
+                    COALESCE(u.ai_model, 'google/gemini-2.5-flash') AS ai_model,
                     COALESCE(u.max_tokens, 50000) AS max_tokens,
                     COALESCE(u.used_tokens, 0) AS used_tokens,
                     COALESCE(u.plan, 'starter') AS plan,
@@ -124,7 +129,7 @@ if ($method === 'GET') {
             unset($u);
 
             arsort($modelCounts);
-            $topModelKey = !empty($modelCounts) ? array_key_first($modelCounts) : 'anthropic/claude-3.5-sonnet';
+            $topModelKey = !empty($modelCounts) ? array_key_first($modelCounts) : 'google/gemini-2.5-flash';
             $topModelName = $allowedModels[$topModelKey]['name'] ?? $topModelKey;
 
             echo json_encode([
@@ -165,7 +170,10 @@ if ($method === 'POST') {
 
     if ($action === 'update_user_ai') {
         $targetUserId = (int)($input['user_id'] ?? 0);
-        $aiModel = trim((string)($input['ai_model'] ?? 'anthropic/claude-3.5-sonnet'));
+        $aiModel = trim((string)($input['ai_model'] ?? 'google/gemini-2.5-flash'));
+        if ($aiModel === 'anthropic/claude-3.5-sonnet' || $aiModel === 'anthropic/claude-3-5-sonnet') {
+            $aiModel = 'google/gemini-2.5-flash';
+        }
         $maxTokens = (int)($input['max_tokens'] ?? 50000);
 
         if ($targetUserId <= 0) {

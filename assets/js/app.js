@@ -1439,9 +1439,9 @@ const App = {
         const modelSelect = document.getElementById('setting-openrouter-model');
         const customInput = document.getElementById('setting-openrouter-custom-model');
         const customWrapper = document.getElementById('openrouter-custom-model-wrapper');
-        let currentModel = d.openrouter_model || 'anthropic/claude-sonnet-4.5';
+        let currentModel = d.openrouter_model || 'google/gemini-2.5-flash';
         if (currentModel === 'anthropic/claude-3.5-sonnet' || currentModel === 'anthropic/claude-3-5-sonnet') {
-          currentModel = 'anthropic/claude-sonnet-4.5';
+          currentModel = 'google/gemini-2.5-flash';
         }
         
         if (modelSelect) {
@@ -1987,10 +1987,10 @@ const App = {
   },
 
   getSelectedOpenRouterModel() {
-    const sel = document.getElementById('setting-openrouter-model')?.value || 'anthropic/claude-sonnet-4.5';
+    const sel = document.getElementById('setting-openrouter-model')?.value || 'google/gemini-2.5-flash';
     if (sel === 'custom') {
       const customVal = document.getElementById('setting-openrouter-custom-model')?.value?.trim();
-      return customVal || 'anthropic/claude-sonnet-4.5';
+      return customVal || 'google/gemini-2.5-flash';
     }
     return sel;
   },

@@ -264,7 +264,10 @@ class WeeklyReportAgentService {
 
         // Intentar llamada con OpenRouter si existe API Key
         $openrouterKey = Settings::get('openrouter_api_key', '');
-        $aiModel = Settings::get('openrouter_model', 'anthropic/claude-3.5-sonnet');
+        $aiModel = Settings::get('openrouter_model', 'google/gemini-2.5-flash');
+        if ($aiModel === 'anthropic/claude-3.5-sonnet' || $aiModel === 'anthropic/claude-3-5-sonnet') {
+            $aiModel = 'google/gemini-2.5-flash';
+        }
 
         if (!empty($openrouterKey)) {
             try {

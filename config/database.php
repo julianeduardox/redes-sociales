@@ -1373,7 +1373,7 @@ class Database {
                     $uCols = $pdo->query("PRAGMA table_info(users)")->fetchAll(PDO::FETCH_ASSOC);
                     $uColNames = array_column($uCols, 'name');
                     if (!in_array('ai_model', $uColNames)) {
-                        $pdo->exec("ALTER TABLE users ADD COLUMN ai_model TEXT DEFAULT 'anthropic/claude-3.5-sonnet'");
+                        $pdo->exec("ALTER TABLE users ADD COLUMN ai_model TEXT DEFAULT 'google/gemini-2.5-flash'");
                     }
                     if (!in_array('max_tokens', $uColNames)) {
                         $pdo->exec("ALTER TABLE users ADD COLUMN max_tokens INTEGER DEFAULT 50000");
@@ -1581,7 +1581,7 @@ class Database {
             'brand_few_shot_examples' => json_encode($defaultFewShots, JSON_UNESCAPED_UNICODE),
             'ai_provider' => 'openrouter',
             'openrouter_api_key' => '',
-            'openrouter_model' => 'anthropic/claude-3.5-sonnet',
+            'openrouter_model' => 'google/gemini-2.5-flash',
             'autopilot_enabled' => '0',
             'autopilot_min_score' => '75',
             'meta_app_id' => '',

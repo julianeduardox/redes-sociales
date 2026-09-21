@@ -1043,7 +1043,11 @@ class MetaApiService {
                                             $pdo->prepare("UPDATE comments SET status = 'ignored', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
                                                 ->execute([':reason' => $suitability['reason'], ':id' => $newCommentId, ':uid' => $uid]);
                                         } else {
-                                            $replies = AiAgentService::generateReplies($cAuthor, $cText, 'instagram', $caption, '', ['brand_voice_id' => $brandVoiceId]);
+                                            $replies = AiAgentService::generateReplies($cAuthor, $cText, 'instagram', $caption, '', [
+                                                'brand_voice_id' => $brandVoiceId,
+                                                'user_id' => $uid,
+                                                'post_id' => $postId
+                                            ]);
                                             $chosenVariant = 'engagement';
                                             if (($analysis['sentiment'] ?? '') === 'lead' || str_starts_with(($analysis['intent'] ?? ''), 'lead_')) {
                                                 $chosenVariant = 'conversion';
@@ -1570,7 +1574,11 @@ class MetaApiService {
                                         $pdo->prepare("UPDATE comments SET status = 'ignored', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
                                             ->execute([':reason' => $suitability['reason'], ':id' => $newCommentId, ':uid' => $uid]);
                                     } else {
-                                        $replies = AiAgentService::generateReplies($fromName, $cText, 'facebook', $message, '', ['brand_voice_id' => $brandVoiceId]);
+                                        $replies = AiAgentService::generateReplies($fromName, $cText, 'facebook', $message, '', [
+                                            'brand_voice_id' => $brandVoiceId,
+                                            'user_id' => $uid,
+                                            'post_id' => $postId
+                                        ]);
                                         $chosenVariant = 'engagement';
                                         if (($analysis['sentiment'] ?? '') === 'lead' || str_starts_with(($analysis['intent'] ?? ''), 'lead_')) {
                                             $chosenVariant = 'conversion';
@@ -2155,7 +2163,11 @@ class MetaApiService {
                                                 $pdo->prepare("UPDATE comments SET status = 'ignored', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
                                                     ->execute([':reason' => $suitability['reason'], ':id' => $newCommentId, ':uid' => $uid]);
                                             } else {
-                                                $replies = AiAgentService::generateReplies($cAuthor, $cText, 'instagram', $caption, '', ['brand_voice_id' => $brandVoiceId]);
+                                                $replies = AiAgentService::generateReplies($cAuthor, $cText, 'instagram', $caption, '', [
+                                                    'brand_voice_id' => $brandVoiceId,
+                                                    'user_id' => $uid,
+                                                    'post_id' => $postId
+                                                ]);
                                                 $chosenVariant = 'engagement';
                                                 if (($analysis['sentiment'] ?? '') === 'lead' || str_starts_with(($analysis['intent'] ?? ''), 'lead_')) {
                                                     $chosenVariant = 'conversion';
@@ -2449,7 +2461,11 @@ class MetaApiService {
                                             $pdo->prepare("UPDATE comments SET status = 'ignored', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
                                                 ->execute([':reason' => $suitability['reason'], ':id' => $newCommentId, ':uid' => $uid]);
                                         } else {
-                                            $replies = AiAgentService::generateReplies($fromName, $cText, 'facebook', $message, '', ['brand_voice_id' => $brandVoiceId]);
+                                            $replies = AiAgentService::generateReplies($fromName, $cText, 'facebook', $message, '', [
+                                                'brand_voice_id' => $brandVoiceId,
+                                                'user_id' => $uid,
+                                                'post_id' => $postId
+                                            ]);
                                             $chosenVariant = 'engagement';
                                             if (($analysis['sentiment'] ?? '') === 'lead' || str_starts_with(($analysis['intent'] ?? ''), 'lead_')) {
                                                 $chosenVariant = 'conversion';
@@ -2519,7 +2535,11 @@ class MetaApiService {
                             ->execute([':reason' => $suitability['reason'], ':id' => $pCmt['id'], ':uid' => $uid]);
                     } else {
                         $bvid = (int)($pCmt['effective_bvid'] ?: $defaultBrandVoiceId);
-                        $replies = AiAgentService::generateReplies($pCmt['author_name'], $pCmt['comment_text'], $pCmt['platform'], $pCmt['post_caption'], '', ['brand_voice_id' => $bvid]);
+                        $replies = AiAgentService::generateReplies($pCmt['author_name'], $pCmt['comment_text'], $pCmt['platform'], $pCmt['post_caption'], '', [
+                            'brand_voice_id' => $bvid,
+                            'user_id' => $uid,
+                            'post_id' => (int)($pCmt['post_id'] ?? 0)
+                        ]);
                         $chosenVariant = 'engagement';
                         if ($pCmt['sentiment'] === 'lead' || str_starts_with($pCmt['intent'], 'lead_')) {
                             $chosenVariant = 'conversion';
