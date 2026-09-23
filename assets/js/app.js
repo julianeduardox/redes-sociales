@@ -1443,9 +1443,9 @@ const App = {
         const modelSelect = document.getElementById('setting-openrouter-model');
         const customInput = document.getElementById('setting-openrouter-custom-model');
         const customWrapper = document.getElementById('openrouter-custom-model-wrapper');
-        let currentModel = d.openrouter_model || 'google/gemini-2.5-flash';
+        let currentModel = d.openrouter_model || 'nousresearch/hermes-3-llama-3.1-70b';
         if (currentModel === 'anthropic/claude-3.5-sonnet' || currentModel === 'anthropic/claude-3-5-sonnet') {
-          currentModel = 'google/gemini-2.5-flash';
+          currentModel = 'nousresearch/hermes-3-llama-3.1-70b';
         }
         
         if (modelSelect) {
@@ -1640,7 +1640,10 @@ const App = {
     const authorInput = document.getElementById('playground-author');
     const commentInput = document.getElementById('playground-comment');
 
-    if (scenarioKey === 'course_qa') {
+    if (scenarioKey === 'emoji_reaction') {
+      if (authorInput) authorInput.value = 'Mateo';
+      if (commentInput) commentInput.value = '🔥🔥👏💯';
+    } else if (scenarioKey === 'course_qa') {
       if (authorInput) authorInput.value = 'Carlos Ramos';
       if (commentInput) commentInput.value = '¿El curso incluye clases grabadas y cuánto tiempo tengo acceso?';
     } else if (scenarioKey === 'philosophy') {

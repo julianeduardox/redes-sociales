@@ -883,7 +883,9 @@ $isMetaConnected = ($activeAccountsCount > 0);
                       <label>Modelo de Inteligencia Preferido:</label>
                       <div style="display: flex; gap: 8px;">
                         <select id="setting-openrouter-model" style="flex: 1;" onchange="App.onOpenRouterModelSelect(this.value)">
-                          <option value="google/gemini-2.5-flash" selected>⭐ Google Gemini 2.5 Flash (Recomendado • Ultrarrápido, económico y altamente contextual)</option>
+                          <option value="nousresearch/hermes-3-llama-3.1-70b" selected>🌟 Nous Hermes 3 (Llama 3.1 70B) — (Recomendado • Ingenioso, empático y ultra conversacional)</option>
+                          <option value="nousresearch/hermes-3-llama-3.1-405b">🧠 Nous Hermes 3 (405B) — (Máxima potencia de razonamiento)</option>
+                          <option value="google/gemini-2.5-flash">⭐ Google Gemini 2.5 Flash (Ultrarrápido y económico)</option>
                           <option value="anthropic/claude-sonnet-4.5">💎 Anthropic Claude Sonnet 4.5 (Tono humano profundo y empático)</option>
                           <option value="deepseek/deepseek-chat">⚡ DeepSeek V3 (Ultra económico • Excelente en español y valor)</option>
                           <option value="openai/gpt-4o-mini">🚀 OpenAI GPT-4o Mini (Rápido, inteligente y equilibrado)</option>
@@ -936,6 +938,7 @@ $isMetaConnected = ($activeAccountsCount > 0);
               <!-- Quick Scenarios -->
               <div style="font-size: 0.74rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; margin-bottom: 6px;">Casos Rápidos de Prueba:</div>
               <div class="quick-scenarios-row" style="display: flex; flex-wrap: wrap; gap: 6px;">
+                <button type="button" class="quick-scenario-btn" onclick="App.setPlaygroundScenario('emoji_reaction')">🔥 Emojis / Reacción Rápida</button>
                 <button type="button" class="quick-scenario-btn" onclick="App.setPlaygroundScenario('course_qa')">📚 Curso / Acceso</button>
                 <button type="button" class="quick-scenario-btn" onclick="App.setPlaygroundScenario('philosophy')">🏛️ Dicotomía / Concepto</button>
                 <button type="button" class="quick-scenario-btn" onclick="App.setPlaygroundScenario('price_lead')">🎯 Precio / Lead</button>

@@ -909,7 +909,7 @@ class AiAgentService {
                 $openrouterModel = $runtimeOverrides['openrouter_model'] ?? $userAssignedModel;
             }
         } else {
-            $openrouterModel = $runtimeOverrides['openrouter_model'] ?? Settings::get('openrouter_model', 'anthropic/claude-sonnet-4.5');
+            $openrouterModel = $runtimeOverrides['openrouter_model'] ?? Settings::get('openrouter_model', 'nousresearch/hermes-3-llama-3.1-70b');
         }
 
         // Normalize obsolete slugs from OpenRouter
@@ -2145,7 +2145,7 @@ class AiAgentService {
         string $brandName, string $personaName, string $brandIndustry, string $brandTone, string $brandDescription, string $language,
         int $warmthLevel, int $depthLevel, int $energyLevel,
         string $closingQuestionRule, string $emojiStyle, array $keyPhrases, array $forbiddenPhrases, array $fewShotExamples,
-        string $apiKey, string $model = 'google/gemini-2.5-flash',
+        string $apiKey, string $model = 'nousresearch/hermes-3-llama-3.1-70b',
         int $targetUserId = 0, ?PDO $pdo = null,
         string $postAuthor = 'general', string $lengthCategory = 'medium', array $recentThreadReplies = [], ?array $commentAnalysis = null,
         array $learningExamples = []
@@ -2159,7 +2159,7 @@ class AiAgentService {
         );
 
         $url = 'https://openrouter.ai/api/v1/chat/completions';
-        $selectedModel = !empty($model) ? trim($model) : 'google/gemini-2.5-flash';
+        $selectedModel = !empty($model) ? trim($model) : 'nousresearch/hermes-3-llama-3.1-70b';
         if ($selectedModel === 'anthropic/claude-3.5-sonnet' || $selectedModel === 'anthropic/claude-3-5-sonnet') {
             $selectedModel = 'anthropic/claude-sonnet-4.5';
         }
@@ -2281,14 +2281,29 @@ class AiAgentService {
             $philosophyContext = "La publicación aborda principios estoicos universales y desarrollo de carácter: autodominio, fortaleza mental, forja de hábitos inquebrantables, disciplina y templanza práctica.";
         }
 
-        // Module 1: Proportionality & Length Directives
+        // Module 1: Proportionality & Length Directives (Hermes 3 Engine)
+        $textNoEmoji = trim(preg_replace('/[\x{1F600}-\x{1F64F}\x{1F300}-\x{1F5FF}\x{1F680}-\x{1F6FF}\x{1F700}-\x{1F77F}\x{1F780}-\x{1F7FF}\x{1F800}-\x{1F8FF}\x{1F900}-\x{1F9FF}\x{1FA00}-\x{1FA6F}\x{1FA70}-\x{1FAFF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}\x{2300}-\x{23FF}\x{2B50}\s\p{P}]/u', '', $commentText));
+        $isEmojiOnlyOrUltraShort = ($lengthCategory === 'short') && (mb_strlen($textNoEmoji, 'UTF-8') <= 3);
+
         $proportionalityDirective = "";
-        if ($lengthCategory === 'short') {
-            $proportionalityDirective = "PROPORCIONALIDAD ESTRICTA: El comentario del seguidor es CORTO o de reacción (emojis / pocas palabras). Tu respuesta DEBE ser concisa, enérgica y directa (MÁXIMO 1 o 2 frases breves, entre 10 y 25 palabras). NUNCA redactes un párrafo largo o abrumador a un comentario breve.";
+        if ($isEmojiOnlyOrUltraShort) {
+            $proportionalityDirective = "PROPORCIONALIDAD QUIRÚRGICA PARA EMOJIS O COMENTARIOS ULTRA CORTOS:\n"
+                . "- El seguidor ha comentado ÚNICAMENTE con emojis (ej. 🔥, 👏, 💯, ❤️, 🙌) o palabras mínimas de aprobación (ej. 'Totalmente', 'Crack', 'Amén', 'Top', 'De una').\n"
+                . "- REGLA DE ORO DE LONGITUD: Tu respuesta DEBE ser ULTRA BREVE, FRESCA, CON CHISPA Y RECIPROCIDAD (MÁXIMO 5 A 12 PALABRAS, en 1 sola frase corta y contundente).\n"
+                . "- EJEMPLOS EXACTOS A REPLICAR:\n"
+                . "  * Si comenta '🔥🔥' -> '¡A tope con esa energía! 🔥 Un fuerte abrazo.' o '¡Esa es la actitud! ⚡🙌' o '¡Puro fuego! Seguimos con todo. 🔥💪'\n"
+                . "  * Si comenta '👏' o '💯' -> '¡Muchísimas gracias por el apoyo! 🤝✨' o '¡Seguimos firmes y sumando! 👊🏛️'\n"
+                . "  * Si comenta 'Totalmente' o 'Así es' -> '¡Totalmente de acuerdo! Fuerza y foco. 🏛️' o '¡Así se habla! Determinación pura. ⚡'\n"
+                . "- PROHIBICIÓN ABSOLUTA: PROHIBIDO redactar párrafos largos o dar discursos solemnes o filosóficos a un simple emoji. NUNCA pases de 12 palabras.\n"
+                . "- PROHIBICIÓN DE PREGUNTAS: Queda TERMINANTEMENTE PROHIBIDO hacer preguntas reflexivas de cierre para este comentario (NADA de '¿en qué buscas aplicarlo hoy?').";
+
+            $closingQuestionRule = "DESACTIVADA (El comentario es solo de emojis o ultra corto. Queda estrictamente prohibido formular preguntas de cierre).";
+        } elseif ($lengthCategory === 'short') {
+            $proportionalityDirective = "PROPORCIONALIDAD ESTRICTA: El comentario del seguidor es CORTO. Tu respuesta DEBE ser concisa, enérgica y directa (MÁXIMO 1 frase breve, entre 10 y 18 palabras). NUNCA redactes un párrafo largo o abrumador a un comentario breve.";
         } elseif ($lengthCategory === 'long') {
             $proportionalityDirective = "PROPORCIONALIDAD ESTRICTA: El comentario del seguidor es EXTENSO o reflexivo (>80 caracteres). Tu respuesta DEBE ser profunda, humana y estructurada (2 a 3 frases completas de alto valor), validando su situación con empatía y aportando una perspectiva práctica memorable.";
         } else {
-            $proportionalityDirective = "PROPORCIONALIDAD ESTRICTA: El comentario tiene extensión MEDIA. Tu respuesta debe tener entre 1 y 2 frases equilibradas, claras y conversacionales (entre 20 y 45 palabras).";
+            $proportionalityDirective = "PROPORCIONALIDAD ESTRICTA: El comentario tiene extensión MEDIA. Tu respuesta debe tener entre 1 y 2 frases equilibradas, claras y conversacionales (entre 18 y 35 palabras).";
         }
 
         // Module 3: Intent Tactical Guidance
@@ -2404,7 +2419,7 @@ REGLAS ESTRICTAS DE VERACIDAD Y ANTI-ALUCINACIÓN (OBLIGATORIAS):
 2. CERO ACCIONES NO REALIZADAS: NUNCA afirmes haber enviado un mensaje directo (DM), correo o realizado acciones externas ("te acabo de enviar un DM", "ya te escribí"). Si corresponde, invita cortésmente al seguidor a escribir por DM o a consultar el enlace en la bio.
 3. MANEJO DE DATOS FALTANTES: Si el seguidor pregunta por especificaciones internas, precios o accesos no descritos en el contexto, responde honestamente con los datos generales conocidos y oriéntalo amablemente al enlace de la bio o a enviar un DM para recibir asesoría personalizada.
 4. PREGUNTAS CONCEPTUALES Y FILOSÓFICAS: Si el seguidor consulta sobre un concepto, metodología o filosofía estoica (ej. Dicotomía del control), responde con fundamento, claridad y valor práctico. NUNCA desvíes preguntas conceptuales a soporte técnico de pedidos o reclamos.
-5. COMENTARIOS DE SOLO EMOJIS O REACCIONES: Si el comentario del seguidor consiste en emojis o reacciones (ej. 👏👏, 🔥, ❤️, 💪, 🙌), responde de forma rápida, agradecida y cercana utilizando también emojis expresivos y coherentes con el tono de la marca.
+5. COMENTARIOS DE SOLO EMOJIS O REACCIONES: Si el comentario del seguidor consiste en emojis (ej. 👏👏, 🔥, ❤️, 💪, 🙌) o palabras mínimas ('Totalmente', 'Top', 'Crack'), responde de forma ULTRA BREVE Y CON CHISPA (MÁXIMO 5 A 12 PALABRAS), usando emojis expresivos de reciprocidad (ej. '¡A tope con esa energía! 🔥 Un fuerte abrazo.', '¡Puro fuego! Seguimos con todo. 🔥💪', '¡Esa es la actitud! ⚡🙌'). QUEDA TERMINANTEMENTE PROHIBIDO redactar párrafos explicativos, discursos solemnes o formular preguntas de cierre a un simple emoji.
 6. COMENTARIOS BURLONES, CHISTES O MEMES: Si el seguidor hace un chiste, broma, ironía o comentario cómico (ej. 'al cazo', 'carnitas', risas, emojis 😝/😂), NUNCA te pongas solemne, NUNCA agradezcas como corporación formal ("Apreciamos que dediques tiempo a reflexionar...") y NUNCA hagas preguntas existenciales ("¿cómo buscas aplicarlo hoy?"). Responde con complicidad, ingenio y risa ("Jajaja...", "😅"), manteniendo la respuesta corta y humana.
 7. VOCATIVO Y NICKNAMES: Si el seguidor tiene un usuario con números (ej. Samuelongo380) o apodos no verificados, NUNCA uses ese handle como nombre de pila. Habla de tú a tú directamente y con fluidez natural sin vocativos forzados.
 
@@ -3018,6 +3033,16 @@ PROMPT;
                 'tag' => 'felicitacion_agradecimiento',
                 'comment' => '¡Excelente contenido y qué gran valor aportan! Me ayudó muchísimo su recomendación.',
                 'reply' => '¡Muchísimas gracias por tus palabras, {nombre}! Nos alegra enorme saber que te ha sido de gran valor. ¿De qué tema te gustaría que profundicemos en la siguiente publicación?'
+            ],
+            [
+                'tag' => 'reaccion_emojis_pura',
+                'comment' => '🔥🔥👏💯',
+                'reply' => '¡A tope con esa energía! 🔥 Un fuerte abrazo.'
+            ],
+            [
+                'tag' => 'acuerdo_corto',
+                'comment' => 'Totalmente de acuerdo',
+                'reply' => '¡Así se habla! Fuerza y foco en tu camino. 🏛️✨'
             ]
         ];
     }
