@@ -717,7 +717,7 @@ class TrendsAgentService {
             $igId  = '';
 
             if (!empty($account['access_token'])) {
-                $token = trim($account['access_token']);
+                $token = Security::decrypt(trim($account['access_token']));
                 $igId  = !empty($account['page_id']) ? (string)$account['page_id'] : Settings::getForUser($userId, 'meta_instagram_account_id', '');
 
                 if (empty($igId)) {

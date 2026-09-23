@@ -26,6 +26,11 @@ data/*.log
 *.pem
 *.key
 *.crt
+data/.app_encryption_key
+data/.*key*
+data/*credentials*
+data/*.txt
+data/data_deletion_audit.log
 
 # 3. Log Files & Server Errors
 *.log

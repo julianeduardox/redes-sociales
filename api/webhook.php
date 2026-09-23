@@ -17,7 +17,17 @@ if ($method === 'GET') {
     $hubMode = $_GET['hub_mode'] ?? '';
     $hubToken = $_GET['hub_verify_token'] ?? '';
     $hubChallenge = $_GET['hub_challenge'] ?? '';
-    $expectedToken = Settings::get('webhook_verify_token', 'social_boost_secure_token_2026');
+    
+    // Fail-Closed: must be explicitly configured in .env or settings, never a public default
+    $expectedToken = getenv('WEBHOOK_VERIFY_TOKEN') ?: ($_ENV['WEBHOOK_VERIFY_TOKEN'] ?? Settings::get('webhook_verify_token', ''));
+
+    // Reject known default or empty tokens immediately
+    $insecureTokens = ['', 'social_boost_secure_token_2026', 'tu_token_aqui', 'change_me'];
+    if (in_array($expectedToken, $insecureTokens, true)) {
+        http_response_code(403);
+        echo json_encode(['error' => 'Webhook no configurado o token inseguro en el servidor'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
 
     // Timing-safe token verification
     if ($hubMode === 'subscribe' && hash_equals($expectedToken, $hubToken)) {
@@ -45,16 +55,24 @@ if ($method === 'POST') {
     // Rate limit webhook ingestion (180 events / minute)
     Security::requireRateLimit('webhook_ingest', 180, 60);
 
-    // Validate Meta Signature if App Secret is configured
-    $metaAppSecret = Settings::get('meta_app_secret', '');
-    $signatureHeader = $_SERVER['HTTP_X_HUB_SIGNATURE_256'] ?? '';
+    // Fail-Closed: Meta App Secret is STRICTLY MANDATORY
+    $metaAppSecret = getenv('META_APP_SECRET') ?: ($_ENV['META_APP_SECRET'] ?? Settings::get('meta_app_secret', ''));
+    if (empty($metaAppSecret)) {
+        http_response_code(403);
+        echo json_encode([
+            'error' => 'Webhook no disponible: Meta App Secret no está configurado en el servidor.'
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
 
-    if (!empty($metaAppSecret)) {
-        if (!Security::validateMetaWebhookSignature($rawInput, $signatureHeader, $metaAppSecret)) {
-            http_response_code(401);
-            echo json_encode(['error' => 'Firma criptográfica HMAC inválida'], JSON_UNESCAPED_UNICODE);
-            exit;
-        }
+    // Require and validate Meta HMAC-SHA256 signature
+    $signatureHeader = $_SERVER['HTTP_X_HUB_SIGNATURE_256'] ?? '';
+    if (empty($signatureHeader) || !Security::validateMetaWebhookSignature($rawInput, $signatureHeader, $metaAppSecret)) {
+        http_response_code(401);
+        echo json_encode([
+            'error' => 'Firma criptográfica HMAC ausente o inválida. Petición rechazada.'
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
     }
 
     // Validate JSON structure

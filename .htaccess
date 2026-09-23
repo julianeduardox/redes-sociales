@@ -26,6 +26,10 @@ Options -Indexes -MultiViews
 
 # 4. HTTP Security Headers (if mod_headers is enabled)
 <IfModule mod_headers.c>
+    # Unset Information Leakage Headers
+    Header unset X-Powered-By
+    Header always unset X-Powered-By
+
     # Prevent MIME Sniffing
     Header set X-Content-Type-Options "nosniff"
     

@@ -27,11 +27,8 @@ unset($_SESSION['meta_oauth_state']);
 $appId = Settings::get('meta_app_id', '', $userId) ?: Settings::get('meta_app_id', '', 1);
 $appSecret = Settings::get('meta_app_secret', '', $userId) ?: Settings::get('meta_app_secret', '', 1);
 
-// Determine redirect URI
-$protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-$host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-$baseUri = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\');
-$redirectUri = $protocol . '://' . $host . ($baseUri !== '' ? $baseUri : '') . '/callback-meta.php';
+// Canonical Redirect URI (Immune to Host Header Poisoning)
+$redirectUri = Security::getOAuthRedirectUri();
 
 $status = 'processing';
 $message = '';
@@ -295,7 +292,7 @@ if (!empty($error)) {
                         WHERE id = :id
                     ");
                     $stmtUp->execute([
-                        ':token' => $pageToken,
+                        ':token' => Security::encrypt($pageToken),
                         ':name' => $pageName,
                         ':avatar' => $pageAvatar,
                         ':id' => $existingFb['id']
@@ -322,7 +319,7 @@ if (!empty($error)) {
                         ':handle' => 'fb_' . $pageId,
                         ':pid' => $pageId,
                         ':avatar' => $pageAvatar,
-                        ':token' => $pageToken
+                        ':token' => Security::encrypt($pageToken)
                     ]);
                     $curActiveCount++;
                     $detectedAccounts[] = [
@@ -352,7 +349,7 @@ if (!empty($error)) {
                             WHERE id = :id
                         ");
                         $stmtUpIg->execute([
-                            ':token' => $pageToken,
+                            ':token' => Security::encrypt($pageToken),
                             ':name' => $igDisplayName,
                             ':handle' => $igUsername ? "@{$igUsername}" : '@ig_' . $igId,
                             ':avatar' => $igAvatar,
@@ -379,7 +376,7 @@ if (!empty($error)) {
                             ':handle' => $igUsername ? "@{$igUsername}" : '@ig_' . $igId,
                             ':igid' => $igId,
                             ':avatar' => $igAvatar,
-                            ':token' => $pageToken
+                            ':token' => Security::encrypt($pageToken)
                         ]);
                         $curActiveCount++;
                         $detectedAccounts[] = [

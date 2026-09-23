@@ -217,8 +217,8 @@ try {
 
             $platformName = ucfirst($commentData['platform'] ?? 'red social');
 
-            // Post to Meta API first to verify if it actually publishes
-            $metaResult = MetaApiService::postReplyToMeta($commentId, $replyText, $userId);
+            // Post to Meta API first to verify if it actually publishes (manual action)
+            $metaResult = MetaApiService::postReplyToMeta($commentId, $replyText, $userId, true);
             $isPosted = !empty($metaResult['success']) ? 1 : 0;
 
             // Save reply in database with user_id and actual publication flag
@@ -316,8 +316,8 @@ try {
                 exit;
             }
 
-            // Re-attempt Meta Graph API post
-            $metaResult = MetaApiService::postReplyToMeta($commentId, $replyText, $userId);
+            // Re-attempt Meta Graph API post (manual action)
+            $metaResult = MetaApiService::postReplyToMeta($commentId, $replyText, $userId, true);
 
             if (!empty($metaResult['success'])) {
                 if ($existingReply) {

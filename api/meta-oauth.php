@@ -129,11 +129,8 @@ $state = 'meta_oauth_' . bin2hex(random_bytes(16));
 $_SESSION['meta_oauth_state'] = $state;
 $_SESSION['meta_oauth_user_id'] = $userId;
 
-// Determine absolute redirect URI
-$protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-$host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-$baseUri = rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'] ?? '')), '/\\');
-$redirectUri = $protocol . '://' . $host . ($baseUri !== '' ? $baseUri : '') . '/callback-meta.php';
+// Canonical Redirect URI (Immune to Host Header Poisoning)
+$redirectUri = Security::getOAuthRedirectUri();
 
 // Requested Meta App Review permissions
 $requestedScopes = $_GET['scopes'] ?? '';

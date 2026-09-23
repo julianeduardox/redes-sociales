@@ -4,7 +4,7 @@
  * Centralized Cyber Security, Access Control, CSRF, Rate Limiting & Input Sanitization
  */
 
-if (session_status() === PHP_SESSION_NONE) {
+if (session_status() === PHP_SESSION_NONE && !headers_sent() && php_sapi_name() !== 'cli') {
     // Determine HTTPS status including proxy headers
     $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
         || (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443)
@@ -33,58 +33,116 @@ class Security {
 
     /**
      * Apply strict HTTP security headers
+     * Returns the array of applied security headers for verification and testing
      */
-    public static function applySecurityHeaders(bool $isApi = false): void {
-        if (headers_sent()) {
-            return;
+    public static function applySecurityHeaders(bool $isApi = false): array {
+        $applied = [];
+
+        // 1. Remove Information Disclosure Headers (Hide PHP version)
+        if (!headers_sent()) {
+            header_remove('X-Powered-By');
+        }
+        @ini_set('expose_php', '0');
+        $applied['X-Powered-By'] = null; // Specifically unset
+
+        // 2. Core Defense Headers
+        $applied['X-Content-Type-Options'] = 'nosniff';
+        $applied['X-Frame-Options'] = 'SAMEORIGIN';
+        $applied['X-XSS-Protection'] = '1; mode=block';
+        $applied['Referrer-Policy'] = 'strict-origin-when-cross-origin';
+        $applied['Permissions-Policy'] = 'camera=(), microphone=(), geolocation=()';
+
+        if (!headers_sent()) {
+            header('X-Content-Type-Options: nosniff');
+            header('X-Frame-Options: SAMEORIGIN');
+            header('X-XSS-Protection: 1; mode=block');
+            header('Referrer-Policy: strict-origin-when-cross-origin');
+            header('Permissions-Policy: camera=(), microphone=(), geolocation=()');
         }
 
-        // Prevent MIME type sniffing
-        header('X-Content-Type-Options: nosniff');
-        
-        // Prevent Clickjacking
-        header('X-Frame-Options: SAMEORIGIN');
-        
-        // Cross-Site Scripting filter for legacy browsers
-        header('X-XSS-Protection: 1; mode=block');
-        
-        // Referrer policy
-        header('Referrer-Policy: strict-origin-when-cross-origin');
-        
-        // Permissions policy (camera, mic, geolocation disabled unless explicitly needed)
-        header('Permissions-Policy: camera=(), microphone=(), geolocation=()');
-
         if ($isApi) {
-            header('Content-Type: application/json; charset=utf-8');
-            // Restrict CORS to same-origin by default
-            $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-            $host = $_SERVER['HTTP_HOST'] ?? '';
-            if (!empty($origin) && str_contains($origin, $host)) {
-                header('Access-Control-Allow-Origin: ' . $origin);
-                header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-                header('Access-Control-Allow-Headers: Content-Type, X-CSRF-Token, Authorization');
-                header('Access-Control-Allow-Credentials: true');
+            $applied['Content-Type'] = 'application/json; charset=utf-8';
+            $applied['Content-Security-Policy'] = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'";
+            if (!headers_sent()) {
+                header('Content-Type: application/json; charset=utf-8');
+                header("Content-Security-Policy: default-src 'none'; frame-ancestors 'none'; base-uri 'none'");
             }
+            self::applyStrictCors();
         } else {
-            // Content Security Policy for HTML pages
+            // Hardened Content Security Policy for HTML pages
             $csp = [
                 "default-src 'self'",
                 "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
-                "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+                "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
                 "font-src 'self' https://fonts.gstatic.com data:",
                 "img-src 'self' data: https: blob:",
-                "connect-src 'self' https://openrouter.ai https://graph.facebook.com",
+                "connect-src 'self' https://openrouter.ai https://graph.facebook.com https://graph.instagram.com",
                 "frame-ancestors 'self'",
+                "frame-src 'self' https://www.facebook.com https://www.instagram.com",
+                "object-src 'none'",
                 "base-uri 'self'",
                 "form-action 'self'"
             ];
-            header('Content-Security-Policy: ' . implode('; ', $csp));
+            $cspString = implode('; ', $csp);
+            $applied['Content-Security-Policy'] = $cspString;
+            if (!headers_sent()) {
+                header('Content-Security-Policy: ' . $cspString);
+            }
         }
 
         // HSTS if HTTPS
-        if ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443)) {
-            header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
+        if ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443)) {
+            $applied['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains';
+            if (!headers_sent()) {
+                header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
+            }
         }
+
+        return $applied;
+    }
+
+    /**
+     * Get trusted canonical application base URL
+     * Prioritizes APP_URL from .env to prevent HTTP Host Header Poisoning
+     */
+    public static function getAppUrl(): string {
+        self::loadEnv();
+        $configuredAppUrl = getenv('APP_URL') ?: ($_ENV['APP_URL'] ?? '');
+        if (!empty($configuredAppUrl)) {
+            return rtrim($configuredAppUrl, '/');
+        }
+
+        // Safe fallback for local development when APP_URL is not configured
+        $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+            || (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443)
+            || (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https');
+        
+        $protocol = $isHttps ? 'https' : 'http';
+        $serverHost = $_SERVER['SERVER_NAME'] ?? $_SERVER['SERVER_ADDR'] ?? 'localhost';
+        
+        // Strict hostname validation to reject host poisoning
+        if (!filter_var($serverHost, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME) && $serverHost !== 'localhost') {
+            $serverHost = 'localhost';
+        }
+
+        $port = (int)($_SERVER['SERVER_PORT'] ?? ($isHttps ? 443 : 80));
+        $portSuffix = (!in_array($port, [80, 443], true)) ? ":{$port}" : '';
+
+        $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
+        $baseDir = rtrim(dirname($scriptName), '/\\');
+        if (str_ends_with($baseDir, '/api') || str_ends_with($baseDir, '\\api') || str_ends_with($baseDir, '/services') || str_ends_with($baseDir, '\\services')) {
+            $baseDir = dirname($baseDir);
+        }
+        $baseDir = ($baseDir === '/' || $baseDir === '\\') ? '' : rtrim($baseDir, '/\\');
+
+        return "{$protocol}://{$serverHost}{$portSuffix}{$baseDir}";
+    }
+
+    /**
+     * Get trusted canonical OAuth Redirect URI
+     */
+    public static function getOAuthRedirectUri(): string {
+        return self::getAppUrl() . '/callback-meta.php';
     }
 
     /**
@@ -290,5 +348,253 @@ class Security {
             'error' => $publicMessage
         ], JSON_UNESCAPED_UNICODE);
         exit;
+    }
+
+    /**
+     * Load environment variables from .env if present
+     */
+    public static function loadEnv(): void {
+        static $loaded = false;
+        if ($loaded) return;
+        $loaded = true;
+
+        $envFile = __DIR__ . '/../.env';
+        if (file_exists($envFile)) {
+            $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            foreach ($lines as $line) {
+                $line = trim($line);
+                if (empty($line) || str_starts_with($line, '#')) continue;
+                if (str_contains($line, '=')) {
+                    [$name, $value] = explode('=', $line, 2);
+                    $name = trim($name);
+                    $value = trim($value, " \t\n\r\0\x0B\"'");
+                    if (getenv($name) === false && !isset($_ENV[$name])) {
+                        putenv("{$name}={$value}");
+                        $_ENV[$name] = $value;
+                        $_SERVER[$name] = $value;
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Check if an Origin is explicitly whitelisted (Zero-Trust)
+     */
+    public static function isAllowedOrigin(string $origin): bool {
+        if (empty($origin)) {
+            return false;
+        }
+
+        self::loadEnv();
+
+        $parsedOrigin = parse_url($origin);
+        if (!$parsedOrigin || empty($parsedOrigin['scheme']) || empty($parsedOrigin['host'])) {
+            return false;
+        }
+
+        $originScheme = strtolower($parsedOrigin['scheme']);
+        $originHost = strtolower($parsedOrigin['host']);
+        $originPort = $parsedOrigin['port'] ?? ($originScheme === 'https' ? 443 : 80);
+
+        // Standardize origin representation (scheme://host[:port])
+        $normalizedOrigin = $originScheme . '://' . $originHost;
+        if (!($originScheme === 'https' && $originPort === 443) && !($originScheme === 'http' && $originPort === 80)) {
+            $normalizedOrigin .= ':' . $originPort;
+        }
+
+        $allowedOrigins = [];
+
+        // 1. Explicitly configured origins from .env (CORS_ALLOWED_ORIGINS)
+        $configuredOrigins = getenv('CORS_ALLOWED_ORIGINS') ?: ($_ENV['CORS_ALLOWED_ORIGINS'] ?? '');
+        if (!empty($configuredOrigins)) {
+            foreach (explode(',', $configuredOrigins) as $o) {
+                $trimmed = trim($o);
+                if (!empty($trimmed)) {
+                    $allowedOrigins[] = rtrim(strtolower($trimmed), '/');
+                }
+            }
+        }
+
+        // 2. Application canonical URL if configured in .env (APP_URL)
+        $appUrl = getenv('APP_URL') ?: ($_ENV['APP_URL'] ?? '');
+        if (!empty($appUrl)) {
+            $parsedApp = parse_url($appUrl);
+            if ($parsedApp && !empty($parsedApp['host'])) {
+                $appScheme = strtolower($parsedApp['scheme'] ?? 'http');
+                $appHost = strtolower($parsedApp['host']);
+                $appPort = $parsedApp['port'] ?? ($appScheme === 'https' ? 443 : 80);
+                $appNorm = $appScheme . '://' . $appHost;
+                if (!($appScheme === 'https' && $appPort === 443) && !($appScheme === 'http' && $appPort === 80)) {
+                    $appNorm .= ':' . $appPort;
+                }
+                $allowedOrigins[] = $appNorm;
+            }
+        }
+
+        // 3. Local trusted development addresses (exact matches only)
+        $serverPort = (int)($_SERVER['SERVER_PORT'] ?? 80);
+        $allowedOrigins[] = 'http://localhost';
+        $allowedOrigins[] = 'https://localhost';
+        $allowedOrigins[] = 'http://127.0.0.1';
+        $allowedOrigins[] = 'https://127.0.0.1';
+        if (!in_array($serverPort, [80, 443], true)) {
+            $allowedOrigins[] = "http://localhost:{$serverPort}";
+            $allowedOrigins[] = "https://localhost:{$serverPort}";
+            $allowedOrigins[] = "http://127.0.0.1:{$serverPort}";
+            $allowedOrigins[] = "https://127.0.0.1:{$serverPort}";
+        }
+        if (!in_array($originPort, [80, 443], true)) {
+            if ($originHost === 'localhost' || $originHost === '127.0.0.1') {
+                $allowedOrigins[] = "{$originScheme}://{$originHost}:{$originPort}";
+            }
+        }
+
+        $allowedOrigins = array_unique($allowedOrigins);
+
+        // Strict exact equality comparison (Zero-Trust)
+        return in_array($normalizedOrigin, $allowedOrigins, true);
+    }
+
+    /**
+     * Apply strict zero-trust CORS validation against an explicit whitelist
+     * Eliminates Host-trust and substring-based CORS injection
+     */
+    public static function applyStrictCors(): void {
+        $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+        if (empty($origin)) {
+            return;
+        }
+
+        if (self::isAllowedOrigin($origin)) {
+            header('Access-Control-Allow-Origin: ' . $origin);
+            header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+            header('Access-Control-Allow-Headers: Content-Type, X-CSRF-Token, Authorization, X-Requested-With');
+            header('Access-Control-Allow-Credentials: true');
+            header('Access-Control-Max-Age: 86400');
+            header('Vary: Origin');
+
+            if (strtoupper($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') {
+                http_response_code(204);
+                exit;
+            }
+        }
+    }
+
+    /**
+     * Get or initialize the 256-bit symmetric encryption key from .env or secure persistent keyfile
+     */
+    public static function getEncryptionKey(): string {
+        self::loadEnv();
+        $keyHex = getenv('APP_ENCRYPTION_KEY') ?: ($_ENV['APP_ENCRYPTION_KEY'] ?? '');
+
+        if (!empty($keyHex)) {
+            $bin = @hex2bin($keyHex);
+            if ($bin !== false && strlen($bin) === 32) {
+                return $bin;
+            }
+            if (strlen($keyHex) === 32) {
+                return $keyHex;
+            }
+            return hash('sha256', $keyHex, true);
+        }
+
+        // Persistent fallback keyfile in data/ (denied by .htaccess)
+        $dataDir = __DIR__ . '/../data';
+        if (!is_dir($dataDir)) {
+            @mkdir($dataDir, 0750, true);
+        }
+        $keyFile = $dataDir . '/.app_encryption_key';
+        if (file_exists($keyFile)) {
+            $raw = @file_get_contents($keyFile);
+            if ($raw !== false && strlen($raw) === 32) {
+                return $raw;
+            }
+        }
+
+        // Generate and persist 32-byte CSPRNG key
+        $newKey = random_bytes(32);
+        @file_put_contents($keyFile, $newKey, LOCK_EX);
+        @chmod($keyFile, 0600);
+        return $newKey;
+    }
+
+    /**
+     * Authenticated Symmetric Encryption (AES-256-GCM)
+     * Format: enc:v1:<base64(iv(12) . tag(16) . ciphertext)>
+     */
+    public static function encrypt(?string $plaintext): string {
+        if ($plaintext === null || $plaintext === '') {
+            return '';
+        }
+
+        // Already encrypted?
+        if (str_starts_with($plaintext, 'enc:v1:')) {
+            return $plaintext;
+        }
+
+        $key = self::getEncryptionKey();
+        $iv = random_bytes(12);
+        $tag = '';
+
+        $ciphertext = openssl_encrypt(
+            $plaintext,
+            'aes-256-gcm',
+            $key,
+            OPENSSL_RAW_DATA,
+            $iv,
+            $tag,
+            '',
+            16
+        );
+
+        if ($ciphertext === false) {
+            throw new RuntimeException("Fallo crítico en el cifrado AES-256-GCM");
+        }
+
+        return 'enc:v1:' . base64_encode($iv . $tag . $ciphertext);
+    }
+
+    /**
+     * Authenticated Symmetric Decryption (AES-256-GCM)
+     */
+    public static function decrypt(?string $payload): string {
+        if ($payload === null || $payload === '') {
+            return '';
+        }
+
+        // Transparent backward compatibility: if not encrypted with enc:v1:, return as-is
+        if (!str_starts_with($payload, 'enc:v1:')) {
+            return $payload;
+        }
+
+        $encoded = substr($payload, 7);
+        $raw = base64_decode($encoded, true);
+        if ($raw === false || strlen($raw) < 28) {
+            error_log("[SECURITY] Intento de descifrado con payload corrupto o inválido.");
+            return '';
+        }
+
+        $iv = substr($raw, 0, 12);
+        $tag = substr($raw, 12, 16);
+        $ciphertext = substr($raw, 28);
+
+        $key = self::getEncryptionKey();
+
+        $decrypted = openssl_decrypt(
+            $ciphertext,
+            'aes-256-gcm',
+            $key,
+            OPENSSL_RAW_DATA,
+            $iv,
+            $tag
+        );
+
+        if ($decrypted === false) {
+            error_log("[SECURITY] Fallo de integridad o clave incorrecta al descifrar AES-256-GCM.");
+            return '';
+        }
+
+        return $decrypted;
     }
 }

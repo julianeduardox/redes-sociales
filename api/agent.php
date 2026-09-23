@@ -311,9 +311,9 @@ try {
         }
         $chosenReply = $replies[$chosenVariant] ?? $replies['engagement'];
 
-        // Post reply to Meta
-        $metaResult = MetaApiService::postReplyToMeta((int)$c['id'], $chosenReply, $userId);
-        $isPosted = !empty($metaResult['success']) ? 1 : 0;
+        // Post reply to Meta (manual single trigger from UI)
+        $metaResult = MetaApiService::postReplyToMeta((int)$c['id'], $chosenReply, $userId, true);
+        $isPosted = !empty($metaResult['success']) && empty($metaResult['skipped']) ? 1 : 0;
 
         // Insert reply record
         $stmtRep = $pdo->prepare("

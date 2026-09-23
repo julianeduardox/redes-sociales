@@ -4,33 +4,15 @@
  * Handles transactional emails (Password Resets, Security Alerts) with HTML templates
  */
 
+require_once __DIR__ . '/../config/security.php';
+
 class MailerService {
 
     /**
-     * Get the dynamic application base URL
+     * Get the trusted canonical application base URL
      */
     public static function getBaseUrl(): string {
-        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-            || (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443)
-            || (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https')
-            ? 'https' : 'http';
-
-        $host = $_SERVER['HTTP_HOST'] ?? 'socialapi.turbogram.site';
-        
-        // Remove trailing script paths
-        $scriptPath = $_SERVER['SCRIPT_NAME'] ?? '';
-        $dir = dirname($scriptPath);
-        if ($dir === '/' || $dir === '\\') {
-            $dir = '';
-        }
-
-        // If running in local subfolder e.g. /Redes sociales
-        if (strpos($scriptPath, 'api/') !== false || strpos($scriptPath, 'services/') !== false) {
-            $dir = dirname($dir);
-            if ($dir === '/' || $dir === '\\') $dir = '';
-        }
-
-        return rtrim($protocol . '://' . $host . $dir, '/');
+        return Security::getAppUrl();
     }
 
     /**

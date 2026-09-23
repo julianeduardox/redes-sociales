@@ -260,28 +260,33 @@ function processWebhookQueue(PDO $pdo, int $batchLimit = 50, ?int $specificQueue
                                     $chosenReply = $replies[$chosenVariant] ?? $replies['engagement'];
 
                                     $metaRes = MetaApiService::postReplyToMeta($newDbId, $chosenReply, $targetUserId);
-                                    $isPosted = !empty($metaRes['success']) ? 1 : 0;
-
-                                    $stmtRep = $pdo->prepare("
-                                        INSERT INTO replies (user_id, comment_id, reply_text, reply_type, tone_used, variant_type, is_posted_to_platform)
-                                        VALUES (:uid, :cid, :text, 'autopilot', 'auto_selected', :variant, :is_posted)
-                                    ");
-                                    $stmtRep->execute([
-                                        ':uid' => $targetUserId,
-                                        ':cid' => $newDbId,
-                                        ':text' => $chosenReply,
-                                        ':variant' => $chosenVariant,
-                                        ':is_posted' => $isPosted
-                                    ]);
-
-                                    if ($isPosted) {
-                                        $pdo->prepare("UPDATE comments SET status = 'replied', highlight_reason = NULL WHERE id = :id AND user_id = :uid")->execute([':id' => $newDbId, ':uid' => $targetUserId]);
-                                        $repliesPosted++;
-                                        cliLog("🤖 Autopilot publicó respuesta a Facebook para: {$senderName}", 'success', $silent);
+                                    if (!empty($metaRes['already_posted']) || !empty($metaRes['skipped'])) {
+                                        $pdo->prepare("UPDATE comments SET status = 'replied' WHERE id = :id AND user_id = :uid")->execute([':id' => $newDbId, ':uid' => $targetUserId]);
+                                        cliLog("ℹ️ Comentario {$newDbId} omitido (ya respondido o > 2h)", 'info', $silent);
                                     } else {
-                                        $errReason = $metaRes['error'] ?? 'Fallo al publicar respuesta en Facebook';
-                                        $pdo->prepare("UPDATE comments SET status = 'failed', highlight_reason = :reason WHERE id = :id AND user_id = :uid")->execute([':reason' => $errReason, ':id' => $newDbId, ':uid' => $targetUserId]);
-                                        cliLog("⚠️ Autopilot no pudo publicar respuesta a Facebook para: {$senderName} ({$errReason})", 'warning', $silent);
+                                        $isPosted = !empty($metaRes['success']) ? 1 : 0;
+
+                                        $stmtRep = $pdo->prepare("
+                                            INSERT INTO replies (user_id, comment_id, reply_text, reply_type, tone_used, variant_type, is_posted_to_platform)
+                                            VALUES (:uid, :cid, :text, 'autopilot', 'auto_selected', :variant, :is_posted)
+                                        ");
+                                        $stmtRep->execute([
+                                            ':uid' => $targetUserId,
+                                            ':cid' => $newDbId,
+                                            ':text' => $chosenReply,
+                                            ':variant' => $chosenVariant,
+                                            ':is_posted' => $isPosted
+                                        ]);
+
+                                        if ($isPosted) {
+                                            $pdo->prepare("UPDATE comments SET status = 'replied', highlight_reason = NULL WHERE id = :id AND user_id = :uid")->execute([':id' => $newDbId, ':uid' => $targetUserId]);
+                                            $repliesPosted++;
+                                            cliLog("🤖 Autopilot publicó respuesta a Facebook para: {$senderName}", 'success', $silent);
+                                        } else {
+                                            $errReason = $metaRes['error'] ?? 'Fallo al publicar respuesta en Facebook';
+                                            $pdo->prepare("UPDATE comments SET status = 'failed', highlight_reason = :reason WHERE id = :id AND user_id = :uid")->execute([':reason' => $errReason, ':id' => $newDbId, ':uid' => $targetUserId]);
+                                            cliLog("⚠️ Autopilot no pudo publicar respuesta a Facebook para: {$senderName} ({$errReason})", 'warning', $silent);
+                                        }
                                     }
                                 }
                             }
@@ -479,28 +484,33 @@ function processWebhookQueue(PDO $pdo, int $batchLimit = 50, ?int $specificQueue
                                     $chosenReply = $replies[$chosenVariant] ?? $replies['engagement'];
 
                                     $metaRes = MetaApiService::postReplyToMeta($newDbId, $chosenReply, $targetUserId);
-                                    $isPosted = !empty($metaRes['success']) ? 1 : 0;
-
-                                    $stmtRep = $pdo->prepare("
-                                        INSERT INTO replies (user_id, comment_id, reply_text, reply_type, tone_used, variant_type, is_posted_to_platform)
-                                        VALUES (:uid, :cid, :text, 'autopilot', 'auto_selected', :variant, :is_posted)
-                                    ");
-                                    $stmtRep->execute([
-                                        ':uid' => $targetUserId,
-                                        ':cid' => $newDbId,
-                                        ':text' => $chosenReply,
-                                        ':variant' => $chosenVariant,
-                                        ':is_posted' => $isPosted
-                                    ]);
-
-                                    if ($isPosted) {
-                                        $pdo->prepare("UPDATE comments SET status = 'replied', highlight_reason = NULL WHERE id = :id AND user_id = :uid")->execute([':id' => $newDbId, ':uid' => $targetUserId]);
-                                        $repliesPosted++;
-                                        cliLog("🤖 Autopilot publicó respuesta a Instagram para: @{$senderUsername}", 'success', $silent);
+                                    if (!empty($metaRes['already_posted']) || !empty($metaRes['skipped'])) {
+                                        $pdo->prepare("UPDATE comments SET status = 'replied' WHERE id = :id AND user_id = :uid")->execute([':id' => $newDbId, ':uid' => $targetUserId]);
+                                        cliLog("ℹ️ Comentario {$newDbId} omitido (ya respondido o > 2h)", 'info', $silent);
                                     } else {
-                                        $errReason = $metaRes['error'] ?? 'Fallo al publicar respuesta en Instagram';
-                                        $pdo->prepare("UPDATE comments SET status = 'failed', highlight_reason = :reason WHERE id = :id AND user_id = :uid")->execute([':reason' => $errReason, ':id' => $newDbId, ':uid' => $targetUserId]);
-                                        cliLog("⚠️ Autopilot no pudo publicar respuesta a Instagram para: @{$senderUsername} ({$errReason})", 'warning', $silent);
+                                        $isPosted = !empty($metaRes['success']) ? 1 : 0;
+
+                                        $stmtRep = $pdo->prepare("
+                                            INSERT INTO replies (user_id, comment_id, reply_text, reply_type, tone_used, variant_type, is_posted_to_platform)
+                                            VALUES (:uid, :cid, :text, 'autopilot', 'auto_selected', :variant, :is_posted)
+                                        ");
+                                        $stmtRep->execute([
+                                            ':uid' => $targetUserId,
+                                            ':cid' => $newDbId,
+                                            ':text' => $chosenReply,
+                                            ':variant' => $chosenVariant,
+                                            ':is_posted' => $isPosted
+                                        ]);
+
+                                        if ($isPosted) {
+                                            $pdo->prepare("UPDATE comments SET status = 'replied', highlight_reason = NULL WHERE id = :id AND user_id = :uid")->execute([':id' => $newDbId, ':uid' => $targetUserId]);
+                                            $repliesPosted++;
+                                            cliLog("🤖 Autopilot publicó respuesta a Instagram para: @{$senderUsername}", 'success', $silent);
+                                        } else {
+                                            $errReason = $metaRes['error'] ?? 'Fallo al publicar respuesta en Instagram';
+                                            $pdo->prepare("UPDATE comments SET status = 'failed', highlight_reason = :reason WHERE id = :id AND user_id = :uid")->execute([':reason' => $errReason, ':id' => $newDbId, ':uid' => $targetUserId]);
+                                            cliLog("⚠️ Autopilot no pudo publicar respuesta a Instagram para: @{$senderUsername} ({$errReason})", 'warning', $silent);
+                                        }
                                     }
                                 }
                             }
@@ -554,12 +564,14 @@ if (!defined('PROCESS_QUEUE_LIB_ONLY')) {
     $isCli = (php_sapi_name() === 'cli' || defined('STDIN'));
     if (!$isCli) {
         $secretKey = $_GET['key'] ?? '';
-        $configuredSecret = Settings::get('cron_secret_key', 'cron_secure_token_2026');
+        $configuredSecret = getenv('CRON_SECRET_KEY') ?: ($_ENV['CRON_SECRET_KEY'] ?? Settings::get('cron_secret_key', ''));
         
-        if (empty($secretKey) || !hash_equals($configuredSecret, $secretKey)) {
+        // Fail-Closed: reject empty or default known tokens immediately
+        $insecureTokens = ['', 'cron_secure_token_2026', 'tu_cron_key_aqui', 'secret'];
+        if (in_array($configuredSecret, $insecureTokens, true) || empty($secretKey) || !hash_equals($configuredSecret, $secretKey)) {
             http_response_code(403);
             header('Content-Type: application/json; charset=utf-8');
-            echo json_encode(['error' => 'Acceso no autorizado al cron worker.'], JSON_UNESCAPED_UNICODE);
+            echo json_encode(['error' => 'Acceso no autorizado al cron worker. Clave no configurada o token inválido.'], JSON_UNESCAPED_UNICODE);
             exit;
         }
         header('Content-Type: application/json; charset=utf-8');

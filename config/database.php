@@ -143,6 +143,14 @@ class Database {
                 ]);
 
             } else {
+                $customDb = getenv('DB_DATABASE') ?: ($_ENV['DB_DATABASE'] ?? '');
+                if (!empty($customDb)) {
+                    if (!str_starts_with($customDb, '/') && !preg_match('/^[a-zA-Z]:/', $customDb)) {
+                        self::$dbFile = __DIR__ . '/../' . ltrim($customDb, '/\\');
+                    } else {
+                        self::$dbFile = $customDb;
+                    }
+                }
                 // Default: SQLite with WAL mode & concurrency tuning
                 $dataDir = dirname(self::$dbFile);
                 if (!is_dir($dataDir)) {
@@ -1495,11 +1503,30 @@ class Database {
         try {
             $userCount = (int)$pdo->query("SELECT COUNT(*) FROM users")->fetchColumn();
             if ($userCount === 0) {
-                $adminHash = password_hash('Admin2026!Secure', PASSWORD_BCRYPT, ['cost' => 12]);
+                self::loadEnv();
+                $initialPassword = getenv('ADMIN_INITIAL_PASSWORD') ?: ($_ENV['ADMIN_INITIAL_PASSWORD'] ?? '');
+                $adminEmail = getenv('ADMIN_INITIAL_EMAIL') ?: ($_ENV['ADMIN_INITIAL_EMAIL'] ?? 'julianeduardox@gmail.com');
+                $adminName = getenv('ADMIN_INITIAL_NAME') ?: ($_ENV['ADMIN_INITIAL_NAME'] ?? 'Julian Eduardo');
+
+                if (empty($initialPassword)) {
+                    $initialPassword = bin2hex(random_bytes(10));
+                    $dataDir = dirname(self::$dbFile);
+                    if (is_dir($dataDir)) {
+                        $credFile = $dataDir . '/initial_admin_credentials.txt';
+                        @file_put_contents($credFile, "Email: {$adminEmail}\nContraseña temporal inicial: {$initialPassword}\nGenerado: " . date('c') . "\nNOTA: Cambia esta contraseña inmediatamente y elimina este archivo.\n", LOCK_EX);
+                        @chmod($credFile, 0600);
+                    }
+                }
+
+                $adminHash = password_hash($initialPassword, PASSWORD_BCRYPT, ['cost' => 12]);
                 $pdo->prepare("
                     INSERT INTO users (tenant_id, name, email, password_hash, role, avatar_url, last_login_at)
-                    VALUES ('tnt_admin_01', 'Julian Eduardo', 'julianeduardox@gmail.com', :hash, 'admin', 'https://ui-avatars.com/api/?name=Julian+Eduardo&background=6366f1&color=fff&size=96', CURRENT_TIMESTAMP)
-                ")->execute([':hash' => $adminHash]);
+                    VALUES ('tnt_admin_01', :name, :email, :hash, 'admin', 'https://ui-avatars.com/api/?name=Julian+Eduardo&background=6366f1&color=fff&size=96', CURRENT_TIMESTAMP)
+                ")->execute([
+                    ':name' => $adminName,
+                    ':email' => $adminEmail,
+                    ':hash' => $adminHash
+                ]);
                 $adminId = (int)$pdo->lastInsertId();
                 self::seedInitialData($pdo, $adminId);
             }
@@ -1622,7 +1649,7 @@ class Database {
             'meta_app_secret' => '',
             'meta_page_access_token' => '',
             'meta_instagram_account_id' => '',
-            'webhook_verify_token' => 'social_boost_secure_token_2026'
+            'webhook_verify_token' => getenv('WEBHOOK_VERIFY_TOKEN') ?: ($_ENV['WEBHOOK_VERIFY_TOKEN'] ?? bin2hex(random_bytes(16)))
         ];
 
         foreach ($defaultSettings as $k => $v) {

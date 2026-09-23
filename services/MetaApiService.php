@@ -27,7 +27,7 @@ class MetaApiService {
             $stmt = $pdo->prepare("SELECT access_token FROM accounts WHERE user_id = :uid AND access_token IS NOT NULL AND access_token != '' ORDER BY id DESC LIMIT 1");
             $stmt->execute([':uid' => $uid]);
             $accRow = $stmt->fetch();
-            $accessToken = !empty($accRow['access_token']) ? $accRow['access_token'] : Settings::get('meta_page_access_token', '', $uid);
+            $accessToken = !empty($accRow['access_token']) ? Security::decrypt($accRow['access_token']) : Settings::get('meta_page_access_token', '', $uid);
         }
 
         $appId = Settings::get('meta_app_id', '', $uid);
@@ -395,9 +395,23 @@ class MetaApiService {
     /**
      * Post a reply to a Facebook or Instagram comment
      */
-    public static function postReplyToMeta(int $commentDbId, string $replyMessage, ?int $userId = null): array {
+    public static function postReplyToMeta(int $commentDbId, string $replyMessage, ?int $userId = null, bool $isManual = false): array {
         $uid = ($userId !== null && $userId > 0) ? $userId : (class_exists('Auth') && Auth::check() ? Auth::id() : 1);
         $pdo = Database::getConnection();
+
+        // 1. Strict Idempotency Guard: Never post twice to the same comment
+        $checkExistingReply = $pdo->prepare("SELECT id FROM replies WHERE comment_id = :cid AND is_posted_to_platform = 1 LIMIT 1");
+        $checkExistingReply->execute([':cid' => $commentDbId]);
+        if ($checkExistingReply->fetch()) {
+            $pdo->prepare("UPDATE comments SET status = 'replied' WHERE id = :id AND user_id = :uid")->execute([':id' => $commentDbId, ':uid' => $uid]);
+            return [
+                'success' => true,
+                'already_posted' => true,
+                'simulated' => false,
+                'message' => 'El comentario ya fue respondido en Meta anteriormente.'
+            ];
+        }
+
         $stmt = $pdo->prepare("
             SELECT c.*, p.external_post_id, p.account_id, a.access_token as account_token, a.platform as account_platform, a.page_id as account_page_id
             FROM comments c 
@@ -417,11 +431,25 @@ class MetaApiService {
             ];
         }
 
+        // 2. Strict Age Cutoff Guard: Refuse automatic replies for comments older than 2 hours (7200 seconds)
+        if (!$isManual && !empty($comment['created_at'])) {
+            $commentAgeSeconds = time() - strtotime($comment['created_at']);
+            if ($commentAgeSeconds > 7200) {
+                $pdo->prepare("UPDATE comments SET status = 'replied' WHERE id = :id AND user_id = :uid")->execute([':id' => $commentDbId, ':uid' => $uid]);
+                return [
+                    'success' => true,
+                    'already_posted' => false,
+                    'skipped' => true,
+                    'message' => 'Comentario con más de 2 horas de antigüedad; omitido por seguridad de cuenta.'
+                ];
+            }
+        }
+
         $platform = strtolower($comment['platform'] ?? 'facebook');
         $externalCommentId = $comment['external_comment_id'] ?? '';
 
         // Select the most appropriate token based on platform
-        $pageAccessToken = !empty($comment['account_token']) ? $comment['account_token'] : '';
+        $pageAccessToken = !empty($comment['account_token']) ? Security::decrypt($comment['account_token']) : '';
 
         // If no token from the specific post's account, try finding a token for this platform from user's accounts
         if (empty($pageAccessToken)) {
@@ -434,7 +462,7 @@ class MetaApiService {
             $stmtAcc->execute([':uid' => $uid, ':platform' => $platform]);
             $accRow = $stmtAcc->fetch();
             if ($accRow && !empty($accRow['access_token'])) {
-                $pageAccessToken = $accRow['access_token'];
+                $pageAccessToken = Security::decrypt($accRow['access_token']);
             }
         }
 
@@ -563,7 +591,7 @@ class MetaApiService {
         $stmtFb->execute([':uid' => $uid]);
         $fbAcc = $stmtFb->fetch();
 
-        $fbToken = $fbAcc['access_token'] ?? Settings::get('meta_page_access_token', '', $uid);
+        $fbToken = !empty($fbAcc['access_token']) ? Security::decrypt($fbAcc['access_token']) : Settings::get('meta_page_access_token', '', $uid);
         if (!empty($fbToken) && !str_starts_with($fbToken, 'IGAA') && !str_starts_with($fbToken, 'IGQV')) {
             $result['facebook']['has_token'] = true;
             $result['facebook']['account_name'] = $fbAcc['account_name'] ?? 'Facebook Page';
@@ -592,7 +620,7 @@ class MetaApiService {
         $stmtIg->execute([':uid' => $uid]);
         $igAcc = $stmtIg->fetch();
 
-        $igToken = $igAcc['access_token'] ?? Settings::get('meta_instagram_token', '', $uid);
+        $igToken = !empty($igAcc['access_token']) ? Security::decrypt($igAcc['access_token']) : Settings::get('meta_instagram_token', '', $uid);
         if (empty($igToken)) {
             $cand = Settings::get('meta_page_access_token', '', $uid);
             if (!empty($cand) && (str_starts_with($cand, 'IGAA') || str_starts_with($cand, 'IGQV'))) {
@@ -636,7 +664,8 @@ class MetaApiService {
 
         $userToken = Settings::get('meta_user_access_token', '', $uid);
         $pageToken = Settings::get('meta_page_access_token', '', $uid);
-        $defaultToken = !empty($userToken) ? $userToken : $pageToken;
+        // Prioritize permanent Page Access Token: works for both Pages and linked Instagram accounts
+        $defaultToken = !empty($pageToken) ? $pageToken : (!empty($userToken) ? $userToken : '');
         $defaultBrandVoiceId = Database::ensureDefaultBrandVoice($pdo, $uid);
 
         $accountDiagnostics = [];
@@ -692,7 +721,7 @@ class MetaApiService {
                     ")->execute([
                         ':name' => $pname,
                         ':avatar' => $pageAvatar,
-                        ':token' => $ptok,
+                        ':token' => Security::encrypt($ptok),
                         ':id' => $existingFb['id']
                     ]);
                 } else {
@@ -706,7 +735,7 @@ class MetaApiService {
                         ':handle' => 'fb_' . $pid,
                         ':pid' => $pid,
                         ':avatar' => $pageAvatar,
-                        ':token' => $ptok
+                        ':token' => Security::encrypt($ptok)
                     ]);
                 }
 
@@ -731,7 +760,7 @@ class MetaApiService {
                             ':handle' => $igHandle,
                             ':ig_id' => $igId,
                             ':avatar' => $igAvatar,
-                            ':token' => $ptok,
+                            ':token' => Security::encrypt($ptok),
                             ':id' => $existingIg['id']
                         ]);
                     } else {
@@ -745,7 +774,7 @@ class MetaApiService {
                             ':handle' => $igHandle,
                             ':ig_id' => $igId,
                             ':avatar' => $igAvatar,
-                            ':token' => $ptok
+                            ':token' => Security::encrypt($ptok)
                         ]);
                     }
 
@@ -786,6 +815,9 @@ class MetaApiService {
             $platform = $acc['platform'] ?? 'facebook';
             $pageId = trim($acc['page_id'] ?? '');
             $token = !empty($acc['access_token']) ? $acc['access_token'] : $defaultToken;
+            if ($platform === 'facebook' && !empty($pageToken)) {
+                $token = $pageToken; // Always enforce Page Access Token for Facebook Pages
+            }
             $accName = $acc['account_name'] ?? 'Cuenta ' . $accId;
             $accHandle = $acc['account_handle'] ?? '';
             $brandVoiceId = !empty($acc['brand_voice_id']) ? (int)$acc['brand_voice_id'] : $defaultBrandVoiceId;
@@ -844,7 +876,7 @@ class MetaApiService {
                         $cCount = (int)($media['comments_count'] ?? 0);
                         if ($cCount > 0) {
                             $multiUrls['comments_' . $mId] = $igHost . '/' . urlencode($mId) . '/comments?' . http_build_query([
-                                'fields' => 'id,text,username,timestamp,like_count',
+                                'fields' => 'id,text,username,timestamp,like_count,replies{id,text,username,timestamp}',
                                 'limit' => '25',
                                 'access_token' => $token
                             ]);
@@ -997,6 +1029,12 @@ class MetaApiService {
                                 if (!$existingCmt) {
                                     $analysis = AiAgentService::analyzeComment($cText, $caption, $cLikes);
 
+                                    // Detect if comment already has replies on Instagram or is older than 2 hours
+                                    $hasReplies = !empty($cmt['replies']['data']) && is_array($cmt['replies']['data']) && count($cmt['replies']['data']) > 0;
+                                    $cAgeSeconds = time() - strtotime($cCreated);
+                                    $isOldComment = $cAgeSeconds > 7200; // Older than 2 hours
+                                    $initialStatus = ($hasReplies || $isOldComment) ? 'replied' : 'pending';
+
                                     $stmtCmt = $pdo->prepare("
                                         INSERT INTO comments (
                                             post_id, user_id, platform, external_comment_id, 
@@ -1007,7 +1045,7 @@ class MetaApiService {
                                             :post_id, :uid, 'instagram', :ext_id, 
                                             :author_name, :author_handle, :author_avatar, :comment_text, :sentiment, :intent, 
                                             :is_highlighted, :highlight_score, :highlight_reason, 
-                                            'pending', :likes_count, :created_at
+                                            :status, :likes_count, :created_at
                                         )
                                     ");
                                     $stmtCmt->execute([
@@ -1023,55 +1061,32 @@ class MetaApiService {
                                         ':is_highlighted' => ($analysis['is_highlighted'] ?? 0),
                                         ':highlight_score' => $analysis['highlight_score'] ?? 50,
                                         ':highlight_reason' => $analysis['highlight_reason'] ?? '',
+                                        ':status' => $initialStatus,
                                         ':likes_count' => $cLikes,
                                         ':created_at' => $cCreated
                                     ]);
 
                                     $syncedCommentsCount++;
                                     $accNewComments++;
-
-                                    // Automatic Response when Auto-Responder is Active
                                     $newCommentId = (int)$pdo->lastInsertId();
-                                    $autopilotEnabled = Settings::get('autopilot_enabled', '0', $uid) === '1';
 
-                                    if ($autopilotEnabled && $newCommentId > 0) {
-                                        $suitability = AiAgentService::evaluateCommentSuitability($cText);
-                                        if ($suitability['status'] === 'spam') {
-                                            $pdo->prepare("UPDATE comments SET status = 'spam', sentiment = 'spam', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
-                                                ->execute([':reason' => $suitability['reason'], ':id' => $newCommentId, ':uid' => $uid]);
-                                        } elseif ($suitability['status'] === 'ignored') {
-                                            $pdo->prepare("UPDATE comments SET status = 'ignored', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
-                                                ->execute([':reason' => $suitability['reason'], ':id' => $newCommentId, ':uid' => $uid]);
-                                        } else {
-                                            $replies = AiAgentService::generateReplies($cAuthor, $cText, 'instagram', $caption, '', [
-                                                'brand_voice_id' => $brandVoiceId,
-                                                'user_id' => $uid,
-                                                'post_id' => $postId
-                                            ]);
-                                            $chosenVariant = 'engagement';
-                                            if (($analysis['sentiment'] ?? '') === 'lead' || str_starts_with(($analysis['intent'] ?? ''), 'lead_')) {
-                                                $chosenVariant = 'conversion';
-                                            } elseif (($analysis['sentiment'] ?? '') === 'urgent' || ($analysis['intent'] ?? '') === 'support') {
-                                                $chosenVariant = 'support';
+                                    // If Meta already had replies for this comment, record them locally as already posted
+                                    if ($hasReplies && $newCommentId > 0) {
+                                        foreach ($cmt['replies']['data'] as $childRep) {
+                                            $repText = $childRep['text'] ?? '';
+                                            $repCreated = !empty($childRep['timestamp']) ? date('Y-m-d H:i:s', strtotime($childRep['timestamp'])) : $cCreated;
+                                            if (!empty($repText)) {
+                                                $pdo->prepare("
+                                                    INSERT INTO replies (user_id, comment_id, reply_text, reply_type, tone_used, variant_type, is_posted_to_platform, created_at)
+                                                    VALUES (:uid, :cid, :reply, 'existing_meta', 'direct', 'engagement', 1, :created_at)
+                                                ")->execute([
+                                                    ':uid' => $uid,
+                                                    ':cid' => $newCommentId,
+                                                    ':reply' => $repText,
+                                                    ':created_at' => $repCreated
+                                                ]);
+                                                break;
                                             }
-                                            $chosenReply = $replies[$chosenVariant] ?? $replies['engagement'];
-
-                                            $metaRes = self::postReplyToMeta($newCommentId, $chosenReply, $uid);
-                                            $isPosted = !empty($metaRes['success']) ? 1 : 0;
-
-                                            $pdo->prepare("
-                                                INSERT INTO replies (user_id, comment_id, reply_text, reply_type, tone_used, variant_type, is_posted_to_platform)
-                                                VALUES (:uid, :cid, :reply, 'autopilot', 'auto_selected', :variant, :is_posted)
-                                            ")->execute([
-                                                ':uid' => $uid,
-                                                ':cid' => $newCommentId,
-                                                ':reply' => $chosenReply,
-                                                ':variant' => $chosenVariant,
-                                                ':is_posted' => $isPosted
-                                            ]);
-
-                                            $pdo->prepare("UPDATE comments SET status = 'replied' WHERE id = :id AND user_id = :uid")
-                                                ->execute([':id' => $newCommentId, ':uid' => $uid]);
                                         }
                                     }
                                 } else {
@@ -1260,9 +1275,9 @@ class MetaApiService {
                             'access_token' => $token
                         ]);
 
-                        // Fetch comments list directly
+                        // Fetch comments list directly with child comments / replies
                         $multiUrls['fb_comments_' . $pIdExt] = self::BASE_URL . '/' . urlencode($pIdExt) . '/comments?' . http_build_query([
-                            'fields' => 'id,message,from,created_time,like_count',
+                            'fields' => 'id,message,from,created_time,like_count,comment_count,comments{id,from,message,created_time}',
                             'limit' => '50',
                             'access_token' => $token
                         ]);
@@ -1274,7 +1289,7 @@ class MetaApiService {
                                 'access_token' => $token
                             ]);
                             $multiUrls['fb_obj_comments_' . $pIdExt] = self::BASE_URL . '/' . urlencode($objId) . '/comments?' . http_build_query([
-                                'fields' => 'id,message,from,created_time,like_count',
+                                'fields' => 'id,message,from,created_time,like_count,comment_count,comments{id,from,message,created_time}',
                                 'limit' => '50',
                                 'access_token' => $token
                             ]);
@@ -1531,6 +1546,13 @@ class MetaApiService {
 
                             if (!$existingCmt) {
                                 $analysis = AiAgentService::analyzeComment($cText, $message, $cLikes);
+
+                                // Detect if comment already has replies on Facebook or is older than 2 hours
+                                $hasReplies = (!empty($c['comments']['data']) && is_array($c['comments']['data']) && count($c['comments']['data']) > 0) || (!empty($c['comment_count']) && (int)$c['comment_count'] > 0);
+                                $cAgeSeconds = time() - strtotime($cCreated);
+                                $isOldComment = $cAgeSeconds > 7200; // Older than 2 hours
+                                $initialStatus = ($hasReplies || $isOldComment) ? 'replied' : 'pending';
+
                                 $stmtInsertCmt = $pdo->prepare("
                                     INSERT INTO comments (
                                         user_id, post_id, platform, external_comment_id, author_name, author_handle, 
@@ -1539,7 +1561,7 @@ class MetaApiService {
                                     ) VALUES (
                                         :uid, :post_id, 'facebook', :ext_id, :author_name, :author_handle, 
                                         :author_avatar, :comment_text, :sentiment, :intent, :highlight_score, 
-                                        :is_highlighted, :highlight_reason, :likes_count, 'pending', :created_at
+                                        :is_highlighted, :highlight_reason, :likes_count, :status, :created_at
                                     )
                                 ");
                                 $stmtInsertCmt->execute([
@@ -1556,53 +1578,30 @@ class MetaApiService {
                                     ':is_highlighted' => $analysis['is_highlighted'] ?? 0,
                                     ':highlight_reason' => $analysis['highlight_reason'] ?? '',
                                     ':likes_count' => $cLikes,
+                                    ':status' => $initialStatus,
                                     ':created_at' => $cCreated
                                 ]);
                                 $syncedCommentsCount++;
                                 $accNewComments++;
-
-                                // Automatic Response when Auto-Responder is Active
                                 $newCommentId = (int)$pdo->lastInsertId();
-                                $autopilotEnabled = Settings::get('autopilot_enabled', '0', $uid) === '1';
 
-                                if ($autopilotEnabled && $newCommentId > 0) {
-                                    $suitability = AiAgentService::evaluateCommentSuitability($cText);
-                                    if ($suitability['status'] === 'spam') {
-                                        $pdo->prepare("UPDATE comments SET status = 'spam', sentiment = 'spam', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
-                                            ->execute([':reason' => $suitability['reason'], ':id' => $newCommentId, ':uid' => $uid]);
-                                    } elseif ($suitability['status'] === 'ignored') {
-                                        $pdo->prepare("UPDATE comments SET status = 'ignored', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
-                                            ->execute([':reason' => $suitability['reason'], ':id' => $newCommentId, ':uid' => $uid]);
-                                    } else {
-                                        $replies = AiAgentService::generateReplies($fromName, $cText, 'facebook', $message, '', [
-                                            'brand_voice_id' => $brandVoiceId,
-                                            'user_id' => $uid,
-                                            'post_id' => $postId
-                                        ]);
-                                        $chosenVariant = 'engagement';
-                                        if (($analysis['sentiment'] ?? '') === 'lead' || str_starts_with(($analysis['intent'] ?? ''), 'lead_')) {
-                                            $chosenVariant = 'conversion';
-                                        } elseif (($analysis['sentiment'] ?? '') === 'urgent' || ($analysis['intent'] ?? '') === 'support') {
-                                            $chosenVariant = 'support';
+                                // If Meta already had replies for this Facebook comment, record them locally as already posted
+                                if ($hasReplies && !empty($c['comments']['data']) && is_array($c['comments']['data']) && $newCommentId > 0) {
+                                    foreach ($c['comments']['data'] as $childRep) {
+                                        $repText = $childRep['message'] ?? '';
+                                        $repCreated = !empty($childRep['created_time']) ? date('Y-m-d H:i:s', strtotime($childRep['created_time'])) : $cCreated;
+                                        if (!empty($repText)) {
+                                            $pdo->prepare("
+                                                INSERT INTO replies (user_id, comment_id, reply_text, reply_type, tone_used, variant_type, is_posted_to_platform, created_at)
+                                                VALUES (:uid, :cid, :reply, 'existing_meta', 'direct', 'engagement', 1, :created_at)
+                                            ")->execute([
+                                                ':uid' => $uid,
+                                                ':cid' => $newCommentId,
+                                                ':reply' => $repText,
+                                                ':created_at' => $repCreated
+                                            ]);
+                                            break;
                                         }
-                                        $chosenReply = $replies[$chosenVariant] ?? $replies['engagement'];
-
-                                        $metaRes = self::postReplyToMeta($newCommentId, $chosenReply, $uid);
-                                        $isPosted = !empty($metaRes['success']) ? 1 : 0;
-
-                                        $pdo->prepare("
-                                            INSERT INTO replies (user_id, comment_id, reply_text, reply_type, tone_used, variant_type, is_posted_to_platform)
-                                            VALUES (:uid, :cid, :reply, 'autopilot', 'auto_selected', :variant, :is_posted)
-                                        ")->execute([
-                                            ':uid' => $uid,
-                                            ':cid' => $newCommentId,
-                                            ':reply' => $chosenReply,
-                                            ':variant' => $chosenVariant,
-                                            ':is_posted' => $isPosted
-                                        ]);
-
-                                        $pdo->prepare("UPDATE comments SET status = 'replied' WHERE id = :id AND user_id = :uid")
-                                            ->execute([':id' => $newCommentId, ':uid' => $uid]);
                                     }
                                 }
                             } else {
@@ -1660,15 +1659,13 @@ class MetaApiService {
         $appSecret = Settings::get('meta_app_secret', '', $uid);
         $pageAccessToken = Settings::get('meta_page_access_token', '', $uid);
         $igAccountId = Settings::get('meta_instagram_account_id', '', $uid);
-        $webhookVerifyToken = Settings::get('webhook_verify_token', 'social_boost_secure_token_2026', $uid);
+        $webhookVerifyToken = getenv('WEBHOOK_VERIFY_TOKEN') ?: ($_ENV['WEBHOOK_VERIFY_TOKEN'] ?? Settings::get('webhook_verify_token', '', $uid));
 
-        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-        $isHttps = ($protocol === 'https');
-        $isLocalhost = (str_contains($host, 'localhost') || str_contains($host, '127.0.0.1'));
-
-        $baseUri = rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'] ?? '')), '/\\');
-        $baseUrl = $protocol . '://' . $host . ($baseUri !== '' ? $baseUri : '');
+        $baseUrl = Security::getAppUrl();
+        $isHttps = str_starts_with($baseUrl, 'https://');
+        $parsedBase = parse_url($baseUrl);
+        $baseHost = strtolower($parsedBase['host'] ?? 'localhost');
+        $isLocalhost = ($baseHost === 'localhost' || $baseHost === '127.0.0.1');
 
         $checklist = [];
         $totalChecks = 0;
@@ -1899,7 +1896,8 @@ class MetaApiService {
 
         $userToken = Settings::get('meta_user_access_token', '', $uid);
         $pageToken = Settings::get('meta_page_access_token', '', $uid);
-        $defaultToken = !empty($userToken) ? $userToken : $pageToken;
+        // Prioritize Page Access Token: works for Facebook Pages and linked Instagram accounts
+        $defaultToken = !empty($pageToken) ? $pageToken : (!empty($userToken) ? $userToken : '');
         $defaultBrandVoiceId = Database::ensureDefaultBrandVoice($pdo, $uid);
         $autopilotEnabled = Settings::get('autopilot_enabled', '0', $uid) === '1';
 
@@ -1938,6 +1936,9 @@ class MetaApiService {
             $platform = $acc['platform'] ?? 'facebook';
             $pageId = trim($acc['page_id'] ?? '');
             $token = !empty($acc['access_token']) ? $acc['access_token'] : $defaultToken;
+            if ($platform === 'facebook' && !empty($pageToken)) {
+                $token = $pageToken; // Always enforce Page Access Token for Facebook Pages
+            }
             $accHandle = $acc['account_handle'] ?? '';
             $brandVoiceId = !empty($acc['brand_voice_id']) ? (int)$acc['brand_voice_id'] : $defaultBrandVoiceId;
 
@@ -1973,7 +1974,7 @@ class MetaApiService {
                             $cCount = (int)($media['comments_count'] ?? 0);
                             if ($cCount > 0) {
                                 $multiUrls['comments_' . $mId] = self::BASE_URL . '/' . urlencode($mId) . '/comments?' . http_build_query([
-                                    'fields' => 'id,text,username,timestamp,like_count',
+                                    'fields' => 'id,text,username,timestamp,like_count,replies{id,text,username,timestamp}',
                                     'limit' => '20',
                                     'access_token' => $token
                                 ]);
@@ -2120,6 +2121,12 @@ class MetaApiService {
                                     if (!$existingCmt) {
                                         $analysis = AiAgentService::analyzeComment($cText, $caption, $cLikes);
 
+                                        // Detect if comment already has replies on Instagram or is older than 2 hours
+                                        $hasReplies = !empty($cmt['replies']['data']) && is_array($cmt['replies']['data']) && count($cmt['replies']['data']) > 0;
+                                        $cAgeSeconds = time() - strtotime($cCreated);
+                                        $isOldComment = $cAgeSeconds > 7200; // Older than 2 hours
+                                        $initialStatus = ($hasReplies || $isOldComment) ? 'replied' : 'pending';
+
                                         $stmtCmt = $pdo->prepare("
                                             INSERT INTO comments (
                                                 post_id, user_id, platform, external_comment_id, 
@@ -2130,7 +2137,7 @@ class MetaApiService {
                                                 :post_id, :uid, 'instagram', :ext_id, 
                                                 :author_name, :author_handle, :author_avatar, :comment_text, :sentiment, :intent, 
                                                 :is_highlighted, :highlight_score, :highlight_reason, 
-                                                'pending', :likes_count, :created_at
+                                                :status, :likes_count, :created_at
                                             )
                                         ");
                                         $stmtCmt->execute([
@@ -2146,6 +2153,7 @@ class MetaApiService {
                                             ':is_highlighted' => ($analysis['is_highlighted'] ?? 0),
                                             ':highlight_score' => $analysis['highlight_score'] ?? 50,
                                             ':highlight_reason' => $analysis['highlight_reason'] ?? '',
+                                            ':status' => $initialStatus,
                                             ':likes_count' => $cLikes,
                                             ':created_at' => $cCreated
                                         ]);
@@ -2153,8 +2161,28 @@ class MetaApiService {
                                         $syncedCommentsCount++;
                                         $newCommentId = (int)$pdo->lastInsertId();
 
-                                        // Autonomous Autopilot Response
-                                        if ($autopilotEnabled && $newCommentId > 0) {
+                                        // If Meta already had replies for this comment, record them locally as already posted
+                                        if ($hasReplies && $newCommentId > 0) {
+                                            foreach ($cmt['replies']['data'] as $childRep) {
+                                                $repText = $childRep['text'] ?? '';
+                                                $repCreated = !empty($childRep['timestamp']) ? date('Y-m-d H:i:s', strtotime($childRep['timestamp'])) : $cCreated;
+                                                if (!empty($repText)) {
+                                                    $pdo->prepare("
+                                                        INSERT INTO replies (user_id, comment_id, reply_text, reply_type, tone_used, variant_type, is_posted_to_platform, created_at)
+                                                        VALUES (:uid, :cid, :reply, 'existing_meta', 'direct', 'engagement', 1, :created_at)
+                                                    ")->execute([
+                                                        ':uid' => $uid,
+                                                        ':cid' => $newCommentId,
+                                                        ':reply' => $repText,
+                                                        ':created_at' => $repCreated
+                                                    ]);
+                                                    break;
+                                                }
+                                            }
+                                        }
+
+                                        // Autonomous Autopilot Response (Strictly for fresh, unreplied comments under 2 hours old)
+                                        if ($autopilotEnabled && $newCommentId > 0 && !$isOldComment && !$hasReplies) {
                                             $suitability = AiAgentService::evaluateCommentSuitability($cText);
                                             if ($suitability['status'] === 'spam') {
                                                 $pdo->prepare("UPDATE comments SET status = 'spam', sentiment = 'spam', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
@@ -2177,22 +2205,23 @@ class MetaApiService {
                                                 $chosenReply = $replies[$chosenVariant] ?? $replies['engagement'];
 
                                                 $metaRes = self::postReplyToMeta($newCommentId, $chosenReply, $uid);
-                                                $isPosted = !empty($metaRes['success']) ? 1 : 0;
+                                                $isPosted = !empty($metaRes['success']) && empty($metaRes['skipped']) ? 1 : 0;
 
-                                                $pdo->prepare("
-                                                    INSERT INTO replies (user_id, comment_id, reply_text, reply_type, tone_used, variant_type, is_posted_to_platform)
-                                                    VALUES (:uid, :cid, :reply, 'autopilot', 'auto_selected', :variant, :is_posted)
-                                                ")->execute([
-                                                    ':uid' => $uid,
-                                                    ':cid' => $newCommentId,
-                                                    ':reply' => $chosenReply,
-                                                    ':variant' => $chosenVariant,
-                                                    ':is_posted' => $isPosted
-                                                ]);
+                                                if ($isPosted) {
+                                                    $pdo->prepare("
+                                                        INSERT INTO replies (user_id, comment_id, reply_text, reply_type, tone_used, variant_type, is_posted_to_platform)
+                                                        VALUES (:uid, :cid, :reply, 'autopilot', 'auto_selected', :variant, 1)
+                                                    ")->execute([
+                                                        ':uid' => $uid,
+                                                        ':cid' => $newCommentId,
+                                                        ':reply' => $chosenReply,
+                                                        ':variant' => $chosenVariant
+                                                    ]);
 
-                                                $pdo->prepare("UPDATE comments SET status = 'replied' WHERE id = :id AND user_id = :uid")
-                                                    ->execute([':id' => $newCommentId, ':uid' => $uid]);
-                                                $repliesPostedCount++;
+                                                    $pdo->prepare("UPDATE comments SET status = 'replied' WHERE id = :id AND user_id = :uid")
+                                                        ->execute([':id' => $newCommentId, ':uid' => $uid]);
+                                                    $repliesPostedCount++;
+                                                }
                                             }
                                         }
                                     } else {
@@ -2252,7 +2281,7 @@ class MetaApiService {
                             ]);
 
                             $multiUrls['fb_comments_' . $pIdExt] = self::BASE_URL . '/' . urlencode($pIdExt) . '/comments?' . http_build_query([
-                                'fields' => 'id,message,from,created_time,like_count',
+                                'fields' => 'id,message,from,created_time,like_count,comment_count,comments{id,from,message,created_time}',
                                 'limit' => '25',
                                 'access_token' => $token
                             ]);
@@ -2263,7 +2292,7 @@ class MetaApiService {
                                     'access_token' => $token
                                 ]);
                                 $multiUrls['fb_obj_comments_' . $pIdExt] = self::BASE_URL . '/' . urlencode($objId) . '/comments?' . http_build_query([
-                                    'fields' => 'id,message,from,created_time,like_count',
+                                    'fields' => 'id,message,from,created_time,like_count,comment_count,comments{id,from,message,created_time}',
                                     'limit' => '25',
                                     'access_token' => $token
                                 ]);
@@ -2421,6 +2450,13 @@ class MetaApiService {
 
                                 if (!$existingCmt) {
                                     $analysis = AiAgentService::analyzeComment($cText, $message, $cLikes);
+
+                                    // Detect if comment already has replies on Facebook or is older than 2 hours
+                                    $hasReplies = (!empty($c['comments']['data']) && is_array($c['comments']['data']) && count($c['comments']['data']) > 0) || (!empty($c['comment_count']) && (int)$c['comment_count'] > 0);
+                                    $cAgeSeconds = time() - strtotime($cCreated);
+                                    $isOldComment = $cAgeSeconds > 7200; // Older than 2 hours
+                                    $initialStatus = ($hasReplies || $isOldComment) ? 'replied' : 'pending';
+
                                     $stmtInsertCmt = $pdo->prepare("
                                         INSERT INTO comments (
                                             user_id, post_id, platform, external_comment_id, author_name, author_handle, 
@@ -2429,7 +2465,7 @@ class MetaApiService {
                                         ) VALUES (
                                             :uid, :post_id, 'facebook', :ext_id, :author_name, :author_handle, 
                                             :author_avatar, :comment_text, :sentiment, :intent, :highlight_score, 
-                                            :is_highlighted, :highlight_reason, :likes_count, 'pending', :created_at
+                                            :is_highlighted, :highlight_reason, :likes_count, :status, :created_at
                                         )
                                     ");
                                     $stmtInsertCmt->execute([
@@ -2446,13 +2482,34 @@ class MetaApiService {
                                         ':is_highlighted' => $analysis['is_highlighted'] ?? 0,
                                         ':highlight_reason' => $analysis['highlight_reason'] ?? '',
                                         ':likes_count' => $cLikes,
+                                        ':status' => $initialStatus,
                                         ':created_at' => $cCreated
                                     ]);
                                     $syncedCommentsCount++;
                                     $newCommentId = (int)$pdo->lastInsertId();
 
-                                    // Autonomous Autopilot Response
-                                    if ($autopilotEnabled && $newCommentId > 0) {
+                                    // If Meta already had replies for this Facebook comment, record them locally as already posted
+                                    if ($hasReplies && !empty($c['comments']['data']) && is_array($c['comments']['data']) && $newCommentId > 0) {
+                                        foreach ($c['comments']['data'] as $childRep) {
+                                            $repText = $childRep['message'] ?? '';
+                                            $repCreated = !empty($childRep['created_time']) ? date('Y-m-d H:i:s', strtotime($childRep['created_time'])) : $cCreated;
+                                            if (!empty($repText)) {
+                                                $pdo->prepare("
+                                                    INSERT INTO replies (user_id, comment_id, reply_text, reply_type, tone_used, variant_type, is_posted_to_platform, created_at)
+                                                    VALUES (:uid, :cid, :reply, 'existing_meta', 'direct', 'engagement', 1, :created_at)
+                                                ")->execute([
+                                                    ':uid' => $uid,
+                                                    ':cid' => $newCommentId,
+                                                    ':reply' => $repText,
+                                                    ':created_at' => $repCreated
+                                                ]);
+                                                break;
+                                            }
+                                        }
+                                    }
+
+                                    // Autonomous Autopilot Response (Strictly for fresh, unreplied comments under 2 hours old)
+                                    if ($autopilotEnabled && $newCommentId > 0 && !$isOldComment && !$hasReplies) {
                                         $suitability = AiAgentService::evaluateCommentSuitability($cText);
                                         if ($suitability['status'] === 'spam') {
                                             $pdo->prepare("UPDATE comments SET status = 'spam', sentiment = 'spam', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
@@ -2475,22 +2532,23 @@ class MetaApiService {
                                             $chosenReply = $replies[$chosenVariant] ?? $replies['engagement'];
 
                                             $metaRes = self::postReplyToMeta($newCommentId, $chosenReply, $uid);
-                                            $isPosted = !empty($metaRes['success']) ? 1 : 0;
+                                            $isPosted = !empty($metaRes['success']) && empty($metaRes['skipped']) ? 1 : 0;
 
-                                            $pdo->prepare("
-                                                INSERT INTO replies (user_id, comment_id, reply_text, reply_type, tone_used, variant_type, is_posted_to_platform)
-                                                VALUES (:uid, :cid, :reply, 'autopilot', 'auto_selected', :variant, :is_posted)
-                                            ")->execute([
-                                                ':uid' => $uid,
-                                                ':cid' => $newCommentId,
-                                                ':reply' => $chosenReply,
-                                                ':variant' => $chosenVariant,
-                                                ':is_posted' => $isPosted
-                                            ]);
+                                            if ($isPosted) {
+                                                $pdo->prepare("
+                                                    INSERT INTO replies (user_id, comment_id, reply_text, reply_type, tone_used, variant_type, is_posted_to_platform)
+                                                    VALUES (:uid, :cid, :reply, 'autopilot', 'auto_selected', :variant, 1)
+                                                ")->execute([
+                                                    ':uid' => $uid,
+                                                    ':cid' => $newCommentId,
+                                                    ':reply' => $chosenReply,
+                                                    ':variant' => $chosenVariant
+                                                ]);
 
-                                            $pdo->prepare("UPDATE comments SET status = 'replied' WHERE id = :id AND user_id = :uid")
-                                                ->execute([':id' => $newCommentId, ':uid' => $uid]);
-                                            $repliesPostedCount++;
+                                                $pdo->prepare("UPDATE comments SET status = 'replied' WHERE id = :id AND user_id = :uid")
+                                                    ->execute([':id' => $newCommentId, ':uid' => $uid]);
+                                                $repliesPostedCount++;
+                                            }
                                         }
                                     }
                                 } else {
@@ -2509,9 +2567,13 @@ class MetaApiService {
             }
         }
 
-        // 3. Autonomous Autopilot Sweep: Process any pending comments for this user
+        // 3. Autonomous Autopilot Sweep: Process any fresh pending comments for this user (Max 2 hours old)
         if ($autopilotEnabled) {
             try {
+                // Auto-archive any stale pending comments older than 2 hours to avoid delayed spam
+                $pdo->prepare("UPDATE comments SET status = 'replied' WHERE user_id = :uid AND status IN ('pending', 'failed') AND created_at < datetime('now', '-2 hours')")
+                    ->execute([':uid' => $uid]);
+
                 $pendingSweepStmt = $pdo->prepare("
                     SELECT c.*, p.caption as post_caption, p.account_id,
                            COALESCE(p.brand_voice_id, a.brand_voice_id, :default_bvid) as effective_bvid
@@ -2519,11 +2581,13 @@ class MetaApiService {
                     JOIN posts p ON c.post_id = p.id
                     LEFT JOIN accounts a ON p.account_id = a.id
                     WHERE c.user_id = :uid 
+                      AND c.created_at >= datetime('now', '-2 hours')
                       AND (c.status = 'pending' OR (c.status = 'failed' AND c.id NOT IN (SELECT comment_id FROM replies WHERE user_id = :uid2)))
+                      AND c.id NOT IN (SELECT comment_id FROM replies WHERE user_id = :uid3 AND is_posted_to_platform = 1)
                     ORDER BY c.id DESC
                     LIMIT 10
                 ");
-                $pendingSweepStmt->execute([':uid' => $uid, ':uid2' => $uid, ':default_bvid' => $defaultBrandVoiceId]);
+                $pendingSweepStmt->execute([':uid' => $uid, ':uid2' => $uid, ':uid3' => $uid, ':default_bvid' => $defaultBrandVoiceId]);
                 $pendingComments = $pendingSweepStmt->fetchAll();
 
                 foreach ($pendingComments as $pCmt) {
@@ -2550,7 +2614,13 @@ class MetaApiService {
                         $chosenReply = $replies[$chosenVariant] ?? $replies['engagement'];
 
                         $metaRes = self::postReplyToMeta((int)$pCmt['id'], $chosenReply, $uid);
-                        $isPosted = !empty($metaRes['success']) ? 1 : 0;
+                        $isPosted = !empty($metaRes['success']) && empty($metaRes['skipped']) ? 1 : 0;
+
+                        if (!empty($metaRes['already_posted']) || !empty($metaRes['skipped'])) {
+                            $pdo->prepare("UPDATE comments SET status = 'replied' WHERE id = :id AND user_id = :uid")
+                                ->execute([':id' => $pCmt['id'], ':uid' => $uid]);
+                            continue;
+                        }
 
                         $pdo->prepare("
                             INSERT INTO replies (user_id, comment_id, reply_text, reply_type, tone_used, variant_type, is_posted_to_platform)
@@ -2566,12 +2636,12 @@ class MetaApiService {
                         if ($isPosted) {
                             $pdo->prepare("UPDATE comments SET status = 'replied', highlight_reason = NULL WHERE id = :id AND user_id = :uid")
                                 ->execute([':id' => $pCmt['id'], ':uid' => $uid]);
+                            $repliesPostedCount++;
                         } else {
                             $failReason = $metaRes['error'] ?? 'Error al publicar en Meta API';
                             $pdo->prepare("UPDATE comments SET status = 'failed', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
                                 ->execute([':reason' => $failReason, ':id' => $pCmt['id'], ':uid' => $uid]);
                         }
-                        $repliesPostedCount++;
                     }
                 }
             } catch (Throwable $t) {
