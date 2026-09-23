@@ -2140,7 +2140,7 @@ class AiAgentService {
      * OpenRouter API Dynamic Integration (Supports Gemini 2.5 Flash, Claude Sonnet 4.5, DeepSeek V3, GPT-4o Mini, etc.)
      * Enriched with Heuristic Brain Modules 1-5 (Proportionality, Author Context, Clean Vocatives, Thread Memory, Intent Guidance)
      */
-    private static function callOpenRouterApi(
+    public static function callOpenRouterApi(
         string $authorName, string $commentText, string $platform, string $postCaption,
         string $brandName, string $personaName, string $brandIndustry, string $brandTone, string $brandDescription, string $language,
         int $warmthLevel, int $depthLevel, int $energyLevel,
@@ -2164,12 +2164,21 @@ class AiAgentService {
             $selectedModel = 'anthropic/claude-sonnet-4.5';
         }
 
+        $systemPromptContent = "Eres un estratega de respuesta inteligente y asistente de marca para redes sociales. Responde siempre y exclusivamente en formato JSON estructurado válido.";
+
+        $textNoEmojiCheck = trim(preg_replace('/[\x{1F600}-\x{1F64F}\x{1F300}-\x{1F5FF}\x{1F680}-\x{1F6FF}\x{1F700}-\x{1F77F}\x{1F780}-\x{1F7FF}\x{1F800}-\x{1F8FF}\x{1F900}-\x{1F9FF}\x{1FA00}-\x{1FA6F}\x{1FA70}-\x{1FAFF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}\x{2300}-\x{23FF}\x{2B50}\s\p{P}]/u', '', $commentText));
+        $isPureEmojiOrShort = ($lengthCategory === 'short') || (mb_strlen($textNoEmojiCheck, 'UTF-8') <= 3);
+
+        if ($isPureEmojiOrShort) {
+            $systemPromptContent = "Eres un estratega de redes sociales. El seguidor comentó con emojis o palabras mínimas. TU DIRECTIVA ABSOLUTA ES LA BREVEDAD: CADA respuesta DEBE tener entre 4 y 9 palabras como máximo (1 sola frase contundente). NUNCA redactes párrafos, ni des sermones, ni intentes vender, ni hagas preguntas a un simple emoji. Responde en JSON válido.";
+        }
+
         $payload = [
             'model' => $selectedModel,
             'messages' => [
                 [
                     'role' => 'system',
-                    'content' => "Eres un estratega de respuesta inteligente y asistente de marca para redes sociales. Responde siempre y exclusivamente en formato JSON estructurado válido."
+                    'content' => $systemPromptContent
                 ],
                 [
                     'role' => 'user',
@@ -2177,7 +2186,7 @@ class AiAgentService {
                 ]
             ],
             'response_format' => ['type' => 'json_object'],
-            'temperature' => 0.7
+            'temperature' => 0.6
         ];
 
         $appUrl = Settings::get('app_url', 'http://localhost/Redes%20sociales');
@@ -2189,7 +2198,7 @@ class AiAgentService {
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
             'Content-Type: application/json',
             'Authorization: Bearer ' . $apiKey,
-            'HTTP-Referer: ' . $appUrl,
+            'HTTP-Referer' => $appUrl,
             'X-Title: XINDRO Social AI'
         ]);
         curl_setopt($ch, CURLOPT_TIMEOUT, 15);
@@ -2221,6 +2230,47 @@ class AiAgentService {
             $parsed = json_decode($content, true);
 
             if ($parsed && isset($parsed['engagement'])) {
+                // Post-Processing Hard Clamp: Si es un comentario de emojis, asegurar 100% que ninguna opción exceda 10 palabras
+                if ($isPureEmojiOrShort) {
+                    $nameVoc = self::extractCleanFirstName($authorName);
+                    $nameVoc = !empty($nameVoc) ? " $nameVoc" : '';
+                    $shortFallbacks = [
+                        'engagement' => [
+                            "¡A tope con esa energía{$nameVoc}! 🔥 Un fuerte abrazo.",
+                            "¡Muchas gracias por el apoyo{$nameVoc}! 🙌✨",
+                            "¡Qué buena vibra{$nameVoc}! Un saludo fraternal. 🤝✨"
+                        ],
+                        'conversion' => [
+                            "¡Esa es la actitud{$nameVoc}! ⚡ Vamos con todo.",
+                            "¡Seguimos firmes y sumando{$nameVoc}! 👊🏛️",
+                            "¡Puro impulso{$nameVoc}! Adelante siempre. 🚀✨"
+                        ],
+                        'support' => [
+                            "¡Puro fuego{$nameVoc}! Fuerza y foco en tu camino. 🏛️💪",
+                            "¡Así se habla{$nameVoc}! Determinación absoluta. ⚡",
+                            "¡Hermandad pura{$nameVoc}! Seguimos forjando carácter. 🏛️🤝"
+                        ]
+                    ];
+
+                    foreach (['engagement', 'conversion', 'support'] as $k) {
+                        if (!empty($parsed[$k])) {
+                            $words = preg_split('/\s+/u', trim($parsed[$k]));
+                            if (count($words) > 11) {
+                                // Cortar a la primera frase si tiene entre 3 y 9 palabras y no habla de venta/facebook
+                                $sentences = preg_split('/(?<=[.!?])\s+/u', trim($parsed[$k]));
+                                $firstSentence = trim($sentences[0] ?? '');
+                                $firstWords = preg_split('/\s+/u', $firstSentence);
+                                if (count($firstWords) >= 3 && count($firstWords) <= 9 && !str_contains(mb_strtolower($firstSentence), 'facebook') && !str_contains(mb_strtolower($firstSentence), 'curso')) {
+                                    $parsed[$k] = $firstSentence;
+                                } else {
+                                    $pool = $shortFallbacks[$k] ?? $shortFallbacks['engagement'];
+                                    $parsed[$k] = $pool[array_rand($pool)];
+                                }
+                            }
+                        }
+                    }
+                }
+
                 $tipNotice = 'Respuesta generada con OpenRouter (' . htmlspecialchars($selectedModel) . ') adaptada a tu voz de marca.';
                 if ($tokensUsed > 0) {
                     $tipNotice .= ' [Consumo: ' . number_format($tokensUsed) . ' tokens]';
@@ -2384,6 +2434,25 @@ class AiAgentService {
         $cleanCommentText = addslashes($commentText);
         $cleanPostCaption = addslashes($postCaption);
 
+        $optionsInstructions = "";
+        if ($isEmojiOnlyOrUltraShort) {
+            $optionsInstructions = <<<OPTS
+INSTRUCCIÓN EXCLUSIVA PARA COMENTARIO DE EMOJIS O ULTRA-CORTO:
+El seguidor únicamente dejó un emoji o una reacción mínima. NO des discursos de venta ni intentes resolver dudas ni hables sobre el significado del emoji. Genera 3 VARIACIONES DIFERENTES DE REACCIÓN RÁPIDA, FRESCA Y CON ENERGÍA (MÁXIMO 4 A 9 PALABRAS CADA UNA):
+1. "engagement": [Opción 1 - Buena Vibra]: Saludo o reciprocidad muy breve (ej. '¡A tope con esa energía! 🔥 Un fuerte abrazo.').
+2. "conversion": [Opción 2 - Impulso & Fuerza]: Frase corta de determinación o comunidad (ej. '¡Esa es la actitud! ⚡🙌 Vamos con todo.'). NUNCA des discursos de venta ni enlaces a un emoji.
+3. "support": [Opción 3 - Hermandad & Firmeza]: Remate corto y contundente (ej. '¡Puro fuego! Seguimos firmes en el camino. 🏛️💪'). NUNCA resuelvas dudas ni des explicaciones a un emoji.
+PROHIBICIÓN ESTRICTA: CADA UNA DE LAS 3 OPCIONES DEBE TENER MENOS DE 10 PALABRAS. CERO PÁRRAFOS, CERO DISCURSOS FILOSÓFICOS, CERO PREGUNTAS DE CIERRE.
+OPTS;
+        } else {
+            $optionsInstructions = <<<OPTS
+Genera 3 opciones de respuesta adaptadas a las directrices anteriores sin sonar robótico ni usar frases prohibidas:
+1. "engagement": [🤝 Conexión & Empatía]: Cálida, humana, conversacional y cercana.
+2. "conversion": [🎯 Conversión & Venta / CTA]: Proactiva, enfocada en valor y orientando a la acción (DM, link, compra).
+3. "support": [💡 Autoridad & Solución]: Informativa, clara y profesional, resolviendo dudas.
+OPTS;
+        }
+
         return <<<PROMPT
 Eres "$personaName", el estratega oficial de comunicación y gestor de comunidad de la marca "$brandName" en $platform.
 Industria / Nicho: $brandIndustry.
@@ -2429,10 +2498,7 @@ CONTEXTO ACTUAL:
 - Publicación del feed: "$cleanPostCaption".
 - Comentario del seguidor: "$cleanCommentText".
 
-Genera 3 opciones de respuesta adaptadas a las directrices anteriores sin sonar robótico ni usar frases prohibidas:
-1. "engagement": [🤝 Conexión & Empatía]: Cálida, humana, conversacional y cercana.
-2. "conversion": [🎯 Conversión & Venta / CTA]: Proactiva, enfocada en valor y orientando a la acción (DM, link, compra).
-3. "support": [💡 Autoridad & Solución]: Informativa, clara y profesional, resolviendo dudas.
+$optionsInstructions
 
 Responde únicamente en formato JSON válido:
 {
