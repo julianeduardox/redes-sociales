@@ -6,9 +6,11 @@
  * Security Guard: Restricted to CLI execution or Localhost to prevent public information disclosure.
  */
 
-if (php_sapi_name() !== 'cli' && (!isset($_SERVER['REMOTE_ADDR']) || !in_array($_SERVER['REMOTE_ADDR'], ['127.0.0.1', '::1'], true))) {
+if (php_sapi_name() !== 'cli' && !defined('STDIN')) {
     http_response_code(403);
-    die(json_encode(['error' => 'Acceso denegado. Este script solo puede ejecutarse en entorno local o CLI.']));
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['error' => 'Acceso denegado: este script de auditoría solo puede ejecutarse vía CLI.']);
+    exit(1);
 }
 
 $baseDir = dirname(__DIR__);

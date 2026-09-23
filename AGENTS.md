@@ -91,5 +91,6 @@ Para todo desarrollo presente y futuro, es de cumplimiento obligatorio aplicar l
 4. **Cifrado en Reposo Autenticado:** Tokens de acceso a APIs de terceros deben cifrarse con AES-256-GCM (`enc:v1:...`).
 5. **Erradicación de Secretos por Defecto:** Prohibido dejar contraseñas de fábrica en el código. Generar siempre credenciales CSPRNG aleatorias durante la inicialización.
 6. **Supresión de Fuga de Información & CSP:** Remover `X-Powered-By` y aplicar CSP estricto (`default-src 'none'` en API).
-7. **Suite de Pruebas de Blindaje:** Ejecutar periódicamente la suite automatizada de seguridad ([scratch/verify_security_suite.php](file:///c:/xampp/htdocs/Redes%20sociales/scratch/verify_security_suite.php)) con 100% de pruebas aprobadas antes de desplegar.
+7. **Aislamiento CLI de Scripts Administrativos:** Denegar acceso HTTP a `scripts/`, `scratch/` y `data/` en `.htaccess` y validar `php_sapi_name() === 'cli'` en código.
+8. **Suite de Pruebas de Blindaje:** Ejecutar periódicamente la suite automatizada de seguridad ([scratch/verify_security_suite.php](file:///c:/xampp/htdocs/Redes%20sociales/scratch/verify_security_suite.php)) con 100% de pruebas aprobadas antes de desplegar.
 

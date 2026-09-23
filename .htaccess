@@ -20,8 +20,8 @@ Options -Indexes -MultiViews
 <IfModule mod_rewrite.c>
     RewriteEngine On
     
-    # Block direct HTTP requests to internal system directories
-    RewriteRule ^(data|config|services)/ - [F,L,NC]
+    # Block direct HTTP requests to internal system directories, administrative scripts, and tests
+    RewriteRule ^(data|config|services|scripts|scratch|\.agents)/ - [F,L,NC]
 </IfModule>
 
 # 4. HTTP Security Headers (if mod_headers is enabled)

@@ -2,6 +2,15 @@
 /**
  * Utility Script: Create Dedicated Test User in Database for API and Login Testing
  */
+
+// Seguridad: Restricción exclusiva a entorno de consola (CLI)
+if (php_sapi_name() !== 'cli' && !defined('STDIN')) {
+    http_response_code(403);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['error' => 'Acceso denegado: este script administrativo solo puede ejecutarse vía CLI.']);
+    exit(1);
+}
+
 require_once __DIR__ . '/../config/security.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/auth.php';

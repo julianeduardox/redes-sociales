@@ -23,10 +23,11 @@ Este arnés condensa los principios, recetas de código y checklists de verifica
 | **5** | Secretos por defecto en código fuente | Credenciales de fábrica conocidas (`Admin2026!Secure`, `cron_secret`) permiten acceso total. | Erradicación total. Generación obligatoria aleatoria vía CSPRNG durante setup. |
 | **6** | Fuga de información por cabeceras (`X-Powered-By`) | Fingerprinting exacto de versión PHP/Apache facilita explotación dirigida. | Supresión explícita de cabeceras y aplicación de CSP estricto (`default-src 'none'` en API). |
 | **7** | Mutaciones destructivas con comodines (`LIKE %$id%`) | Borrado colateral o inyección que afecta a datos de múltiples usuarios. | Coincidencia exacta por clave primaria (`id = ?`) y aislamiento estricto por tenant (`user_id = ?`). |
+| **8** | Scripts administrativos/migración accesibles vía HTTP | Visitantes no autenticados ejecutan migraciones o crean usuarios de prueba. | Bloqueo en servidor web (`.htaccess` `[F,L,NC]`) + guarda obligatoria `php_sapi_name() === 'cli'`. |
 
 ---
 
-## 🧱 Arquitectura de los 7 Pilares
+## 🧱 Arquitectura de los 8 Pilares
 
 ### Pilar 1: CORS Zero-Trust
 Toda API que exponga recursos debe pasar por [Security::isAllowedOrigin()](file:///c:/xampp/htdocs/Redes%20sociales/config/security.php):
@@ -66,13 +67,27 @@ Toda API que exponga recursos debe pasar por [Security::isAllowedOrigin()](file:
   Content-Security-Policy: default-src 'self'; frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'
   ```
 
-### Pilar 7: Suite de Pruebas de Blindaje (Pen-Testing Automático)
+### Pilar 7: Aislamiento CLI & Blindaje de Scripts Administrativos
+- **Capa 1 (Servidor Web):** En [.htaccess](file:///c:/xampp/htdocs/Redes%20sociales/.htaccess), denegar acceso HTTP con `RewriteRule ^(data|config|services|scripts|scratch|\.agents)/ - [F,L,NC]`.
+- **Capa 2 (Directorio Local):** Incluir `.htaccess` con `Require all denied` en cada carpeta administrativa (`scripts/`, `scratch/`, `data/`).
+- **Capa 3 (Nivel de Código PHP):** Todo script de consola, migración o tarea batch debe verificar al inicio:
+  ```php
+  if (php_sapi_name() !== 'cli' && !defined('STDIN')) {
+      http_response_code(403);
+      header('Content-Type: application/json; charset=utf-8');
+      echo json_encode(['error' => 'Acceso denegado: este script solo puede ejecutarse vía CLI.']);
+      exit(1);
+  }
+  ```
+
+### Pilar 8: Suite de Pruebas de Blindaje (Pen-Testing Automático)
 Todo proyecto cuenta con un script de auditoría automatizada ejecutable desde consola (ej. [scratch/verify_security_suite.php](file:///c:/xampp/htdocs/Redes%20sociales/scratch/verify_security_suite.php)) que valida:
 1. Rechazo de dominios maliciosos con subdominio trampolín (`.evil.example`).
 2. Rechazo con 401/403 ante firmas HMAC faltantes o alteradas.
 3. Rechazo de manipulación en payloads cifrados con AES-256-GCM.
 4. Imposibilidad de alterar URLs de OAuth mediante cabecera `Host` falsificada.
 5. Inexistencia de contraseñas conocidas en esquemas o migraciones.
+6. Bloqueo web inmediato de scripts administrativos con HTTP 403.
 
 ---
 
@@ -84,4 +99,5 @@ Todo proyecto cuenta con un script de auditoría automatizada ejecutable desde c
 - [ ] ¿Los Webhooks rechazan con 401/403 si la firma HMAC falla o no hay secreto?
 - [ ] ¿Se usa AES-256-GCM para tokens y credenciales de terceros en base de datos?
 - [ ] ¿Se eliminó `X-Powered-By` y se configuró CSP estricto?
-- [ ] ¿Se ejecutó y aprobó al 100% la suite de pruebas de seguridad?
+- [ ] ¿Las carpetas `scripts/`, `data/` y `scratch/` están bloqueadas por HTTP y restringidas a CLI?
+- [ ] ¿Se ejecutó y aprobó al 100% la suite de pruebas de seguridad (37/37 PASS)?

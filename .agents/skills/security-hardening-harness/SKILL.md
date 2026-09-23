@@ -20,6 +20,7 @@ Este arnés condensa los estándares de seguridad críticos derivados de auditor
 5. **PROHIBIDO:** Dejar contraseñas o tokens por defecto en el código (ej. `'admin123'`, `'cron_secret_key_2026'`, `'test_token'`).
 6. **PROHIBIDO:** Exponer cabeceras informativas de versión (`X-Powered-By: PHP/8.x`, `Server: Apache/x`).
 7. **PROHIBIDO:** Ejecutar consultas destructivas con comodines (`DELETE ... LIKE %$id%`). Toda mutación debe ser por ID exacto y aislar el tenant (`user_id = ?`).
+8. **PROHIBIDO:** Permitir acceso web directo a scripts administrativos, migraciones o herramientas CLI (`scripts/`, `scratch/`). Deben estar bloqueados en servidor web (`.htaccess`) y tener guarda estricta `php_sapi_name() === 'cli'`.
 
 ---
 
@@ -152,10 +153,29 @@ Este arnés condensa los estándares de seguridad críticos derivados de auditor
 
 ---
 
-### 7. Suite de Pruebas de Penetración Automatizadas
+### 7. Aislamiento CLI & Blindaje de Scripts Administrativos
+- **Regla:** Scripts de migración, generadores de credenciales, herramientas de consola y carpetas de prueba (`scripts/`, `scratch/`) NUNCA deben responder por HTTP.
+- **Implementación Servidor (`.htaccess`):**
+  ```apache
+  RewriteRule ^(data|config|services|scripts|scratch|\.agents)/ - [F,L,NC]
+  ```
+- **Implementación PHP (Defensa en Profundidad):**
+  ```php
+  if (php_sapi_name() !== 'cli' && !defined('STDIN')) {
+      http_response_code(403);
+      header('Content-Type: application/json; charset=utf-8');
+      echo json_encode(['error' => 'Acceso denegado: este script solo puede ejecutarse vía CLI.']);
+      exit(1);
+  }
+  ```
+
+---
+
+### 8. Suite de Pruebas de Penetración Automatizadas
 Antes de entregar o desplegar cualquier cambio crítico, se debe ejecutar un script de prueba automatizado que verifique:
 1. `isAllowedOrigin('https://dominio.evil.example') === false`
 2. POST a webhook con HMAC falsa retorna `401`.
 3. POST a webhook sin secret retorna `403`.
 4. Manipulación de payload cifrado AES-256-GCM es rechazada.
 5. Inyección de `HTTP_HOST` malicioso no contamina `getOAuthRedirectUri()`.
+6. Intento de acceso web a scripts administrativos retorna `403 Forbidden`.
