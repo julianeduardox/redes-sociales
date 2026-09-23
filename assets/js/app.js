@@ -1756,23 +1756,23 @@ const App = {
           </div>
           
           <div class="playground-variant-box" style="border-left: 3px solid var(--primary);">
-            <div class="playground-variant-title" style="color: var(--primary);">🤝 Opción 1: Conexión & Empatía</div>
+            <div class="playground-variant-title" style="color: var(--primary);">🤝 Opción 1: Conexión & Fraternidad</div>
             <div>${this.escapeHtml(reps.engagement)}</div>
           </div>
 
           <div class="playground-variant-box" style="border-left: 3px solid var(--accent-cyan);">
-            <div class="playground-variant-title" style="color: var(--accent-cyan);">🎯 Opción 2: Conversión & Ventas / CTA</div>
+            <div class="playground-variant-title" style="color: var(--accent-cyan);">🏛️ Opción 2: Sabiduría & Fortaleza Estoica</div>
             <div>${this.escapeHtml(reps.conversion)}</div>
           </div>
 
           <div class="playground-variant-box" style="border-left: 3px solid var(--accent-emerald);">
-            <div class="playground-variant-title" style="color: var(--accent-emerald);">💡 Opción 3: Autoridad & Solución</div>
+            <div class="playground-variant-title" style="color: var(--accent-emerald);">⚡ Opción 3: Impulso & Determinación</div>
             <div>${this.escapeHtml(reps.support)}</div>
           </div>
 
           ${reps.engagement_tips ? `
             <div style="font-size: 0.75rem; color: var(--text-dim); padding: 4px 6px;">
-              💡 <em>${this.escapeHtml(reps.engagement_tips)}</em>
+              🏛️ <em>${this.escapeHtml(reps.engagement_tips)}</em>
             </div>
           ` : ''}
         `;

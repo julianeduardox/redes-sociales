@@ -16,6 +16,13 @@ require_once __DIR__ . '/CacheService.php';
 class AiAgentService {
 
     /**
+     * Interruptor temporal de procesos comerciales y soporte técnico.
+     * Desactivado para fortaleza_imparable (página de reflexiones estoicas y filosofía).
+     * Cambiar a true cuando se requiera reactivar ventas y soporte.
+     */
+    public const COMMERCIAL_SALES_ACTIVE = false;
+
+    /**
      * Evaluate if a comment is suitable for Auto-Responder or if it should be marked as SPAM / FOREIGN / STICKER
      */
     public static function evaluateCommentSuitability(string $commentText, string $allowedLang = 'es'): array {
@@ -816,9 +823,9 @@ class AiAgentService {
 
     /**
      * Generate 3 Universal AI response variations:
-     * 1. 🤝 Conexión & Empatía (Cálida, humana, conversacional)
-     * 2. 🎯 Conversión & Venta / CTA (Enfocada en valor, llamado a la acción, DM o link)
-     * 3. 💡 Autoridad & Solución (Profesional, informativa, resolviendo dudas)
+     * 1. 🤝 Conexión & Fraternidad (Cálida, humana, de comunidad)
+     * 2. 🏛️ Sabiduría & Fortaleza Estoica (Profunda, filosófica, autodominio, templanza) [clave interna 'conversion']
+     * 3. ⚡ Impulso & Determinación (Motivadora, disciplina mental, resiliencia) [clave interna 'support']
      */
     public static function generateReplies(
         string $authorName,
@@ -1171,9 +1178,9 @@ class AiAgentService {
             }
 
             $cynicConvertPool = [
-                "Comprendemos que existan posturas escépticas. Para quienes buscan metodologías estructuradas de mentalidad y disciplina, nuestros recursos están siempre disponibles en el perfil. 🎯",
-                "El valor de un método se comprueba en la práctica cotidiana. Puedes consultar guías y herramientas estructuradas en el enlace de nuestra biografía. 📖",
-                "Respetamos cada criterio. Las herramientas formativas oficiales continúan disponibles en el enlace del perfil para quienes deseen profundizar con método. 🚀"
+                "Comprendemos que existan posturas escépticas. La verdadera filosofía no busca convencer con palabras, sino demostrarse con el ejemplo cotidiano. 🏛️",
+                "El valor de los principios estoicos se comprueba en la práctica cotidiana y en la serenidad que aportan ante la adversidad. ⚡",
+                "Respetamos cada criterio. Seguimos firmes compartiendo reflexiones libres para quienes buscan cultivar carácter y templanza. 🏛️✨"
             ];
 
             $cynicSupportPool = [
@@ -1221,9 +1228,9 @@ class AiAgentService {
             }
 
             $ventingConvertPool = [
-                "Canalizar la fricción diaria en disciplina constructiva es el verdadero reto. En el enlace de nuestro perfil compartimos herramientas prácticas sobre mentalidad y autodominio estoico. 🏛️",
-                "Cuando las circunstancias externas retan tu paciencia, el método es tu mejor aliado. En el enlace de la bio tienes guías aplicadas para templar el carácter. 🎯",
-                "El control emocional se entrena como un músculo. Te invitamos a revisar las lecturas y recursos formativos disponibles en nuestro perfil. 📖"
+                "Canalizar la fricción diaria en disciplina constructiva es el verdadero reto. Firmeza en lo que depende de ti y serenidad para soltar lo demás. 🏛️⚡",
+                "Cuando las circunstancias externas retan tu paciencia, la templanza es tu mejor escudo. No concedas a nadie el poder de perturbarte. 🎯🏛️",
+                "El control emocional se entrena como un músculo en cada pequeña reacción cotidiana. Fuerza y autodominio siempre. 🧠✨"
             ];
 
             $ventingSupportPool = [
@@ -1272,9 +1279,9 @@ class AiAgentService {
             }
 
             $peerConvertPool = [
-                "¡Esa es la verdadera tribu! Para seguir fortaleciendo este compromiso en equipo, en el enlace de la bio encuentras recursos de formación y mentalidad. 🚀",
-                "Comunidades unidas llegan mucho más lejos. Tienes recursos formativos y guías de hábitos en el enlace del perfil para avanzar en equipo. 🎯",
-                "¡Gracias por hacer crecer esta comunidad! En el enlace de nuestra biografía compartimos materiales y guías para potenciar este crecimiento conjunto. 📖✨"
+                "¡Esa es la verdadera tribu! Caminar juntos con propósito y templanza multiplica la fuerza de cada uno. 🏛️⚡",
+                "Comunidades unidas llegan mucho más lejos. Firmes en el camino del carácter y la disciplina compartida. 🤝🏛️",
+                "¡Gracias por hacer crecer esta comunidad! Un honor compartir este camino de autodominio con personas con tu visión. 🏛️✨"
             ];
 
             $peerSupportPool = [
@@ -1321,9 +1328,9 @@ class AiAgentService {
             }
 
             $trustConvertPool = [
-                "Comprender que la lealtad se demuestra con hechos transforma nuestras relaciones. En el enlace de nuestra bio compartimos recursos y guías prácticas sobre criterio y mentalidad. 🚀",
-                "El discernimiento y la claridad en nuestros vínculos son claves de crecimiento. Tienes lecturas y metodologías recomendadas en el perfil. 🎯",
-                "Cuando filtras con serenidad, ahorras energía para lo verdaderamente importante. Encuentra recursos prácticos de mentalidad en el link de la bio. 📖✨"
+                "Comprender que la lealtad se demuestra con hechos transforma nuestras relaciones. Serenidad, criterio y rectitud ante todo. 🏛️⚡",
+                "El discernimiento y la claridad en nuestros vínculos son claves de crecimiento. Cero desgaste innecesario y foco total en lo que depende de ti. 🎯🏛️",
+                "Cuando filtras con serenidad, ahorras energía para lo verdaderamente importante. La templanza es la mejor coraza. 🏛️✨"
             ];
 
             $trustSupportPool = [
@@ -1371,10 +1378,10 @@ class AiAgentService {
                 }
 
                 $convertPool = [
-                    "¡Gracias por el impulso{$nameVocative}! En el enlace del perfil compartimos más herramientas para seguir sumando. 🚀",
-                    "¡Agradecidos al 100%{$nameVocative}! Tienes recursos prácticos en la bio para llevar esto al siguiente nivel. 🎯",
-                    "¡Esa es la visión{$nameVocative}! En el link de nuestra biografía encuentras guías clave para continuar avanzando. 📖✨",
-                    "¡Seguimos sumando! En el enlace de nuestro perfil encuentras materiales exclusivos para tu formación. 🚀"
+                    "¡Gracias por el impulso{$nameVocative}! Seguimos firmes compartiendo reflexiones de templanza y carácter. 🏛️⚡",
+                    "¡Agradecidos al 100%{$nameVocative}! La disciplina diaria forja un espíritu inquebrantable. 🎯🏛️",
+                    "¡Esa es la visión{$nameVocative}! Adelante siempre con la frente en alto y autodominio. ⚡💪",
+                    "¡Seguimos sumando! Cada día cuenta en la forja de la mejor versión de uno mismo. 🏛️✨"
                 ];
 
                 $supportPool = [
@@ -1396,10 +1403,10 @@ class AiAgentService {
                 ];
 
                 $convertPool = [
-                    "¡Gracias por el impulso{$nameVocative}! Si quieres llevar esta mentalidad al siguiente nivel, en el enlace de nuestra bio tienes recursos y guías prácticas. 🚀",
-                    "¡Agradecidos por la confianza{$nameVocative}! Recuerda que en nuestro perfil compartimos herramientas formativas para seguir avanzando con método. 🎯",
-                    "¡Esa es la visión{$nameVocative}! Toda la metodología y herramientas recomendadas las encuentras en el enlace de la bio. 📖✨",
-                    "Nos alegra que te sirva de inspiración. En el enlace de nuestro perfil compartimos guías completas para estructurar tus objetivos diarios. 🚀"
+                    "¡Gracias por el impulso{$nameVocative}! La verdadera filosofía se demuestra en las acciones cotidianas. 🏛️⚡",
+                    "¡Agradecidos por la confianza{$nameVocative}! Firmeza total en este camino de autodominio y temple estoico. 🎯🏛️",
+                    "¡Esa es la visión{$nameVocative}! Quien vence sus propias excusas y pereza diaria conquista su vida. 🏛️✨",
+                    "Nos alegra que te sirva de inspiración. Sigamos forjando un carácter inquebrantable día con día. ⚡💪"
                 ];
 
                 $supportPool = [
@@ -1463,7 +1470,7 @@ class AiAgentService {
             return [
                 'source' => 'heuristic_calibrated',
                 'engagement' => $engage,
-                'conversion' => "¡Gracias por el apoyo{$nameVocative}! Tienes recursos prácticos en el enlace del perfil para seguir sumando. 🚀",
+                'conversion' => "¡A seguir forjando ese carácter con disciplina inquebrantable{$nameVocative}! 🏛️⚡ ¡Seguimos firmes!",
                 'support' => ($isPray || $isHundred)
                     ? "El respeto y la gratitud mutua son el cimiento de nuestra comunidad{$nameVocative}. ¡Un fuerte y fraternal abrazo! 🏛️🤝"
                     : "Agradecemos de corazón tu presencia en la comunidad{$nameVocative}. ¡Seguimos con todo! 🏛️💪",
@@ -1491,7 +1498,7 @@ class AiAgentService {
                 return [
                     'source' => 'heuristic_calibrated',
                     'engagement' => $pick($engageHundred),
-                    'conversion' => "¡Agradecidos al 100% por tu apoyo{$nameVocative}! 💯 Tienes más recursos en el enlace del perfil.",
+                    'conversion' => "¡Agradecidos al 100% por tu respaldo{$nameVocative}! 💯🏛️ Fuerza, templanza y foco total en lo que depende de ti.",
                     'support' => "Agradecemos de corazón tu presencia y respaldo en la comunidad{$nameVocative}. 🏛️💯",
                     'engagement_tips' => '💯 Responder con gratitud simétrica a stickers numéricos eleva la fidelidad comunitaria.'
                 ];
@@ -1511,7 +1518,7 @@ class AiAgentService {
                 return [
                     'source' => 'heuristic_calibrated',
                     'engagement' => $pick($engagePray),
-                    'conversion' => "Agradecidos de corazón por tu apoyo{$nameVocative}. 🙏 En el enlace de nuestro perfil encuentras más contenidos para inspirarte.",
+                    'conversion' => "Agradecidos de corazón por tu respeto y buena vibra{$nameVocative}. 🙏🏛️ Que la templanza y la serenidad guíen siempre tus pasos.",
                     'support' => "El respeto mutuo es el cimiento de nuestra comunidad{$nameVocative}. ¡Un fuerte y fraternal abrazo! 🏛️🤝",
                     'engagement_tips' => '🙏 Responder con respeto fraternal a manos unidas refuerza la lealtad comunitaria.'
                 ];
@@ -1533,7 +1540,7 @@ class AiAgentService {
                 return [
                     'source' => 'heuristic_calibrated',
                     'engagement' => $pick($engageApplause),
-                    'conversion' => "¡Gracias por estar presente{$nameVocative}! 👏🚀 Tienes más recursos en el enlace del perfil.",
+                    'conversion' => "¡A seguir forjando ese carácter con disciplina inquebrantable{$nameVocative}! 👏🏛️ ¡Seguimos firmes!",
                     'support' => "¡Un honor contar con tu presencia en la comunidad{$nameVocative}! 🏛️✨ ¡Un fuerte abrazo!",
                     'engagement_tips' => '👏 Responder rápido a comentarios de aplausos y emojis eleva la visibilidad en el algoritmo.'
                 ];
@@ -1553,7 +1560,7 @@ class AiAgentService {
                 return [
                     'source' => 'heuristic_calibrated',
                     'engagement' => $pick($engageFire),
-                    'conversion' => "¡Esa es la actitud imparable{$nameVocative}! 🔥🚀 En el enlace del perfil encuentras recursos para potenciar tu enfoque.",
+                    'conversion' => "¡Esa es la actitud imparable{$nameVocative}! 🔥⚡ Foco total en la disciplina y el autodominio.",
                     'support' => "¡Fuerza e impulso para tus metas{$nameVocative}! 🔥💪 ¡Seguimos firmes!",
                     'engagement_tips' => '🔥 La reciprocidad en comentarios de alta energía impulsa el alcance de la publicación.'
                 ];
@@ -1570,7 +1577,7 @@ class AiAgentService {
                 return [
                     'source' => 'heuristic_calibrated',
                     'engagement' => $pick($engageLove),
-                    'conversion' => "¡Gracias por el cariño{$nameVocative}! ❤️🚀 Recuerda que estamos a un DM de distancia para lo que necesites.",
+                    'conversion' => "¡Mucho aprecio fraternal{$nameVocative}! ❤️🏛️ Unidos en este camino de templanza y fortaleza interior.",
                     'support' => "¡Un saludo muy especial{$nameVocative}! ❤️🤝 ¡Seguimos sumando valor juntos!",
                     'engagement_tips' => '❤️ Conectar con aprecio afianza la lealtad hacia la marca.'
                 ];
@@ -1589,7 +1596,7 @@ class AiAgentService {
                 return [
                     'source' => 'heuristic_calibrated',
                     'engagement' => $pick($engageStrength),
-                    'conversion' => "¡Con toda la determinación{$nameVocative}! 💪🚀 Tienes guías prácticas en el enlace de la bio.",
+                    'conversion' => "¡Con toda la determinación{$nameVocative}! 💪🏛️ La disciplina diaria vence cualquier adversidad.",
                     'support' => "¡Constancia y autodominio cada día{$nameVocative}! 🏛️💪 ¡Foco total en lo esencial!",
                     'engagement_tips' => '💪 Reafirmar la mentalidad y determinación refuerza la identidad de la marca.'
                 ];
@@ -1606,7 +1613,7 @@ class AiAgentService {
             return [
                 'source' => 'heuristic_calibrated',
                 'engagement' => $pick($engageGeneralEmoji),
-                'conversion' => "¡Gracias por la buena energía{$nameVocative}! 🚀✨ Encuentra más recursos en el enlace del perfil.",
+                'conversion' => "¡Esa es la actitud{$nameVocative}! 🏛️⚡ Constancia, templanza y paso firme siempre.",
                 'support' => "¡Agradecidos con tu presencia en la comunidad{$nameVocative}! 🤝✨ ¡Un saludo enorme!",
                 'engagement_tips' => '✨ Responder de inmediato a emojis asegura una alta tasa de engagement.'
             ];
@@ -1658,10 +1665,10 @@ class AiAgentService {
             }
 
             $convertPool = [
-                "Exacto{$nameVocative}. En el enlace de nuestra biografía compartimos lecturas y herramientas para seguir forjando esa mentalidad. 📖",
-                "Totalmente. Si buscas herramientas prácticas de disciplina y enfoque, encuéntralas en el enlace del perfil. 🎯",
-                "Es así{$nameVocative}. La teoría sin acción no transforma vidas; en el enlace de la bio tienes guías aplicadas. 🚀",
-                "Para seguir profundizando en principios de mentalidad y carácter, te invitamos a explorar los recursos en nuestro perfil. 📖✨"
+                "Exacto{$nameVocative}. Dominar el propio juicio es el mayor superpoder ante cualquier obstáculo. 🏛️",
+                "Totalmente{$nameVocative}. La disciplina diaria y la serenidad interior valen más que mil palabras. ⚡",
+                "Es así{$nameVocative}. Quien se conquista a sí mismo en silencio no necesita demostrar nada a nadie. 🏛️✨",
+                "Gran verdad{$nameVocative}. Mantener la templanza cuando todo se agita es la marca del verdadero carácter. 🏛️"
             ];
 
             $supportPool = [
@@ -1710,9 +1717,9 @@ class AiAgentService {
             }
 
             $convertPool = [
-                "¡Tal cual{$nameVocative}! Dominar la mente requiere método y constancia; en el enlace de nuestra biografía compartimos herramientas de autodominio. 🚀",
-                "Exacto. La verdadera victoria empieza adentro. En el link del perfil tienes metodologías y guías para templar tu disciplina diaria. 🎯",
-                "Para acompañar esa batalla interna con métodos claros de enfoque y hábitos, revisa los recursos formativos en nuestro perfil. 📖✨"
+                "¡Tal cual{$nameVocative}! Vencerse a uno mismo en silencio cada día es la verdadera gloria estoica. 🏛️⚡",
+                "Exacto{$nameVocative}. La verdadera victoria empieza adentro cuando apagas el ruido exterior y eliges la templanza. ⚡💪",
+                "Esa batalla interna se gana con pequeñas decisiones de disciplina sostenida. Firmeza total{$nameVocative}. 👊🏛️"
             ];
 
             $supportPool = [
@@ -1753,9 +1760,9 @@ class AiAgentService {
             }
 
             $convertPool = [
-                "Gran cita de fe y fortaleza{$nameVocative}. En el enlace de nuestro perfil compartimos recursos diarios para forjar el carácter y los hábitos. 🙏✨",
-                "Una fuente inagotable de fortaleza interior{$nameVocative}. Agradecidos de tener tu voz y perspectiva en la comunidad. 🎯",
-                "La convicción unida a los buenos hábitos transforma cualquier propósito. Encuentra guías prácticas en el enlace de nuestra biografía. 🚀"
+                "Gran convicción y fortaleza{$nameVocative}. La fe y la rectitud moral son el mejor escudo ante la adversidad. 🙏🏛️",
+                "Una fuente inagotable de serenidad interior{$nameVocative}. Agradecidos de tener tu reflexión en la comunidad. 🙌✨",
+                "La convicción espiritual unida al autodominio cotidiano edifica un espíritu inquebrantable. 🙏⚡"
             ];
 
             $supportPool = [
@@ -1806,10 +1813,10 @@ class AiAgentService {
             }
 
             $convertPool = [
-                "¡Gran compromiso{$nameVocative}! Recuerda que en el enlace de la bio tienes recursos y guías de hábitos para acompañar tu proceso diario. 🎯🚀",
-                "¡Esa es la actitud! Para acompañar ese proceso diario, en el enlace del perfil tienes herramientas estructuradas de mentalidad. 📖✨",
-                "El progreso continuo marca la diferencia. En el enlace de nuestra biografía compartimos guías prácticas para optimizar tus hábitos. 🚀",
-                "Para estructurar ese avance con un método probado de enfoque, consulta los materiales formativos en nuestro perfil. 🎯"
+                "¡Gran compromiso{$nameVocative}! Cada día que eliges el autodominio sobre la queja estás forjando tu destino. 🏛️⚡",
+                "¡Esa es la actitud{$nameVocative}! El hábito diario y silencioso es el único constructor infalible de fortaleza. ⚡💪",
+                "El progreso continuo y sin prisa marca la diferencia. Paso a paso edificando un carácter sólido. 🏛️✨",
+                "Mantener el estándar diario aun cuando nadie te mira es la esencia del estoicismo. ¡Adelante{$nameVocative}! 👊🔥"
             ];
 
             $supportPool = [
@@ -1866,10 +1873,10 @@ class AiAgentService {
             }
 
             $convertPool = [
-                "Ese clic mental es el punto de partida hacia el autodominio. Si esta perspectiva resonó contigo, en el enlace de nuestra biografía compartimos guías para profundizar en la mentalidad estoica aplicada. 📖",
-                "Transformar una reflexión en un cambio duradero requiere método y disciplina cotidiana. Puedes explorar nuestras herramientas formativas en el enlace del perfil. 🎯",
-                "La lucidez llega en el momento exacto en que dejamos de justificarnos. Tienes recursos recomendados en el enlace de la bio. 🚀",
-                "Ese golpe de realidad se convierte en crecimiento cuando hay un plan diario. Encuentra herramientas y guías en nuestro enlace del perfil. 📖✨"
+                "Ese clic mental es el punto de partida hacia el autodominio. A usar esa energía para templar el carácter hoy mismo. 🏛️⚡",
+                "Transformar la lucidez en hechos diarios es lo que distingue a los sabios de los soñadores. ¡Adelante{$nameVocative}! ⚡💪",
+                "La lucidez llega en el momento exacto en que dejamos de justificarnos y tomamos responsabilidad total. 🏛️✨",
+                "Ese golpe de realidad forja templanza cuando se canaliza en acciones concretas. Seguimos firmes en el camino. 👊🏛️"
             ];
 
             $supportPool = [
@@ -1891,6 +1898,16 @@ class AiAgentService {
         // CASE 5: Consultas Comerciales / Precio / Acceso / Lead
         // ══════════════════════════════════════════════════════════════════════
         if ($intent === 'lead_info') {
+            if (!self::COMMERCIAL_SALES_ACTIVE) {
+                return [
+                    'source' => 'heuristic_calibrated',
+                    'engagement' => $helloName . "¡Hola! En Fortaleza Imparable compartimos reflexiones libres y principios de filosofía estoica para la comunidad. No tenemos cursos ni programas de venta activos; si deseas conversar sobre estos principios, con gusto podemos hablar por DM. 🏛️💬",
+                    'conversion' => "Nos enfocamos 100% en aportar valor filosófico, desarrollo de carácter y mentalidad estoica libre para la comunidad. No comercializamos cursos ni libros. ¡Un fuerte abrazo fraternal{$nameVocative}! 🏛️✨",
+                    'support' => "Esta es una comunidad dedicada al crecimiento personal y la filosofía práctica sin fines de venta directa. Si tienes alguna inquietud personal, déjanos un mensaje privado. 🏛️🤝",
+                    'engagement_tips' => '🏛️ La honestidad y transparencia sobre el propósito comunitario fortalece el respeto y la confianza.'
+                ];
+            }
+
             $isCourseStructure = str_contains($textLower, 'clases grabadas') || str_contains($textLower, 'grabada') || str_contains($textLower, 'tiempo de acceso') || str_contains($textLower, 'temario');
 
             if ($isCourseStructure) {
@@ -1935,6 +1952,16 @@ class AiAgentService {
         // CASE 6: Objeciones de Venta / Garantías / Dudas de Compra
         // ══════════════════════════════════════════════════════════════════════
         if ($intent === 'sales_objection') {
+            if (!self::COMMERCIAL_SALES_ACTIVE) {
+                return [
+                    'source' => 'heuristic_calibrated',
+                    'engagement' => "Comprendemos perfectamente tu punto{$nameVocative}. En Fortaleza Imparable nuestro compromiso es 100% auténtico con la filosofía estoica y la comunidad fraternal, sin vender productos ni membresías. 🤝🏛️",
+                    'conversion' => "La transparencia y la rectitud moral son innegociables para nosotros. No ofrecemos procesos comerciales; compartimos sabiduría para el autodominio y la templanza diaria. 🏛️✨",
+                    'support' => "Operamos con total autenticidad en cada publicación. Si deseas dialogar sobre algún principio estoico, nuestro equipo está a un mensaje directo de distancia. 🏛️",
+                    'engagement_tips' => '🛡️ La autenticidad y rectitud de principios consolidan la confianza de la comunidad.'
+                ];
+            }
+
             $objEngage = [
                 "Es totalmente comprensible tu consulta{$nameVocative}. Todo nuestro trabajo cuenta con garantía de satisfacción y soporte dedicado para tu total tranquilidad. 🤝",
                 "Comprendemos perfectamente tu duda{$nameVocative}. Respaldamos cada proceso con garantía comprobada y acompañamiento continuo. 🛡️✨",
@@ -1963,6 +1990,16 @@ class AiAgentService {
         // CASE 7: Soporte Técnico / Acceso / Pedidos
         // ══════════════════════════════════════════════════════════════════════
         if ($intent === 'customer_support') {
+            if (!self::COMMERCIAL_SALES_ACTIVE) {
+                return [
+                    'source' => 'heuristic_calibrated',
+                    'engagement' => "Queremos escucharte y apoyarte{$nameVocative}. Si deseas conversar con más calma o compartir tu situación personal, déjanos un mensaje privado (DM) y con gusto te leemos. 🏛️🤝",
+                    'conversion' => "En esta comunidad nos apoyamos mutuamente en el camino del carácter y la templanza. Déjanos un mensaje directo para charlar con tranquilidad. ⚡🏛️",
+                    'support' => "Tu voz es muy valiosa para nosotros. Por favor contáctanos por mensaje directo para atender tu consulta con el debido tiempo y atención fraternal. 🏛️🤝",
+                    'engagement_tips' => '🏛️ La escucha activa y la cercanía fraternal fortalecen los lazos de la comunidad.'
+                ];
+            }
+
             $suppEngage = [
                 "Lamentamos cualquier inconveniente{$nameVocative}. Por favor envíanos un mensaje directo (DM) con tu correo registrado para que nuestro equipo lo revise de forma prioritaria ya mismo. 🛠️",
                 "Queremos ayudarte de inmediato{$nameVocative}. Déjanos un mensaje privado con los datos de tu cuenta para resolverlo a la brevedad. 🤝",
@@ -2002,7 +2039,7 @@ class AiAgentService {
                 return [
                     'source' => 'heuristic_calibrated',
                     'engagement' => $pick($dichoEngage),
-                    'conversion' => "Dominar la dicotomía del control transforma por completo tu enfoque y claridad mental. En el enlace de nuestra biografía compartimos guías y recursos prácticos sobre mentalidad estoica aplicada. 🚀",
+                    'conversion' => "Dominar la dicotomía del control transforma por completo tu enfoque y claridad mental. Recuerda siempre: actúa con firmeza en lo que dominas y suelta en paz lo demás. 🏛️⚡",
                     'support' => "Ante cualquier obstáculo pregúntate: '¿Esto depende de mí?'. Si depende de ti, actúa con determinación; si no, canaliza tu energía en tu propia respuesta y suelta lo demás. 🏛️",
                     'engagement_tips' => '🧠 Respuestas claras sobre principios clave consolidan a tu marca como referente.'
                 ];
@@ -2017,7 +2054,7 @@ class AiAgentService {
                 return [
                     'source' => 'heuristic_calibrated',
                     'engagement' => $pick($discEngage),
-                    'conversion' => "Cuando aplicas un método estructurado, la disciplina se vuelve un hábito natural. Puedes consultar nuestras herramientas y metodologías en el enlace de la bio para dar el siguiente paso. 🎯",
+                    'conversion' => "Cuando conviertes la disciplina en un estándar innegociable, el carácter se vuelve indestructible. Firmeza en tu camino{$nameVocative}. 🏛️💪",
                     'support' => "La clave para vencer la procrastinación es dividir el objetivo en una micro-tarea que puedas empezar de inmediato. La acción continuada disuelve la resistencia. 🏛️",
                     'engagement_tips' => '💡 Aportar consejos prácticos y accionables fomenta conversaciones de alto engagement.'
                 ];
@@ -2031,9 +2068,9 @@ class AiAgentService {
                 "Cuando la mente se apoya en fundamentos claros, el ruido exterior pierde toda fuerza. Seguimos compartiendo valor con personas de tu criterio. ⚡✨"
             ];
             $conceptConvert = [
-                "Profundizar en estos fundamentos marca la diferencia. Te invitamos a revisar los recursos formativos en el enlace de nuestra biografía. 📖",
-                "En el enlace de nuestro perfil encuentras metodologías estructuradas para aplicar estos principios en tu día a día. 🎯",
-                "Llevar la teoría filosófica a la acción diaria es nuestro principal objetivo. Encuentra más herramientas en el perfil. 🚀"
+                "Dominar estos fundamentos marca la diferencia en el día a día. La verdadera filosofía se demuestra en las acciones cotidianas. 🏛️",
+                "Llevar la teoría estoica a la conducta práctica es el mayor desafío y el más gratificante. ¡Seguimos firmes{$nameVocative}! ⚡",
+                "La claridad de principios disuelve la confusión mental y forja un carácter inquebrantable. Un honor reflexionar juntos en comunidad. 🏛️✨"
             ];
             $conceptSupport = [
                 "La claridad mental surge de la práctica constante y el pensamiento reflexivo. Con gusto seguimos compartiendo contenidos sobre este tema. 🏛️",
@@ -2063,9 +2100,9 @@ class AiAgentService {
                 "¡Así se habla{$nameVocative}! Saludos con toda la energía. ⚡"
             ];
             $generalConvert = [
-                "¡Gracias por acompañarnos! En el enlace del perfil encuentras más contenido y recursos formativos. 🚀",
-                "¡Agradecidos con tu presencia! Tienes recursos prácticos en la bio para seguir avanzando. 🎯",
-                "Encuentra más herramientas y guías exclusivas en el link de nuestra biografía. 📖✨"
+                "¡Esa es la actitud{$nameVocative}! Quien domina sus impulsos y elige la constancia vence cualquier obstáculo. 🏛️⚡",
+                "¡Agradecidos con tu presencia! Foco innegociable en mantener el estándar diario y la templanza interior. 🎯🏛️",
+                "La verdadera victoria se construye en silencio con disciplina cotidiana. ¡Seguimos firmes! 🏛️✨"
             ];
             $generalSupport = [
                 "Agradecemos tu presencia en la comunidad{$nameVocative}. ¡Un fuerte abrazo! 🏛️",
@@ -2090,9 +2127,9 @@ class AiAgentService {
             "Comentarios enriquecedores como el tuyo le dan un sentido mucho mayor a esta comunidad{$nameVocative}. ¡Vamos por más! 👊🔥"
         ];
         $generalMediumConvert = [
-            "¡Totalmente! Si deseas profundizar en estos enfoques y herramientas, en el enlace de nuestra biografía tienes más información. 🚀",
-            "Para continuar desarrollando estos conceptos con metodologías prácticas, visita los recursos en el perfil. 🎯",
-            "En el enlace de nuestra bio compartimos guías estructuradas para seguir cultivando esta mentalidad día con día. 📖✨"
+            "¡Totalmente! Cuando alineas tu mente con principios sólidos de autodominio, nada externo puede perturbarte. 🏛️⚡",
+            "Para continuar forjando carácter, el mayor reto es la constancia silenciosa día tras día. ¡Firmeza total{$nameVocative}! 🎯🏛️",
+            "La templanza cotidiana es la mayor armadura ante la adversidad. Un honor compartir este camino en comunidad. 🏛️✨"
         ];
         $generalMediumSupport = [
             "¡Un gran saludo{$nameVocative}! Encantados de leerte y tener tu participación reflexiva en nuestra comunidad. 🏛️",
@@ -2383,13 +2420,21 @@ class AiAgentService {
             $forbiddenPhrases[] = 'reflexionar con nosotros';
             $forbiddenPhrases[] = '¡Seguimos adelante! 🏛️ ¿En qué';
         } elseif (str_starts_with($intent, 'lead_') || $intent === 'price_lead' || str_contains($commentLower, 'precio') || str_contains($commentLower, 'costo') || str_contains($commentLower, 'mentoría') || str_contains($commentLower, 'mentoria') || str_contains($commentLower, 'curso')) {
-            $intentGuidance = "DIRECTIVA DE INTENCIÓN [Interés Comercial / Precio / Mentoría]: Destaca el valor transformador del programa o mentoría e invita amablemente a revisar el enlace en la bio o a enviar un DM para coordinar detalles. NUNCA inventes precios o cifras ficticias.";
+            if (!self::COMMERCIAL_SALES_ACTIVE) {
+                $intentGuidance = "DIRECTIVA DE INTENCIÓN [Pregunta de Precio/Curso/Acceso]: Esta es una comunidad de reflexión filosófica y frases estoicas sin catálogo de venta activo ni cursos de pago. Agradece con amabilidad y humildad fraternal, aclarando que compartimos reflexiones libres para la comunidad, e invita a enviar un DM si desea charlar o profundizar personalmente sobre algún principio.";
+            } else {
+                $intentGuidance = "DIRECTIVA DE INTENCIÓN [Interés Comercial / Precio / Mentoría]: Destaca el valor transformador del programa o mentoría e invita amablemente a revisar el enlace en la bio o a enviar un DM para coordinar detalles. NUNCA inventes precios o cifras ficticias.";
+            }
         } elseif ($intent === 'venting_resilience' || str_contains($commentLower, 'ansiedad') || str_contains($commentLower, 'desmorona') || str_contains($commentLower, 'cuesta') || str_contains($commentLower, 'difícil') || str_contains($commentLower, 'dificil') || str_contains($commentLower, 'no puedo')) {
             $intentGuidance = "DIRECTIVA DE INTENCIÓN [Desahogo Emocional / Búsqueda de Resiliencia]: El seguidor comparte una dificultad, miedo o frustración real. Aplica profunda empatía humana: valida su desafío con respeto fraternal y enfócalo en lo que sí está bajo su control (Dicotomía del Control). NUNCA le vendas agresivamente ni uses clichés superficiales de autoayuda.";
         } elseif ($intent === 'support' || $intent === 'support_request') {
-            $intentGuidance = "DIRECTIVA DE INTENCIÓN [Consulta de Soporte / Duda Técnica]: Resuelve con precisión y cortesía. Si requiere verificación interna o acceso de cuenta, oriéntalo a escribir por DM.";
+            if (!self::COMMERCIAL_SALES_ACTIVE) {
+                $intentGuidance = "DIRECTIVA DE INTENCIÓN [Consulta de Comunidad]: Responde con cortesía y cercanía fraternal, e invita amablemente a un mensaje directo (DM) para conversar con calma. CERO soporte técnico de software o pedidos.";
+            } else {
+                $intentGuidance = "DIRECTIVA DE INTENCIÓN [Consulta de Soporte / Duda Técnica]: Resuelve con precisión y cortesía. Si requiere verificación interna o acceso de cuenta, oriéntalo a escribir por DM.";
+            }
         } elseif ($intent === 'praise_positive' || $intent === 'gratitude_community') {
-            $intentGuidance = "DIRECTIVA DE INTENCIÓN [Agradecimiento / Comunidad]: Agradece con humildad fraternal y remata con una pregunta o reflexión que continúe enriqueciendo la comunidad.";
+            $intentGuidance = "DIRECTIVA DE INTENCIÓN [Agradecimiento / Comunidad]: Agradece con humildad fraternal y remata con una frase o reflexión que continúe enriqueciendo la comunidad.";
         }
 
         // Module 5: Thread Memory & Deduplication
@@ -2445,12 +2490,21 @@ El seguidor únicamente dejó un emoji o una reacción mínima. NO des discursos
 PROHIBICIÓN ESTRICTA: CADA UNA DE LAS 3 OPCIONES DEBE TENER MENOS DE 10 PALABRAS. CERO PÁRRAFOS, CERO DISCURSOS FILOSÓFICOS, CERO PREGUNTAS DE CIERRE.
 OPTS;
         } else {
-            $optionsInstructions = <<<OPTS
+            if (!self::COMMERCIAL_SALES_ACTIVE) {
+                $optionsInstructions = <<<OPTS
+Genera 3 opciones de respuesta con enfoque exclusivo en COMUNIDAD, FILOSOFÍA ESTOICA Y CARÁCTER (CERO VENTAS, CERO ENLACES EN BIO, CERO SOPORTE TÉCNICO):
+1. "engagement": [🤝 Conexión & Fraternidad]: Cálida, humana, cercana y de comunidad, validando la reflexión con empatía fraternal.
+2. "conversion": [🏛️ Sabiduría & Fortaleza Estoica]: Profunda, fundamentada en principios estoicos o citas prácticas (Séneca, Marco Aurelio, Epicteto, autodominio, templanza, forja de carácter). 100% filosófica, CERO ventas, CERO enlaces.
+3. "support": [⚡ Impulso & Determinación]: Motivadora, con garra, enfoque a la acción interior y disciplina mental inquebrantable. CERO soporte técnico.
+OPTS;
+            } else {
+                $optionsInstructions = <<<OPTS
 Genera 3 opciones de respuesta adaptadas a las directrices anteriores sin sonar robótico ni usar frases prohibidas:
 1. "engagement": [🤝 Conexión & Empatía]: Cálida, humana, conversacional y cercana.
 2. "conversion": [🎯 Conversión & Venta / CTA]: Proactiva, enfocada en valor y orientando a la acción (DM, link, compra).
 3. "support": [💡 Autoridad & Solución]: Informativa, clara y profesional, resolviendo dudas.
 OPTS;
+            }
         }
 
         return <<<PROMPT
@@ -2483,11 +2537,11 @@ $threadMemoryBlock
 CONCEPTOS CLAVE A DESTACAR: $keyPhrasesText.
 FRASES TOTALMENTE PROHIBIDAS (NUNCA LAS USES): $forbiddenText.
 
-REGLAS ESTRICTAS DE VERACIDAD Y ANTI-ALUCINACIÓN (OBLIGATORIAS):
-1. CERO FALSA ESCASEZ Y CERO INVENCIÓN: NUNCA inventes ofertas inexistentes, porcentajes de descuento no indicados ni cupos limitados ficticios (ej. "quedan 10 cupos").
-2. CERO ACCIONES NO REALIZADAS: NUNCA afirmes haber enviado un mensaje directo (DM), correo o realizado acciones externas ("te acabo de enviar un DM", "ya te escribí"). Si corresponde, invita cortésmente al seguidor a escribir por DM o a consultar el enlace en la bio.
-3. MANEJO DE DATOS FALTANTES: Si el seguidor pregunta por especificaciones internas, precios o accesos no descritos en el contexto, responde honestamente con los datos generales conocidos y oriéntalo amablemente al enlace de la bio o a enviar un DM para recibir asesoría personalizada.
-4. PREGUNTAS CONCEPTUALES Y FILOSÓFICAS: Si el seguidor consulta sobre un concepto, metodología o filosofía estoica (ej. Dicotomía del control), responde con fundamento, claridad y valor práctico. NUNCA desvíes preguntas conceptuales a soporte técnico de pedidos o reclamos.
+REGLAS ESTRICTAS DE FILOSOFÍA ESTOICA Y VERACIDAD (OBLIGATORIAS):
+1. CERO VENTAS Y CERO LINKS COMERCIALES: Esta página NO VENDE cursos, mentorías ni productos. QUEDA TERMINANTEMENTE PROHIBIDO decir "mira el enlace de la bio para inscribirte", "compra aquí", "nuestros cursos" o invitar a adquirir nada.
+2. CERO ACCIONES NO REALIZADAS: NUNCA afirmes haber enviado un mensaje directo (DM), correo o realizado acciones externas ("te acabo de enviar un DM", "ya te escribí").
+3. CONSULTAS DE ACCESO O PRECIOS: Si alguien pregunta por costos o cursos, aclara amablemente que compartimos reflexiones libres y principios estoicos sin catálogo de venta activo, e invita a un DM si desea charlar fraternalmente.
+4. PREGUNTAS CONCEPTUALES Y FILOSÓFICAS: Si el seguidor consulta sobre un concepto, metodología o filosofía estoica (ej. Dicotomía del control, memento mori, amor fati), responde con fundamento, claridad y valor práctico. NUNCA desvíes preguntas conceptuales a soporte técnico de pedidos o reclamos.
 5. COMENTARIOS DE SOLO EMOJIS O REACCIONES: Si el comentario del seguidor consiste en emojis (ej. 👏👏, 🔥, ❤️, 💪, 🙌) o palabras mínimas ('Totalmente', 'Top', 'Crack'), responde de forma ULTRA BREVE Y CON CHISPA (MÁXIMO 5 A 12 PALABRAS), usando emojis expresivos de reciprocidad (ej. '¡A tope con esa energía! 🔥 Un fuerte abrazo.', '¡Puro fuego! Seguimos con todo. 🔥💪', '¡Esa es la actitud! ⚡🙌'). QUEDA TERMINANTEMENTE PROHIBIDO redactar párrafos explicativos, discursos solemnes o formular preguntas de cierre a un simple emoji.
 6. COMENTARIOS BURLONES, CHISTES O MEMES: Si el seguidor hace un chiste, broma, ironía o comentario cómico (ej. 'al cazo', 'carnitas', risas, emojis 😝/😂), NUNCA te pongas solemne, NUNCA agradezcas como corporación formal ("Apreciamos que dediques tiempo a reflexionar...") y NUNCA hagas preguntas existenciales ("¿cómo buscas aplicarlo hoy?"). Responde con complicidad, ingenio y risa ("Jajaja...", "😅"), manteniendo la respuesta corta y humana.
 7. VOCATIVO Y NICKNAMES: Si el seguidor tiene un usuario con números (ej. Samuelongo380) o apodos no verificados, NUNCA uses ese handle como nombre de pila. Habla de tú a tú directamente y con fluidez natural sin vocativos forzados.
@@ -3074,6 +3128,46 @@ PROMPT;
     }
 
     public static function getDefaultFewShotExamples(): array {
+        if (!self::COMMERCIAL_SALES_ACTIVE) {
+            return [
+                [
+                    'tag' => 'consulta_comunidad_filosofica',
+                    'comment' => '¿Tienen cursos, libros o mentorías de pago?',
+                    'reply' => '¡Hola {nombre}! En Fortaleza Imparable nos dedicamos 100% a compartir reflexiones libres y principios estoicos para la comunidad; no vendemos cursos ni libros. Si deseas charlar sobre estos temas, con gusto te leemos por DM. 🏛️💬'
+                ],
+                [
+                    'tag' => 'concepto_filosofico',
+                    'comment' => '¿Cómo aplico la dicotomía del control en mi día a día cuando siento estrés?',
+                    'reply' => '¡Hola {nombre}! La clave es separar lo que depende al 100% de ti (tu actitud, tus decisiones y tu esfuerzo) de lo externo. Enfoca toda tu energía en tu propia respuesta y suelta lo incontrolable. Firmeza en tu camino. 🏛️'
+                ],
+                [
+                    'tag' => 'batalla_interna_disciplina',
+                    'comment' => 'A veces cuesta mantener la disciplina cuando todo sale mal.',
+                    'reply' => 'Totalmente, {nombre}. Como enseñaba Marco Aurelio, el obstáculo en el camino se convierte en el camino. No busques que todo sea fácil, sino forjarte lo bastante fuerte para superarlo. ¡Seguimos firmes! ⚡🏛️'
+                ],
+                [
+                    'tag' => 'apoyo_fraternal_comunidad',
+                    'comment' => 'Me gustaría compartir una duda sobre cómo afrontar una situación difícil.',
+                    'reply' => '¡Hola {nombre}! Esta comunidad es un espacio seguro para reflexionar y crecer juntos. Escríbenos por mensaje directo (DM) y con gusto dialogamos con calma. Un fuerte abrazo fraternal. 🏛️🤝'
+                ],
+                [
+                    'tag' => 'felicitacion_agradecimiento',
+                    'comment' => '¡Excelente contenido y qué gran valor aportan! Me ayudó muchísimo su reflexión.',
+                    'reply' => '¡Muchísimas gracias por tus palabras, {nombre}! Nos alegra enorme sumar a tu camino. ¡Seguimos firmes forjando carácter juntos! 🏛️✨'
+                ],
+                [
+                    'tag' => 'reaccion_emojis_pura',
+                    'comment' => '🔥🔥👏💯',
+                    'reply' => '¡A tope con esa energía! 🔥 Un fuerte abrazo.'
+                ],
+                [
+                    'tag' => 'acuerdo_corto',
+                    'comment' => 'Totalmente de acuerdo',
+                    'reply' => '¡Así se habla! Fuerza y foco en tu camino. 🏛️✨'
+                ]
+            ];
+        }
+
         return [
             [
                 'tag' => 'precio_leads',

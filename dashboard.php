@@ -155,7 +155,7 @@ $isMetaConnected = ($activeAccountsCount > 0);
 
     <!-- Compact Copilot Quick Trigger -->
     <div class="sidebar-assistant-compact">
-      <button type="button" class="btn-sidebar-assistant-compact" onclick="AgentController.openAssistantModal()" title="Abrir Copiloto de Conversión & Respuestas">
+      <button type="button" class="btn-sidebar-assistant-compact" onclick="AgentController.openAssistantModal()" title="Abrir Copiloto IA de Respuestas">
         <span>✨ Copiloto IA</span>
       </button>
       <button type="button" class="sidebar-score-guide-btn" onclick="App.openScoreGuideModal()" title="Ver cómo se calcula el Score de IA">
@@ -355,7 +355,7 @@ $isMetaConnected = ($activeAccountsCount > 0);
           <div class="feed-toolbar-row">
             <div class="feed-toolbar-left" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
               <span class="feed-counter-text" id="feed-counter-display">Cargando comentarios...</span>
-              <button type="button" class="btn-toolbar-assistant" onclick="AgentController.openAssistantModal()" title="Abrir Copiloto de Conversión & Respuestas">
+              <button type="button" class="btn-toolbar-assistant" onclick="AgentController.openAssistantModal()" title="Abrir Copiloto IA de Respuestas">
                 <span>🪄 Copiloto IA</span>
               </button>
               <button type="button" class="btn-toolbar-assistant btn-toolbar-cleanup" id="btn-inbox-cleanup" onclick="App.confirmAndRunWeeklyCleanup()" title="Archivar comentarios respondidos y generar reporte de eficiencia semanal">
@@ -1897,7 +1897,7 @@ $isMetaConnected = ($activeAccountsCount > 0);
           <div class="detail-pending-icon">⏳</div>
           <div class="detail-pending-info">
             <h4>Este comentario aún no ha sido respondido</h4>
-            <p>Abre el Copiloto de Conversión para forjar una respuesta inteligente calibrada con la voz de tu marca.</p>
+            <p>Abre el Copiloto IA para forjar una respuesta inteligente calibrada con tu comunidad.</p>
           </div>
           <button type="button" class="btn-detail-respond-now" onclick="App.openAssistantFromDetail()">
             <span>🪄 Responder con Copiloto ✨</span>

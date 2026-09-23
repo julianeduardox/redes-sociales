@@ -138,11 +138,11 @@ const AgentController = {
         </div>
       </div>
 
-      <!-- Conversion & Sales CTA Card -->
+      <!-- Variant 2: Stoic Wisdom & Character -->
       <div class="suggestion-card" id="card-variant-conversion" onclick="AgentController.selectVariant('conversion')">
         <div class="suggestion-header">
-          <span class="suggestion-tag conversion">🎯 Opción 2: Conversión & Venta</span>
-          <span style="font-size: 0.72rem; color: var(--text-dim);">Enfoque Comercial & CTA</span>
+          <span class="suggestion-tag conversion">🏛️ Opción 2: Sabiduría & Fortaleza Estoica</span>
+          <span style="font-size: 0.72rem; color: var(--text-dim);">Reflexión Filosófica & Carácter</span>
         </div>
         <p class="suggestion-text" id="text-variant-conversion">${this.escapeHtml(replies.conversion || '')}</p>
         <div class="suggestion-actions">
@@ -161,11 +161,11 @@ const AgentController = {
         </div>
       </div>
 
-      <!-- Authority & Support Solution Card -->
+      <!-- Variant 3: Drive & Determination -->
       <div class="suggestion-card" id="card-variant-support" onclick="AgentController.selectVariant('support')">
         <div class="suggestion-header">
-          <span class="suggestion-tag support">💡 Opción 3: Autoridad & Solución</span>
-          <span style="font-size: 0.72rem; color: var(--text-dim);">Resolución & Soporte</span>
+          <span class="suggestion-tag support">⚡ Opción 3: Impulso & Determinación</span>
+          <span style="font-size: 0.72rem; color: var(--text-dim);">Fuerza Mental & Resiliencia</span>
         </div>
         <p class="suggestion-text" id="text-variant-support">${this.escapeHtml(replies.support || '')}</p>
         <div class="suggestion-actions">
@@ -186,7 +186,7 @@ const AgentController = {
 
       ${replies.engagement_tips ? `
         <div class="suggestion-tip">
-          💡 <strong>Estrategia Comercial:</strong> ${this.escapeHtml(replies.engagement_tips)}
+          🏛️ <strong>Estrategia Comunitaria:</strong> ${this.escapeHtml(replies.engagement_tips)}
         </div>
       ` : ''}
     `;
@@ -613,11 +613,11 @@ const AgentController = {
         </div>
       </div>
 
-      <!-- Variant 2: Conversion & Sales CTA -->
+      <!-- Variant 2: Stoic Wisdom & Character -->
       <div class="modal-suggestion-card card-motivation" id="modal-card-conversion" onclick="AgentController.selectModalVariant('conversion')">
         <div class="modal-suggestion-header">
-          <span class="modal-suggestion-tag motivation">🎯 Opción 2: Conversión & Venta</span>
-          <span class="modal-suggestion-sub">Enfoque Comercial, Producto & DM</span>
+          <span class="modal-suggestion-tag motivation">🏛️ Opción 2: Sabiduría & Fortaleza Estoica</span>
+          <span class="modal-suggestion-sub">Profundidad Filosófica & Autodominio</span>
         </div>
         <div class="modal-suggestion-text" id="modal-text-conversion">${this.escapeHtml(replies.conversion || '')}</div>
         <div class="modal-suggestion-actions">
@@ -636,11 +636,11 @@ const AgentController = {
         </div>
       </div>
 
-      <!-- Variant 3: Authority & Support Solution -->
+      <!-- Variant 3: Drive & Determination -->
       <div class="modal-suggestion-card card-community" id="modal-card-support" onclick="AgentController.selectModalVariant('support')">
         <div class="modal-suggestion-header">
-          <span class="modal-suggestion-tag community">💡 Opción 3: Autoridad & Solución</span>
-          <span class="modal-suggestion-sub">Resolución Directa, Confianza & Soporte</span>
+          <span class="modal-suggestion-tag community">⚡ Opción 3: Impulso & Determinación</span>
+          <span class="modal-suggestion-sub">Energía, Resiliencia & Disciplina</span>
         </div>
         <div class="modal-suggestion-text" id="modal-text-support">${this.escapeHtml(replies.support || '')}</div>
         <div class="modal-suggestion-actions">
