@@ -534,11 +534,12 @@ const App = {
     });
 
     // Platform switcher pills (integrated in feed header & global)
-    document.querySelectorAll('.platform-pill-group .platform-pill').forEach(btn => {
+    document.querySelectorAll('.feed-controls-primary-row [data-platform]').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('.platform-pill-group .platform-pill').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.feed-controls-primary-row [data-platform]').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        this.activePlatform = btn.dataset.platform;
+        this.activePlatform = btn.dataset.platform || 'all';
+        this.currentPage = 1;
         this.loadComments();
 
         // Synchronize with planner and analytics if initialized
@@ -549,10 +550,13 @@ const App = {
           });
         }
         if (typeof AnalyticsController !== 'undefined') {
-          AnalyticsController.activePlatform = this.activePlatform;
+          AnalyticsController.postsPlatform = this.activePlatform;
           document.querySelectorAll('[data-post-platform]').forEach(b => {
             b.classList.toggle('active', b.dataset.postPlatform === this.activePlatform);
           });
+          if (typeof AnalyticsController.loadAnalytics === 'function') {
+            AnalyticsController.loadAnalytics();
+          }
         }
       });
     });
@@ -2594,15 +2598,27 @@ const App = {
           App.showToast('✅ Sincronización rápida completada sin novedades.', 'info', 3000);
         }
 
+        const isWorker = !!(d.worker && d.worker.active);
+        this.isWorkerActive = isWorker;
+        if (badge) {
+          if (isWorker) {
+            badge.classList.add('worker-active');
+          } else {
+            badge.classList.remove('worker-active');
+          }
+        }
+
         const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         if (statusText) {
-          statusText.textContent = `Auto-Sync: OK (${nowTime})`;
+          statusText.textContent = isWorker ? `PC Background: OK (${nowTime})` : `Auto-Sync: OK (${nowTime})`;
         }
         if (badge) {
-          badge.title = `Sincronización autónoma completada a las ${nowTime}. Clic para sincronizar ahora.`;
+          badge.title = isWorker
+            ? `Motor XINDRO activo 24/7 en segundo plano en tu PC (Ciclo #${d.worker.cycle_count || 1}). Sincronizado a las ${nowTime}. Clic para forzar chequeo.`
+            : `Sincronización autónoma por navegador completada a las ${nowTime}. Clic para sincronizar ahora.`;
         }
       } else {
-        if (statusText) statusText.textContent = 'Auto-Sync: Activo (3m)';
+        if (statusText) statusText.textContent = this.isWorkerActive ? 'PC Background: Activo' : 'Auto-Sync: Activo (3m)';
       }
     } catch (err) {
       console.warn('Heartbeat background warning:', err);
@@ -2612,7 +2628,7 @@ const App = {
       if (badge) badge.classList.remove('syncing');
       setTimeout(() => {
         if (statusText && statusText.textContent.includes('OK')) {
-          statusText.textContent = 'Auto-Sync: Activo (3m)';
+          statusText.textContent = this.isWorkerActive ? 'PC Background: Activo' : 'Auto-Sync: Activo (3m)';
         }
       }, 15000);
     }

@@ -55,9 +55,15 @@ const AnalyticsController = {
 
   filterPostsPlatform(platform) {
     this.postsPlatform = platform;
-    document.querySelectorAll('#analytics-posts-subview .platform-pill').forEach(btn => {
+    document.querySelectorAll('#analytics-posts-subview [data-post-platform]').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.postPlatform === platform);
     });
+    if (typeof App !== 'undefined') {
+      App.activePlatform = platform;
+      document.querySelectorAll('.feed-controls-primary-row [data-platform]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.platform === platform);
+      });
+    }
     this.loadAnalytics();
   },
 

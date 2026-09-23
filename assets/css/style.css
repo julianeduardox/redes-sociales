@@ -811,6 +811,16 @@ input:checked + .slider:before {
   transition: all 0.3s ease;
 }
 
+.stat-pill.sync-indicator.worker-active {
+  background: rgba(99, 102, 241, 0.16);
+  border-color: rgba(129, 140, 248, 0.45);
+}
+
+.stat-pill.sync-indicator.worker-active .heartbeat-dot {
+  background: #a855f7;
+  box-shadow: 0 0 10px #a855f7;
+}
+
 .stat-pill.sync-indicator.syncing .heartbeat-dot {
   background: #38bdf8;
   box-shadow: 0 0 10px #38bdf8;

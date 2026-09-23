@@ -51,12 +51,47 @@ try {
     // 1. Process pending items from webhook queue (Fast, local DB processing)
     $queueStats = processWebhookQueue($pdo, 20, null, true);
 
-    // 2. Determine if Meta quickSync is due (Rate limiting quickSync to 1 per 75 seconds unless forced)
+    // 2. Check Background Worker Status
+    $workerStatusFile = __DIR__ . '/../data/worker_status.json';
+    $workerInfo = [
+        'active' => false,
+        'status' => 'inactive',
+        'last_beat' => null,
+        'seconds_ago' => null,
+        'pid' => null,
+        'cycle_count' => 0,
+        'total_replies_posted' => 0
+    ];
+    if (file_exists($workerStatusFile)) {
+        $rawStatus = @file_get_contents($workerStatusFile);
+        $parsedStatus = json_decode($rawStatus, true);
+        if (is_array($parsedStatus)) {
+            $lastBeatStr = $parsedStatus['last_beat'] ?? ($parsedStatus['updated_at'] ?? null);
+            if ($lastBeatStr) {
+                $lastBeatTs = strtotime($lastBeatStr);
+                $diff = time() - $lastBeatTs;
+                // Active if heartbeat reported within last 180 seconds and not marked stopped
+                $isActive = ($diff <= 180) && (($parsedStatus['status'] ?? '') !== 'stopped');
+                $workerInfo = [
+                    'active' => $isActive,
+                    'status' => $isActive ? ($parsedStatus['status'] ?? 'running') : 'inactive',
+                    'last_beat' => $lastBeatStr,
+                    'seconds_ago' => $diff,
+                    'pid' => $parsedStatus['pid'] ?? null,
+                    'cycle_count' => $parsedStatus['cycle_count'] ?? 0,
+                    'total_replies_posted' => $parsedStatus['total_replies_posted'] ?? 0
+                ];
+            }
+        }
+    }
+
+    // 3. Determine if Meta quickSync is due
+    // If background worker is actively running, browser avoids redundant Meta API polling unless forced
     $cacheKey = "last_meta_quicksync_user_{$userId}";
     $lastSyncTime = (int)Settings::get($cacheKey, 0, $userId);
     $now = time();
     $minInterval = 75; // minimum seconds between full Meta quickSync calls
-    $syncDue = $forceSync || (($now - $lastSyncTime) >= $minInterval);
+    $syncDue = $forceSync || (!$workerInfo['active'] && (($now - $lastSyncTime) >= $minInterval));
 
     $quickSyncStats = null;
     if ($syncDue) {
@@ -73,6 +108,7 @@ try {
         'data' => [
             'timestamp' => date('Y-m-d H:i:s'),
             'autopilot_enabled' => $autopilotEnabled,
+            'worker' => $workerInfo,
             'webhook_queue' => [
                 'processed' => $queueStats['processed_events'] ?? 0,
                 'comments_ingested' => $queueStats['comments_ingested'] ?? 0,

@@ -3,13 +3,16 @@
 # -----------------------------------------------------------------------------
 
 # 1. Databases & Local Data (Never commit real SQLite databases or credentials)
-data/*.sqlite
+data/*.sqlite*
 data/*.sqlite-journal
 data/*.sqlite3
 data/*.db
 data/*.db-journal
-*.sqlite
-*.sqlite3
+data/.*.lock
+data/*.lock
+data/worker_status.json
+data/*.log
+*.sqlite*
 *.db
 
 # Keep .htaccess and .gitkeep inside data/

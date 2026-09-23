@@ -1892,7 +1892,7 @@ class MetaApiService {
     public static function quickSync(?int $userId = null): array {
         $startTime = microtime(true);
         if (function_exists('set_time_limit')) {
-            @set_time_limit(60);
+            @set_time_limit(php_sapi_name() === 'cli' ? 0 : 60);
         }
         $uid = ($userId !== null && $userId > 0) ? $userId : (class_exists('Auth') && Auth::check() ? Auth::id() : 1);
         $pdo = Database::getConnection();
@@ -2518,11 +2518,12 @@ class MetaApiService {
                     FROM comments c
                     JOIN posts p ON c.post_id = p.id
                     LEFT JOIN accounts a ON p.account_id = a.id
-                    WHERE c.user_id = :uid AND c.status = 'pending'
+                    WHERE c.user_id = :uid 
+                      AND (c.status = 'pending' OR (c.status = 'failed' AND c.id NOT IN (SELECT comment_id FROM replies WHERE user_id = :uid2)))
                     ORDER BY c.id DESC
                     LIMIT 10
                 ");
-                $pendingSweepStmt->execute([':uid' => $uid, ':default_bvid' => $defaultBrandVoiceId]);
+                $pendingSweepStmt->execute([':uid' => $uid, ':uid2' => $uid, ':default_bvid' => $defaultBrandVoiceId]);
                 $pendingComments = $pendingSweepStmt->fetchAll();
 
                 foreach ($pendingComments as $pCmt) {
@@ -2562,8 +2563,14 @@ class MetaApiService {
                             ':is_posted' => $isPosted
                         ]);
 
-                        $pdo->prepare("UPDATE comments SET status = 'replied' WHERE id = :id AND user_id = :uid")
-                            ->execute([':id' => $pCmt['id'], ':uid' => $uid]);
+                        if ($isPosted) {
+                            $pdo->prepare("UPDATE comments SET status = 'replied', highlight_reason = NULL WHERE id = :id AND user_id = :uid")
+                                ->execute([':id' => $pCmt['id'], ':uid' => $uid]);
+                        } else {
+                            $failReason = $metaRes['error'] ?? 'Error al publicar en Meta API';
+                            $pdo->prepare("UPDATE comments SET status = 'failed', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
+                                ->execute([':reason' => $failReason, ':id' => $pCmt['id'], ':uid' => $uid]);
+                        }
                         $repliesPostedCount++;
                     }
                 }
