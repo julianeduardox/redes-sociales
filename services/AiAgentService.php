@@ -2203,11 +2203,14 @@ class AiAgentService {
 
         $systemPromptContent = "Eres un estratega de respuesta inteligente y asistente de marca para redes sociales. Responde siempre y exclusivamente en formato JSON estructurado válido.";
 
+        $charCount = mb_strlen(trim($commentText), 'UTF-8');
+        $wordsArray = preg_split('/\s+/u', trim($commentText), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $wordCount = count($wordsArray);
         $textNoEmojiCheck = trim(preg_replace('/[\x{1F600}-\x{1F64F}\x{1F300}-\x{1F5FF}\x{1F680}-\x{1F6FF}\x{1F700}-\x{1F77F}\x{1F780}-\x{1F7FF}\x{1F800}-\x{1F8FF}\x{1F900}-\x{1F9FF}\x{1FA00}-\x{1FA6F}\x{1FA70}-\x{1FAFF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}\x{2300}-\x{23FF}\x{2B50}\s\p{P}]/u', '', $commentText));
-        $isPureEmojiOrShort = ($lengthCategory === 'short') || (mb_strlen($textNoEmojiCheck, 'UTF-8') <= 3);
+        $isPureEmojiOrShort = ($lengthCategory === 'short') || ($charCount <= 42) || ($wordCount <= 6) || (mb_strlen($textNoEmojiCheck, 'UTF-8') <= 3);
 
         if ($isPureEmojiOrShort) {
-            $systemPromptContent = "Eres un estratega de redes sociales. El seguidor comentó con emojis o palabras mínimas. TU DIRECTIVA ABSOLUTA ES LA BREVEDAD: CADA respuesta DEBE tener entre 4 y 9 palabras como máximo (1 sola frase contundente). NUNCA redactes párrafos, ni des sermones, ni intentes vender, ni hagas preguntas a un simple emoji. Responde en JSON válido.";
+            $systemPromptContent = "Eres el gestor de comunidad de Fortaleza Imparable (frases estoicas). El seguidor dejó un comentario breve, un sticker o un emoji. TU DIRECTIVA ABSOLUTA ES LA BREVEDAD HUMANA (MÁXIMO 5 A 10 PALABRAS POR RESPUESTA): 1 sola frase corta, ágil y cercana con un emoji sobrio al final. Queda ESTRICTAMENTE PROHIBIDO redactar párrafos largos, discursos filosóficos solemnes o formular preguntas de cierre. Responde en JSON estructurado.";
         }
 
         $payload = [
@@ -2267,40 +2270,50 @@ class AiAgentService {
             $parsed = json_decode($content, true);
 
             if ($parsed && isset($parsed['engagement'])) {
-                // Post-Processing Hard Clamp: Si es un comentario de emojis, asegurar 100% que ninguna opción exceda 10 palabras
+                // Post-Processing Hard Clamp: Si es un comentario corto o emoji, asegurar 100% que ninguna opción exceda 10 palabras
                 if ($isPureEmojiOrShort) {
                     $nameVoc = self::extractCleanFirstName($authorName);
                     $nameVoc = !empty($nameVoc) ? " $nameVoc" : '';
-                    $shortFallbacks = [
+                    $shortGoldenFallbacks = [
                         'engagement' => [
-                            "¡A tope con esa energía{$nameVoc}! 🔥 Un fuerte abrazo.",
-                            "¡Muchas gracias por el apoyo{$nameVoc}! 🙌✨",
-                            "¡Qué buena vibra{$nameVoc}! Un saludo fraternal. 🤝✨"
+                            "¡Así es{$nameVoc}! Con la verdad por delante. ✨",
+                            "¡Muchas gracias{$nameVoc}! Qué bueno que resuene contigo. ✨",
+                            "¡Muchas gracias por el apoyo y la buena energía! 🙌✨",
+                            "¡Así es{$nameVoc}! El mejor filtro es el tiempo. 👊",
+                            "¡Así se habla{$nameVoc}! Con toda la fuerza. 🔥👊",
+                            "¡Gracias a ti por estar siempre apoyando! 🤝✨"
                         ],
                         'conversion' => [
-                            "¡Esa es la actitud{$nameVoc}! ⚡ Vamos con todo.",
-                            "¡Seguimos firmes y sumando{$nameVoc}! 👊🏛️",
-                            "¡Puro impulso{$nameVoc}! Adelante siempre. 🚀✨"
+                            "¡Ese es el espíritu{$nameVoc}! Un día a la vez. 💪🔥",
+                            "Totalmente de acuerdo{$nameVoc}. Fuerza y foco en el camino. 🏛️✨",
+                            "¡Firmeza total{$nameVoc}! Pequeñas victorias diarias. 👊🏛️",
+                            "¡Seguimos firmes{$nameVoc}! Quien vence sus excusas es imbatible. ⚡",
+                            "¡Así se habla{$nameVoc}! Determinación absoluta. ⚡💪"
                         ],
                         'support' => [
-                            "¡Puro fuego{$nameVoc}! Fuerza y foco en tu camino. 🏛️💪",
-                            "¡Así se habla{$nameVoc}! Determinación absoluta. ⚡",
-                            "¡Hermandad pura{$nameVoc}! Seguimos forjando carácter. 🏛️🤝"
+                            "¡Puro impulso{$nameVoc}! Adelante con serenidad. 🏛️💪",
+                            "¡Amén y muchas gracias por la buena vibra! 🙌✨",
+                            "¡Esa es la actitud{$nameVoc}! Seguimos sumando juntos. 🤝⚡",
+                            "¡Firmeza total{$nameVoc}! El mejor filtro es el tiempo. 🏛️✨",
+                            "¡Hermandad pura{$nameVoc}! Fuerza y foco en tu camino. 🏛️🤝"
                         ]
                     ];
 
                     foreach (['engagement', 'conversion', 'support'] as $k) {
                         if (!empty($parsed[$k])) {
-                            $words = preg_split('/\s+/u', trim($parsed[$k]));
-                            if (count($words) > 11) {
-                                // Cortar a la primera frase si tiene entre 3 y 9 palabras y no habla de venta/facebook
-                                $sentences = preg_split('/(?<=[.!?])\s+/u', trim($parsed[$k]));
+                            // Erradicar cualquier pregunta que el modelo haya intentado añadir a un comentario corto
+                            $parsed[$k] = trim(preg_replace('/\s*[¿\?][^.!?]*[.?]?/u', '', $parsed[$k]));
+                            
+                            $words = preg_split('/\s+/u', trim($parsed[$k]), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+                            if (count($words) > 10) {
+                                // Cortar a la primera frase si tiene entre 4 y 10 palabras
+                                $sentences = preg_split('/(?<=[.!?])\s+/u', trim($parsed[$k]), -1, PREG_SPLIT_NO_EMPTY) ?: [];
                                 $firstSentence = trim($sentences[0] ?? '');
-                                $firstWords = preg_split('/\s+/u', $firstSentence);
-                                if (count($firstWords) >= 3 && count($firstWords) <= 9 && !str_contains(mb_strtolower($firstSentence), 'facebook') && !str_contains(mb_strtolower($firstSentence), 'curso')) {
+                                $firstWords = preg_split('/\s+/u', $firstSentence, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+                                if (count($firstWords) >= 3 && count($firstWords) <= 10 && !str_contains(mb_strtolower($firstSentence), 'facebook') && !str_contains(mb_strtolower($firstSentence), 'curso')) {
                                     $parsed[$k] = $firstSentence;
                                 } else {
-                                    $pool = $shortFallbacks[$k] ?? $shortFallbacks['engagement'];
+                                    $pool = $shortGoldenFallbacks[$k] ?? $shortGoldenFallbacks['engagement'];
                                     $parsed[$k] = $pool[array_rand($pool)];
                                 }
                             }
@@ -2369,28 +2382,26 @@ class AiAgentService {
         }
 
         // Module 1: Proportionality & Length Directives (Hermes 3 Engine)
+        $charCount = mb_strlen(trim($commentText), 'UTF-8');
+        $wordsArray = preg_split('/\s+/u', trim($commentText), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $wordCount = count($wordsArray);
         $textNoEmoji = trim(preg_replace('/[\x{1F600}-\x{1F64F}\x{1F300}-\x{1F5FF}\x{1F680}-\x{1F6FF}\x{1F700}-\x{1F77F}\x{1F780}-\x{1F7FF}\x{1F800}-\x{1F8FF}\x{1F900}-\x{1F9FF}\x{1FA00}-\x{1FA6F}\x{1FA70}-\x{1FAFF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}\x{2300}-\x{23FF}\x{2B50}\s\p{P}]/u', '', $commentText));
-        $isEmojiOnlyOrUltraShort = ($lengthCategory === 'short') && (mb_strlen($textNoEmoji, 'UTF-8') <= 3);
+        $isShortComment = ($lengthCategory === 'short') || ($charCount <= 42) || ($wordCount <= 6) || (mb_strlen($textNoEmoji, 'UTF-8') <= 3);
 
         $proportionalityDirective = "";
-        if ($isEmojiOnlyOrUltraShort) {
-            $proportionalityDirective = "PROPORCIONALIDAD QUIRÚRGICA PARA EMOJIS O COMENTARIOS ULTRA CORTOS:\n"
-                . "- El seguidor ha comentado ÚNICAMENTE con emojis (ej. 🔥, 👏, 💯, ❤️, 🙌) o palabras mínimas de aprobación (ej. 'Totalmente', 'Crack', 'Amén', 'Top', 'De una').\n"
-                . "- REGLA DE ORO DE LONGITUD: Tu respuesta DEBE ser ULTRA BREVE, FRESCA, CON CHISPA Y RECIPROCIDAD (MÁXIMO 5 A 12 PALABRAS, en 1 sola frase corta y contundente).\n"
-                . "- EJEMPLOS EXACTOS A REPLICAR:\n"
-                . "  * Si comenta '🔥🔥' -> '¡A tope con esa energía! 🔥 Un fuerte abrazo.' o '¡Esa es la actitud! ⚡🙌' o '¡Puro fuego! Seguimos con todo. 🔥💪'\n"
-                . "  * Si comenta '👏' o '💯' -> '¡Muchísimas gracias por el apoyo! 🤝✨' o '¡Seguimos firmes y sumando! 👊🏛️'\n"
-                . "  * Si comenta 'Totalmente' o 'Así es' -> '¡Totalmente de acuerdo! Fuerza y foco. 🏛️' o '¡Así se habla! Determinación pura. ⚡'\n"
-                . "- PROHIBICIÓN ABSOLUTA: PROHIBIDO redactar párrafos largos o dar discursos solemnes o filosóficos a un simple emoji. NUNCA pases de 12 palabras.\n"
-                . "- PROHIBICIÓN DE PREGUNTAS: Queda TERMINANTEMENTE PROHIBIDO hacer preguntas reflexivas de cierre para este comentario (NADA de '¿en qué buscas aplicarlo hoy?').";
+        if ($isShortComment) {
+            $proportionalityDirective = "REGLA DE LONGITUD DINÁMICA ESTRICTA (MÁXIMO 5 A 10 PALABRAS - CAPACITACIÓN HERMES):\n"
+                . "- El seguidor dejó un comentario CORTO, acuerdo breve, sticker o emoji (ej. 'Exacto !', 'Gran verdad', 'Brutal', 'Totalmente', 'Hermoso ❤️', stickers o emojis).\n"
+                . "- REGLA DE ORO HUMANA: Las respuestas largas a comentarios simples delatan inmediatamente que son bots. Tu respuesta DEBE ser súper ágil, humana, cálida y directa (ESTRICTAMENTE ENTRE 5 Y 10 PALABRAS, en 1 sola frase contundente).\n"
+                . "- REMATE: Termina con 1 emoji sobrio y natural (✨, 👍, 👊, 🙌, 🔥, 💪).\n"
+                . "- PROHIBICIÓN ABSOLUTA: Queda TERMINANTEMENTE PROHIBIDO escribir párrafos largos, reflexiones excesivamente solemnes o filosóficas pesadas a comentarios breves.\n"
+                . "- PROHIBICIÓN DE PREGUNTAS: Queda ESTRICTAMENTE PROHIBIDO formular preguntas reflexivas o existenciales de cierre a comentarios cortos.";
 
-            $closingQuestionRule = "DESACTIVADA (El comentario es solo de emojis o ultra corto. Queda estrictamente prohibido formular preguntas de cierre).";
-        } elseif ($lengthCategory === 'short') {
-            $proportionalityDirective = "PROPORCIONALIDAD ESTRICTA: El comentario del seguidor es CORTO. Tu respuesta DEBE ser concisa, enérgica y directa (MÁXIMO 1 frase breve, entre 10 y 18 palabras). NUNCA redactes un párrafo largo o abrumador a un comentario breve.";
+            $closingQuestionRule = "DESACTIVADA (El comentario es corto; queda estrictamente prohibido formular preguntas de cierre).";
         } elseif ($lengthCategory === 'long') {
-            $proportionalityDirective = "PROPORCIONALIDAD ESTRICTA: El comentario del seguidor es EXTENSO o reflexivo (>80 caracteres). Tu respuesta DEBE ser profunda, humana y estructurada (2 a 3 frases completas de alto valor), validando su situación con empatía y aportando una perspectiva práctica memorable.";
+            $proportionalityDirective = "PROPORCIONALIDAD ESTRICTA: El comentario del seguidor es EXTENSO o reflexivo (>80 caracteres). Tu respuesta DEBE ser humana, empática y de valor (máximo 1 a 2 frases concisas, entre 15 y 25 palabras), validando su punto con serenidad estoica.";
         } else {
-            $proportionalityDirective = "PROPORCIONALIDAD ESTRICTA: El comentario tiene extensión MEDIA. Tu respuesta debe tener entre 1 y 2 frases equilibradas, claras y conversacionales (entre 18 y 35 palabras).";
+            $proportionalityDirective = "PROPORCIONALIDAD ESTRICTA: El comentario tiene extensión MEDIA. Tu respuesta debe tener 1 sola frase equilibrada y conversacional (entre 12 y 18 palabras). NUNCA redactes discursos abrumadores.";
         }
 
         // Module 3: Intent Tactical Guidance
@@ -2480,22 +2491,22 @@ class AiAgentService {
         $cleanPostCaption = addslashes($postCaption);
 
         $optionsInstructions = "";
-        if ($isEmojiOnlyOrUltraShort) {
+        if ($isShortComment) {
             $optionsInstructions = <<<OPTS
-INSTRUCCIÓN EXCLUSIVA PARA COMENTARIO DE EMOJIS O ULTRA-CORTO:
-El seguidor únicamente dejó un emoji o una reacción mínima. NO des discursos de venta ni intentes resolver dudas ni hables sobre el significado del emoji. Genera 3 VARIACIONES DIFERENTES DE REACCIÓN RÁPIDA, FRESCA Y CON ENERGÍA (MÁXIMO 4 A 9 PALABRAS CADA UNA):
-1. "engagement": [Opción 1 - Buena Vibra]: Saludo o reciprocidad muy breve (ej. '¡A tope con esa energía! 🔥 Un fuerte abrazo.').
-2. "conversion": [Opción 2 - Impulso & Fuerza]: Frase corta de determinación o comunidad (ej. '¡Esa es la actitud! ⚡🙌 Vamos con todo.'). NUNCA des discursos de venta ni enlaces a un emoji.
-3. "support": [Opción 3 - Hermandad & Firmeza]: Remate corto y contundente (ej. '¡Puro fuego! Seguimos firmes en el camino. 🏛️💪'). NUNCA resuelvas dudas ni des explicaciones a un emoji.
-PROHIBICIÓN ESTRICTA: CADA UNA DE LAS 3 OPCIONES DEBE TENER MENOS DE 10 PALABRAS. CERO PÁRRAFOS, CERO DISCURSOS FILOSÓFICOS, CERO PREGUNTAS DE CIERRE.
+INSTRUCCIÓN EXCLUSIVA PARA COMENTARIO CORTO / REACCIÓN (BREVEDAD TOTAL - CAPACITACIÓN HERMES):
+El seguidor dejó un comentario breve, acuerdo o reacción. Genera 3 VARIACIONES DIFERENTES DE RESPUESTA SÚPER CONCISA (ESTRICTAMENTE ENTRE 5 Y 10 PALABRAS CADA UNA, 1 SOLA FRASE):
+1. "engagement": [Validación Cálida & Cercana]: Acuerdo ágil y agradecimiento natural con 1 emoji (ej. '¡Así es! Con la verdad por delante. ✨' o '¡Muchas gracias! Qué bueno que resuene contigo. ✨').
+2. "conversion": [Impulso Estoico Breve]: Frase corta de determinación y templanza sin ventas (ej. 'Totalmente de acuerdo. Fuerza y foco en el camino. 🏛️✨' o '¡Ese es el espíritu! Un día a la vez. 💪🔥').
+3. "support": [Hermandad & Firmeza]: Remate corto y contundente sin soporte técnico (ej. '¡Así se habla! Con toda la fuerza. 🔥👊' o '¡Así es! El mejor filtro es el tiempo. 👊').
+PROHIBICIÓN ESTRICTA: CADA UNA DE LAS 3 OPCIONES DEBE TENER ENTRE 5 Y 10 PALABRAS. CERO PÁRRAFOS, CERO SOLEMNIDAD PESADA, CERO PREGUNTAS DE CIERRE.
 OPTS;
         } else {
             if (!self::COMMERCIAL_SALES_ACTIVE) {
                 $optionsInstructions = <<<OPTS
-Genera 3 opciones de respuesta con enfoque exclusivo en COMUNIDAD, FILOSOFÍA ESTOICA Y CARÁCTER (CERO VENTAS, CERO ENLACES EN BIO, CERO SOPORTE TÉCNICO):
-1. "engagement": [🤝 Conexión & Fraternidad]: Cálida, humana, cercana y de comunidad, validando la reflexión con empatía fraternal.
-2. "conversion": [🏛️ Sabiduría & Fortaleza Estoica]: Profunda, fundamentada en principios estoicos o citas prácticas (Séneca, Marco Aurelio, Epicteto, autodominio, templanza, forja de carácter). 100% filosófica, CERO ventas, CERO enlaces.
-3. "support": [⚡ Impulso & Determinación]: Motivadora, con garra, enfoque a la acción interior y disciplina mental inquebrantable. CERO soporte técnico.
+Genera 3 opciones de respuesta con enfoque exclusivo en COMUNIDAD Y FILOSOFÍA ESTOICA (1 sola frase concisa, entre 12 y 18 palabras, CERO VENTAS, CERO ENLACES EN BIO, CERO SOPORTE TÉCNICO):
+1. "engagement": [🤝 Conexión & Fraternidad]: Cálida, humana y cercana, validando con empatía fraternal.
+2. "conversion": [🏛️ Sabiduría & Fortaleza Estoica]: Breve y fundamentada en principios estoicos de autodominio y temple (CERO ventas).
+3. "support": [⚡ Impulso & Determinación]: Motivadora, con garra y disciplina mental inquebrantable (CERO soporte técnico).
 OPTS;
             } else {
                 $optionsInstructions = <<<OPTS
@@ -3131,39 +3142,64 @@ PROMPT;
         if (!self::COMMERCIAL_SALES_ACTIVE) {
             return [
                 [
-                    'tag' => 'consulta_comunidad_filosofica',
-                    'comment' => '¿Tienen cursos, libros o mentorías de pago?',
-                    'reply' => '¡Hola {nombre}! En Fortaleza Imparable nos dedicamos 100% a compartir reflexiones libres y principios estoicos para la comunidad; no vendemos cursos ni libros. Si deseas charlar sobre estos temas, con gusto te leemos por DM. 🏛️💬'
+                    'tag' => 'acuerdo_breve_sandra_soto',
+                    'comment' => 'Exacto !',
+                    'reply' => '¡Así es! Con la verdad por delante. ✨'
                 ],
                 [
-                    'tag' => 'concepto_filosofico',
-                    'comment' => '¿Cómo aplico la dicotomía del control en mi día a día cuando siento estrés?',
-                    'reply' => '¡Hola {nombre}! La clave es separar lo que depende al 100% de ti (tu actitud, tus decisiones y tu esfuerzo) de lo externo. Enfoca toda tu energía en tu propia respuesta y suelta lo incontrolable. Firmeza en tu camino. 🏛️'
+                    'tag' => 'acuerdo_breve_rodolfo_alamos',
+                    'comment' => 'Que gran verdad',
+                    'reply' => '¡Así es! El mejor filtro es el tiempo. 👊'
                 ],
                 [
-                    'tag' => 'batalla_interna_disciplina',
-                    'comment' => 'A veces cuesta mantener la disciplina cuando todo sale mal.',
-                    'reply' => 'Totalmente, {nombre}. Como enseñaba Marco Aurelio, el obstáculo en el camino se convierte en el camino. No busques que todo sea fácil, sino forjarte lo bastante fuerte para superarlo. ¡Seguimos firmes! ⚡🏛️'
+                    'tag' => 'validacion_energética_julian_bustamante',
+                    'comment' => 'Brutal 🔥💪',
+                    'reply' => '¡Así se habla! Con toda la fuerza. 🔥👊'
                 ],
                 [
-                    'tag' => 'apoyo_fraternal_comunidad',
-                    'comment' => 'Me gustaría compartir una duda sobre cómo afrontar una situación difícil.',
-                    'reply' => '¡Hola {nombre}! Esta comunidad es un espacio seguro para reflexionar y crecer juntos. Escríbenos por mensaje directo (DM) y con gusto dialogamos con calma. Un fuerte abrazo fraternal. 🏛️🤝'
+                    'tag' => 'elogio_afectuoso_maria_alejandra',
+                    'comment' => 'Hermoso ❤️',
+                    'reply' => '¡Muchas gracias! Qué bueno que resuene contigo. ✨'
                 ],
                 [
-                    'tag' => 'felicitacion_agradecimiento',
-                    'comment' => '¡Excelente contenido y qué gran valor aportan! Me ayudó muchísimo su reflexión.',
-                    'reply' => '¡Muchísimas gracias por tus palabras, {nombre}! Nos alegra enorme sumar a tu camino. ¡Seguimos firmes forjando carácter juntos! 🏛️✨'
+                    'tag' => 'acuerdo_espiritual_lucia_reck',
+                    'comment' => 'Así es!! bendiciones',
+                    'reply' => '¡Amén y muchas gracias por la buena vibra! 🙌✨'
                 ],
                 [
-                    'tag' => 'reaccion_emojis_pura',
-                    'comment' => '🔥🔥👏💯',
-                    'reply' => '¡A tope con esa energía! 🔥 Un fuerte abrazo.'
+                    'tag' => 'sticker_aprobacion_argenis',
+                    'comment' => '💯 [Sticker 100]',
+                    'reply' => '¡Muchas gracias por el apoyo y la buena energía! 🙌✨'
                 ],
                 [
-                    'tag' => 'acuerdo_corto',
-                    'comment' => 'Totalmente de acuerdo',
-                    'reply' => '¡Así se habla! Fuerza y foco en tu camino. 🏛️✨'
+                    'tag' => 'compromiso_proceso_jimdwin',
+                    'comment' => 'Trabajando en eso!... 💪',
+                    'reply' => '¡Ese es el espíritu! Un día a la vez construyendo esa fortaleza. Dale con todo. 💪🔥'
+                ],
+                [
+                    'tag' => 'reflexion_filtro_tiempo_maria_eugenia',
+                    'comment' => 'Yooooooooo pienso no hay necesidad de Borrar a alguien ellos mismos se Borrarán Solo',
+                    'reply' => 'Totalmente de acuerdo, el tiempo solo acomoda las cosas y filtra a quien debe estar. 🎯'
+                ],
+                [
+                    'tag' => 'batalla_interna_juan_rios',
+                    'comment' => 'El único rival y enemigo real. Si le ganas sos imbatible.',
+                    'reply' => 'Totalmente de acuerdo. Vencerse a uno mismo es la batalla más dura pero la única que realmente importa. 🤝✨'
+                ],
+                [
+                    'tag' => 'cita_biblica_maximiliano',
+                    'comment' => 'Todo lo puedo en Cristo que me fortalece. Pablo Apóstol en la carta a los Filipenses.',
+                    'reply' => 'Amén. Una gran fuente de fortaleza espiritual que complementa la disciplina mental. Muchas gracias por compartirlo. 🙌'
+                ],
+                [
+                    'tag' => 'desahogo_personal_indigo',
+                    'comment' => 'Sabes qué difícil es aguantar a los hijosderemilputa todo el día... Quiere volverme demasiado fuerte',
+                    'reply' => 'Las batallas diarias son las que más temple exigen. Mantén la calma y enfócate en tu crecimiento mental. Ánimo. 🧠✨'
+                ],
+                [
+                    'tag' => 'moderacion_provocacion_enzo',
+                    'comment' => 'Para mi que eres marica',
+                    'reply' => 'Agradecemos tu tiempo y respeto hacia nuestra comunidad. ¡Que tengas un excelente día! ✨'
                 ]
             ];
         }
@@ -3175,34 +3211,19 @@ PROMPT;
                 'reply' => '¡Hola {nombre}! Con gusto te comparto los detalles. El programa incluye acceso completo a las clases grabadas, módulos prácticos y soporte continuo. Puedes revisar los detalles e inscribirte directamente en el enlace de nuestra biografía, o enviarnos un DM si deseas asesoría personalizada. ¿Qué objetivo principal buscas alcanzar?'
             ],
             [
-                'tag' => 'concepto_filosofico',
-                'comment' => '¿Cómo aplico la dicotomía del control en mi día a día cuando siento estrés?',
-                'reply' => '¡Hola {nombre}! La clave es separar lo que depende al 100% de ti (tu actitud, tus decisiones y tu esfuerzo) de lo externo (el tráfico, las opiniones ajenas). Enfoca toda tu energía en tu propia respuesta y suelta lo incontrolable. ¿Qué obstáculo puntual estás enfrentando hoy?'
+                'tag' => 'acuerdo_breve_sandra_soto',
+                'comment' => 'Exacto !',
+                'reply' => '¡Así es! Con la verdad por delante. ✨'
             ],
             [
-                'tag' => 'objecion_garantia',
-                'comment' => '¿Qué garantía tienen y cómo sé si funcionará para mí?',
-                'reply' => 'Excelente pregunta, {nombre}. Respaldamos todo nuestro trabajo con garantía de satisfacción y atención personalizada 1 a 1. Además, puedes revisar testimonios de nuestra comunidad en el enlace de la bio. ¿Te gustaría agendar una llamada rápida para evaluar tu caso?'
+                'tag' => 'validacion_energética_julian_bustamante',
+                'comment' => 'Brutal 🔥💪',
+                'reply' => '¡Así se habla! Con toda la fuerza. 🔥👊'
             ],
             [
-                'tag' => 'soporte_ayuda',
-                'comment' => 'Tengo un inconveniente con el acceso a mi cuenta en la plataforma.',
-                'reply' => '¡Hola {nombre}! Por supuesto, queremos que accedas sin inconvenientes. Por favor envíanos un mensaje privado (DM) con tu correo registrado para que nuestro equipo técnico lo verifique y resuelva de inmediato. ¡Cuenta con nosotros!'
-            ],
-            [
-                'tag' => 'felicitacion_agradecimiento',
-                'comment' => '¡Excelente contenido y qué gran valor aportan! Me ayudó muchísimo su recomendación.',
-                'reply' => '¡Muchísimas gracias por tus palabras, {nombre}! Nos alegra enorme saber que te ha sido de gran valor. ¿De qué tema te gustaría que profundicemos en la siguiente publicación?'
-            ],
-            [
-                'tag' => 'reaccion_emojis_pura',
-                'comment' => '🔥🔥👏💯',
-                'reply' => '¡A tope con esa energía! 🔥 Un fuerte abrazo.'
-            ],
-            [
-                'tag' => 'acuerdo_corto',
-                'comment' => 'Totalmente de acuerdo',
-                'reply' => '¡Así se habla! Fuerza y foco en tu camino. 🏛️✨'
+                'tag' => 'elogio_afectuoso_maria_alejandra',
+                'comment' => 'Hermoso ❤️',
+                'reply' => '¡Muchas gracias! Qué bueno que resuene contigo. ✨'
             ]
         ];
     }
