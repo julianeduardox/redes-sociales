@@ -77,4 +77,19 @@ Este documento establece las directrices arquitectónicas, de ciberseguridad y d
    * Siempre mantener activo el motor heurístico local como fallback en caso de indisponibilidad de OpenRouter o falta de saldo de API.
 2. **Webhooks de Meta:**
    * Verificar la cabecera `X-Hub-Signature-256` con HMAC-SHA256 en [api/webhook.php](file:///c:/xampp/htdocs/Redes%20sociales/api/webhook.php) antes de procesar cualquier evento entrante.
-   * Responder a Meta con código `HTTP 200 OK` inmediatamente para evitar reintentos acumulados.
+   * Política Fail-Closed: si el secreto no está configurado o la firma no coincide, responder de inmediato con `401 Unauthorized` o `403 Forbidden`. Nunca devolver `200 OK` si la autenticidad falla.
+
+---
+
+## 🔒 5. Arnés de Ciberseguridad & Blindaje (Security Hardening Harness)
+
+Para todo desarrollo presente y futuro, es de cumplimiento obligatorio aplicar los 7 pilares descritos en [docs/SECURITY_HARNESS.md](file:///c:/xampp/htdocs/Redes%20sociales/docs/SECURITY_HARNESS.md) y la skill `.agents/skills/security-hardening-harness/SKILL.md`:
+
+1. **CORS Zero-Trust:** Solo admitir orígenes normalizados (`scheme://host[:port]`) que coincidan exactamente con `CORS_ALLOWED_ORIGINS` o `APP_URL`. Queda prohibido `str_contains` o `stripos` con el host.
+2. **Webhooks Fail-Closed:** Rechazar con 401/403 ante secretos faltantes o firmas HMAC-SHA256 inválidas.
+3. **Inmunidad a Host-Poisoning:** Generar URLs canónicas y callbacks de OAuth a partir de `APP_URL` de `.env`, nunca confiando en `$_SERVER['HTTP_HOST']`.
+4. **Cifrado en Reposo Autenticado:** Tokens de acceso a APIs de terceros deben cifrarse con AES-256-GCM (`enc:v1:...`).
+5. **Erradicación de Secretos por Defecto:** Prohibido dejar contraseñas de fábrica en el código. Generar siempre credenciales CSPRNG aleatorias durante la inicialización.
+6. **Supresión de Fuga de Información & CSP:** Remover `X-Powered-By` y aplicar CSP estricto (`default-src 'none'` en API).
+7. **Suite de Pruebas de Blindaje:** Ejecutar periódicamente la suite automatizada de seguridad ([scratch/verify_security_suite.php](file:///c:/xampp/htdocs/Redes%20sociales/scratch/verify_security_suite.php)) con 100% de pruebas aprobadas antes de desplegar.
+
