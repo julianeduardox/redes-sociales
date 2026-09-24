@@ -431,16 +431,16 @@ class MetaApiService {
             ];
         }
 
-        // 2. Strict Age Cutoff Guard: Refuse automatic replies for comments older than 2 hours (7200 seconds)
+        // 2. Strict Age Cutoff Guard: Refuse automatic replies for comments older than 24 hours (86400 seconds)
         if (!$isManual && !empty($comment['created_at'])) {
             $commentAgeSeconds = time() - strtotime($comment['created_at']);
-            if ($commentAgeSeconds > 7200) {
+            if ($commentAgeSeconds > 86400) {
                 $pdo->prepare("UPDATE comments SET status = 'replied' WHERE id = :id AND user_id = :uid")->execute([':id' => $commentDbId, ':uid' => $uid]);
                 return [
                     'success' => true,
                     'already_posted' => false,
                     'skipped' => true,
-                    'message' => 'Comentario con más de 2 horas de antigüedad; omitido por seguridad de cuenta.'
+                    'message' => 'Comentario con más de 24 horas de antigüedad; omitido por seguridad de cuenta.'
                 ];
             }
         }
@@ -1029,10 +1029,10 @@ class MetaApiService {
                                 if (!$existingCmt) {
                                     $analysis = AiAgentService::analyzeComment($cText, $caption, $cLikes);
 
-                                    // Detect if comment already has replies on Instagram or is older than 2 hours
+                                    // Detect if comment already has replies on Instagram or is older than 24 hours
                                     $hasReplies = !empty($cmt['replies']['data']) && is_array($cmt['replies']['data']) && count($cmt['replies']['data']) > 0;
                                     $cAgeSeconds = time() - strtotime($cCreated);
-                                    $isOldComment = $cAgeSeconds > 7200; // Older than 2 hours
+                                    $isOldComment = $cAgeSeconds > 86400; // Older than 24 hours
                                     $initialStatus = ($hasReplies || $isOldComment) ? 'replied' : 'pending';
 
                                     $stmtCmt = $pdo->prepare("
@@ -1275,10 +1275,11 @@ class MetaApiService {
                             'access_token' => $token
                         ]);
 
-                        // Fetch comments list directly with child comments / replies
+                        // Fetch comments list directly with child comments / replies (Newest first, high limit)
                         $multiUrls['fb_comments_' . $pIdExt] = self::BASE_URL . '/' . urlencode($pIdExt) . '/comments?' . http_build_query([
                             'fields' => 'id,message,from,created_time,like_count,comment_count,comments{id,from,message,created_time}',
-                            'limit' => '50',
+                            'order' => 'reverse_chronological',
+                            'limit' => '100',
                             'access_token' => $token
                         ]);
 
@@ -1290,7 +1291,8 @@ class MetaApiService {
                             ]);
                             $multiUrls['fb_obj_comments_' . $pIdExt] = self::BASE_URL . '/' . urlencode($objId) . '/comments?' . http_build_query([
                                 'fields' => 'id,message,from,created_time,like_count,comment_count,comments{id,from,message,created_time}',
-                                'limit' => '50',
+                                'order' => 'reverse_chronological',
+                                'limit' => '100',
                                 'access_token' => $token
                             ]);
                         }
@@ -1547,10 +1549,10 @@ class MetaApiService {
                             if (!$existingCmt) {
                                 $analysis = AiAgentService::analyzeComment($cText, $message, $cLikes);
 
-                                // Detect if comment already has replies on Facebook or is older than 2 hours
+                                // Detect if comment already has replies on Facebook or is older than 24 hours
                                 $hasReplies = (!empty($c['comments']['data']) && is_array($c['comments']['data']) && count($c['comments']['data']) > 0) || (!empty($c['comment_count']) && (int)$c['comment_count'] > 0);
                                 $cAgeSeconds = time() - strtotime($cCreated);
-                                $isOldComment = $cAgeSeconds > 7200; // Older than 2 hours
+                                $isOldComment = $cAgeSeconds > 86400; // Older than 24 hours
                                 $initialStatus = ($hasReplies || $isOldComment) ? 'replied' : 'pending';
 
                                 $stmtInsertCmt = $pdo->prepare("
@@ -2121,10 +2123,10 @@ class MetaApiService {
                                     if (!$existingCmt) {
                                         $analysis = AiAgentService::analyzeComment($cText, $caption, $cLikes);
 
-                                        // Detect if comment already has replies on Instagram or is older than 2 hours
+                                        // Detect if comment already has replies on Instagram or is older than 24 hours
                                         $hasReplies = !empty($cmt['replies']['data']) && is_array($cmt['replies']['data']) && count($cmt['replies']['data']) > 0;
                                         $cAgeSeconds = time() - strtotime($cCreated);
-                                        $isOldComment = $cAgeSeconds > 7200; // Older than 2 hours
+                                        $isOldComment = $cAgeSeconds > 86400; // Older than 24 hours
                                         $initialStatus = ($hasReplies || $isOldComment) ? 'replied' : 'pending';
 
                                         $stmtCmt = $pdo->prepare("
@@ -2245,11 +2247,11 @@ class MetaApiService {
                         }
                     }
                 } else {
-                    // Facebook Page: Fetch top 10 published posts
+                    // Facebook Page: Fetch top 20 published posts
                     $fbFields = 'id,message,story,created_time,full_picture,permalink_url,shares,reactions.summary(total_count).limit(0),likes.summary(total_count).limit(0),comments.summary(total_count).limit(0),attachments{type,target{id},unshimmed_url,media{image{src}},title,description}';
                     $fbUrl = self::BASE_URL . '/' . urlencode($pageId) . '/published_posts?' . http_build_query([
                         'fields' => $fbFields,
-                        'limit' => '10',
+                        'limit' => '20',
                         'access_token' => $token
                     ]);
                     $fbData = self::makeGetRequest($fbUrl, 15, 5);
@@ -2258,7 +2260,7 @@ class MetaApiService {
                     if (empty($fbData['data']) && !isset($fbData['error'])) {
                         $fbUrlFeed = self::BASE_URL . '/' . urlencode($pageId) . '/feed?' . http_build_query([
                             'fields' => $fbFields,
-                            'limit' => '10',
+                            'limit' => '20',
                             'access_token' => $token
                         ]);
                         $fbData = self::makeGetRequest($fbUrlFeed, 15, 5);
@@ -2291,7 +2293,8 @@ class MetaApiService {
 
                             $multiUrls['fb_comments_' . $pIdExt] = self::BASE_URL . '/' . urlencode($pIdExt) . '/comments?' . http_build_query([
                                 'fields' => 'id,message,from,created_time,like_count,comment_count,comments{id,from,message,created_time}',
-                                'limit' => '25',
+                                'order' => 'reverse_chronological',
+                                'limit' => '100',
                                 'access_token' => $token
                             ]);
 
@@ -2302,7 +2305,8 @@ class MetaApiService {
                                 ]);
                                 $multiUrls['fb_obj_comments_' . $pIdExt] = self::BASE_URL . '/' . urlencode($objId) . '/comments?' . http_build_query([
                                     'fields' => 'id,message,from,created_time,like_count,comment_count,comments{id,from,message,created_time}',
-                                    'limit' => '25',
+                                    'order' => 'reverse_chronological',
+                                    'limit' => '100',
                                     'access_token' => $token
                                 ]);
                             }
@@ -2460,10 +2464,10 @@ class MetaApiService {
                                 if (!$existingCmt) {
                                     $analysis = AiAgentService::analyzeComment($cText, $message, $cLikes);
 
-                                    // Detect if comment already has replies on Facebook or is older than 2 hours
+                                    // Detect if comment already has replies on Facebook or is older than 24 hours
                                     $hasReplies = (!empty($c['comments']['data']) && is_array($c['comments']['data']) && count($c['comments']['data']) > 0) || (!empty($c['comment_count']) && (int)$c['comment_count'] > 0);
                                     $cAgeSeconds = time() - strtotime($cCreated);
-                                    $isOldComment = $cAgeSeconds > 7200; // Older than 2 hours
+                                    $isOldComment = $cAgeSeconds > 86400; // Older than 24 hours
                                     $initialStatus = ($hasReplies || $isOldComment) ? 'replied' : 'pending';
 
                                     $stmtInsertCmt = $pdo->prepare("
@@ -2585,11 +2589,11 @@ class MetaApiService {
             }
         }
 
-        // 3. Autonomous Autopilot Sweep: Process any fresh pending comments for this user (Max 2 hours old)
+        // 3. Autonomous Autopilot Sweep: Process any fresh pending comments for this user (Max 24 hours old)
         if ($autopilotEnabled) {
             try {
-                // Auto-archive any stale pending comments older than 2 hours to avoid delayed spam
-                $pdo->prepare("UPDATE comments SET status = 'replied' WHERE user_id = :uid AND status IN ('pending', 'failed') AND created_at < datetime('now', 'localtime', '-2 hours')")
+                // Auto-archive any stale pending comments older than 24 hours to avoid delayed spam
+                $pdo->prepare("UPDATE comments SET status = 'replied' WHERE user_id = :uid AND status IN ('pending', 'failed') AND created_at < datetime('now', 'localtime', '-24 hours')")
                     ->execute([':uid' => $uid]);
 
                 $pendingSweepStmt = $pdo->prepare("
@@ -2599,11 +2603,11 @@ class MetaApiService {
                     JOIN posts p ON c.post_id = p.id
                     LEFT JOIN accounts a ON p.account_id = a.id
                     WHERE c.user_id = :uid 
-                      AND c.created_at >= datetime('now', 'localtime', '-2 hours')
+                      AND c.created_at >= datetime('now', 'localtime', '-24 hours')
                       AND (c.status = 'pending' OR (c.status = 'failed' AND c.id NOT IN (SELECT comment_id FROM replies WHERE user_id = :uid2)))
                       AND c.id NOT IN (SELECT comment_id FROM replies WHERE user_id = :uid3 AND is_posted_to_platform = 1)
                     ORDER BY c.id DESC
-                    LIMIT 10
+                    LIMIT 25
                 ");
                 $pendingSweepStmt->execute([':uid' => $uid, ':uid2' => $uid, ':uid3' => $uid, ':default_bvid' => $defaultBrandVoiceId]);
                 $pendingComments = $pendingSweepStmt->fetchAll();
