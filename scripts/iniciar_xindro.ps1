@@ -15,7 +15,6 @@ if (Test-Path $lockFile) {
     }
 }
 
-$outLog = Join-Path $projectDir "data\worker_startup_out.log"
-$errLog = Join-Path $projectDir "data\worker_startup_err.log"
-Start-Process -FilePath $phpExe -ArgumentList @($workerScript, "--interval=30", "--silent") -WorkingDirectory $projectDir -RedirectStandardOutput $outLog -RedirectStandardError $errLog -WindowStyle Hidden
+$cmd = "`"$phpExe`" `"$workerScript`" --interval=30 --silent"
+Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = $cmd; CurrentDirectory = $projectDir } | Out-Null
 Write-Output "OK: XINDRO Background Worker lanzado exitosamente."

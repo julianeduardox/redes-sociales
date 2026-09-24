@@ -814,7 +814,7 @@ class MetaApiService {
             $accId = (int)$acc['id'];
             $platform = $acc['platform'] ?? 'facebook';
             $pageId = trim($acc['page_id'] ?? '');
-            $token = !empty($acc['access_token']) ? $acc['access_token'] : $defaultToken;
+            $token = !empty($acc['access_token']) ? Security::decrypt($acc['access_token']) : $defaultToken;
             if ($platform === 'facebook' && !empty($pageToken)) {
                 $token = $pageToken; // Always enforce Page Access Token for Facebook Pages
             }
@@ -1935,7 +1935,7 @@ class MetaApiService {
             $accId = (int)$acc['id'];
             $platform = $acc['platform'] ?? 'facebook';
             $pageId = trim($acc['page_id'] ?? '');
-            $token = !empty($acc['access_token']) ? $acc['access_token'] : $defaultToken;
+            $token = !empty($acc['access_token']) ? Security::decrypt($acc['access_token']) : $defaultToken;
             if ($platform === 'facebook' && !empty($pageToken)) {
                 $token = $pageToken; // Always enforce Page Access Token for Facebook Pages
             }
@@ -2225,11 +2225,20 @@ class MetaApiService {
                                             }
                                         }
                                     } else {
-                                        $pdo->prepare("UPDATE comments SET likes_count = :likes WHERE id = :id AND user_id = :uid")->execute([
-                                            ':likes' => $cLikes,
-                                            ':id' => $existingCmt['id'],
-                                            ':uid' => $uid
-                                        ]);
+                                        $hasReplies = !empty($cmt['replies']['data']) && is_array($cmt['replies']['data']) && count($cmt['replies']['data']) > 0;
+                                        if ($hasReplies) {
+                                            $pdo->prepare("UPDATE comments SET status = 'replied', likes_count = :likes WHERE id = :id AND user_id = :uid")->execute([
+                                                ':likes' => $cLikes,
+                                                ':id' => $existingCmt['id'],
+                                                ':uid' => $uid
+                                            ]);
+                                        } else {
+                                            $pdo->prepare("UPDATE comments SET likes_count = :likes WHERE id = :id AND user_id = :uid")->execute([
+                                                ':likes' => $cLikes,
+                                                ':id' => $existingCmt['id'],
+                                                ':uid' => $uid
+                                            ]);
+                                        }
                                     }
                                 }
                             }
@@ -2552,11 +2561,20 @@ class MetaApiService {
                                         }
                                     }
                                 } else {
-                                    $pdo->prepare("UPDATE comments SET likes_count = :likes WHERE id = :id AND user_id = :uid")->execute([
-                                        ':likes' => $cLikes,
-                                        ':id' => $existingCmt['id'],
-                                        ':uid' => $uid
-                                    ]);
+                                    $hasReplies = (!empty($c['comments']['data']) && is_array($c['comments']['data']) && count($c['comments']['data']) > 0) || (!empty($c['comment_count']) && (int)$c['comment_count'] > 0);
+                                    if ($hasReplies) {
+                                        $pdo->prepare("UPDATE comments SET status = 'replied', likes_count = :likes WHERE id = :id AND user_id = :uid")->execute([
+                                            ':likes' => $cLikes,
+                                            ':id' => $existingCmt['id'],
+                                            ':uid' => $uid
+                                        ]);
+                                    } else {
+                                        $pdo->prepare("UPDATE comments SET likes_count = :likes WHERE id = :id AND user_id = :uid")->execute([
+                                            ':likes' => $cLikes,
+                                            ':id' => $existingCmt['id'],
+                                            ':uid' => $uid
+                                        ]);
+                                    }
                                 }
                             }
                         }
@@ -2571,7 +2589,7 @@ class MetaApiService {
         if ($autopilotEnabled) {
             try {
                 // Auto-archive any stale pending comments older than 2 hours to avoid delayed spam
-                $pdo->prepare("UPDATE comments SET status = 'replied' WHERE user_id = :uid AND status IN ('pending', 'failed') AND created_at < datetime('now', '-2 hours')")
+                $pdo->prepare("UPDATE comments SET status = 'replied' WHERE user_id = :uid AND status IN ('pending', 'failed') AND created_at < datetime('now', 'localtime', '-2 hours')")
                     ->execute([':uid' => $uid]);
 
                 $pendingSweepStmt = $pdo->prepare("
@@ -2581,7 +2599,7 @@ class MetaApiService {
                     JOIN posts p ON c.post_id = p.id
                     LEFT JOIN accounts a ON p.account_id = a.id
                     WHERE c.user_id = :uid 
-                      AND c.created_at >= datetime('now', '-2 hours')
+                      AND c.created_at >= datetime('now', 'localtime', '-2 hours')
                       AND (c.status = 'pending' OR (c.status = 'failed' AND c.id NOT IN (SELECT comment_id FROM replies WHERE user_id = :uid2)))
                       AND c.id NOT IN (SELECT comment_id FROM replies WHERE user_id = :uid3 AND is_posted_to_platform = 1)
                     ORDER BY c.id DESC

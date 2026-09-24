@@ -818,6 +818,18 @@ class AiAgentService {
         if (str_contains($capLower, 'epicteto') || str_contains($capLower, 'epictetus')) {
             return 'epicteto';
         }
+        if (str_contains($capLower, 'minamoto') || str_contains($capLower, 'yoshitsune')) {
+            return 'minamoto';
+        }
+        if (str_contains($capLower, 'musashi') || str_contains($capLower, 'miyamoto')) {
+            return 'musashi';
+        }
+        if (str_contains($capLower, 'sun tzu') || str_contains($capLower, 'sun-tzu') || str_contains($capLower, 'suntzu')) {
+            return 'sun_tzu';
+        }
+        if (str_contains($capLower, 'nietzsche')) {
+            return 'nietzsche';
+        }
         return 'general';
     }
 
@@ -924,10 +936,11 @@ class AiAgentService {
             $openrouterModel = 'anthropic/claude-sonnet-4.5';
         }
 
-        // Check user token quota
+        // Check user token quota (Admins or accounts with max_tokens <= 0 have unlimited quota)
+        $userRole = $userAiConfig['role'] ?? '';
         $maxTokens = (int)($userAiConfig['max_tokens'] ?? 50000);
         $usedTokens = (int)($userAiConfig['used_tokens'] ?? 0);
-        $isTokensExhausted = ($maxTokens > 0 && $usedTokens >= $maxTokens);
+        $isTokensExhausted = ($userRole !== 'admin') && ($maxTokens > 0 && $usedTokens >= $maxTokens);
 
         // Try OpenRouter API first if configured and user has remaining quota
         if ($aiProvider === 'openrouter' && !empty($openrouterKey) && !$isTokensExhausted) {
@@ -2238,7 +2251,7 @@ class AiAgentService {
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
             'Content-Type: application/json',
             'Authorization: Bearer ' . $apiKey,
-            'HTTP-Referer' => $appUrl,
+            'HTTP-Referer: ' . $appUrl,
             'X-Title: XINDRO Social AI'
         ]);
         curl_setopt($ch, CURLOPT_TIMEOUT, 15);
@@ -2377,6 +2390,14 @@ class AiAgentService {
             $philosophyContext = "La publicación cita o aborda el pensamiento de SÉNECA (Cartas a Lucilio / De la brevedad de la vida: el valor del tiempo presente, la serenidad ante la adversidad, la superación de la ansiedad y el dominio de las pasiones).";
         } elseif ($postAuthor === 'dostoievski') {
             $philosophyContext = "La publicación cita o aborda a FIÓDOR DOSTOYEVSKI (la forja del carácter en medio de la adversidad humana, la resiliencia moral y la fortaleza interior ante momentos oscuros).";
+        } elseif ($postAuthor === 'minamoto') {
+            $philosophyContext = "La publicación cita o aborda al legendario héroe samurái MINAMOTO NO YOSHITSUNE (1159–1189, brillante estratega y maestro samurái de las Guerras Genpei, símbolo de honor, lealtad y temple ante la tragedia. ¡ADVERTENCIA ABSOLUTA: NO confundir con Miyamoto Musashi!). Si el seguidor pregunta quién era, aclara su identidad con certeza histórica y respeto.";
+        } elseif ($postAuthor === 'musashi') {
+            $philosophyContext = "La publicación cita o aborda al maestro espadachín MIYAMOTO MUSASHI (autor de El Libro de los Cinco Anillos y Dokkodo: el camino del guerrero solitario, la disciplina innegociable y el autodominio de la mente y la espada).";
+        } elseif ($postAuthor === 'sun_tzu') {
+            $philosophyContext = "La publicación cita o aborda a SUN TZU (El Arte de la Guerra: la estrategia, la serenidad mental, la adaptabilidad y el autodominio táctico ante el conflicto).";
+        } elseif ($postAuthor === 'nietzsche') {
+            $philosophyContext = "La publicación cita o aborda a FRIEDRICH NIETZSCHE (Amor Fati, la superación personal, abrazar el sufrimiento como motor de grandeza y la forja de una voluntad inquebrantable).";
         } else {
             $philosophyContext = "La publicación aborda principios estoicos universales y desarrollo de carácter: autodominio, fortaleza mental, forja de hábitos inquebrantables, disciplina y templanza práctica.";
         }
@@ -2556,6 +2577,8 @@ REGLAS ESTRICTAS DE FILOSOFÍA ESTOICA Y VERACIDAD (OBLIGATORIAS):
 5. COMENTARIOS DE SOLO EMOJIS O REACCIONES: Si el comentario del seguidor consiste en emojis (ej. 👏👏, 🔥, ❤️, 💪, 🙌) o palabras mínimas ('Totalmente', 'Top', 'Crack'), responde de forma ULTRA BREVE Y CON CHISPA (MÁXIMO 5 A 12 PALABRAS), usando emojis expresivos de reciprocidad (ej. '¡A tope con esa energía! 🔥 Un fuerte abrazo.', '¡Puro fuego! Seguimos con todo. 🔥💪', '¡Esa es la actitud! ⚡🙌'). QUEDA TERMINANTEMENTE PROHIBIDO redactar párrafos explicativos, discursos solemnes o formular preguntas de cierre a un simple emoji.
 6. COMENTARIOS BURLONES, CHISTES O MEMES: Si el seguidor hace un chiste, broma, ironía o comentario cómico (ej. 'al cazo', 'carnitas', risas, emojis 😝/😂), NUNCA te pongas solemne, NUNCA agradezcas como corporación formal ("Apreciamos que dediques tiempo a reflexionar...") y NUNCA hagas preguntas existenciales ("¿cómo buscas aplicarlo hoy?"). Responde con complicidad, ingenio y risa ("Jajaja...", "😅"), manteniendo la respuesta corta y humana.
 7. VOCATIVO Y NICKNAMES: Si el seguidor tiene un usuario con números (ej. Samuelongo380) o apodos no verificados, NUNCA uses ese handle como nombre de pila. Habla de tú a tú directamente y con fluidez natural sin vocativos forzados.
+8. LECTURA CRÍTICA Y RESPUESTAS DIRECTAS: Si el seguidor hace una pregunta puntual (ej. "¿Quién era ese Minamoto?", "¿De quién es la frase?"), RESPONDE DIRECTAMENTE a lo que pregunta con precisión histórica y cultural (¡CUIDADO: Minamoto no Yoshitsune NO es Miyamoto Musashi!). Jamás te vayas por las ramas ni des discursos genéricos cuando te hacen una pregunta concreta.
+9. ERRADICACIÓN DE PREGUNTAS CLICHÉ DE BOT: Queda TERMINANTEMENTE PROHIBIDO cerrar las respuestas con preguntas forzadas de coach o bot como "¿En qué situación o reto buscas aplicarlo hoy?", "¿Cuál consideras tu mayor desafío respecto a esto hoy?" o "¿Cómo lo aplicas en tu vida?". Si el seguidor no hizo una consulta que amerite repregunta, cierra con una frase contundente, fraternidad o sabiduría estoica, NUNCA con una pregunta de relleno.
 
 $fewShotText
 

@@ -18,6 +18,9 @@ class Auth {
      * Initialize strict session parameters if not already started
      */
     public static function initSession(): void {
+        if (php_sapi_name() === 'cli') {
+            return;
+        }
         if (session_status() === PHP_SESSION_NONE) {
             $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
                 || (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443)
