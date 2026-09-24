@@ -25,7 +25,7 @@ class AiAgentService {
     /**
      * Evaluate if a comment is suitable for Auto-Responder or if it should be marked as SPAM / FOREIGN / STICKER
      */
-    public static function evaluateCommentSuitability(string $commentText, string $allowedLang = 'es'): array {
+    public static function evaluateCommentSuitability(string $commentText, string $allowedLang = 'es', ?array $attachment = null): array {
         $text = trim($commentText);
         $textLower = mb_strtolower($text, 'UTF-8');
 
@@ -142,6 +142,26 @@ class AiAgentService {
         }
 
         // 3. Check for Stickers / Pure Emojis (No text / fewer than 2 letters)
+        $isStickerMarker = str_starts_with($text, '[Sticker') || str_starts_with($text, '[GIF') || !empty($attachment);
+        if ($isStickerMarker) {
+            $stickerEval = self::classifyStickerSentiment($attachment ?? [], $commentText);
+            if ($stickerEval['sentiment'] === 'mocking') {
+                return [
+                    'status' => 'ignored',
+                    'should_reply' => false,
+                    'reason' => '🛡️ Silencio Operativo: Sticker de burla o doble sentido negativo ignorado en Autopilot',
+                    'category' => 'mocking_sticker'
+                ];
+            }
+            return [
+                'status' => 'valid',
+                'should_reply' => true,
+                'reason' => '🎨 Sticker amigable de la comunidad (apto para respuesta ágil)',
+                'category' => 'friendly_sticker',
+                'description' => $stickerEval['description'] ?? 'Sticker amigable'
+            ];
+        }
+
         $textNoEmoji = preg_replace('/[\x{1F600}-\x{1F64F}\x{1F300}-\x{1F5FF}\x{1F680}-\x{1F6FF}\x{1F700}-\x{1F77F}\x{1F780}-\x{1F7FF}\x{1F800}-\x{1F8FF}\x{1F900}-\x{1F9FF}\x{1FA00}-\x{1FA6F}\x{1FA70}-\x{1FAFF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}\x{2300}-\x{23FF}\x{2B50}\x{200D}\x{FE0F}\s\p{P}]/u', '', $text);
         
         if (mb_strlen($textNoEmoji, 'UTF-8') < 2) {
@@ -160,7 +180,7 @@ class AiAgentService {
                 'status' => 'ignored',
                 'should_reply' => false,
                 'reason' => '🎨 Comentario vacío o símbolo suelto sin texto para responder',
-                'category' => 'sticker'
+                'category' => 'empty_comment'
             ];
         }
 
@@ -219,10 +239,253 @@ class AiAgentService {
     }
 
     /**
+     * Detect follower gender context (female, male, neutral) from author name and comment text
+     * Returns: ['gender' => 'female'|'male'|'neutral', 'first_name' => string, 'confidence' => float, 'reason' => string]
+     */
+    public static function detectGenderContext(?string $authorName, string $commentText = ''): array {
+        $cleanFirstName = self::extractCleanFirstName($authorName);
+        $nameLower = mb_strtolower($cleanFirstName, 'UTF-8');
+        $commentLower = mb_strtolower($commentText, 'UTF-8');
+
+        // Text explicit markers take absolute priority
+        if (preg_match('/\b(soy mujer|como mujer|de mujer|siendo mujer|agradecida|cansada|encantada|preparada|dispuesta|sola|tranquila|segura|abrumada|orgullosa|madre|abuela|esposa|chica|niña|mujer)\b/iu', $commentLower)) {
+            return [
+                'gender' => 'female',
+                'first_name' => $cleanFirstName,
+                'confidence' => 0.98,
+                'reason' => 'Autoidentificación o concordancia gramatical femenina en el comentario'
+            ];
+        }
+
+        if (preg_match('/\b(soy hombre|como hombre|de hombre|siendo hombre|agradecido|cansado|encantado|preparado|dispuesto|solo|tranquilo|seguro|abrumado|orgulloso|padre|abuelo|esposo|chico|niño|hombre)\b/iu', $commentLower)) {
+            return [
+                'gender' => 'male',
+                'first_name' => $cleanFirstName,
+                'confidence' => 0.95,
+                'reason' => 'Autoidentificación o concordancia gramatical masculina en el comentario'
+            ];
+        }
+
+        // Female names dictionary (Spanish & Latin American popular names)
+        $femaleNames = [
+            'angela', 'angy', 'marisol', 'imma', 'inma', 'helen', 'cristina', 'nuria', 'alma', 'laura',
+            'maria', 'maría', 'carmen', 'ana', 'isabel', 'patricia', 'marta', 'rosa', 'sofia', 'sofía',
+            'andrea', 'veronica', 'verónica', 'lucia', 'lucía', 'elena', 'paula', 'daniela', 'sara', 'claudia',
+            'beatriz', 'natalia', 'lorena', 'monica', 'mónica', 'adriana', 'teresa', 'alicia', 'silvia', 'alejandra',
+            'pilar', 'rocio', 'rocío', 'mercedes', 'irene', 'raquel', 'julia', 'victoria', 'esther', 'eva',
+            'susana', 'gloria', 'vanessa', 'vanesa', 'sandra', 'diana', 'sonia', 'marina', 'noelia', 'miriam',
+            'carla', 'celia', 'nerea', 'blanca', 'tamara', 'lidia', 'begoña', 'yolanda', 'amparo', 'consuelo',
+            'esperanza', 'lourdes', 'montserrat', 'gemma', 'aurora', 'paloma', 'josefina', 'antonia', 'francisca',
+            'dolores', 'manuela', 'concepción', 'encarnación', 'magaly', 'wendy', 'katherine', 'jessica', 'jennifer',
+            'stephany', 'stephanie', 'karina', 'gabriela', 'valeria', 'camila', 'guadalupe', 'juana', 'margarita',
+            'rosario', 'leticia', 'cecilia', 'belen', 'belén', 'jazmin', 'jazmín', 'genesis', 'génesis', 'ximena',
+            'jimena', 'mariana', 'estefania', 'estefanía', 'carolina', 'paola', 'fabiana', 'marcela', 'elvira'
+        ];
+
+        // Male names dictionary
+        $maleNames = [
+            'crisanto', 'carlos', 'mijail', 'ernesto', 'plutarco', 'jorge', 'edgard', 'edgar', 'julian', 'julián',
+            'sergio', 'hernando', 'andres', 'andrés', 'hugo', 'jose', 'josé', 'luis', 'juan', 'pedro',
+            'antonio', 'manuel', 'francisco', 'david', 'javier', 'fernando', 'daniel', 'miguel', 'alejandro', 'pablo',
+            'jesus', 'jesús', 'angel', 'ángel', 'rafael', 'marcos', 'marco', 'mario', 'ruben', 'rubén',
+            'diego', 'adrian', 'adrián', 'alvaro', 'álvaro', 'ivan', 'iván', 'victor', 'víctor', 'cristian',
+            'christian', 'hector', 'héctor', 'raul', 'raúl', 'gabriel', 'oscar', 'óscar', 'gonzalo', 'lucas',
+            'mateo', 'martin', 'martín', 'rodrigo', 'roberto', 'ignacio', 'santiago', 'felipe', 'alfonso', 'ricardo',
+            'joaquin', 'joaquín', 'eduardo', 'celestino', 'garuvita', 'jalad', 'enrique', 'guillermo', 'cesar', 'césar',
+            'gustavo', 'ramon', 'ramón', 'alberto', 'arturo', 'jaime', 'salvador', 'tomas', 'tomás', 'vicente',
+            'emilio', 'julio', 'marcelo', 'german', 'germán', 'federico', 'marian', 'mariano', 'felix', 'félix'
+        ];
+
+        if (!empty($nameLower)) {
+            if (in_array($nameLower, $femaleNames, true)) {
+                return [
+                    'gender' => 'female',
+                    'first_name' => $cleanFirstName,
+                    'confidence' => 0.95,
+                    'reason' => "Nombre de pila femenino reconocido ('$cleanFirstName')"
+                ];
+            }
+            if (in_array($nameLower, $maleNames, true)) {
+                return [
+                    'gender' => 'male',
+                    'first_name' => $cleanFirstName,
+                    'confidence' => 0.95,
+                    'reason' => "Nombre de pila masculino reconocido ('$cleanFirstName')"
+                ];
+            }
+            // Morphological rule: Spanish first names ending in 'a' are overwhelmingly female
+            $maleExceptionsEndingInA = ['borja', 'luca', 'sasha', 'elias', 'josua', 'mustafa'];
+            if (str_ends_with($nameLower, 'a') && !in_array($nameLower, $maleExceptionsEndingInA, true) && mb_strlen($nameLower, 'UTF-8') >= 3) {
+                return [
+                    'gender' => 'female',
+                    'first_name' => $cleanFirstName,
+                    'confidence' => 0.85,
+                    'reason' => "Terminación morfológica femenina en español ('-a')"
+                ];
+            }
+            // Morphological rule: Spanish first names ending in 'o' are overwhelmingly male
+            if (str_ends_with($nameLower, 'o') && $nameLower !== 'amparo' && $nameLower !== 'consuelo' && $nameLower !== 'rosario' && mb_strlen($nameLower, 'UTF-8') >= 3) {
+                return [
+                    'gender' => 'male',
+                    'first_name' => $cleanFirstName,
+                    'confidence' => 0.85,
+                    'reason' => "Terminación morfológica masculina en español ('-o')"
+                ];
+            }
+        }
+
+        return [
+            'gender' => 'neutral',
+            'first_name' => $cleanFirstName,
+            'confidence' => 0.50,
+            'reason' => 'Género neutro o no determinado con certeza'
+        ];
+    }
+
+    /**
+     * Classify Sticker or GIF sentiment: Friendly vs Mocking/Negative
+     * Uses metadata analysis + OpenRouter Vision fallback for image inspection
+     */
+    public static function classifyStickerSentiment(array $attachment, string $commentText = '', ?string $apiKey = null): array {
+        $type = strtolower($attachment['type'] ?? '');
+        $title = strtolower($attachment['title'] ?? '');
+        $desc = strtolower($attachment['description'] ?? '');
+        $url = strtolower($attachment['url'] ?? '');
+        $targetUrl = strtolower($attachment['target']['url'] ?? '');
+        $imgSrc = $attachment['media']['image']['src'] ?? '';
+        $fullMetadata = "$type $title $desc $url $targetUrl $commentText";
+
+        // 1. Text or metadata mocking patterns
+        $mockingPatterns = [
+            'haha', 'hahaha', 'jaja', 'jajaja', 'jeje', 'jejeje', 'lol', 'lmao', 'xd', 'rofl',
+            'einstein', 'tongue', 'lengua', 'burla', 'burlon', 'burlón', 'sarcas', 'chiste', 'joke',
+            'clown', 'payaso', 'laugh', 'laughing', 'giggle', 'snicker', 'mock', 'mocking', 'troll',
+            'ridicule', 'carcajada', 'muerto de risa', 'morir de risa'
+        ];
+
+        foreach ($mockingPatterns as $pat) {
+            if (preg_match('/\b' . preg_quote($pat, '/') . '\b/iu', $fullMetadata)) {
+                return [
+                    'sentiment' => 'mocking',
+                    'reason' => "Patrón de burla o mofa detectado en metadatos: '$pat'",
+                    'description' => $title ?: 'Sticker/GIF con patrón de risa o mofa'
+                ];
+            }
+        }
+
+        if (preg_match('/[😂🤣😹😜🤪😝🤡]/u', $commentText)) {
+            return [
+                'sentiment' => 'mocking',
+                'reason' => 'Emojis de burla o mofa detectados junto al sticker',
+                'description' => 'Comentario con emojis de burla'
+            ];
+        }
+
+        // 2. Explicit friendly patterns in metadata
+        $friendlyPatterns = [
+            'cierto', 'agree', 'clap', 'clapping', 'handshake', 'aplauso', 'apreton', 'apretón',
+            'deal', 'pusheen', 'cat', 'hug', 'love', 'corazon', 'corazón', 'gracias', 'thanks',
+            'star', 'estrella', 'flor', 'flower', 'respect', 'respeto', 'strength', 'fuerza',
+            'support', 'apoyo', '100%', 'thumbs up', 'firme'
+        ];
+
+        foreach ($friendlyPatterns as $fpat) {
+            if (preg_match('/\b' . preg_quote($fpat, '/') . '\b/iu', $fullMetadata)) {
+                return [
+                    'sentiment' => 'friendly',
+                    'reason' => "Patrón amigable detectado en metadatos: '$fpat'",
+                    'description' => $title ?: 'Sticker de apoyo o acuerdo'
+                ];
+            }
+        }
+
+        // 3. Fast Vision Inspection via OpenRouter if image URL is available and key exists
+        $resolvedApiKey = !empty($apiKey) ? $apiKey : Settings::get('openrouter_api_key', '');
+        if (!empty($resolvedApiKey) && !empty($imgSrc) && (filter_var($imgSrc, FILTER_VALIDATE_URL))) {
+            try {
+                $payload = [
+                    'model' => 'openai/gpt-4o-mini',
+                    'messages' => [
+                        [
+                            'role' => 'user',
+                            'content' => [
+                                [
+                                    'type' => 'text',
+                                    'text' => 'Analiza este sticker o imagen de un comentario de Facebook en una página de filosofía estoica y superación personal. ¿Qué muestra la imagen? ¿Es un sticker de apoyo/amigable (ej. aplausos, apretón de manos, emoción, ternura, felicitación, flores, respeto) o es de burla/carcajada/sarcasmo (ej. risa descarada "HA HA HA", mofa, burla, meme negativo)? Responde en formato JSON estricto: {"description": "...", "sentiment": "friendly" o "mocking"}'
+                                ],
+                                [
+                                    'type' => 'image_url',
+                                    'image_url' => ['url' => $imgSrc]
+                                ]
+                            ]
+                        ]
+                    ],
+                    'response_format' => ['type' => 'json_object']
+                ];
+
+                $ch = curl_init('https://openrouter.ai/api/v1/chat/completions');
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_POST, true);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+                curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                    'Content-Type: application/json',
+                    'Authorization: Bearer ' . $resolvedApiKey
+                ]);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 6);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+                $res = curl_exec($ch);
+                curl_close($ch);
+
+                if ($res) {
+                    $json = json_decode($res, true);
+                    $content = $json['choices'][0]['message']['content'] ?? '';
+                    $parsed = json_decode($content, true);
+                    if (!empty($parsed['sentiment'])) {
+                        $sent = strtolower($parsed['sentiment']) === 'mocking' ? 'mocking' : 'friendly';
+                        return [
+                            'sentiment' => $sent,
+                            'reason' => 'Análisis de visión AI: ' . ($parsed['description'] ?? ''),
+                            'description' => $parsed['description'] ?? ''
+                        ];
+                    }
+                }
+            } catch (Throwable $e) {
+                error_log("Sticker Vision Check Error: " . $e->getMessage());
+            }
+        }
+
+        // Default: If no mocking detected, treat as friendly community reaction
+        return [
+            'sentiment' => 'friendly',
+            'reason' => 'Reacción visual amigable de la comunidad',
+            'description' => 'Sticker amigable'
+        ];
+    }
+
+    /**
+     * Failsafe Post-Processing Guard: Ensure no "hermano" slips through to female or neutral users
+     */
+    public static function sanitizeGenderVocatives(string $reply, string $gender, string $firstName = ''): string {
+        if ($gender === 'female') {
+            // Replace "hermano" with "guerrera" or personal name
+            $replacement = !empty($firstName) ? $firstName : 'guerrera';
+            $reply = preg_replace('/\bhermano\b/iu', $replacement, $reply);
+            $reply = preg_replace('/\bhermanos\b/iu', 'guerreras', $reply);
+            $reply = preg_replace('/\bamigo\b/iu', !empty($firstName) ? $firstName : 'amiga', $reply);
+            $reply = preg_replace('/\bcamarada\b/iu', 'guerrera', $reply);
+        } elseif ($gender === 'neutral') {
+            // Remove awkward "hermano" if neutral/unknown
+            $reply = preg_replace('/,?\s*\bhermano\b/iu', '', $reply);
+            $reply = preg_replace('/\bhermano,?\s*/iu', '', $reply);
+        }
+        return trim($reply);
+    }
+
+    /**
      * Universal Intent & Sentiment Commercial Classifier
      */
-    public static function analyzeComment(string $commentText, string $postCaption = '', int $likesCount = 0, string $authorName = ''): array {
-        $suitability = self::evaluateCommentSuitability($commentText);
+    public static function analyzeComment(string $commentText, string $postCaption = '', int $likesCount = 0, string $authorName = '', ?array $attachment = null): array {
+        $suitability = self::evaluateCommentSuitability($commentText, 'es', $attachment);
         if (!$suitability['should_reply']) {
             $isToxic = ($suitability['status'] === 'toxic' || $suitability['category'] === 'toxic_hostile');
             return [
@@ -236,6 +499,22 @@ class AiAgentService {
                 'autopilot_status' => 'ignored',
                 'autopilot_reason' => $suitability['reason'],
                 'detected_keywords' => $isToxic ? ['toxic_severe'] : []
+            ];
+        }
+
+        // Special handling for friendly sticker reactions
+        if ($suitability['category'] === 'friendly_sticker') {
+            return [
+                'sentiment' => 'positive',
+                'intent' => 'friendly_sticker_reaction',
+                'highlight_score' => 80,
+                'commercial_priority' => 75,
+                'is_highlighted' => 0,
+                'highlight_reason' => $suitability['reason'],
+                'autopilot_ready' => true,
+                'autopilot_status' => 'approved',
+                'autopilot_reason' => 'Sticker amigable de la comunidad aprobado para respuesta ágil',
+                'detected_keywords' => ['sticker_friendly']
             ];
         }
 
@@ -955,7 +1234,14 @@ class AiAgentService {
                 $postAuthor, $lengthCategory, $recentThreadReplies, $analysis, $learningExamples
             );
             if ($openrouterResult !== null && !empty($openrouterResult['engagement'])) {
-                return self::sanitizeRepliesWithForbidden($openrouterResult, $forbiddenPhrases);
+                $sanitized = self::sanitizeRepliesWithForbidden($openrouterResult, $forbiddenPhrases);
+                $genderCtx = self::detectGenderContext($authorName, $commentText);
+                foreach ($sanitized as $k => $v) {
+                    if (is_string($v)) {
+                        $sanitized[$k] = self::sanitizeGenderVocatives($v, $genderCtx['gender'], $genderCtx['first_name']);
+                    }
+                }
+                return $sanitized;
             }
         }
 
@@ -970,7 +1256,14 @@ class AiAgentService {
             $recentThreadReplies
         );
 
-        return self::sanitizeRepliesWithForbidden($localResult, $forbiddenPhrases);
+        $finalLocal = self::sanitizeRepliesWithForbidden($localResult, $forbiddenPhrases);
+        $genderCtx = self::detectGenderContext($authorName, $commentText);
+        foreach ($finalLocal as $k => $v) {
+            if (is_string($v)) {
+                $finalLocal[$k] = self::sanitizeGenderVocatives($v, $genderCtx['gender'], $genderCtx['first_name']);
+            }
+        }
+        return $finalLocal;
     }
 
     /**
@@ -2369,15 +2662,32 @@ class AiAgentService {
         string $postAuthor = 'general', string $lengthCategory = 'medium', array $recentThreadReplies = [], ?array $commentAnalysis = null,
         array $learningExamples = []
     ): string {
-        // Module 4: Clean Name Extraction & Bot Protection
-        $isGeneric = self::isGenericAuthorName($authorName);
-        $cleanFirstName = $isGeneric ? '' : self::extractCleanFirstName($authorName);
+        // Module 4: Clean Name Extraction & Follower Gender Context
+        $genderCtx = self::detectGenderContext($authorName, $commentText);
+        $gender = $genderCtx['gender'];
+        $cleanFirstName = $genderCtx['first_name'];
 
         $nameInstruction = "";
         if (!empty($cleanFirstName)) {
             $nameInstruction = "- El nombre de pila verificado del seguidor es \"$cleanFirstName\". Úsalo de forma natural y orgánica (puede ser al inicio o integrado fluidamente en la oración). NUNCA inventes nombres, ni uses caracteres raros como '@' o números de perfil.";
         } else {
             $nameInstruction = "- El perfil del seguidor no tiene un nombre personal reconocible (ej. cuenta comercial o pseudónimo numérico). NO inventes ningún nombre ni uses su handle de usuario. Dirígete a él de forma directa y cercana sin vocativo artificial.";
+        }
+
+        $genderInstruction = "";
+        if ($gender === 'female') {
+            $nameRef = !empty($cleanFirstName) ? "\"$cleanFirstName\"" : "un trato femenino respetuoso";
+            $genderInstruction = "DIRECTIVA ESTRICTA DE GÉNERO [SEGUIDORA MUJER - PROHIBICIÓN TOTAL DE 'HERMANO']:\n"
+                . "- La seguidora ha sido identificada con certeza como MUJER (Nombre: \"$cleanFirstName\" / Indicios en comentario).\n"
+                . "- PROHIBICIÓN TOTAL Y TERMINANTE: Queda ESTRICTAMENTE PROHIBIDO decirle \"hermano\", \"amigo\", \"rey\" o cualquier término masculino. Usar 'hermano' con una mujer delata inmediatamente que eres un bot.\n"
+                . "- TRATAMIENTO OBLIGATORIO: Dirígete a ella usando $nameRef, o vocativos afines como \"guerrera\", \"hermana\", o bien de forma cercana y cálida sin género forzado (ej. '¡Un abrazo grande, guerrera!', 'Totalmente, $cleanFirstName', 'Así se habla', 'Con toda la fuerza').";
+        } elseif ($gender === 'male') {
+            $genderInstruction = "DIRECTIVA DE GÉNERO [SEGUIDOR HOMBRE]:\n"
+                . "- El seguidor es un hombre (Nombre: \"$cleanFirstName\"). Puedes usar su nombre de pila, o vocativos como \"hermano\" o \"guerrero\" con moderación orgánica y respeto estoico.";
+        } else {
+            $genderInstruction = "DIRECTIVA DE GÉNERO [GÉNERO NEUTRO / NO ESPECIFICADO]:\n"
+                . "- El perfil no indica género con certeza o es un nombre genérico/comercial.\n"
+                . "- REGLA DE ORO: NO uses \"hermano\" por defecto. Emplea un trato cercano y universal de guerrero/comunidad (ej. 'Totalmente de acuerdo', 'Un gran abrazo', 'Con toda la determinación') sin asumir masculinidad.";
         }
 
         // Module 2: Philosophical & Cultural Post Context
@@ -2409,8 +2719,18 @@ class AiAgentService {
         $textNoEmoji = trim(preg_replace('/[\x{1F600}-\x{1F64F}\x{1F300}-\x{1F5FF}\x{1F680}-\x{1F6FF}\x{1F700}-\x{1F77F}\x{1F780}-\x{1F7FF}\x{1F800}-\x{1F8FF}\x{1F900}-\x{1F9FF}\x{1FA00}-\x{1FA6F}\x{1FA70}-\x{1FAFF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}\x{2300}-\x{23FF}\x{2B50}\s\p{P}]/u', '', $commentText));
         $isShortComment = ($lengthCategory === 'short') || ($charCount <= 42) || ($wordCount <= 6) || (mb_strlen($textNoEmoji, 'UTF-8') <= 3);
 
+        $isStickerComment = str_starts_with($commentText, '[Sticker') || str_starts_with($commentText, '[GIF') || (($commentAnalysis['intent'] ?? '') === 'friendly_sticker_reaction');
+
         $proportionalityDirective = "";
-        if ($isShortComment) {
+        if ($isStickerComment) {
+            $proportionalityDirective = "DIRECTIVA EXCLUSIVA PARA RESPUESTA A STICKER AMIGABLE (MÁXIMO 5 A 8 PALABRAS):\n"
+                . "- El seguidor comentó con un STICKER o GIF AMIGABLE de apoyo, acuerdo o afecto.\n"
+                . "- REGLA DE ORO: Responde de forma muy agradable, cálida y ULTRA BREVE (ESTRICTAMENTE ENTRE 5 Y 8 PALABRAS, 1 SOLA FRASE).\n"
+                . "- REMATE: Termina con 1 emoji cálido o afín (✨, 🤝, 👏, 🫂, 🏛️, 👊, 🔥).\n"
+                . "- REGLA DE GÉNERO: Si es mujer, respeta la prohibición estricta de 'hermano'.\n"
+                . "- PROHIBICIÓN ABSOLUTA: Cero discursos solemnes, cero reflexiones existenciales y CERO preguntas de cierre.";
+            $closingQuestionRule = "DESACTIVADA (Es un sticker. Queda terminantemente prohibido hacer preguntas de cierre).";
+        } elseif ($isShortComment) {
             $proportionalityDirective = "REGLA DE LONGITUD DINÁMICA ESTRICTA (MÁXIMO 5 A 10 PALABRAS - CAPACITACIÓN HERMES):\n"
                 . "- El seguidor dejó un comentario CORTO, acuerdo breve, sticker o emoji (ej. 'Exacto !', 'Gran verdad', 'Brutal', 'Totalmente', 'Hermoso ❤️', stickers o emojis).\n"
                 . "- REGLA DE ORO HUMANA: Las respuestas largas a comentarios simples delatan inmediatamente que son bots. Tu respuesta DEBE ser súper ágil, humana, cálida y directa (ESTRICTAMENTE ENTRE 5 Y 10 PALABRAS, en 1 sola frase contundente).\n"
@@ -2556,6 +2876,9 @@ CALIBRACIÓN DE IDENTIDAD:
 TRATAMIENTO DEL NOMBRE DEL SEGUIDOR:
 $nameInstruction
 
+TRATAMIENTO DE GÉNERO Y VOCATIVOS:
+$genderInstruction
+
 FILOSOFÍA Y CONTEXTO CULTURAL DEL POST:
 $philosophyContext
 
@@ -2579,6 +2902,8 @@ REGLAS ESTRICTAS DE FILOSOFÍA ESTOICA Y VERACIDAD (OBLIGATORIAS):
 7. VOCATIVO Y NICKNAMES: Si el seguidor tiene un usuario con números (ej. Samuelongo380) o apodos no verificados, NUNCA uses ese handle como nombre de pila. Habla de tú a tú directamente y con fluidez natural sin vocativos forzados.
 8. LECTURA CRÍTICA Y RESPUESTAS DIRECTAS: Si el seguidor hace una pregunta puntual (ej. "¿Quién era ese Minamoto?", "¿De quién es la frase?"), RESPONDE DIRECTAMENTE a lo que pregunta con precisión histórica y cultural (¡CUIDADO: Minamoto no Yoshitsune NO es Miyamoto Musashi!). Jamás te vayas por las ramas ni des discursos genéricos cuando te hacen una pregunta concreta.
 9. ERRADICACIÓN DE PREGUNTAS CLICHÉ DE BOT: Queda TERMINANTEMENTE PROHIBIDO cerrar las respuestas con preguntas forzadas de coach o bot como "¿En qué situación o reto buscas aplicarlo hoy?", "¿Cuál consideras tu mayor desafío respecto a esto hoy?" o "¿Cómo lo aplicas en tu vida?". Si el seguidor no hizo una consulta que amerite repregunta, cierra con una frase contundente, fraternidad o sabiduría estoica, NUNCA con una pregunta de relleno.
+10. GÉNERO Y PROHIBICIÓN DE 'HERMANO' A MUJERES: Si la seguidora es mujer (identificada arriba), queda TERMINANTEMENTE PROHIBIDO decirle "hermano". Trátala por su nombre, o como "guerrera", "hermana", o con cercanía sin género masculino. Si el género no se conoce, no asumas "hermano" por defecto.
+11. STICKERS O GIFS AMIGABLES: Si el seguidor comentó con un sticker de apoyo (apretón de manos, aplauso, ¡Cierto!, emoción/afecto), responde de forma muy agradable, breve (5 a 8 palabras) y con 1 emoji afín.
 
 $fewShotText
 

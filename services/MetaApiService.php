@@ -1275,9 +1275,9 @@ class MetaApiService {
                             'access_token' => $token
                         ]);
 
-                        // Fetch comments list directly with child comments / replies (Newest first, high limit)
+                        // Fetch comments list directly with child comments / replies (Newest first, high limit, with attachments/stickers)
                         $multiUrls['fb_comments_' . $pIdExt] = self::BASE_URL . '/' . urlencode($pIdExt) . '/comments?' . http_build_query([
-                            'fields' => 'id,message,from,created_time,like_count,comment_count,comments{id,from,message,created_time}',
+                            'fields' => 'id,message,from,created_time,like_count,comment_count,attachment,comments{id,from,message,created_time,attachment}',
                             'order' => 'reverse_chronological',
                             'limit' => '100',
                             'access_token' => $token
@@ -1290,7 +1290,7 @@ class MetaApiService {
                                 'access_token' => $token
                             ]);
                             $multiUrls['fb_obj_comments_' . $pIdExt] = self::BASE_URL . '/' . urlencode($objId) . '/comments?' . http_build_query([
-                                'fields' => 'id,message,from,created_time,like_count,comment_count,comments{id,from,message,created_time}',
+                                'fields' => 'id,message,from,created_time,like_count,comment_count,attachment,comments{id,from,message,created_time,attachment}',
                                 'order' => 'reverse_chronological',
                                 'limit' => '100',
                                 'access_token' => $token
@@ -1535,19 +1535,32 @@ class MetaApiService {
                             if (empty($cmtExtId) || isset($processedCmtIds[$cmtExtId])) continue;
                             $processedCmtIds[$cmtExtId] = true;
 
-                            $cText = $c['message'] ?? '';
+                            $cText = trim($c['message'] ?? '');
                             $fromName = $c['from']['name'] ?? 'Usuario de Facebook';
                             $cLikes = (int)($c['like_count'] ?? 0);
                             $cCreated = !empty($c['created_time']) ? date('Y-m-d H:i:s', strtotime($c['created_time'])) : date('Y-m-d H:i:s');
 
-                            if (empty($cText)) continue;
+                            $attachment = $c['attachment'] ?? null;
+                            if (empty($cText)) {
+                                if (!empty($attachment)) {
+                                    $attachType = strtolower($attachment['type'] ?? 'sticker');
+                                    $attachTitle = trim($attachment['title'] ?? '');
+                                    if ($attachType === 'animated_image_share') {
+                                        $cText = (!empty($attachTitle) && !str_contains($attachTitle, '.com')) ? "[GIF: {$attachTitle}]" : "[GIF / Reacción]";
+                                    } else {
+                                        $cText = !empty($attachTitle) ? "[Sticker: {$attachTitle}]" : "[Sticker]";
+                                    }
+                                } else {
+                                    continue;
+                                }
+                            }
 
                             $checkCmt = $pdo->prepare("SELECT id FROM comments WHERE external_comment_id = :ext_id AND user_id = :uid LIMIT 1");
                             $checkCmt->execute([':ext_id' => $cmtExtId, ':uid' => $uid]);
                             $existingCmt = $checkCmt->fetch();
 
                             if (!$existingCmt) {
-                                $analysis = AiAgentService::analyzeComment($cText, $message, $cLikes);
+                                $analysis = AiAgentService::analyzeComment($cText, $message, $cLikes, $fromName, $attachment);
 
                                 // Detect if comment already has replies on Facebook or is older than 24 hours
                                 $hasReplies = (!empty($c['comments']['data']) && is_array($c['comments']['data']) && count($c['comments']['data']) > 0) || (!empty($c['comment_count']) && (int)$c['comment_count'] > 0);
@@ -2292,7 +2305,7 @@ class MetaApiService {
                             ]);
 
                             $multiUrls['fb_comments_' . $pIdExt] = self::BASE_URL . '/' . urlencode($pIdExt) . '/comments?' . http_build_query([
-                                'fields' => 'id,message,from,created_time,like_count,comment_count,comments{id,from,message,created_time}',
+                                'fields' => 'id,message,from,created_time,like_count,comment_count,attachment,comments{id,from,message,created_time,attachment}',
                                 'order' => 'reverse_chronological',
                                 'limit' => '100',
                                 'access_token' => $token
@@ -2304,7 +2317,7 @@ class MetaApiService {
                                     'access_token' => $token
                                 ]);
                                 $multiUrls['fb_obj_comments_' . $pIdExt] = self::BASE_URL . '/' . urlencode($objId) . '/comments?' . http_build_query([
-                                    'fields' => 'id,message,from,created_time,like_count,comment_count,comments{id,from,message,created_time}',
+                                    'fields' => 'id,message,from,created_time,like_count,comment_count,attachment,comments{id,from,message,created_time,attachment}',
                                     'order' => 'reverse_chronological',
                                     'limit' => '100',
                                     'access_token' => $token
@@ -2450,19 +2463,32 @@ class MetaApiService {
                                 if (empty($cmtExtId) || isset($processedCmtIds[$cmtExtId])) continue;
                                 $processedCmtIds[$cmtExtId] = true;
 
-                                $cText = $c['message'] ?? '';
+                                $cText = trim($c['message'] ?? '');
                                 $fromName = $c['from']['name'] ?? 'Usuario de Facebook';
                                 $cLikes = (int)($c['like_count'] ?? 0);
                                 $cCreated = !empty($c['created_time']) ? date('Y-m-d H:i:s', strtotime($c['created_time'])) : date('Y-m-d H:i:s');
 
-                                if (empty($cText)) continue;
+                                $attachment = $c['attachment'] ?? null;
+                                if (empty($cText)) {
+                                    if (!empty($attachment)) {
+                                        $attachType = strtolower($attachment['type'] ?? 'sticker');
+                                        $attachTitle = trim($attachment['title'] ?? '');
+                                        if ($attachType === 'animated_image_share') {
+                                            $cText = (!empty($attachTitle) && !str_contains($attachTitle, '.com')) ? "[GIF: {$attachTitle}]" : "[GIF / Reacción]";
+                                        } else {
+                                            $cText = !empty($attachTitle) ? "[Sticker: {$attachTitle}]" : "[Sticker]";
+                                        }
+                                    } else {
+                                        continue;
+                                    }
+                                }
 
                                 $checkCmt = $pdo->prepare("SELECT id FROM comments WHERE external_comment_id = :ext_id AND user_id = :uid LIMIT 1");
                                 $checkCmt->execute([':ext_id' => $cmtExtId, ':uid' => $uid]);
                                 $existingCmt = $checkCmt->fetch();
 
                                 if (!$existingCmt) {
-                                    $analysis = AiAgentService::analyzeComment($cText, $message, $cLikes);
+                                    $analysis = AiAgentService::analyzeComment($cText, $message, $cLikes, $fromName, $attachment);
 
                                     // Detect if comment already has replies on Facebook or is older than 24 hours
                                     $hasReplies = (!empty($c['comments']['data']) && is_array($c['comments']['data']) && count($c['comments']['data']) > 0) || (!empty($c['comment_count']) && (int)$c['comment_count'] > 0);
