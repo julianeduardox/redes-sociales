@@ -399,7 +399,7 @@ class MetaApiService {
         $uid = ($userId !== null && $userId > 0) ? $userId : (class_exists('Auth') && Auth::check() ? Auth::id() : 1);
         $pdo = Database::getConnection();
 
-        // 1. Strict Idempotency Guard: Never post twice to the same comment
+        // 1. Strict Idempotency & Concurrency Lock: Never post twice to the same comment
         $checkExistingReply = $pdo->prepare("SELECT id FROM replies WHERE comment_id = :cid AND is_posted_to_platform = 1 LIMIT 1");
         $checkExistingReply->execute([':cid' => $commentDbId]);
         if ($checkExistingReply->fetch()) {
@@ -410,6 +410,20 @@ class MetaApiService {
                 'simulated' => false,
                 'message' => 'El comentario ya fue respondido en Meta anteriormente.'
             ];
+        }
+
+        // Atomic lock for automatic/background threads to prevent duplicate posts under concurrent runs
+        if (!$isManual) {
+            $lockStmt = $pdo->prepare("UPDATE comments SET status = 'replying' WHERE id = :id AND user_id = :uid AND status != 'replying' AND status != 'replied'");
+            $lockStmt->execute([':id' => $commentDbId, ':uid' => $uid]);
+            if ($lockStmt->rowCount() === 0) {
+                return [
+                    'success' => true,
+                    'already_posted' => true,
+                    'skipped' => true,
+                    'message' => 'El comentario ya está siendo procesado o ya fue respondido por otro proceso.'
+                ];
+            }
         }
 
         $stmt = $pdo->prepare("
@@ -523,6 +537,7 @@ class MetaApiService {
         $data = json_decode($response, true);
 
         if ($httpCode >= 200 && $httpCode < 300 && is_array($data) && !isset($data['error'])) {
+            $pdo->prepare("UPDATE comments SET status = 'replied' WHERE id = :id AND user_id = :uid")->execute([':id' => $commentDbId, ':uid' => $uid]);
             return [
                 'success' => true,
                 'simulated' => false,
@@ -530,6 +545,9 @@ class MetaApiService {
                 'meta_response' => $data
             ];
         } else {
+            if (!$isManual) {
+                $pdo->prepare("UPDATE comments SET status = 'failed' WHERE id = :id AND user_id = :uid AND status = 'replying'")->execute([':id' => $commentDbId, ':uid' => $uid]);
+            }
             $errorObj = is_array($data) && isset($data['error']) ? $data['error'] : [];
             $errorCode = $errorObj['code'] ?? null;
             $errorSubcode = $errorObj['error_subcode'] ?? null;

@@ -625,6 +625,16 @@ class AiAgentService {
             'difícil mantener la calma', 'dificil mantener la calma'
         ];
 
+        // 0.65 Existential Doubt, Hardship, Grief or Pain (Miseria, sufrir, para qué vivir, dolor, tristeza, vacío)
+        $existentialPatterns = [
+            'miseria', 'para que vivir', 'para qué vivir', 'de que sirve', 'de qué sirve',
+            'tanto dolor', 'mucho dolor', 'sufrir tanto', 'para que sufrir', 'para qué sufrir',
+            'no le veo sentido', 'sin sentido', 'vida de mierda', 'cansado de vivir',
+            'ganas de tirar la toalla', 'rendirse', 'no puedo mas', 'no puedo más',
+            'todo sale mal', 'para que luchar', 'para qué luchar', 'desesperanza',
+            'angustia', 'soledad', 'vacío', 'vacio'
+        ];
+
         // 0.7 Community Peer Support (Seguidores apoyándose mutuamente en los comentarios)
         $peerSupportPatterns = [
             'si quieres puedes', 'si quieres podes', 'si querés podés', 'ánimo hermano', 'animo hermano',
@@ -838,6 +848,14 @@ class AiAgentService {
             }
         }
 
+        // Detect Existential Doubt, Hardship or Suffering
+        $foundExistential = [];
+        foreach ($existentialPatterns as $p) {
+            if (str_contains($textLower, $p)) {
+                $foundExistential[] = $p;
+            }
+        }
+
         // Detect Community Peer Support
         $foundPeerSupport = [];
         foreach ($peerSupportPatterns as $p) {
@@ -883,6 +901,15 @@ class AiAgentService {
             $autopilotReady = true;
             $autopilotStatus = 'ready';
             $autopilotReason = '✔ Apto para Autopilot (Contención estoica sobria sin validar el insulto ni usar fiesta)';
+        } elseif (!empty($foundExistential)) {
+            $sentiment = 'reflective_pain';
+            $intent = 'existential_doubt';
+            $score = 95;
+            $highlightReason = '🏛️ Duda Existencial o Dolor: Cuestionamiento sobre la miseria, sufrimiento o sentido de la vida; responder con compasión serena y fortaleza estoica, CERO agradecimientos superficiales';
+            $keywords = $foundExistential;
+            $autopilotReady = true;
+            $autopilotStatus = 'ready';
+            $autopilotReason = '✔ Apto para Autopilot (Respuesta empática, sabia y reflexiva con filosofía estoica)';
         } elseif (!empty($foundHumor) || ($hasHumorEmoji && empty($foundVenting))) {
             $sentiment = 'positive';
             $intent = 'humor_banter_joke';
@@ -1942,14 +1969,14 @@ class AiAgentService {
             } elseif ($isShort) {
                 // Respuestas cortas contundentes de 1 sola línea (Module 1)
                 $engagePool = [
-                    "¡Así es{$nameVocative}! Con la verdad por delante. 👊",
+                    "¡Así es{$nameVocative}! La claridad y la serenidad marcan el camino. 👊",
                     "¡Así se habla{$nameVocative}! El mejor filtro es el tiempo. 🎯",
                     "¡Totalmente{$nameVocative}! Foco en lo que sí depende de nosotros. ⚡",
-                    "¡De una{$nameVocative}! La verdad no necesita adornos. 👊",
-                    "¡Exacto{$nameVocative}! Adelante con firmeza total. ⚡",
-                    "Gran verdad{$nameVocative}. Gracias por acompañarnos. 👍",
-                    "¡Tal cual{$nameVocative}! Mente clara y paso firme. 🏛️",
-                    "¡Sin duda{$nameVocative}! Foco en lo esencial. ⚡"
+                    "¡De una{$nameVocative}! La firmeza interior no necesita adornos. 👊",
+                    "¡Exacto{$nameVocative}! Adelante con firmeza y templanza. ⚡",
+                    "Gran verdad{$nameVocative}. Gracias por acompañarnos y sumar. 👍",
+                    "¡Tal cual{$nameVocative}! Mente clara y paso firme siempre. 🏛️",
+                    "¡Sin duda{$nameVocative}! Foco y calma en lo esencial. ⚡"
                 ];
             } else {
                 // Respuestas con profundidad y contexto del autor del post (Module 2)
@@ -2507,16 +2534,22 @@ class AiAgentService {
             $selectedModel = 'anthropic/claude-sonnet-4.5';
         }
 
-        $systemPromptContent = "Eres un estratega de respuesta inteligente y asistente de marca para redes sociales. Responde siempre y exclusivamente en formato JSON estructurado válido.";
-
         $charCount = mb_strlen(trim($commentText), 'UTF-8');
         $wordsArray = preg_split('/\s+/u', trim($commentText), -1, PREG_SPLIT_NO_EMPTY) ?: [];
         $wordCount = count($wordsArray);
-        $textNoEmojiCheck = trim(preg_replace('/[\x{1F600}-\x{1F64F}\x{1F300}-\x{1F5FF}\x{1F680}-\x{1F6FF}\x{1F700}-\x{1F77F}\x{1F780}-\x{1F7FF}\x{1F800}-\x{1F8FF}\x{1F900}-\x{1F9FF}\x{1FA00}-\x{1FA6F}\x{1FA70}-\x{1FAFF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}\x{2300}-\x{23FF}\x{2B50}\s\p{P}]/u', '', $commentText));
-        $isPureEmojiOrShort = ($lengthCategory === 'short') || ($charCount <= 42) || ($wordCount <= 6) || (mb_strlen($textNoEmojiCheck, 'UTF-8') <= 3);
+        $textNoEmojiCheck = trim(preg_replace('/[\x{1F600}-\x{1F64F}\x{1F300}-\x{1F5FF}\x{1F680}-\x{1F6FF}\x{1F700}-\x{1F77F}\x{1F780}-\x{1F7FF}\x{1F800}-\x{1F8FF}\x{1F900}-\x{1F9FF}\x{1FA00}-\x{1FA6F}\x{1FA70}-\x{1FAFF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}\x{2300}-\x{23FF}\x{2B50}\x{200D}\x{FE0F}\s\p{P}]/u', '', $commentText));
+
+        // Solo es puro emoji o micro-reacción si NO contiene preguntas ni carga semántica de dolor, duda o reflexión
+        $hasQuestionOrSemantic = (bool)preg_match('/[¿\?]|(\b(pero|por qué|porque|para que|para qué|cómo|como|quien|quién|cuál|cual|miseria|dolor|difícil|dificil|no|si|vida|tiempo|mente|sentido|lucha|camino)\b)/iu', $commentText);
+        $isPureEmojiOrShort = !$hasQuestionOrSemantic && (
+            (mb_strlen($textNoEmojiCheck, 'UTF-8') === 0) ||
+            ($wordCount <= 3 && in_array(mb_strtolower(trim($commentText), 'UTF-8'), ['amen', 'amén', 'top', 'total', 'exacto', 'de una', 'asi es', 'así es', 'tal cual', 'de acuerdo', '100%']))
+        );
 
         if ($isPureEmojiOrShort) {
-            $systemPromptContent = "Eres el gestor de comunidad de Fortaleza Imparable (frases estoicas). El seguidor dejó un comentario breve, un sticker o un emoji. TU DIRECTIVA ABSOLUTA ES LA BREVEDAD HUMANA (MÁXIMO 5 A 10 PALABRAS POR RESPUESTA): 1 sola frase corta, ágil y cercana con un emoji sobrio al final. Queda ESTRICTAMENTE PROHIBIDO redactar párrafos largos, discursos filosóficos solemnes o formular preguntas de cierre. Responde en JSON estructurado.";
+            $systemPromptContent = "Eres Hermes, gestor de comunidad de Fortaleza Imparable. El seguidor dejó una reacción rápida, emoji o sticker. Responde con calidez humana, autenticidad y frescura (1 sola frase ágil, aproximadamente 6 a 15 palabras, con 1 emoji sobrio). Evita discursos solemnes o fórmulas prefabricadas repetitivas. Responde en JSON estructurado.";
+        } else {
+            $systemPromptContent = "Eres Hermes, la voz e inteligencia de la comunidad Fortaleza Imparable (filosofía estoica, mentalidad, crecimiento y autodominio personal). Tu misión es responder como un ser humano sabio, empático, cercano y reflexivo. Tienes total libertad para pensar, razonar el contexto del seguidor y redactar respuestas genuinas (10 a 30 palabras). Si el seguidor expresa una duda o dolor, respóndele con comprensión serena; si reflexiona, nutre su idea con profundidad práctica. QUEDA TERMINANTEMENTE PROHIBIDO sonar como un bot repetitivo, dar respuestas inconexas o recitar plantillas fijas como 'con la verdad por delante'. Responde en JSON estructurado.";
         }
 
         $payload = [
@@ -2532,7 +2565,9 @@ class AiAgentService {
                 ]
             ],
             'response_format' => ['type' => 'json_object'],
-            'temperature' => 0.6
+            'temperature' => 0.75,
+            'frequency_penalty' => 0.45,
+            'presence_penalty' => 0.35
         ];
 
         $appUrl = Settings::get('app_url', 'http://localhost/Redes%20sociales');
@@ -2544,7 +2579,7 @@ class AiAgentService {
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
             'Content-Type: application/json',
             'Authorization: Bearer ' . $apiKey,
-            'HTTP-Referer: ' . $appUrl,
+            'HTTP-Referer' => $appUrl,
             'X-Title: XINDRO Social AI'
         ]);
         curl_setopt($ch, CURLOPT_TIMEOUT, 15);
@@ -2576,54 +2611,48 @@ class AiAgentService {
             $parsed = json_decode($content, true);
 
             if ($parsed && isset($parsed['engagement'])) {
-                // Post-Processing Hard Clamp: Si es un comentario corto o emoji, asegurar 100% que ninguna opción exceda 10 palabras
+                // Post-Processing Humano: Respetar la inteligencia y libertad de Hermes
                 if ($isPureEmojiOrShort) {
-                    $nameVoc = self::extractCleanFirstName($authorName);
-                    $nameVoc = !empty($nameVoc) ? " $nameVoc" : '';
-                    $shortGoldenFallbacks = [
-                        'engagement' => [
-                            "¡Así es{$nameVoc}! Con la verdad por delante. ✨",
-                            "¡Muchas gracias{$nameVoc}! Qué bueno que resuene contigo. ✨",
-                            "¡Muchas gracias por el apoyo y la buena energía! 🙌✨",
-                            "¡Así es{$nameVoc}! El mejor filtro es el tiempo. 👊",
-                            "¡Así se habla{$nameVoc}! Con toda la fuerza. 🔥👊",
-                            "¡Gracias a ti por estar siempre apoyando! 🤝✨"
-                        ],
-                        'conversion' => [
-                            "¡Ese es el espíritu{$nameVoc}! Un día a la vez. 💪🔥",
-                            "Totalmente de acuerdo{$nameVoc}. Fuerza y foco en el camino. 🏛️✨",
-                            "¡Firmeza total{$nameVoc}! Pequeñas victorias diarias. 👊🏛️",
-                            "¡Seguimos firmes{$nameVoc}! Quien vence sus excusas es imbatible. ⚡",
-                            "¡Así se habla{$nameVoc}! Determinación absoluta. ⚡💪"
-                        ],
-                        'support' => [
-                            "¡Puro impulso{$nameVoc}! Adelante con serenidad. 🏛️💪",
-                            "¡Amén y muchas gracias por la buena vibra! 🙌✨",
-                            "¡Esa es la actitud{$nameVoc}! Seguimos sumando juntos. 🤝⚡",
-                            "¡Firmeza total{$nameVoc}! El mejor filtro es el tiempo. 🏛️✨",
-                            "¡Hermandad pura{$nameVoc}! Fuerza y foco en tu camino. 🏛️🤝"
-                        ]
-                    ];
-
                     foreach (['engagement', 'conversion', 'support'] as $k) {
                         if (!empty($parsed[$k])) {
-                            // Erradicar cualquier pregunta que el modelo haya intentado añadir a un comentario corto
+                            // Limpiar preguntas interrogativas que desentonan con un simple emoji
                             $parsed[$k] = trim(preg_replace('/\s*[¿\?][^.!?]*[.?]?/u', '', $parsed[$k]));
-                            
-                            $words = preg_split('/\s+/u', trim($parsed[$k]), -1, PREG_SPLIT_NO_EMPTY) ?: [];
-                            if (count($words) > 10) {
-                                // Cortar a la primera frase si tiene entre 4 y 10 palabras
-                                $sentences = preg_split('/(?<=[.!?])\s+/u', trim($parsed[$k]), -1, PREG_SPLIT_NO_EMPTY) ?: [];
-                                $firstSentence = trim($sentences[0] ?? '');
-                                $firstWords = preg_split('/\s+/u', $firstSentence, -1, PREG_SPLIT_NO_EMPTY) ?: [];
-                                if (count($firstWords) >= 3 && count($firstWords) <= 10 && !str_contains(mb_strtolower($firstSentence), 'facebook') && !str_contains(mb_strtolower($firstSentence), 'curso')) {
-                                    $parsed[$k] = $firstSentence;
-                                } else {
-                                    $pool = $shortGoldenFallbacks[$k] ?? $shortGoldenFallbacks['engagement'];
-                                    $parsed[$k] = $pool[array_rand($pool)];
-                                }
-                            }
                         }
+                    }
+                }
+
+                // Respaldo de variedad solo si alguna opción quedó vacía (sin sobreescribir la respuesta de Hermes)
+                $nameVoc = self::extractCleanFirstName($authorName);
+                $nameVoc = !empty($nameVoc) ? " $nameVoc" : '';
+                $freshGoldenFallbacks = [
+                    'engagement' => [
+                        "¡Totalmente de acuerdo{$nameVoc}! La serenidad y el foco son el camino. 🏛️✨",
+                        "¡Muchas gracias{$nameVoc}! Qué bueno que esta reflexión resuene contigo. ✨",
+                        "¡Muchas gracias por acompañarnos y sumar tan buena energía! 🙌✨",
+                        "¡Así se habla{$nameVoc}! Pequeñas victorias diarias forjan el carácter. 👊",
+                        "¡Ese es el camino{$nameVoc}! Paso firme y mente clara. 🔥🏛️",
+                        "Apreciamos mucho tu presencia y constancia en la comunidad{$nameVoc}. 🤝✨"
+                    ],
+                    'conversion' => [
+                        "¡Ese es el espíritu{$nameVoc}! Un día a la vez forjando la templanza. 💪🔥",
+                        "Totalmente de acuerdo{$nameVoc}. Fuerza y serenidad en el camino. 🏛️✨",
+                        "¡Firmeza total{$nameVoc}! Quien vence sus excusas es imbatible. 👊🏛️",
+                        "¡Seguimos firmes{$nameVoc}! Foco total en lo que sí depende de ti. ⚡",
+                        "¡Así se habla{$nameVoc}! Determinación absoluta día a día. ⚡💪"
+                    ],
+                    'support' => [
+                        "¡Puro impulso{$nameVoc}! Adelante con calma y determinación. 🏛️💪",
+                        "¡Amén y muchas gracias por las bendiciones y la buena vibra! 🙌✨",
+                        "¡Esa es la actitud{$nameVoc}! Seguimos aprendiendo y creciendo juntos. 🤝⚡",
+                        "¡Firmeza total{$nameVoc}! El tiempo siempre acomoda cada cosa en su lugar. 🏛️✨",
+                        "¡Hermandad pura{$nameVoc}! Fuerza y sabiduría para tu camino. 🏛️🤝"
+                    ]
+                ];
+
+                foreach (['engagement', 'conversion', 'support'] as $k) {
+                    if (empty(trim($parsed[$k] ?? ''))) {
+                        $pool = $freshGoldenFallbacks[$k] ?? $freshGoldenFallbacks['engagement'];
+                        $parsed[$k] = $pool[array_rand($pool)];
                     }
                 }
 
@@ -2716,8 +2745,14 @@ class AiAgentService {
         $charCount = mb_strlen(trim($commentText), 'UTF-8');
         $wordsArray = preg_split('/\s+/u', trim($commentText), -1, PREG_SPLIT_NO_EMPTY) ?: [];
         $wordCount = count($wordsArray);
-        $textNoEmoji = trim(preg_replace('/[\x{1F600}-\x{1F64F}\x{1F300}-\x{1F5FF}\x{1F680}-\x{1F6FF}\x{1F700}-\x{1F77F}\x{1F780}-\x{1F7FF}\x{1F800}-\x{1F8FF}\x{1F900}-\x{1F9FF}\x{1FA00}-\x{1FA6F}\x{1FA70}-\x{1FAFF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}\x{2300}-\x{23FF}\x{2B50}\s\p{P}]/u', '', $commentText));
-        $isShortComment = ($lengthCategory === 'short') || ($charCount <= 42) || ($wordCount <= 6) || (mb_strlen($textNoEmoji, 'UTF-8') <= 3);
+        $textNoEmoji = trim(preg_replace('/[\x{1F600}-\x{1F64F}\x{1F300}-\x{1F5FF}\x{1F680}-\x{1F6FF}\x{1F700}-\x{1F77F}\x{1F780}-\x{1F7FF}\x{1F800}-\x{1F8FF}\x{1F900}-\x{1F9FF}\x{1FA00}-\x{1FA6F}\x{1FA70}-\x{1FAFF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}\x{2300}-\x{23FF}\x{2B50}\x{200D}\x{FE0F}\s\p{P}]/u', '', $commentText));
+
+        // Solo es comentario breve de reacción si no contiene preguntas ni carga semántica reflexiva/dolorosa
+        $hasQuestionOrSemantic = (bool)preg_match('/[¿\?]|(\b(pero|por qué|porque|para que|para qué|cómo|como|quien|quién|cuál|cual|miseria|dolor|difícil|dificil|no|si|vida|tiempo|mente|sentido|lucha|camino)\b)/iu', $commentText);
+        $isShortComment = !$hasQuestionOrSemantic && (
+            (mb_strlen($textNoEmoji, 'UTF-8') === 0) ||
+            ($wordCount <= 3 && in_array(mb_strtolower(trim($commentText), 'UTF-8'), ['amen', 'amén', 'top', 'total', 'exacto', 'de una', 'asi es', 'así es', 'tal cual', 'de acuerdo', '100%']))
+        );
 
         $isStickerComment = str_starts_with($commentText, '[Sticker') || str_starts_with($commentText, '[GIF') || (($commentAnalysis['intent'] ?? '') === 'friendly_sticker_reaction');
 
@@ -2731,18 +2766,18 @@ class AiAgentService {
                 . "- PROHIBICIÓN ABSOLUTA: Cero discursos solemnes, cero reflexiones existenciales y CERO preguntas de cierre.";
             $closingQuestionRule = "DESACTIVADA (Es un sticker. Queda terminantemente prohibido hacer preguntas de cierre).";
         } elseif ($isShortComment) {
-            $proportionalityDirective = "REGLA DE LONGITUD DINÁMICA ESTRICTA (MÁXIMO 5 A 10 PALABRAS - CAPACITACIÓN HERMES):\n"
-                . "- El seguidor dejó un comentario CORTO, acuerdo breve, sticker o emoji (ej. 'Exacto !', 'Gran verdad', 'Brutal', 'Totalmente', 'Hermoso ❤️', stickers o emojis).\n"
-                . "- REGLA DE ORO HUMANA: Las respuestas largas a comentarios simples delatan inmediatamente que son bots. Tu respuesta DEBE ser súper ágil, humana, cálida y directa (ESTRICTAMENTE ENTRE 5 Y 10 PALABRAS, en 1 sola frase contundente).\n"
-                . "- REMATE: Termina con 1 emoji sobrio y natural (✨, 👍, 👊, 🙌, 🔥, 💪).\n"
-                . "- PROHIBICIÓN ABSOLUTA: Queda TERMINANTEMENTE PROHIBIDO escribir párrafos largos, reflexiones excesivamente solemnes o filosóficas pesadas a comentarios breves.\n"
-                . "- PROHIBICIÓN DE PREGUNTAS: Queda ESTRICTAMENTE PROHIBIDO formular preguntas reflexivas o existenciales de cierre a comentarios cortos.";
+            $proportionalityDirective = "REGLA DE RESPUESTA A REACCIÓN O ACUERDO BREVE (HUMANO Y CERCANO - LIBERTAD HERMES):\n"
+                . "- El seguidor dejó un emoji, sticker o acuerdo breve (ej. 'Amén', 'Exacto !', 'Gran verdad', 'Brutal', 'Totalmente', 'Hermoso ❤️').\n"
+                . "- Responde de forma ágil, humana, cálida y natural (1 sola frase, aproximadamente 6 a 15 palabras).\n"
+                . "- REMATE: Termina con 1 emoji sobrio y respetuoso (✨, 👍, 👊, 🙌, 🔥, 💪, 🏛️).\n"
+                . "- VARIEDAD OBLIGATORIA: NUNCA uses la misma frase con varios seguidores. QUEDA PROHIBIDO repetir muletillas como 'con la verdad por delante'.\n"
+                . "- PROHIBICIÓN DE PREGUNTAS: Queda ESTRICTAMENTE PROHIBIDO formular preguntas de cierre a simples reacciones.";
 
             $closingQuestionRule = "DESACTIVADA (El comentario es corto; queda estrictamente prohibido formular preguntas de cierre).";
         } elseif ($lengthCategory === 'long') {
-            $proportionalityDirective = "PROPORCIONALIDAD ESTRICTA: El comentario del seguidor es EXTENSO o reflexivo (>80 caracteres). Tu respuesta DEBE ser humana, empática y de valor (máximo 1 a 2 frases concisas, entre 15 y 25 palabras), validando su punto con serenidad estoica.";
+            $proportionalityDirective = "PROPORCIONALIDAD ESTRICTA: El comentario del seguidor es reflexivo o extenso (>80 caracteres). Tu respuesta debe ser humana, empática y con sustancia estoica (entre 15 y 30 palabras).";
         } else {
-            $proportionalityDirective = "PROPORCIONALIDAD ESTRICTA: El comentario tiene extensión MEDIA. Tu respuesta debe tener 1 sola frase equilibrada y conversacional (entre 12 y 18 palabras). NUNCA redactes discursos abrumadores.";
+            $proportionalityDirective = "PROPORCIONALIDAD: Tu respuesta debe tener entre 12 y 25 palabras, conversacional y bien pensada. Evita sonar esquemático o robótico.";
         }
 
         // Module 3: Intent Tactical Guidance
@@ -2771,6 +2806,11 @@ class AiAgentService {
             $forbiddenPhrases[] = 'dediques tiempo a interactuar';
             $forbiddenPhrases[] = 'reflexionar con nosotros';
             $forbiddenPhrases[] = '¡Seguimos adelante! 🏛️ ¿En qué';
+        } elseif ($intent === 'existential_doubt' || str_contains($commentLower, 'miseria') || str_contains($commentLower, 'para que vivir') || str_contains($commentLower, 'para qué vivir') || str_contains($commentLower, 'de que sirve') || str_contains($commentLower, 'de qué sirve') || str_contains($commentLower, 'sin sentido')) {
+            $intentGuidance = "DIRECTIVA DE INTENCIÓN [Duda Existencial / Dolor / Cuestionamiento de la Miseria]:\n"
+                . "- El seguidor plantea un cuestionamiento sobre el dolor, la miseria o el sentido de vivir ante la adversidad.\n"
+                . "- REGLA DE ORO: Responde con profunda empatía humana y serenidad estoica. Valida con respeto su sentir sin juzgar, y comparte con calidez que aunque no elegimos las dificultades externas, la mayor dignidad humana reside en la fortaleza del espíritu y el autodominio interior.\n"
+                . "- PROHIBICIÓN ABSOLUTA: QUEDA TERMINANTEMENTE PROHIBIDO darle las gracias por apoyar ('gracias por estar siempre apoyando'), festejar o usar optimismo ingenuo y superficial.";
         } elseif (str_starts_with($intent, 'lead_') || $intent === 'price_lead' || str_contains($commentLower, 'precio') || str_contains($commentLower, 'costo') || str_contains($commentLower, 'mentoría') || str_contains($commentLower, 'mentoria') || str_contains($commentLower, 'curso')) {
             if (!self::COMMERCIAL_SALES_ACTIVE) {
                 $intentGuidance = "DIRECTIVA DE INTENCIÓN [Pregunta de Precio/Curso/Acceso]: Esta es una comunidad de reflexión filosófica y frases estoicas sin catálogo de venta activo ni cursos de pago. Agradece con amabilidad y humildad fraternal, aclarando que compartimos reflexiones libres para la comunidad, e invita a enviar un DM si desea charlar o profundizar personalmente sobre algún principio.";
@@ -2834,19 +2874,19 @@ class AiAgentService {
         $optionsInstructions = "";
         if ($isShortComment) {
             $optionsInstructions = <<<OPTS
-INSTRUCCIÓN EXCLUSIVA PARA COMENTARIO CORTO / REACCIÓN (BREVEDAD TOTAL - CAPACITACIÓN HERMES):
-El seguidor dejó un comentario breve, acuerdo o reacción. Genera 3 VARIACIONES DIFERENTES DE RESPUESTA SÚPER CONCISA (ESTRICTAMENTE ENTRE 5 Y 10 PALABRAS CADA UNA, 1 SOLA FRASE):
-1. "engagement": [Validación Cálida & Cercana]: Acuerdo ágil y agradecimiento natural con 1 emoji (ej. '¡Así es! Con la verdad por delante. ✨' o '¡Muchas gracias! Qué bueno que resuene contigo. ✨').
-2. "conversion": [Impulso Estoico Breve]: Frase corta de determinación y templanza sin ventas (ej. 'Totalmente de acuerdo. Fuerza y foco en el camino. 🏛️✨' o '¡Ese es el espíritu! Un día a la vez. 💪🔥').
-3. "support": [Hermandad & Firmeza]: Remate corto y contundente sin soporte técnico (ej. '¡Así se habla! Con toda la fuerza. 🔥👊' o '¡Así es! El mejor filtro es el tiempo. 👊').
-PROHIBICIÓN ESTRICTA: CADA UNA DE LAS 3 OPCIONES DEBE TENER ENTRE 5 Y 10 PALABRAS. CERO PÁRRAFOS, CERO SOLEMNIDAD PESADA, CERO PREGUNTAS DE CIERRE.
+INSTRUCCIÓN PARA COMENTARIO BREVE O REACCIÓN (LIBERTAD Y VARIEDAD - HERMES):
+El seguidor dejó una reacción breve o acuerdo. Genera 3 VARIACIONES DIFERENTES Y FRESCAS DE RESPUESTA (1 sola frase ágil, 6 a 15 palabras cada una):
+1. "engagement": [Validación Cálida & Humana]: Acuerdo auténtico y natural con 1 emoji (ej. 'Totalmente de acuerdo, la disciplina interior lo cambia todo 🏛️' o '¡Muchas gracias! Me alegra que esta reflexión te acompañe hoy ✨').
+2. "conversion": [Impulso Estoico Breve]: Determinación y templanza sin ventas (ej. 'Fuerza y foco en el camino, paso a paso 🏛️✨' o '¡Ese es el espíritu! Un día a la vez forjando el carácter 💪🔥').
+3. "support": [Hermandad & Firmeza]: Remate contundente y fraternal sin soporte técnico (ej. '¡Así se habla! Con toda la constancia 👊⚡' o 'El tiempo y la calma siempre ponen todo en su lugar 🏛️').
+PROHIBICIÓN ESTRICTA: Cero discursos abrumadores, cero preguntas forzadas y PROHIBIDO usar la frase 'con la verdad por delante'.
 OPTS;
         } else {
             if (!self::COMMERCIAL_SALES_ACTIVE) {
                 $optionsInstructions = <<<OPTS
-Genera 3 opciones de respuesta con enfoque exclusivo en COMUNIDAD Y FILOSOFÍA ESTOICA (1 sola frase concisa, entre 12 y 18 palabras, CERO VENTAS, CERO ENLACES EN BIO, CERO SOPORTE TÉCNICO):
-1. "engagement": [🤝 Conexión & Fraternidad]: Cálida, humana y cercana, validando con empatía fraternal.
-2. "conversion": [🏛️ Sabiduría & Fortaleza Estoica]: Breve y fundamentada en principios estoicos de autodominio y temple (CERO ventas).
+Genera 3 opciones de respuesta con enfoque exclusivo en COMUNIDAD Y FILOSOFÍA ESTOICA (1 sola frase concisa, entre 12 y 25 palabras, CERO VENTAS, CERO ENLACES EN BIO, CERO SOPORTE TÉCNICO):
+1. "engagement": [🤝 Conexión & Fraternidad]: Cálida, humana y cercana, validando con empatía fraternal y comprensión real de lo que dijo el seguidor.
+2. "conversion": [🏛️ Sabiduría & Fortaleza Estoica]: Fundamentada en principios estoicos de autodominio y temple (CERO ventas).
 3. "support": [⚡ Impulso & Determinación]: Motivadora, con garra y disciplina mental inquebrantable (CERO soporte técnico).
 OPTS;
             } else {
@@ -2904,6 +2944,7 @@ REGLAS ESTRICTAS DE FILOSOFÍA ESTOICA Y VERACIDAD (OBLIGATORIAS):
 9. ERRADICACIÓN DE PREGUNTAS CLICHÉ DE BOT: Queda TERMINANTEMENTE PROHIBIDO cerrar las respuestas con preguntas forzadas de coach o bot como "¿En qué situación o reto buscas aplicarlo hoy?", "¿Cuál consideras tu mayor desafío respecto a esto hoy?" o "¿Cómo lo aplicas en tu vida?". Si el seguidor no hizo una consulta que amerite repregunta, cierra con una frase contundente, fraternidad o sabiduría estoica, NUNCA con una pregunta de relleno.
 10. GÉNERO Y PROHIBICIÓN DE 'HERMANO' A MUJERES: Si la seguidora es mujer (identificada arriba), queda TERMINANTEMENTE PROHIBIDO decirle "hermano". Trátala por su nombre, o como "guerrera", "hermana", o con cercanía sin género masculino. Si el género no se conoce, no asumas "hermano" por defecto.
 11. STICKERS O GIFS AMIGABLES: Si el seguidor comentó con un sticker de apoyo (apretón de manos, aplauso, ¡Cierto!, emoción/afecto), responde de forma muy agradable, breve (5 a 8 palabras) y con 1 emoji afín.
+12. LIBERTAD CREATIVA Y CERO MULETILLAS O DISPARATES: Piensa y reflexiona como un ser humano sabio, empático y consciente. Si alguien expresa una queja, pregunta dolorosa o reflexión existencial sobre la miseria o la dificultad, NUNCA respondas con plantillas de agradecimiento ("gracias por apoyar") ni frases mecánicas. Varía siempre tu vocabulario; QUEDA PROHIBIDO repetir muletillas como 'con la verdad por delante' o 'gracias por estar siempre apoyando'.
 
 $fewShotText
 
@@ -3492,7 +3533,7 @@ PROMPT;
                 [
                     'tag' => 'acuerdo_breve_sandra_soto',
                     'comment' => 'Exacto !',
-                    'reply' => '¡Así es! Con la verdad por delante. ✨'
+                    'reply' => 'Totalmente de acuerdo. La serenidad y el autodominio marcan la diferencia. 🏛️✨'
                 ],
                 [
                     'tag' => 'acuerdo_breve_rodolfo_alamos',
@@ -3561,7 +3602,7 @@ PROMPT;
             [
                 'tag' => 'acuerdo_breve_sandra_soto',
                 'comment' => 'Exacto !',
-                'reply' => '¡Así es! Con la verdad por delante. ✨'
+                'reply' => 'Totalmente de acuerdo. La constancia y el foco interior son la clave. 🏛️✨'
             ],
             [
                 'tag' => 'validacion_energética_julian_bustamante',
