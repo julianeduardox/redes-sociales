@@ -243,6 +243,10 @@ function processWebhookQueue(PDO $pdo, int $batchLimit = 50, ?int $specificQueue
                                 } elseif ($suitability['status'] === 'ignored') {
                                     $pdo->prepare("UPDATE comments SET status = 'ignored', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
                                         ->execute([':reason' => $suitability['reason'], ':id' => $newDbId, ':uid' => $targetUserId]);
+                                } elseif ($suitability['status'] === 'toxic' || !$suitability['should_reply']) {
+                                    $pdo->prepare("UPDATE comments SET status = 'ignored', sentiment = 'toxic', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
+                                        ->execute([':reason' => $suitability['reason'], ':id' => $newDbId, ':uid' => $targetUserId]);
+                                    cliLog("🛡️ Autopilot Facebook: Comentario {$newDbId} bloqueado por toxicidad/silencio operativo", 'warning', $silent);
                                 } else {
                                     $replies = AiAgentService::generateReplies($senderName, $message, 'facebook', $postCaption, '', [
                                         'user_id' => $targetUserId,
@@ -467,6 +471,10 @@ function processWebhookQueue(PDO $pdo, int $batchLimit = 50, ?int $specificQueue
                                 } elseif ($suitability['status'] === 'ignored') {
                                     $pdo->prepare("UPDATE comments SET status = 'ignored', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
                                         ->execute([':reason' => $suitability['reason'], ':id' => $newDbId, ':uid' => $targetUserId]);
+                                } elseif ($suitability['status'] === 'toxic' || !$suitability['should_reply']) {
+                                    $pdo->prepare("UPDATE comments SET status = 'ignored', sentiment = 'toxic', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
+                                        ->execute([':reason' => $suitability['reason'], ':id' => $newDbId, ':uid' => $targetUserId]);
+                                    cliLog("🛡️ Autopilot Instagram: Comentario {$newDbId} bloqueado por toxicidad/silencio operativo", 'warning', $silent);
                                 } else {
                                     $replies = AiAgentService::generateReplies($senderUsername, $message, 'instagram', $postCaption, '', [
                                         'user_id' => $targetUserId,

@@ -2223,6 +2223,9 @@ class MetaApiService {
                                             } elseif ($suitability['status'] === 'ignored') {
                                                 $pdo->prepare("UPDATE comments SET status = 'ignored', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
                                                     ->execute([':reason' => $suitability['reason'], ':id' => $newCommentId, ':uid' => $uid]);
+                                            } elseif ($suitability['status'] === 'toxic' || !$suitability['should_reply']) {
+                                                $pdo->prepare("UPDATE comments SET status = 'ignored', sentiment = 'toxic', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
+                                                    ->execute([':reason' => $suitability['reason'], ':id' => $newCommentId, ':uid' => $uid]);
                                             } else {
                                                 $replies = AiAgentService::generateReplies($cAuthor, $cText, 'instagram', $caption, '', [
                                                     'brand_voice_id' => $brandVoiceId,
@@ -2574,6 +2577,9 @@ class MetaApiService {
                                         } elseif ($suitability['status'] === 'ignored') {
                                             $pdo->prepare("UPDATE comments SET status = 'ignored', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
                                                 ->execute([':reason' => $suitability['reason'], ':id' => $newCommentId, ':uid' => $uid]);
+                                        } elseif ($suitability['status'] === 'toxic' || !$suitability['should_reply']) {
+                                            $pdo->prepare("UPDATE comments SET status = 'ignored', sentiment = 'toxic', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
+                                                ->execute([':reason' => $suitability['reason'], ':id' => $newCommentId, ':uid' => $uid]);
                                         } else {
                                             $replies = AiAgentService::generateReplies($fromName, $cText, 'facebook', $message, '', [
                                                 'brand_voice_id' => $brandVoiceId,
@@ -2663,6 +2669,9 @@ class MetaApiService {
                             ->execute([':reason' => $suitability['reason'], ':id' => $pCmt['id'], ':uid' => $uid]);
                     } elseif ($suitability['status'] === 'ignored') {
                         $pdo->prepare("UPDATE comments SET status = 'ignored', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
+                            ->execute([':reason' => $suitability['reason'], ':id' => $pCmt['id'], ':uid' => $uid]);
+                    } elseif ($suitability['status'] === 'toxic' || !$suitability['should_reply']) {
+                        $pdo->prepare("UPDATE comments SET status = 'ignored', sentiment = 'toxic', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
                             ->execute([':reason' => $suitability['reason'], ':id' => $pCmt['id'], ':uid' => $uid]);
                     } else {
                         $bvid = (int)($pCmt['effective_bvid'] ?: $defaultBrandVoiceId);

@@ -77,8 +77,20 @@ class AiAgentService {
             'estafaron', 'fraude', 'fraudulento', 'ladrones', 'ladrón', 'ladron', 'robando', 'rateros',
             'mierda', 'puta', 'putas', 'puto', 'putos', 'hdp', 'hijo de puta', 'hija de puta', 'malparido',
             'malparidos', 'sinvergüenza', 'sinverguenza', 'sinvergüenzas', 'asqueroso', 'asquerosa',
-            'muérete', 'muerete', 'inútil', 'inutil', 'inútiles', 'payaso', 'payasos', 'asco de cuenta'
+            'muérete', 'muerete', 'inútil', 'inutil', 'inútiles', 'payaso', 'payasos', 'asco de cuenta',
+            'csm', 'csmr', 'ctm', 'ctmr', 'alv', 'chupala', 'pendejo', 'pendejos', 'pendeja', 'pendejas', 'pendejada'
         ];
+
+        // 1.55 Check for Hostile Bot-Shaming or AI Mockery Attack (Silencio Operativo Inmediato)
+        $isBotAttack = (bool)preg_match('/\b(esa ia|es una ia|pinche bot|bot mediocre|ni escribir sabe|ia de mierda|ia csmr?|maldita ia|eres un bot|eres una ia)\b/iu', $textLower);
+        if ($isBotAttack) {
+            return [
+                'status' => 'toxic',
+                'should_reply' => false,
+                'reason' => '🛡️ Silencio Operativo: Ataque o burla hostil hacia el sistema/IA. Bloqueado en Autopilot para no entrar en polémicas ni validar al troll.',
+                'category' => 'toxic_hostile'
+            ];
+        }
 
         if (!$isPersonalVenting) {
             foreach ($severeToxicKeywords as $tw) {
@@ -467,17 +479,30 @@ class AiAgentService {
      */
     public static function sanitizeGenderVocatives(string $reply, string $gender, string $firstName = ''): string {
         if ($gender === 'female') {
-            // Replace "hermano" with "guerrera" or personal name
+            // Replace masculine vocatives with female name or "guerrera" / "amiga"
             $replacement = !empty($firstName) ? $firstName : 'guerrera';
             $reply = preg_replace('/\bhermano\b/iu', $replacement, $reply);
             $reply = preg_replace('/\bhermanos\b/iu', 'guerreras', $reply);
             $reply = preg_replace('/\bamigo\b/iu', !empty($firstName) ? $firstName : 'amiga', $reply);
+            $reply = preg_replace('/\bamigos\b/iu', 'amigas', $reply);
             $reply = preg_replace('/\bcamarada\b/iu', 'guerrera', $reply);
+            $reply = preg_replace('/\bcamaradas\b/iu', 'guerreras', $reply);
+            $reply = preg_replace('/\bcompa\b/iu', !empty($firstName) ? $firstName : 'guerrera', $reply);
+            $reply = preg_replace('/\bbro\b/iu', !empty($firstName) ? $firstName : 'guerrera', $reply);
+            $reply = preg_replace('/\brey\b/iu', 'reina', $reply);
         } elseif ($gender === 'neutral') {
-            // Remove awkward "hermano" if neutral/unknown
-            $reply = preg_replace('/,?\s*\bhermano\b/iu', '', $reply);
-            $reply = preg_replace('/\bhermano,?\s*/iu', '', $reply);
+            // Strictly eliminate any assumed gender vocative (amigo/hermano/etc.) to keep the message universal and clean
+            $patternMiddle = '/,?\s*\b(amigo|amiga|amigos|amigas|hermano|hermana|hermanos|hermanas|camarada|camaradas|compa|compas|bro|rey|reina)\b/iu';
+            $patternStart = '/\b(amigo|amiga|amigos|amigas|hermano|hermana|hermanos|hermanas|camarada|camaradas|compa|compas|bro|rey|reina),?\s*/iu';
+            $reply = preg_replace($patternMiddle, '', $reply);
+            $reply = preg_replace($patternStart, '', $reply);
+            // Capitalize sentence beginnings if a leading vocative was stripped
+            $reply = preg_replace_callback('/(^|[.!?]\s+)([a-záéíóúñ])/u', function($m) {
+                return $m[1] . mb_strtoupper($m[2], 'UTF-8');
+            }, $reply);
         }
+        $reply = preg_replace('/\s+([.,;:!?])/u', '$1', $reply);
+        $reply = preg_replace('/\s{2,}/u', ' ', $reply);
         return trim($reply);
     }
 
@@ -2549,7 +2574,7 @@ class AiAgentService {
         if ($isPureEmojiOrShort) {
             $systemPromptContent = "Eres Hermes, gestor de comunidad de Fortaleza Imparable. El seguidor dejó una reacción rápida, emoji o sticker. Responde con calidez humana, autenticidad y frescura (1 sola frase ágil, aproximadamente 6 a 15 palabras, con 1 emoji sobrio). Evita discursos solemnes o fórmulas prefabricadas repetitivas. Responde en JSON estructurado.";
         } else {
-            $systemPromptContent = "Eres Hermes, la voz e inteligencia de la comunidad Fortaleza Imparable (filosofía estoica, mentalidad, crecimiento y autodominio personal). Tu misión es responder como un ser humano sabio, empático, cercano y reflexivo. Tienes total libertad para pensar, razonar el contexto del seguidor y redactar respuestas genuinas (10 a 30 palabras). Si el seguidor expresa una duda o dolor, respóndele con comprensión serena; si reflexiona, nutre su idea con profundidad práctica. QUEDA TERMINANTEMENTE PROHIBIDO sonar como un bot repetitivo, dar respuestas inconexas o recitar plantillas fijas como 'con la verdad por delante'. Responde en JSON estructurado.";
+            $systemPromptContent = "Eres Hermes, la voz e inteligencia de la comunidad Fortaleza Imparable (filosofía estoica, mentalidad, crecimiento y autodominio personal). Tu misión es responder como un ser humano sabio, empático, cercano y reflexivo. Tienes total libertad para pensar, razonar el contexto del seguidor y redactar respuestas genuinas (10 a 30 palabras). Si el seguidor expresa una duda o dolor, respóndele con comprensión serena; si reflexiona, nutre su idea con profundidad práctica. QUEDA TERMINANTEMENTE PROHIBIDO sonar como un bot predecible o recitar frases de molde. Varía continuamente tu vocabulario e ideas (templanza, presencia, constancia, dominio interior). Responde en JSON estructurado.";
         }
 
         $payload = [
@@ -2770,7 +2795,7 @@ class AiAgentService {
                 . "- El seguidor dejó un emoji, sticker o acuerdo breve (ej. 'Amén', 'Exacto !', 'Gran verdad', 'Brutal', 'Totalmente', 'Hermoso ❤️').\n"
                 . "- Responde de forma ágil, humana, cálida y natural (1 sola frase, aproximadamente 6 a 15 palabras).\n"
                 . "- REMATE: Termina con 1 emoji sobrio y respetuoso (✨, 👍, 👊, 🙌, 🔥, 💪, 🏛️).\n"
-                . "- VARIEDAD OBLIGATORIA: NUNCA uses la misma frase con varios seguidores. QUEDA PROHIBIDO repetir muletillas como 'con la verdad por delante'.\n"
+                . "- VARIEDAD OBLIGATORIA: Cada seguidor es único. Varía ampliamente tus expresiones y enfoques (disciplina diaria, templanza, autodominio, calma mental, foco en lo esencial, paso firme). NUNCA repitas la misma frase ni estructuras calcadas.\n"
                 . "- PROHIBICIÓN DE PREGUNTAS: Queda ESTRICTAMENTE PROHIBIDO formular preguntas de cierre a simples reacciones.";
 
             $closingQuestionRule = "DESACTIVADA (El comentario es corto; queda estrictamente prohibido formular preguntas de cierre).";
@@ -2785,10 +2810,13 @@ class AiAgentService {
         $commentLower = mb_strtolower($commentText, 'UTF-8');
         $intentGuidance = "";
 
-        // Detect Humor, Banter, Sarcasm or Meme
-        $isHumorBanter = ($intent === 'humor_banter_joke') 
+        // Detect Humor, Banter, Sarcasm or Meme (Solo si no contiene toxicidad, insultos o ataques hacia la IA)
+        $hasHostileOrBotAttack = (bool)preg_match('/\b(csm|csmr|ctm|ctmr|mierda|puta|puto|hdp|estupido|estúpido|idiota|imbecil|imbécil|esa ia|ni escribir sabe|bot mediocre|ia de mierda)\b/iu', $commentLower);
+        $isHumorBanter = !$hasHostileOrBotAttack && (
+            ($intent === 'humor_banter_joke') 
             || (bool)preg_match('/[😝😜🤪😂🤣😆😹🤡]/u', $commentText)
-            || (bool)preg_match('/\b(carnitas|al cazo|cazo|al sart[eé]n|matadero|jajaja|jaja|jeje|xd|lol|lmao|qu[eé] risa|mor[ií] de risa|se mam[oó]|te mamaste|no mames|no manches|chiste|broma|cerdo|puerco|al asador)\b/iu', $commentText);
+            || (bool)preg_match('/\b(carnitas|al cazo|cazo|al sart[eé]n|matadero|jajaja|jaja|jeje|xd|lol|lmao|qu[eé] risa|mor[ií] de risa|se mam[oó]|te mamaste|no mames|no manches|chiste|broma|cerdo|puerco|al asador)\b/iu', $commentText)
+        );
 
         if ($isHumorBanter) {
             $intentGuidance = "DIRECTIVA DE INTENCIÓN [😄 Humor, Broma, Meme o Banter]:\n"
@@ -2879,7 +2907,7 @@ El seguidor dejó una reacción breve o acuerdo. Genera 3 VARIACIONES DIFERENTES
 1. "engagement": [Validación Cálida & Humana]: Acuerdo auténtico y natural con 1 emoji (ej. 'Totalmente de acuerdo, la disciplina interior lo cambia todo 🏛️' o '¡Muchas gracias! Me alegra que esta reflexión te acompañe hoy ✨').
 2. "conversion": [Impulso Estoico Breve]: Determinación y templanza sin ventas (ej. 'Fuerza y foco en el camino, paso a paso 🏛️✨' o '¡Ese es el espíritu! Un día a la vez forjando el carácter 💪🔥').
 3. "support": [Hermandad & Firmeza]: Remate contundente y fraternal sin soporte técnico (ej. '¡Así se habla! Con toda la constancia 👊⚡' o 'El tiempo y la calma siempre ponen todo en su lugar 🏛️').
-PROHIBICIÓN ESTRICTA: Cero discursos abrumadores, cero preguntas forzadas y PROHIBIDO usar la frase 'con la verdad por delante'.
+DIRECTIVA DE VARIEDAD: Cero discursos solemnes, cero preguntas forzadas y máxima frescura en cada opción, alternando enfoques de constancia, serenidad y autodominio.
 OPTS;
         } else {
             if (!self::COMMERCIAL_SALES_ACTIVE) {
@@ -2944,7 +2972,7 @@ REGLAS ESTRICTAS DE FILOSOFÍA ESTOICA Y VERACIDAD (OBLIGATORIAS):
 9. ERRADICACIÓN DE PREGUNTAS CLICHÉ DE BOT: Queda TERMINANTEMENTE PROHIBIDO cerrar las respuestas con preguntas forzadas de coach o bot como "¿En qué situación o reto buscas aplicarlo hoy?", "¿Cuál consideras tu mayor desafío respecto a esto hoy?" o "¿Cómo lo aplicas en tu vida?". Si el seguidor no hizo una consulta que amerite repregunta, cierra con una frase contundente, fraternidad o sabiduría estoica, NUNCA con una pregunta de relleno.
 10. GÉNERO Y PROHIBICIÓN DE 'HERMANO' A MUJERES: Si la seguidora es mujer (identificada arriba), queda TERMINANTEMENTE PROHIBIDO decirle "hermano". Trátala por su nombre, o como "guerrera", "hermana", o con cercanía sin género masculino. Si el género no se conoce, no asumas "hermano" por defecto.
 11. STICKERS O GIFS AMIGABLES: Si el seguidor comentó con un sticker de apoyo (apretón de manos, aplauso, ¡Cierto!, emoción/afecto), responde de forma muy agradable, breve (5 a 8 palabras) y con 1 emoji afín.
-12. LIBERTAD CREATIVA Y CERO MULETILLAS O DISPARATES: Piensa y reflexiona como un ser humano sabio, empático y consciente. Si alguien expresa una queja, pregunta dolorosa o reflexión existencial sobre la miseria o la dificultad, NUNCA respondas con plantillas de agradecimiento ("gracias por apoyar") ni frases mecánicas. Varía siempre tu vocabulario; QUEDA PROHIBIDO repetir muletillas como 'con la verdad por delante' o 'gracias por estar siempre apoyando'.
+12. LIBERTAD CREATIVA Y CERO MULETILLAS O DISPARATES: Piensa y reflexiona como un ser humano sabio, empático y consciente. Si alguien expresa una queja, pregunta dolorosa o reflexión existencial sobre la miseria o la dificultad, NUNCA respondas con plantillas de agradecimiento ("gracias por apoyar") ni frases mecánicas. Varía siempre tu vocabulario abordando la virtud, la resiliencia y la dicotomía del control con lenguaje renovado y genuino.
 
 $fewShotText
 
@@ -3507,6 +3535,15 @@ PROMPT;
      * Guarantee no forbidden phrases appear in generated outputs
      */
     private static function sanitizeRepliesWithForbidden(array $res, array $forbiddenPhrases): array {
+        $clicheAlternates = [
+            '¡Totalmente de acuerdo! La serenidad y el foco son el camino. 🏛️✨',
+            '¡Así es! Pequeñas victorias diarias forjan el carácter. 👊🏛️',
+            '¡Exacto! Foco en lo que sí depende de uno. ✨',
+            '¡Ese es el camino! Mente clara y paso firme. 🔥🏛️',
+            'Totalmente. La templanza diaria marca la verdadera diferencia. ⚡'
+        ];
+        $altIdx = 0;
+
         foreach (['engagement', 'conversion', 'support'] as $key) {
             if (isset($res[$key]) && is_string($res[$key])) {
                 foreach ($forbiddenPhrases as $badPhrase) {
@@ -3514,6 +3551,19 @@ PROMPT;
                         $res[$key] = str_ireplace(trim($badPhrase), '', $res[$key]);
                     }
                 }
+
+                // Interceptar cliché obsesivo "con la verdad por delante/siempre adelante/como faro"
+                if (preg_match('/con la verdad (por|siempre)?\s*(delante|adelante|como faro)/iu', $res[$key])) {
+                    $replacement = $clicheAlternates[$altIdx % count($clicheAlternates)];
+                    $altIdx++;
+                    $res[$key] = $replacement;
+                }
+
+                // Interceptar cualquier autoincriminación o respuesta tonta a ataques de bot
+                if (preg_match('/(?:jajaja,?\s*(?:muy cierto|tienes raz[oó]n|es verdad)|soy una ia|somos una ia|ni escribir s[eé])/iu', $res[$key])) {
+                    $res[$key] = 'La serenidad y el autodominio están por encima de cualquier ruido externo. Firmeza y buen camino. 🏛️';
+                }
+
                 $res[$key] = preg_replace('/\s+/', ' ', trim($res[$key]));
             }
         }
