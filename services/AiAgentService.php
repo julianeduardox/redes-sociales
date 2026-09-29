@@ -291,7 +291,11 @@ class AiAgentService {
             'dolores', 'manuela', 'concepción', 'encarnación', 'magaly', 'wendy', 'katherine', 'jessica', 'jennifer',
             'stephany', 'stephanie', 'karina', 'gabriela', 'valeria', 'camila', 'guadalupe', 'juana', 'margarita',
             'rosario', 'leticia', 'cecilia', 'belen', 'belén', 'jazmin', 'jazmín', 'genesis', 'génesis', 'ximena',
-            'jimena', 'mariana', 'estefania', 'estefanía', 'carolina', 'paola', 'fabiana', 'marcela', 'elvira'
+            'jimena', 'mariana', 'estefania', 'estefanía', 'carolina', 'paola', 'fabiana', 'marcela', 'elvira',
+            'jadau', 'yadira', 'dayana', 'daiana', 'nayeli', 'grecia', 'xochitl', 'citlali', 'yamileth', 'yamilet',
+            'maricarmen', 'mariel', 'mariela', 'danitza', 'denisse', 'denis', 'sarahi', 'sarai', 'karely', 'keyla',
+            'nayla', 'naomi', 'noemi', 'noemí', 'ruth', 'mirtha', 'mirta', 'gladys', 'gladis', 'luz', 'maritza',
+            'janeth', 'yaneth', 'yanet', 'yuri', 'yuridia', 'socorro', 'remedios', 'milagros', 'paz', 'inés', 'ines'
         ];
 
         // Male names dictionary
@@ -2731,17 +2735,24 @@ class AiAgentService {
         $genderInstruction = "";
         if ($gender === 'female') {
             $nameRef = !empty($cleanFirstName) ? "\"$cleanFirstName\"" : "un trato femenino respetuoso";
-            $genderInstruction = "DIRECTIVA ESTRICTA DE GÉNERO [SEGUIDORA MUJER - PROHIBICIÓN TOTAL DE 'HERMANO']:\n"
+            $genderInstruction = "DIRECTIVA ESTRICTA DE GÉNERO [SEGUIDORA MUJER - PROHIBICIÓN TOTAL DE 'HERMANO' Y 'BIENVENIDO']:\n"
                 . "- La seguidora ha sido identificada con certeza como MUJER (Nombre: \"$cleanFirstName\" / Indicios en comentario).\n"
-                . "- PROHIBICIÓN TOTAL Y TERMINANTE: Queda ESTRICTAMENTE PROHIBIDO decirle \"hermano\", \"amigo\", \"rey\" o cualquier término masculino. Usar 'hermano' con una mujer delata inmediatamente que eres un bot.\n"
-                . "- TRATAMIENTO OBLIGATORIO: Dirígete a ella usando $nameRef, o vocativos afines como \"guerrera\", \"hermana\", o bien de forma cercana y cálida sin género forzado (ej. '¡Un abrazo grande, guerrera!', 'Totalmente, $cleanFirstName', 'Así se habla', 'Con toda la fuerza').";
+                . "- PROHIBICIÓN TOTAL Y TERMINANTE: Queda ESTRICTAMENTE PROHIBIDO decirle \"hermano\", \"amigo\", \"rey\", \"bienvenido\" o cualquier término masculino. Usar términos masculinos con una mujer delata inmediatamente que eres un bot.\n"
+                . "- TRATAMIENTO OBLIGATORIO: Dirígete a ella usando $nameRef, o vocativos afines como \"guerrera\", \"hermana\", o bien de forma cercana y cálida sin género forzado (ej. '¡Un abrazo grande, guerrera!', 'Totalmente, $cleanFirstName', 'Así se habla', 'Con toda la fuerza', '¡Bienvenida a la comunidad!').";
         } elseif ($gender === 'male') {
             $genderInstruction = "DIRECTIVA DE GÉNERO [SEGUIDOR HOMBRE]:\n"
                 . "- El seguidor es un hombre (Nombre: \"$cleanFirstName\"). Puedes usar su nombre de pila, o vocativos como \"hermano\" o \"guerrero\" con moderación orgánica y respeto estoico.";
         } else {
-            $genderInstruction = "DIRECTIVA DE GÉNERO [GÉNERO NEUTRO / NO ESPECIFICADO]:\n"
-                . "- El perfil no indica género con certeza o es un nombre genérico/comercial.\n"
-                . "- REGLA DE ORO: NO uses \"hermano\" por defecto. Emplea un trato cercano y universal de guerrero/comunidad (ej. 'Totalmente de acuerdo', 'Un gran abrazo', 'Con toda la determinación') sin asumir masculinidad.";
+            $genderInstruction = "DIRECTIVA ESTRICTA DE GÉNERO [GÉNERO NEUTRO / NO ESPECIFICADO O USUARIO DE FACEBOOK]:\n"
+                . "- El perfil no indica género con certeza o es un nombre ambiguo / 'Usuario de Facebook'.\n"
+                . "- PROHIBICIÓN TERMINANTE DE SESGO MASCULINO: Queda ESTRICTAMENTE PROHIBIDO usar palabras con género marcado como \"bienvenido\", \"bienvenida\", \"hermano\", \"amigo\", \"guerrero\" o \"campeón\".\n"
+                . "- TRATAMIENTO OBLIGATORIO: Usa SIEMPRE fórmulas 100% universales y neutras gramaticalmente que suenen impecables para cualquier persona. Ejemplos obligatorios:\n"
+                . "  * '¡Qué alegría tenerte en la comunidad de Fortaleza Imparable! ✨'\n"
+                . "  * '¡Un gran saludo y muchas gracias por acompañarnos! 🤝'\n"
+                . "  * '¡Muchísimas gracias por sumarte y por tan buena energía! 🙌'\n"
+                . "  * 'Totalmente de acuerdo. Fuerza y constancia en el camino. 🏛️✨'\n"
+                . "  * '¡Así se habla! Paso firme y mente clara. ⚡'\n"
+                . "- Jamás asumas masculinidad por defecto.";
         }
 
         // Module 2: Philosophical & Cultural Post Context
@@ -2772,22 +2783,34 @@ class AiAgentService {
         $wordCount = count($wordsArray);
         $textNoEmoji = trim(preg_replace('/[\x{1F600}-\x{1F64F}\x{1F300}-\x{1F5FF}\x{1F680}-\x{1F6FF}\x{1F700}-\x{1F77F}\x{1F780}-\x{1F7FF}\x{1F800}-\x{1F8FF}\x{1F900}-\x{1F9FF}\x{1FA00}-\x{1FA6F}\x{1FA70}-\x{1FAFF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}\x{2300}-\x{23FF}\x{2B50}\x{200D}\x{FE0F}\s\p{P}]/u', '', $commentText));
 
+        // Detección de saludos cordiales breves (ej. "Saludos", "Hola", "Buenos días", "Excelente", etc.)
+        $isGreetingComment = (bool)preg_match('/^(saludos|saludo|hola|holas|buen d[ií]a|buenos d[ií]as|buenas tardes|buenas noches|bendiciones|gracias|muchas gracias|excelente)[!.\s]*$/iu', trim($commentText));
+
         // Solo es comentario breve de reacción si no contiene preguntas ni carga semántica reflexiva/dolorosa
         $hasQuestionOrSemantic = (bool)preg_match('/[¿\?]|(\b(pero|por qué|porque|para que|para qué|cómo|como|quien|quién|cuál|cual|miseria|dolor|difícil|dificil|no|si|vida|tiempo|mente|sentido|lucha|camino)\b)/iu', $commentText);
         $isShortComment = !$hasQuestionOrSemantic && (
+            $isGreetingComment ||
             (mb_strlen($textNoEmoji, 'UTF-8') === 0) ||
-            ($wordCount <= 3 && in_array(mb_strtolower(trim($commentText), 'UTF-8'), ['amen', 'amén', 'top', 'total', 'exacto', 'de una', 'asi es', 'así es', 'tal cual', 'de acuerdo', '100%']))
+            ($wordCount <= 3 && in_array(mb_strtolower(trim($commentText), 'UTF-8'), ['amen', 'amén', 'top', 'total', 'exacto', 'de una', 'asi es', 'así es', 'tal cual', 'de acuerdo', '100%', 'saludos', 'hola']))
         );
 
         $isStickerComment = str_starts_with($commentText, '[Sticker') || str_starts_with($commentText, '[GIF') || (($commentAnalysis['intent'] ?? '') === 'friendly_sticker_reaction');
 
         $proportionalityDirective = "";
-        if ($isStickerComment) {
+        if ($isGreetingComment) {
+            $proportionalityDirective = "DIRECTIVA EXCLUSIVA PARA SALUDO O MENSAJE CORTO CORDIAL (MÁXIMO 6 A 12 PALABRAS, 1 SOLA FRASE):\n"
+                . "- El seguidor envió un saludo breve (ej. 'Saludos', 'Hola', 'Buenos días', 'Bendiciones', con o sin sticker/emoji).\n"
+                . "- REGLA DE ORO: Responde de forma muy agradable, cálida, humana y BREVE (1 sola frase, entre 6 y 12 palabras).\n"
+                . "- REMATE: Termina con 1 emoji cálido o afín (✨, 🤝, 🙌, 🏛️, 👊).\n"
+                . "- REGLA DE GÉNERO NEUTRO: NUNCA digas 'bienvenido' ni 'hermano' a menos que sea un hombre verificado. Usa giros neutros como '¡Saludos! Qué alegría tenerte por aquí, un fuerte abrazo.' o '¡Un gran saludo! Muchísimas gracias por el apoyo y la energía.'\n"
+                . "- PROHIBICIÓN ABSOLUTA: CERO discursos solemnes de iniciación, CERO reflexiones existenciales y CERO preguntas de cierre.";
+            $closingQuestionRule = "DESACTIVADA (Es un saludo breve. Queda terminantemente prohibido hacer preguntas de cierre).";
+        } elseif ($isStickerComment) {
             $proportionalityDirective = "DIRECTIVA EXCLUSIVA PARA RESPUESTA A STICKER AMIGABLE (MÁXIMO 5 A 8 PALABRAS):\n"
                 . "- El seguidor comentó con un STICKER o GIF AMIGABLE de apoyo, acuerdo o afecto.\n"
                 . "- REGLA DE ORO: Responde de forma muy agradable, cálida y ULTRA BREVE (ESTRICTAMENTE ENTRE 5 Y 8 PALABRAS, 1 SOLA FRASE).\n"
                 . "- REMATE: Termina con 1 emoji cálido o afín (✨, 🤝, 👏, 🫂, 🏛️, 👊, 🔥).\n"
-                . "- REGLA DE GÉNERO: Si es mujer, respeta la prohibición estricta de 'hermano'.\n"
+                . "- REGLA DE GÉNERO: Respeta la neutralidad y la prohibición estricta de 'hermano' o 'bienvenido'.\n"
                 . "- PROHIBICIÓN ABSOLUTA: Cero discursos solemnes, cero reflexiones existenciales y CERO preguntas de cierre.";
             $closingQuestionRule = "DESACTIVADA (Es un sticker. Queda terminantemente prohibido hacer preguntas de cierre).";
         } elseif ($isShortComment) {
@@ -3552,8 +3575,8 @@ PROMPT;
                     }
                 }
 
-                // Interceptar cliché obsesivo "con la verdad por delante/siempre adelante/como faro"
-                if (preg_match('/con la verdad (por|siempre)?\s*(delante|adelante|como faro)/iu', $res[$key])) {
+                // Interceptar cliché obsesivo "con la verdad por delante/siempre adelante/como faro/como brújula"
+                if (preg_match('/(?:con (?:toda )?la verdad|la verdad (?:siempre|como) (?:delante|adelante|faro|br[úu]jula|libera)|con la verdad (?:por|siempre)?\s*(?:delante|adelante|como faro))/iu', $res[$key])) {
                     $replacement = $clicheAlternates[$altIdx % count($clicheAlternates)];
                     $altIdx++;
                     $res[$key] = $replacement;

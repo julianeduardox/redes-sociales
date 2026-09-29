@@ -55,9 +55,13 @@ desktop.ini
 # 6. Temporary / Cache Files
 *.tmp
 *.bak
+*.old
 *.swp
 *.cache
 data/cache/
 !data/cache/.gitkeep
 scratch/
+*voz*
+scripts/reset_admin_password.php
 *~
+

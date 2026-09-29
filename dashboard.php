@@ -130,6 +130,12 @@ $isMetaConnected = ($activeAccountsCount > 0);
         <span>Planificador</span>
       </button>
 
+      <button class="nav-btn" data-tab="radar" title="Radar de Creadores & Recreación de Frases Épicas">
+        <span class="icon">🧭</span>
+        <span>Radar Creadores</span>
+        <span class="nav-badge" id="badge-count-radar" style="background: rgba(139,92,246,0.25); color: #a78bfa;">IA</span>
+      </button>
+
       <button class="nav-btn" data-tab="analytics">
         <span class="icon">📊</span>
         <span>Estadísticas</span>
@@ -463,6 +469,105 @@ $isMetaConnected = ($activeAccountsCount > 0);
           <div id="calendar-grid-cells" class="calendar-grid-body">
             <!-- Rendered by PlannerController.renderCalendar() -->
           </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- View: Radar de Creadores & Re-creación Estoica -->
+    <div id="view-radar" style="display: none; padding: 28px; overflow-y: auto; height: calc(100vh - 70px);">
+      <div style="max-width: 1400px; margin: 0 auto;">
+        
+        <!-- Header -->
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 14px; margin-bottom: 22px;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 1.5rem;">🧭</span>
+              <h3 style="font-size: 1.4rem; font-weight: 800; color: #fff; margin: 0;">
+                Radar de Creadores & Re-creación Estoica
+              </h3>
+              <span class="quote-badge-pill modern" style="font-size: 0.72rem;">@fortaleza_imparable</span>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin: 6px 0 0 0; max-width: 780px;">
+              Monitorea las mejores publicaciones de tus competidores y referentes de nicho (Estoicismo, Bushido, Samurái), audita si sus citas son históricamente auténticas o mitos de redes, y genera copys y prompts visuales originales para tu marca.
+            </p>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <button type="button" class="btn-primary-action" style="background: linear-gradient(135deg, #7c3aed, #4f46e5); font-weight: 700; box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35);" onclick="RadarController.syncAll(this)">
+              <span>🔄 Sincronizar Todo (Meta API)</span>
+            </button>
+            <button type="button" class="btn-secondary-action" style="border: 1px solid rgba(255,255,255,0.15); padding: 8px 14px; font-size: 0.82rem;" onclick="RadarController.openAddCreatorModal()">
+              <span>➕ Monitorear Creador</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Section 1: Creadores en Monitoreo -->
+        <div style="margin-bottom: 18px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <div style="font-size: 0.92rem; font-weight: 800; color: #e2e8f0; display: flex; align-items: center; gap: 6px;">
+              <span>🎯</span> Cuentas de Referencia en Monitoreo
+            </div>
+            <span style="font-size: 0.76rem; color: var(--text-dim);">Instagram (Auto-Sync) & Facebook (Importación)</span>
+          </div>
+          <div id="radar-creators-carousel" class="creators-carousel">
+            <!-- Rendered dynamically by RadarController.renderCreators() -->
+          </div>
+        </div>
+
+        <!-- Section 2: Barra de Importación Rápida -->
+        <div class="radar-quick-import-bar">
+          <form class="radar-import-form" onsubmit="RadarController.submitDirectImport(event)">
+            <div class="radar-import-input-wrap">
+              <span class="radar-import-icon">📥</span>
+              <input type="text" id="radar-import-input" class="radar-import-input" placeholder="Pegar enlace de post (IG o FB), frase de autor o texto a auditar y re-crear..." />
+            </div>
+
+            <select id="radar-import-creator" style="background: rgba(10,13,20,0.8); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; padding: 11px 14px; color: #e2e8f0; font-size: 0.84rem; outline: none;">
+              <option value="">(Opcional) Asociar a Creador</option>
+            </select>
+
+            <button type="submit" id="btn-radar-import-submit" class="btn-primary-action" style="background: linear-gradient(135deg, #10b981, #059669); font-weight: 700; white-space: nowrap; padding: 11px 18px; border-radius: 10px;">
+              <span>⚡ Auditar & Desmontar</span>
+            </button>
+          </form>
+        </div>
+
+        <!-- Section 3: Toolbar de Filtrado & Feed -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 18px;">
+          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <div class="search-box" style="width: 240px;">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="radar-search-input" placeholder="Buscar por frase, palabra..." style="padding-left: 34px;" />
+            </div>
+
+            <select id="radar-creator-filter" style="background: rgba(23,31,48,0.7); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 7px 12px; color: #e2e8f0; font-size: 0.82rem; outline: none;">
+              <option value="all">🌐 Todos los Creadores</option>
+            </select>
+
+            <select id="radar-status-filter" style="background: rgba(23,31,48,0.7); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 7px 12px; color: #e2e8f0; font-size: 0.82rem; outline: none;">
+              <option value="all">⚖️ Todo Tipo de Citas</option>
+              <option value="verified_authentic">🏛️ Solo Auténticas</option>
+              <option value="apocryphal">⚠️ Solo Apócrifas / Mitos</option>
+              <option value="modern_idea">💡 Solo Ideas Modernas</option>
+              <option value="pending">⏳ Pendientes de Auditoría</option>
+            </select>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span id="radar-posts-count-badge" style="font-size: 0.78rem; color: var(--text-dim);">0 posts</span>
+            <select id="radar-sort-select" class="sort-select">
+              <option value="engagement">🔥 Mayor Engagement</option>
+              <option value="likes">❤️ Más Likes</option>
+              <option value="recent">📅 Más Recientes</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Grid de Publicaciones de Inspiración -->
+        <div id="radar-posts-grid" class="radar-posts-grid">
+          <!-- Rendered dynamically by RadarController.renderPosts() -->
         </div>
 
       </div>
@@ -2235,6 +2340,64 @@ $isMetaConnected = ($activeAccountsCount > 0);
   </div>
 </div>
 
+<!-- Modal: Atenea Studio - Estrategia Creativa & Filosofía para Fortaleza Imparable -->
+<div class="modal-overlay" id="modal-recreate-fortaleza" onclick="if(event.target===this) RadarController.closeRecreateModal()">
+  <div class="modal-box" style="max-width: 1100px; background: #0c101b; border: 1px solid rgba(139,92,246,0.35); box-shadow: 0 25px 70px rgba(0,0,0,0.9);">
+    <div class="modal-header" style="border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 14px;">
+      <div>
+        <h4 style="font-size: 1.15rem; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px; margin: 0;">
+          <span>🏛️</span> Atenea Studio — Directora de Estrategia Creativa (@fortaleza_imparable)
+        </h4>
+        <span style="font-size: 0.78rem; color: var(--text-muted);">
+          Deconstrucción de ADN Psicológico + 4 Variantes Originales (Corto, Profundo, Guerrero, Estoico) + Dirección Visual Midjourney
+        </span>
+      </div>
+      <button type="button" class="btn-close-modal" onclick="RadarController.closeRecreateModal()">&times;</button>
+    </div>
+
+    <div class="modal-body" id="recreate-modal-content" style="padding: 18px 0 6px 0;">
+      <!-- Dynamic content rendered by RadarController.renderRecreationStudio() -->
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Monitorear Nuevo Creador -->
+<div class="modal-overlay" id="modal-add-creator" onclick="if(event.target===this) App.closeModal('modal-add-creator')">
+  <div class="modal-box" style="max-width: 480px;">
+    <div class="modal-header">
+      <h4 style="font-size: 1.05rem; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 6px; margin: 0;">
+        <span>➕</span> Monitorear Nuevo Creador de Nicho
+      </h4>
+      <button type="button" class="btn-close-modal" onclick="App.closeModal('modal-add-creator')">&times;</button>
+    </div>
+
+    <form class="modal-body" onsubmit="RadarController.submitAddCreator(event)" style="padding: 18px 0 6px 0; display: flex; flex-direction: column; gap: 14px;">
+      <div>
+        <label style="font-size: 0.8rem; font-weight: 700; color: #cbd5e1; display: block; margin-bottom: 5px;">Plataforma</label>
+        <select id="new-creator-platform" class="modal-control-select" style="width: 100%;">
+          <option value="instagram">📸 Instagram (Sincronización Automática con Meta API)</option>
+          <option value="facebook">📘 Facebook (Monitoreo con Enlaces de Post)</option>
+        </select>
+      </div>
+
+      <div>
+        <label style="font-size: 0.8rem; font-weight: 700; color: #cbd5e1; display: block; margin-bottom: 5px;">Usuario o Enlace del Perfil</label>
+        <input type="text" id="new-creator-username" class="modal-control-input" placeholder="ej. gloriaestoica o https://instagram.com/..." required />
+      </div>
+
+      <div>
+        <label style="font-size: 0.8rem; font-weight: 700; color: #cbd5e1; display: block; margin-bottom: 5px;">Nombre de Referencia (Opcional)</label>
+        <input type="text" id="new-creator-display-name" class="modal-control-input" placeholder="ej. Gloria Estoica" />
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px;">
+        <button type="button" class="btn-secondary-action" onclick="App.closeModal('modal-add-creator')">Cancelar</button>
+        <button type="submit" class="btn-primary-action" style="background: linear-gradient(135deg, #7c3aed, #4f46e5);">Agregar Creador</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- Toast Container -->
 <div class="toast-container" id="toast-container"></div>
 
@@ -2243,6 +2406,7 @@ $isMetaConnected = ($activeAccountsCount > 0);
 <script src="assets/js/analytics.js?v=<?= time() ?>"></script>
 <script src="assets/js/planner.js?v=<?= time() ?>"></script>
 <script src="assets/js/trends.js?v=<?= time() ?>"></script>
+<script src="assets/js/radar.js?v=<?= time() ?>"></script>
 <script src="assets/js/app.js?v=<?= time() ?>"></script>
 
 </body>

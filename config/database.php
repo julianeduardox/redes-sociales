@@ -182,7 +182,7 @@ class Database {
             }
 
             // Concurrency Optimization: Cache schema state with PRAGMA user_version to skip redundant DDL checks on every request
-            $targetSchemaVersion = 20260922;
+            $targetSchemaVersion = 20261001;
             $currentSchemaVersion = 0;
             if ($driver === 'sqlite') {
                 try {
@@ -1389,6 +1389,318 @@ class Database {
                 }
             } catch (Throwable $e) {
                 error_log("Trends Agent table migration notice: " . $e->getMessage());
+            }
+
+            // 8. Ensure creator_targets and inspiration_posts tables exist (Creator Radar & Inspiration)
+            try {
+                $creatorCols = self::getTableColumns($pdo, 'creator_targets');
+                if (empty($creatorCols)) {
+                    if ($driver === 'pgsql') {
+                        $pdo->exec("
+                            CREATE TABLE IF NOT EXISTS creator_targets (
+                                id SERIAL PRIMARY KEY,
+                                user_id INTEGER NOT NULL DEFAULT 1,
+                                platform VARCHAR(50) NOT NULL DEFAULT 'instagram',
+                                username VARCHAR(255) NOT NULL,
+                                display_name VARCHAR(255),
+                                followers_count INTEGER DEFAULT 0,
+                                media_count INTEGER DEFAULT 0,
+                                avatar_url TEXT,
+                                profile_url TEXT,
+                                is_active INTEGER DEFAULT 1,
+                                last_synced_at TIMESTAMP,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                            );
+                            CREATE UNIQUE INDEX IF NOT EXISTS uq_creator_user_platform ON creator_targets(user_id, platform, username);
+                            CREATE INDEX IF NOT EXISTS idx_creator_user ON creator_targets(user_id, is_active);
+
+                            CREATE TABLE IF NOT EXISTS inspiration_posts (
+                                id SERIAL PRIMARY KEY,
+                                user_id INTEGER NOT NULL DEFAULT 1,
+                                creator_id INTEGER,
+                                platform VARCHAR(50) NOT NULL DEFAULT 'instagram',
+                                external_post_id VARCHAR(255) NOT NULL,
+                                caption TEXT,
+                                media_url TEXT,
+                                permalink TEXT,
+                                media_type VARCHAR(50) DEFAULT 'image',
+                                likes_count INTEGER DEFAULT 0,
+                                comments_count INTEGER DEFAULT 0,
+                                engagement_score REAL DEFAULT 0.0,
+                                posted_at TIMESTAMP,
+                                quote_extracted TEXT,
+                                quote_author VARCHAR(255),
+                                quote_verified_status VARCHAR(50) DEFAULT 'pending',
+                                quote_source_note TEXT,
+                                theme VARCHAR(100),
+                                emotion VARCHAR(100),
+                                hook TEXT,
+                                ai_analysis TEXT,
+                                fetched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                                FOREIGN KEY (creator_id) REFERENCES creator_targets(id) ON DELETE SET NULL
+                            );
+                            CREATE UNIQUE INDEX IF NOT EXISTS uq_inspiration_post ON inspiration_posts(user_id, platform, external_post_id);
+                            CREATE INDEX IF NOT EXISTS idx_inspiration_score ON inspiration_posts(user_id, engagement_score);
+                            CREATE INDEX IF NOT EXISTS idx_inspiration_creator ON inspiration_posts(creator_id, posted_at);
+                        ");
+                    } elseif ($driver === 'mysql') {
+                        $pdo->exec("
+                            CREATE TABLE IF NOT EXISTS creator_targets (
+                                id INT AUTO_INCREMENT PRIMARY KEY,
+                                user_id INT NOT NULL DEFAULT 1,
+                                platform VARCHAR(50) NOT NULL DEFAULT 'instagram',
+                                username VARCHAR(255) NOT NULL,
+                                display_name VARCHAR(255),
+                                followers_count INT DEFAULT 0,
+                                media_count INT DEFAULT 0,
+                                avatar_url TEXT,
+                                profile_url TEXT,
+                                is_active INT DEFAULT 1,
+                                last_synced_at DATETIME,
+                                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                                UNIQUE KEY uq_creator_user_platform (user_id, platform, username),
+                                INDEX idx_creator_user (user_id, is_active),
+                                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+                            CREATE TABLE IF NOT EXISTS inspiration_posts (
+                                id INT AUTO_INCREMENT PRIMARY KEY,
+                                user_id INT NOT NULL DEFAULT 1,
+                                creator_id INT,
+                                platform VARCHAR(50) NOT NULL DEFAULT 'instagram',
+                                external_post_id VARCHAR(255) NOT NULL,
+                                caption TEXT,
+                                media_url TEXT,
+                                permalink TEXT,
+                                media_type VARCHAR(50) DEFAULT 'image',
+                                likes_count INT DEFAULT 0,
+                                comments_count INT DEFAULT 0,
+                                engagement_score FLOAT DEFAULT 0.0,
+                                posted_at DATETIME,
+                                quote_extracted TEXT,
+                                quote_author VARCHAR(255),
+                                quote_verified_status VARCHAR(50) DEFAULT 'pending',
+                                quote_source_note TEXT,
+                                theme VARCHAR(100),
+                                emotion VARCHAR(100),
+                                hook TEXT,
+                                ai_analysis TEXT,
+                                fetched_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                                UNIQUE KEY uq_inspiration_post (user_id, platform, external_post_id),
+                                INDEX idx_inspiration_score (user_id, engagement_score),
+                                INDEX idx_inspiration_creator (creator_id, posted_at),
+                                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                                FOREIGN KEY (creator_id) REFERENCES creator_targets(id) ON DELETE SET NULL
+                            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+                        ");
+                    } else {
+                        $pdo->exec("
+                            CREATE TABLE IF NOT EXISTS creator_targets (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                user_id INTEGER NOT NULL DEFAULT 1,
+                                platform TEXT NOT NULL DEFAULT 'instagram',
+                                username TEXT NOT NULL,
+                                display_name TEXT,
+                                followers_count INTEGER DEFAULT 0,
+                                media_count INTEGER DEFAULT 0,
+                                avatar_url TEXT,
+                                profile_url TEXT,
+                                is_active INTEGER DEFAULT 1,
+                                last_synced_at DATETIME,
+                                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                            );
+                            CREATE UNIQUE INDEX IF NOT EXISTS uq_creator_user_platform ON creator_targets(user_id, platform, username);
+                            CREATE INDEX IF NOT EXISTS idx_creator_user ON creator_targets(user_id, is_active);
+
+                            CREATE TABLE IF NOT EXISTS inspiration_posts (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                user_id INTEGER NOT NULL DEFAULT 1,
+                                creator_id INTEGER,
+                                platform TEXT NOT NULL DEFAULT 'instagram',
+                                external_post_id TEXT NOT NULL,
+                                caption TEXT,
+                                media_url TEXT,
+                                permalink TEXT,
+                                media_type TEXT DEFAULT 'image',
+                                likes_count INTEGER DEFAULT 0,
+                                comments_count INTEGER DEFAULT 0,
+                                engagement_score REAL DEFAULT 0.0,
+                                posted_at DATETIME,
+                                quote_extracted TEXT,
+                                quote_author TEXT,
+                                quote_verified_status TEXT DEFAULT 'pending',
+                                quote_source_note TEXT,
+                                theme TEXT,
+                                emotion TEXT,
+                                hook TEXT,
+                                ai_analysis TEXT,
+                                fetched_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                                FOREIGN KEY (creator_id) REFERENCES creator_targets(id) ON DELETE SET NULL
+                            );
+                            CREATE UNIQUE INDEX IF NOT EXISTS uq_inspiration_post ON inspiration_posts(user_id, platform, external_post_id);
+                            CREATE INDEX IF NOT EXISTS idx_inspiration_score ON inspiration_posts(user_id, engagement_score);
+                            CREATE INDEX IF NOT EXISTS idx_inspiration_creator ON inspiration_posts(creator_id, posted_at);
+                        ");
+                    }
+
+                    // Seed initial reference accounts for user 1
+                    $initialCreators = [
+                        ['platform' => 'instagram', 'username' => 'gloriaestoica', 'display_name' => 'Gloria Estoica', 'profile_url' => 'https://www.instagram.com/gloriaestoica'],
+                        ['platform' => 'instagram', 'username' => 'centralestoica', 'display_name' => 'Central Estoica', 'profile_url' => 'https://www.instagram.com/centralestoica'],
+                        ['platform' => 'instagram', 'username' => 'estoicismo_diario', 'display_name' => 'Estoicismo Diario', 'profile_url' => 'https://www.instagram.com/estoicismo_diario'],
+                        ['platform' => 'instagram', 'username' => 'apexus.legado', 'display_name' => 'Apexus Legado', 'profile_url' => 'https://www.instagram.com/apexus.legado'],
+                        ['platform' => 'facebook',  'username' => 'Oficialcarlosarias', 'display_name' => 'Carlos Arias', 'profile_url' => 'https://www.facebook.com/Oficialcarlosarias/'],
+                        ['platform' => 'facebook',  'username' => 'elsamurai1', 'display_name' => 'El Samurai', 'profile_url' => 'https://www.facebook.com/elsamurai1/'],
+                        ['platform' => 'facebook',  'username' => 'Estoicismo1', 'display_name' => 'Estoicismo', 'profile_url' => 'https://www.facebook.com/Estoicismo1/'],
+                    ];
+
+                    $insTarget = $pdo->prepare("
+                        INSERT OR IGNORE INTO creator_targets (user_id, platform, username, display_name, profile_url)
+                        VALUES (1, :platform, :username, :display_name, :profile_url)
+                    ");
+                    foreach ($initialCreators as $ic) {
+                        try {
+                            $insTarget->execute([
+                                ':platform' => $ic['platform'],
+                                ':username' => $ic['username'],
+                                ':display_name' => $ic['display_name'],
+                                ':profile_url' => $ic['profile_url']
+                            ]);
+                        } catch (Throwable) {}
+                    }
+                }
+
+                // Ensure recreated_copies, opportunity_score, content_dna columns exist in inspiration_posts
+                if ($driver === 'sqlite') {
+                    $inspCols = $pdo->query("PRAGMA table_info(inspiration_posts)")->fetchAll(PDO::FETCH_ASSOC);
+                    $inspColNames = array_column($inspCols, 'name');
+                    if (!in_array('recreated_copies', $inspColNames)) {
+                        $pdo->exec("ALTER TABLE inspiration_posts ADD COLUMN recreated_copies TEXT");
+                    }
+                    if (!in_array('opportunity_score', $inspColNames)) {
+                        $pdo->exec("ALTER TABLE inspiration_posts ADD COLUMN opportunity_score REAL DEFAULT 0.0");
+                    }
+                    if (!in_array('content_dna', $inspColNames)) {
+                        $pdo->exec("ALTER TABLE inspiration_posts ADD COLUMN content_dna TEXT");
+                    }
+
+                    // Atenea Tables for Creative Strategy & Memory
+                    $pdo->exec("
+                        CREATE TABLE IF NOT EXISTS atenea_content_dna (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            user_id INTEGER NOT NULL DEFAULT 1,
+                            post_id INTEGER,
+                            core_concept TEXT,
+                            conflict TEXT,
+                            transformation TEXT,
+                            hook_type TEXT,
+                            sentence_structure TEXT,
+                            opportunity_score REAL DEFAULT 0.0,
+                            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                        );
+                        CREATE INDEX IF NOT EXISTS idx_atenea_dna_user ON atenea_content_dna(user_id, post_id);
+
+                        CREATE TABLE IF NOT EXISTS atenea_creations_memory (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            user_id INTEGER NOT NULL DEFAULT 1,
+                            inspiration_post_id INTEGER,
+                            variation_type TEXT NOT NULL,
+                            hook TEXT,
+                            full_copy TEXT,
+                            visual_prompt TEXT,
+                            visual_matrix TEXT,
+                            status TEXT DEFAULT 'draft',
+                            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                        );
+                        CREATE INDEX IF NOT EXISTS idx_atenea_mem_user ON atenea_creations_memory(user_id, inspiration_post_id, variation_type);
+                    ");
+                } elseif ($driver === 'mysql') {
+                    $mCols = self::getTableColumns($pdo, 'inspiration_posts');
+                    if (!in_array('recreated_copies', $mCols)) {
+                        $pdo->exec("ALTER TABLE inspiration_posts ADD COLUMN recreated_copies TEXT NULL");
+                    }
+                    if (!in_array('opportunity_score', $mCols)) {
+                        $pdo->exec("ALTER TABLE inspiration_posts ADD COLUMN opportunity_score DOUBLE DEFAULT 0.0");
+                    }
+                    if (!in_array('content_dna', $mCols)) {
+                        $pdo->exec("ALTER TABLE inspiration_posts ADD COLUMN content_dna TEXT NULL");
+                    }
+                    $pdo->exec("
+                        CREATE TABLE IF NOT EXISTS atenea_content_dna (
+                            id INT AUTO_INCREMENT PRIMARY KEY,
+                            user_id INT NOT NULL DEFAULT 1,
+                            post_id INT,
+                            core_concept TEXT,
+                            conflict TEXT,
+                            transformation TEXT,
+                            hook_type VARCHAR(100),
+                            sentence_structure TEXT,
+                            opportunity_score DOUBLE DEFAULT 0.0,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                        );
+                        CREATE TABLE IF NOT EXISTS atenea_creations_memory (
+                            id INT AUTO_INCREMENT PRIMARY KEY,
+                            user_id INT NOT NULL DEFAULT 1,
+                            inspiration_post_id INT,
+                            variation_type VARCHAR(50) NOT NULL,
+                            hook TEXT,
+                            full_copy TEXT,
+                            visual_prompt TEXT,
+                            visual_matrix TEXT,
+                            status VARCHAR(50) DEFAULT 'draft',
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                        );
+                    ");
+                } elseif ($driver === 'pgsql') {
+                    $pCols = self::getTableColumns($pdo, 'inspiration_posts');
+                    if (!in_array('recreated_copies', $pCols)) {
+                        $pdo->exec("ALTER TABLE inspiration_posts ADD COLUMN recreated_copies TEXT");
+                    }
+                    if (!in_array('opportunity_score', $pCols)) {
+                        $pdo->exec("ALTER TABLE inspiration_posts ADD COLUMN opportunity_score REAL DEFAULT 0.0");
+                    }
+                    if (!in_array('content_dna', $pCols)) {
+                        $pdo->exec("ALTER TABLE inspiration_posts ADD COLUMN content_dna TEXT");
+                    }
+                    $pdo->exec("
+                        CREATE TABLE IF NOT EXISTS atenea_content_dna (
+                            id SERIAL PRIMARY KEY,
+                            user_id INTEGER NOT NULL DEFAULT 1,
+                            post_id INTEGER,
+                            core_concept TEXT,
+                            conflict TEXT,
+                            transformation TEXT,
+                            hook_type VARCHAR(100),
+                            sentence_structure TEXT,
+                            opportunity_score REAL DEFAULT 0.0,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                        );
+                        CREATE TABLE IF NOT EXISTS atenea_creations_memory (
+                            id SERIAL PRIMARY KEY,
+                            user_id INTEGER NOT NULL DEFAULT 1,
+                            inspiration_post_id INTEGER,
+                            variation_type VARCHAR(50) NOT NULL,
+                            hook TEXT,
+                            full_copy TEXT,
+                            visual_prompt TEXT,
+                            visual_matrix TEXT,
+                            status VARCHAR(50) DEFAULT 'draft',
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                        );
+                    ");
+                }
+            } catch (Throwable $e) {
+                error_log("Creator Radar migration notice: " . $e->getMessage());
             }
 
             // Ensure AI model, token quota & presence columns in users

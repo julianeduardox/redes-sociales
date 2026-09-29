@@ -53,7 +53,7 @@ const App = {
     // 1. Detect and restore active tab from URL hash or storage immediately on page load / F5
     const hash = window.location.hash ? window.location.hash.replace('#', '').trim() : '';
     let savedTab = hash || sessionStorage.getItem('xindro_active_tab') || localStorage.getItem('xindro_active_tab') || 'inbox';
-    const validTabs = ['inbox', 'highlights', 'leads', 'urgent', 'spam', 'planner', 'analytics', 'settings', 'meta', 'users'];
+    const validTabs = ['inbox', 'highlights', 'leads', 'urgent', 'spam', 'planner', 'radar', 'analytics', 'settings', 'meta', 'users'];
     const tabToRestore = validTabs.includes(savedTab) ? savedTab : 'inbox';
     this.switchTab(tabToRestore, false);
 
@@ -652,7 +652,7 @@ const App = {
   },
 
   switchTab(tab, updateHistory = true) {
-    const validTabs = ['inbox', 'highlights', 'leads', 'urgent', 'spam', 'planner', 'analytics', 'settings', 'meta', 'users'];
+    const validTabs = ['inbox', 'highlights', 'leads', 'urgent', 'spam', 'planner', 'radar', 'analytics', 'settings', 'meta', 'users'];
     const activeTab = validTabs.includes(tab) ? tab : 'inbox';
     this.activeTab = activeTab;
     
@@ -687,6 +687,7 @@ const App = {
     const mainFeedView = document.getElementById('view-feed-workspace');
     const settingsView = document.getElementById('view-settings');
     const plannerView = document.getElementById('view-planner');
+    const radarView = document.getElementById('view-radar');
     const analyticsView = document.getElementById('view-analytics');
     const metaView = document.getElementById('view-meta');
     const usersView = document.getElementById('view-users');
@@ -694,6 +695,7 @@ const App = {
     if (mainFeedView) mainFeedView.style.display = (activeTab === 'inbox' || activeTab === 'highlights' || activeTab === 'leads' || activeTab === 'urgent' || activeTab === 'spam') ? 'flex' : 'none';
     if (settingsView) settingsView.style.display = (activeTab === 'settings') ? 'block' : 'none';
     if (plannerView) plannerView.style.display = (activeTab === 'planner') ? 'block' : 'none';
+    if (radarView) radarView.style.display = (activeTab === 'radar') ? 'block' : 'none';
     if (analyticsView) analyticsView.style.display = (activeTab === 'analytics') ? 'block' : 'none';
     if (metaView) metaView.style.display = (activeTab === 'meta') ? 'block' : 'none';
     if (usersView) usersView.style.display = (activeTab === 'users') ? 'block' : 'none';
@@ -710,6 +712,9 @@ const App = {
       switch (activeTab) {
         case 'planner':
           topbarTitle.textContent = 'Planificador de Contenido & Horarios Dorados';
+          break;
+        case 'radar':
+          topbarTitle.textContent = 'Radar de Creadores & Re-creación Estoica';
           break;
         case 'analytics':
           topbarTitle.textContent = 'Métricas de Audiencia & Meta Graph API';
@@ -755,6 +760,10 @@ const App = {
     } else if (activeTab === 'planner') {
       if (typeof PlannerController !== 'undefined') {
         PlannerController.loadPlanner();
+      }
+    } else if (activeTab === 'radar') {
+      if (typeof RadarController !== 'undefined') {
+        RadarController.loadRadar();
       }
     } else if (activeTab === 'analytics') {
       if (typeof AnalyticsController !== 'undefined') {

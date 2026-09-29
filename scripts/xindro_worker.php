@@ -185,9 +185,24 @@ $statusState = [
 ];
 updateWorkerStatus($statusFile, $statusState);
 
-// ─── Main Execution Loop ──────────────────────────────────────────────────────
+// ─── Main Execution Loop & Code Hot-Reload Tracking ──────────────────────────
 $pdo = Database::getConnection();
 $lastTrendsHour = -1;
+
+$trackedFiles = [
+    $rootDir . '/services/AiAgentService.php',
+    $rootDir . '/services/MetaApiService.php',
+    $rootDir . '/config/database.php',
+    $rootDir . '/config/settings.php',
+    $rootDir . '/cron/process_queue.php',
+    $rootDir . '/scripts/xindro_worker.php'
+];
+$trackedMtimes = [];
+foreach ($trackedFiles as $tf) {
+    if (file_exists($tf)) {
+        $trackedMtimes[$tf] = filemtime($tf);
+    }
+}
 
 while (true) {
     $cycleStart = microtime(true);
@@ -199,6 +214,42 @@ while (true) {
         workerLog("🛑 Señal de detención recibida (.worker_stop). Cerrando limpiamente...", 'warn', $silent, $logFile);
         @unlink($stopFile);
         break;
+    }
+
+    // Hot-Reload Check: If any core PHP file was updated on disk, restart cleanly with new code
+    if (!$runOnce) {
+        clearstatcache();
+        $reloadNeeded = false;
+        $changedFileName = '';
+        foreach ($trackedFiles as $tf) {
+            if (file_exists($tf)) {
+                $curMtime = filemtime($tf);
+                if (isset($trackedMtimes[$tf]) && $curMtime > $trackedMtimes[$tf]) {
+                    $reloadNeeded = true;
+                    $changedFileName = basename($tf);
+                    break;
+                }
+            }
+        }
+
+        if ($reloadNeeded) {
+            workerLog("🔄 [HOT-RELOAD] Se detectó modificación en '{$changedFileName}'. Reiniciando worker para cargar nuevo código...", 'magenta', $silent, $logFile);
+            $statusState['status'] = 'reloading';
+            updateWorkerStatus($statusFile, $statusState);
+            if ($lockFp) {
+                flock($lockFp, LOCK_UN);
+                fclose($lockFp);
+            }
+            @unlink($lockFile);
+
+            $phpBin = 'c:\\xampp\\php\\php.exe';
+            if (!file_exists($phpBin)) {
+                $phpBin = PHP_BINARY;
+            }
+            $cmd = 'powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath \'' . $phpBin . '\' -ArgumentList \'scripts\\xindro_worker.php\', \'--interval=' . $cycleInterval . '\' -WorkingDirectory \'' . $rootDir . '\' -RedirectStandardOutput \'data\\worker_background.log\' -RedirectStandardError \'data\\worker_background_err.log\' -WindowStyle Hidden"';
+            pclose(popen($cmd, 'r'));
+            exit(0);
+        }
     }
 
     workerLog("─── Ciclo #{$statusState['cycle_count']} iniciando ─────────────────────────────", 'bold', $silent, $logFile);
