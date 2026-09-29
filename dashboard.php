@@ -136,6 +136,12 @@ $isMetaConnected = ($activeAccountsCount > 0);
         <span class="nav-badge" id="badge-count-radar" style="background: rgba(139,92,246,0.25); color: #a78bfa;">IA</span>
       </button>
 
+      <button class="nav-btn" data-tab="atenea-learning" title="Atenea Intelligence - Motor de Aprendizaje Continuo de @fortaleza_imparable">
+        <span class="icon">🏛️</span>
+        <span>Atenea Learning</span>
+        <span class="nav-badge" id="badge-atenea-learning" style="background: rgba(245,158,11,0.25); color: #fbbf24;">PRO</span>
+      </button>
+
       <button class="nav-btn" data-tab="analytics">
         <span class="icon">📊</span>
         <span>Estadísticas</span>
@@ -570,6 +576,173 @@ $isMetaConnected = ($activeAccountsCount > 0);
         <!-- Grid de Publicaciones de Inspiración -->
         <div id="radar-posts-grid" class="radar-posts-grid">
           <!-- Rendered dynamically by RadarController.renderPosts() -->
+        </div>
+
+      </div>
+    </div>
+
+    <!-- View: Atenea Continuous Learning Engine (@fortaleza_imparable) -->
+    <div id="view-atenea-learning" style="display: none; padding: 28px; overflow-y: auto; height: calc(100vh - 70px);">
+      <div style="max-width: 1400px; margin: 0 auto;" id="atenea-learning-container">
+        
+        <!-- Header -->
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 14px; margin-bottom: 22px;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 1.6rem;">🏛️</span>
+              <h3 style="font-size: 1.45rem; font-weight: 800; color: #fff; margin: 0;">
+                Atenea Intelligence — Motor de Aprendizaje Continuo
+              </h3>
+              <span class="quote-badge-pill modern" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; border-color: rgba(245, 158, 11, 0.4); font-size: 0.72rem;">@fortaleza_imparable</span>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin: 6px 0 0 0; max-width: 820px;">
+              Atenea aprende directamente del comportamiento histórico de tu audiencia en Facebook e Instagram. Analiza correlaciones de ADN de contenido, percentiles y extrae fórmulas ganadoras comprobadas y anti-patrones que deben evitarse.
+            </p>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <button type="button" class="btn-primary-action" style="background: linear-gradient(135deg, #f59e0b, #d97706); font-weight: 700; box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35);" onclick="AteneaLearningController.rebuildAll(this)">
+              <span>⚡ Reconstruir & Minar Patrones Ahora</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Spinner loader -->
+        <div id="atenea-learning-spinner" style="display: none; text-align: center; padding: 30px;">
+          <div class="comment-loading" style="margin: 0 auto 12px;"></div>
+          <div style="color: var(--text-muted); font-size: 0.85rem;">Analizando correlaciones de audiencia y percentiles...</div>
+        </div>
+
+        <div id="atenea-learning-content">
+          <!-- KPI Cards Grid -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 22px;">
+            <div class="atenea-kpi-card">
+              <div style="font-size: 0.74rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">Publicaciones Indexadas</div>
+              <div style="font-size: 1.8rem; font-weight: 900; color: #fff; margin: 4px 0;" id="atenea-kpi-total-indexed">209</div>
+              <div style="font-size: 0.76rem; color: #a5b4fc; display: flex; gap: 8px;">
+                <span id="atenea-kpi-fb-count">112 Facebook</span> • <span id="atenea-kpi-ig-count">97 Instagram</span>
+              </div>
+            </div>
+
+            <div class="atenea-kpi-card">
+              <div style="font-size: 0.74rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">Fórmulas Ganadoras</div>
+              <div style="font-size: 1.8rem; font-weight: 900; color: #34d399; margin: 4px 0;" id="atenea-kpi-winners-count">7</div>
+              <div style="font-size: 0.76rem; color: #6ee7b7;">Top 10% y Top 20% de rendimiento</div>
+            </div>
+
+            <div class="atenea-kpi-card">
+              <div style="font-size: 0.74rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">Anti-Patrones Detectados</div>
+              <div style="font-size: 1.8rem; font-weight: 900; color: #f87171; margin: 4px 0;" id="atenea-kpi-anti-count">4</div>
+              <div style="font-size: 0.76rem; color: #fca5a5;">Franja inferior (Bottom 20% - Qué evitar)</div>
+            </div>
+
+            <div class="atenea-kpi-card">
+              <div style="font-size: 0.74rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">Nivel de Confianza</div>
+              <div style="font-size: 1.8rem; font-weight: 900; color: #38bdf8; margin: 4px 0;">ALTO</div>
+              <div style="font-size: 0.76rem; color: #7dd3fc;">Muestra estadística validada (n &ge; 15)</div>
+            </div>
+          </div>
+
+          <!-- Tiers Distribution Bar -->
+          <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: var(--radius-md); padding: 18px 22px; margin-bottom: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span style="font-size: 0.85rem; font-weight: 800; color: #fff;">Distribución de Rendimiento por Percentiles Normalizados</span>
+              <span style="font-size: 0.75rem; color: var(--text-dim);">Ponderado por Shares (Facebook) y Guardados/Alcance (Instagram)</span>
+            </div>
+
+            <div class="atenea-tier-progress-track">
+              <div id="tier-bar-top10" class="atenea-tier-seg top10" style="width: 10%;" title="Top 10%"></div>
+              <div id="tier-bar-top20" class="atenea-tier-seg top20" style="width: 10%;" title="Top 20%"></div>
+              <div id="tier-bar-avg" class="atenea-tier-seg avg" style="width: 60%;" title="Promedio"></div>
+              <div id="tier-bar-low20" class="atenea-tier-seg low20" style="width: 20%;" title="Bottom 20%"></div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; font-size: 0.74rem; color: #cbd5e1; flex-wrap: wrap; gap: 8px;">
+              <span style="display: flex; align-items: center; gap: 6px;">
+                <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: #10b981;"></span>
+                <span id="tier-label-top10">Top 10% (20 posts)</span>
+              </span>
+              <span style="display: flex; align-items: center; gap: 6px;">
+                <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: #06b6d4;"></span>
+                <span id="tier-label-top20">Top 20% (21 posts)</span>
+              </span>
+              <span style="display: flex; align-items: center; gap: 6px;">
+                <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: #6366f1;"></span>
+                <span id="tier-label-avg">Promedio (125 posts)</span>
+              </span>
+              <span style="display: flex; align-items: center; gap: 6px;">
+                <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: #ef4444;"></span>
+                <span id="tier-label-low20">Bottom 20% (43 posts)</span>
+              </span>
+            </div>
+          </div>
+
+          <!-- Two Columns: Top Formulas vs Anti-Patterns -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px;">
+            <!-- Column 1: Fórmulas Ganadoras -->
+            <div style="background: rgba(10, 15, 26, 0.7); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-md); padding: 20px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 1.2rem;">⭐</span>
+                  <h4 style="font-size: 1rem; font-weight: 800; color: #34d399; margin: 0;">Fórmulas Ganadoras Comprobadas</h4>
+                </div>
+                <span style="font-size: 0.74rem; color: var(--text-dim);">Top 10% - 20%</span>
+              </div>
+              <div id="atenea-winners-list">
+                <!-- Rendered dynamically by AteneaLearningController -->
+              </div>
+            </div>
+
+            <!-- Column 2: Anti-Patrones -->
+            <div style="background: rgba(10, 15, 26, 0.7); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: var(--radius-md); padding: 20px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 1.2rem;">⚠️</span>
+                  <h4 style="font-size: 1rem; font-weight: 800; color: #f87171; margin: 0;">Anti-Patrones (Qué Evitar)</h4>
+                </div>
+                <span style="font-size: 0.74rem; color: var(--text-dim);">Bottom 20%</span>
+              </div>
+              <div id="atenea-anti-patterns-list">
+                <!-- Rendered dynamically by AteneaLearningController -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Directivas en Vivo Inyectadas en Atenea -->
+          <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(139, 92, 246, 0.25); border-radius: var(--radius-md); padding: 20px; margin-bottom: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 1.2rem;">🧠</span>
+                <h4 style="font-size: 0.95rem; font-weight: 800; color: #c084fc; margin: 0;">Directivas Empíricas Inyectadas en el Prompt de Atenea</h4>
+              </div>
+              <span style="font-size: 0.72rem; color: #a5b4fc; background: rgba(139, 92, 246, 0.15); padding: 3px 8px; border-radius: 4px;">Inyección Automática en Vivo</span>
+            </div>
+            <pre id="atenea-live-directives-code" class="atenea-directives-terminal">Cargando directivas empíricas...</pre>
+          </div>
+
+          <!-- Top Performing Posts vs Low Performing Posts -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <!-- Top Posts -->
+            <div>
+              <div style="font-size: 0.92rem; font-weight: 800; color: #34d399; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                <span>🏆</span> Publicaciones Históricas de Mayor Impacto
+              </div>
+              <div id="atenea-top-posts-grid" style="display: flex; flex-direction: column; gap: 10px;">
+                <!-- Injected dynamically -->
+              </div>
+            </div>
+
+            <!-- Low Posts -->
+            <div>
+              <div style="font-size: 0.92rem; font-weight: 800; color: #f87171; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                <span>📉</span> Publicaciones Históricas de Menor Impacto (Auditoría de Errores)
+              </div>
+              <div id="atenea-low-posts-grid" style="display: flex; flex-direction: column; gap: 10px;">
+                <!-- Injected dynamically -->
+              </div>
+            </div>
+          </div>
+
         </div>
 
       </div>
@@ -2409,6 +2582,7 @@ $isMetaConnected = ($activeAccountsCount > 0);
 <script src="assets/js/planner.js?v=<?= time() ?>"></script>
 <script src="assets/js/trends.js?v=<?= time() ?>"></script>
 <script src="assets/js/radar.js?v=<?= time() ?>"></script>
+<script src="assets/js/atenea_learning.js?v=<?= time() ?>"></script>
 <script src="assets/js/app.js?v=<?= time() ?>"></script>
 
 </body>

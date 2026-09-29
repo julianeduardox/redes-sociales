@@ -16,6 +16,7 @@ require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/settings.php';
 require_once __DIR__ . '/../config/security.php';
 require_once __DIR__ . '/../services/AiAgentService.php';
+require_once __DIR__ . '/../services/AteneaLearningEngine.php';
 
 class InspirationRadarService {
     private const GRAPH_API_VERSION = 'v19.0';
@@ -980,6 +981,9 @@ PROMPT;
             $caption = $post['caption'] ?: $quote;
             $author = $post['quote_author'] ?: 'Estoico';
 
+            // Obtener directivas y patrones empíricos aprendidos de la propia audiencia de @fortaleza_imparable
+            $learnedDirectives = AteneaLearningEngine::getActivePatternsForPrompt($userId);
+
             $systemPrompt = "Eres ATENEA, la Directora de Estrategia de Contenido y Filosofía de 'Fortaleza Imparable' (@fortaleza_imparable). Eres una estratega maestra en psicología estoica grecorromana y ética marcial samurái (Bushido / Dokkōdō).
 
 DIRECTIVA CARDINAL: Tu misión NO es escribir copys largos, ni párrafos de lectura, ni artículos. Tu tarea es deconstruir el ADN psicológico de la publicación original (frase de la imagen + pie de foto) y sintetizarla en exactamente 4 FRASES ORIGINALES DE ALTO IMPACTO (8 a 22 palabras cada una), listas para ser estampadas como texto principal en placas de imagen y portadas de Reels/Vídeos de @fortaleza_imparable.
@@ -988,9 +992,13 @@ REGLAS DE RIGOR Y ESTILO:
 1. ANTI-CLICHÉ ESTRICTO: Queda terminantemente prohibido usar frases trilladas de gimnasio o de autoayuda barata (ej. 'conviértete en bestia', 'sé imparable', 'sal de tu zona de confort', repetición de 'fuego y acero'). Emplea sobriedad aforística, filo intelectual y peso moral.
 2. RIGOR HISTÓRICO: Diferencia nítidamente la tradición estoica grecorromana (Marco Aurelio, Séneca, Epicteto) de la tradición marcial japonesa (Miyamoto Musashi, Dokkōdō, Hagakure). Jamás clasifiques a Musashi como 'estoico'.
 3. EXTENSIÓN ESTRICTA: Cada una de las 4 frases debe tener entre 8 y 22 palabras exactas. Ni una sola frase debe ser un párrafo largo.
-4. ¿POR QUÉ FUNCIONA?: Redacta 2 líneas sintetizando el mecanismo psicológico que hace memorable este ángulo.
+4. ¿POR QUÉ FUNCIONA?: Redacta 2 líneas sintetizando el mecanismo psicológico que hace memorable este ángulo.";
 
-Responde SIEMPRE única y exclusivamente en formato JSON estricto sin markdown ni preámbulos.";
+            if (!empty($learnedDirectives)) {
+                $systemPrompt .= "\n\n" . $learnedDirectives;
+            }
+
+            $systemPrompt .= "\n\nResponde SIEMPRE única y exclusivamente en formato JSON estricto sin markdown ni preámbulos.";
 
             $userPrompt = <<<PROMPT
 Analiza la siguiente publicación de referencia:
@@ -1155,7 +1163,8 @@ PROMPT;
                                 'visual_prompt' => $visualPrompt,
                                 'image_prompt' => $visualPrompt
                             ],
-                            'visual_director' => $visualDirector
+                            'visual_director' => $visualDirector,
+                            'learned_patterns_applied' => !empty($learnedDirectives)
                         ];
                     }
                 }
@@ -1182,7 +1191,8 @@ PROMPT;
                 'dna' => $heuristic['dna'],
                 'phrases' => $heuristic['phrases'],
                 'recreations' => $heuristic['recreations'],
-                'visual_director' => $heuristic['visual_director']
+                'visual_director' => $heuristic['visual_director'],
+                'learned_patterns_applied' => !empty($learnedDirectives)
             ];
         } catch (Throwable $e) {
             error_log("InspirationRadar generateFortalezaRecreations: " . $e->getMessage());

@@ -182,7 +182,7 @@ class Database {
             }
 
             // Concurrency Optimization: Cache schema state with PRAGMA user_version to skip redundant DDL checks on every request
-            $targetSchemaVersion = 20261003;
+            $targetSchemaVersion = 20261004;
             $currentSchemaVersion = 0;
             if ($driver === 'sqlite') {
                 try {
@@ -1732,6 +1732,238 @@ class Database {
                 }
             } catch (Throwable $e) {
                 error_log("Creator Radar migration notice: " . $e->getMessage());
+            }
+
+            // 9. Atenea Continuous Learning Engine Tables (atenea_post_dna, atenea_performance_dna, atenea_learned_patterns, atenea_feedback_loop)
+            try {
+                $driver = self::getDriver();
+                if ($driver === 'sqlite') {
+                    $pdo->exec("
+                        CREATE TABLE IF NOT EXISTS atenea_post_dna (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            user_id INTEGER NOT NULL DEFAULT 1,
+                            source_type TEXT NOT NULL DEFAULT 'OWN',
+                            brand TEXT NOT NULL DEFAULT 'FORTALEZA_IMPARABLE',
+                            platform TEXT NOT NULL,
+                            post_id INTEGER NULL,
+                            inspiration_post_id INTEGER NULL,
+                            external_post_id TEXT NOT NULL,
+                            caption TEXT,
+                            overlay_quote TEXT,
+                            theme TEXT,
+                            subtheme TEXT,
+                            core_concept TEXT,
+                            philosophical_principle TEXT,
+                            hook_type TEXT,
+                            hook_text TEXT,
+                            sentence_structure TEXT,
+                            word_count INTEGER DEFAULT 0,
+                            character_count INTEGER DEFAULT 0,
+                            emotional_trigger TEXT,
+                            audience_pain TEXT,
+                            belief_challenged TEXT,
+                            conflict TEXT,
+                            transformation TEXT,
+                            shareability_mechanism TEXT,
+                            saveability_mechanism TEXT,
+                            format TEXT DEFAULT 'single_image',
+                            visual_subject TEXT,
+                            visual_style TEXT,
+                            analyzed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                            FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE SET NULL,
+                            FOREIGN KEY (inspiration_post_id) REFERENCES inspiration_posts(id) ON DELETE SET NULL
+                        );
+                        CREATE UNIQUE INDEX IF NOT EXISTS uq_atenea_post_dna ON atenea_post_dna(user_id, platform, external_post_id);
+                        CREATE INDEX IF NOT EXISTS idx_atenea_post_dna_lookup ON atenea_post_dna(user_id, source_type, platform);
+                        CREATE INDEX IF NOT EXISTS idx_atenea_post_dna_theme ON atenea_post_dna(user_id, theme, hook_type);
+
+                        CREATE TABLE IF NOT EXISTS atenea_performance_dna (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            user_id INTEGER NOT NULL DEFAULT 1,
+                            post_dna_id INTEGER NOT NULL,
+                            platform TEXT NOT NULL,
+                            raw_likes INTEGER DEFAULT 0,
+                            raw_comments INTEGER DEFAULT 0,
+                            raw_shares INTEGER DEFAULT 0,
+                            raw_saves INTEGER DEFAULT 0,
+                            raw_reach INTEGER DEFAULT 0,
+                            raw_impressions INTEGER DEFAULT 0,
+                            engagement_rate REAL DEFAULT 0.0,
+                            share_rate REAL DEFAULT 0.0,
+                            save_rate REAL DEFAULT 0.0,
+                            comment_rate REAL DEFAULT 0.0,
+                            metric_basis TEXT NOT NULL,
+                            share_score REAL DEFAULT 0.0,
+                            save_score REAL DEFAULT 0.0,
+                            conversation_score REAL DEFAULT 0.0,
+                            overall_performance_score REAL DEFAULT 0.0,
+                            performance_tier TEXT NOT NULL DEFAULT 'AVERAGE',
+                            is_outlier INTEGER DEFAULT 0,
+                            calculated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                            FOREIGN KEY (post_dna_id) REFERENCES atenea_post_dna(id) ON DELETE CASCADE
+                        );
+                        CREATE UNIQUE INDEX IF NOT EXISTS uq_atenea_perf_post ON atenea_performance_dna(post_dna_id);
+                        CREATE INDEX IF NOT EXISTS idx_atenea_perf_tier ON atenea_performance_dna(user_id, platform, performance_tier);
+                        CREATE INDEX IF NOT EXISTS idx_atenea_perf_score ON atenea_performance_dna(user_id, overall_performance_score DESC);
+
+                        CREATE TABLE IF NOT EXISTS atenea_learned_patterns (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            user_id INTEGER NOT NULL DEFAULT 1,
+                            pattern_type TEXT NOT NULL DEFAULT 'WINNING_FORMULA',
+                            platform TEXT NOT NULL DEFAULT 'all',
+                            theme TEXT,
+                            hook_type TEXT,
+                            structure TEXT,
+                            word_count_range TEXT,
+                            emotional_trigger TEXT,
+                            visual_subject TEXT,
+                            description TEXT NOT NULL,
+                            sample_size INTEGER NOT NULL DEFAULT 1,
+                            confidence_level TEXT NOT NULL DEFAULT 'LOW',
+                            confidence_score REAL NOT NULL DEFAULT 0.0,
+                            positive_evidence_count INTEGER DEFAULT 0,
+                            negative_evidence_count INTEGER DEFAULT 0,
+                            lift_metric TEXT NOT NULL,
+                            status TEXT NOT NULL DEFAULT 'EMERGING',
+                            last_validated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                        );
+                        CREATE INDEX IF NOT EXISTS idx_atenea_patterns_status ON atenea_learned_patterns(user_id, status, confidence_level);
+                        CREATE INDEX IF NOT EXISTS idx_atenea_patterns_type ON atenea_learned_patterns(user_id, platform, pattern_type);
+
+                        CREATE TABLE IF NOT EXISTS atenea_feedback_loop (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            user_id INTEGER NOT NULL DEFAULT 1,
+                            creation_memory_id INTEGER NOT NULL,
+                            published_post_id INTEGER NULL,
+                            predicted_angle TEXT NOT NULL,
+                            matched_pattern_ids TEXT,
+                            actual_performance_tier TEXT DEFAULT 'PENDING',
+                            validated_outcome INTEGER DEFAULT 0,
+                            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                        );
+                        CREATE INDEX IF NOT EXISTS idx_atenea_fback_creation ON atenea_feedback_loop(user_id, creation_memory_id);
+                        CREATE INDEX IF NOT EXISTS idx_atenea_fback_post ON atenea_feedback_loop(published_post_id);
+                    ");
+                } elseif ($driver === 'mysql') {
+                    $pdo->exec("
+                        CREATE TABLE IF NOT EXISTS atenea_post_dna (
+                            id INT AUTO_INCREMENT PRIMARY KEY,
+                            user_id INT NOT NULL DEFAULT 1,
+                            source_type VARCHAR(20) NOT NULL DEFAULT 'OWN',
+                            brand VARCHAR(100) NOT NULL DEFAULT 'FORTALEZA_IMPARABLE',
+                            platform VARCHAR(50) NOT NULL,
+                            post_id INT NULL,
+                            inspiration_post_id INT NULL,
+                            external_post_id VARCHAR(255) NOT NULL,
+                            caption TEXT,
+                            overlay_quote TEXT,
+                            theme VARCHAR(150),
+                            subtheme VARCHAR(150),
+                            core_concept TEXT,
+                            philosophical_principle VARCHAR(150),
+                            hook_type VARCHAR(100),
+                            hook_text TEXT,
+                            sentence_structure TEXT,
+                            word_count INT DEFAULT 0,
+                            character_count INT DEFAULT 0,
+                            emotional_trigger VARCHAR(100),
+                            audience_pain TEXT,
+                            belief_challenged TEXT,
+                            conflict TEXT,
+                            transformation TEXT,
+                            shareability_mechanism TEXT,
+                            saveability_mechanism TEXT,
+                            format VARCHAR(50) DEFAULT 'single_image',
+                            visual_subject VARCHAR(150),
+                            visual_style VARCHAR(150),
+                            analyzed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                            UNIQUE KEY uq_atenea_post_dna (user_id, platform, external_post_id),
+                            INDEX idx_atenea_post_dna_lookup (user_id, source_type, platform),
+                            INDEX idx_atenea_post_dna_theme (user_id, theme, hook_type),
+                            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                            FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE SET NULL,
+                            FOREIGN KEY (inspiration_post_id) REFERENCES inspiration_posts(id) ON DELETE SET NULL
+                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+                        CREATE TABLE IF NOT EXISTS atenea_performance_dna (
+                            id INT AUTO_INCREMENT PRIMARY KEY,
+                            user_id INT NOT NULL DEFAULT 1,
+                            post_dna_id INT NOT NULL,
+                            platform VARCHAR(50) NOT NULL,
+                            raw_likes INT DEFAULT 0,
+                            raw_comments INT DEFAULT 0,
+                            raw_shares INT DEFAULT 0,
+                            raw_saves INT DEFAULT 0,
+                            raw_reach INT DEFAULT 0,
+                            raw_impressions INT DEFAULT 0,
+                            engagement_rate DOUBLE DEFAULT 0.0,
+                            share_rate DOUBLE DEFAULT 0.0,
+                            save_rate DOUBLE DEFAULT 0.0,
+                            comment_rate DOUBLE DEFAULT 0.0,
+                            metric_basis VARCHAR(255) NOT NULL,
+                            share_score DOUBLE DEFAULT 0.0,
+                            save_score DOUBLE DEFAULT 0.0,
+                            conversation_score DOUBLE DEFAULT 0.0,
+                            overall_performance_score DOUBLE DEFAULT 0.0,
+                            performance_tier VARCHAR(50) NOT NULL DEFAULT 'AVERAGE',
+                            is_outlier INT DEFAULT 0,
+                            calculated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                            UNIQUE KEY uq_atenea_perf_post (post_dna_id),
+                            INDEX idx_atenea_perf_tier (user_id, platform, performance_tier),
+                            INDEX idx_atenea_perf_score (user_id, overall_performance_score),
+                            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                            FOREIGN KEY (post_dna_id) REFERENCES atenea_post_dna(id) ON DELETE CASCADE
+                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+                        CREATE TABLE IF NOT EXISTS atenea_learned_patterns (
+                            id INT AUTO_INCREMENT PRIMARY KEY,
+                            user_id INT NOT NULL DEFAULT 1,
+                            pattern_type VARCHAR(50) NOT NULL DEFAULT 'WINNING_FORMULA',
+                            platform VARCHAR(50) NOT NULL DEFAULT 'all',
+                            theme VARCHAR(150),
+                            hook_type VARCHAR(100),
+                            structure TEXT,
+                            word_count_range VARCHAR(100),
+                            emotional_trigger VARCHAR(100),
+                            visual_subject VARCHAR(150),
+                            description TEXT NOT NULL,
+                            sample_size INT NOT NULL DEFAULT 1,
+                            confidence_level VARCHAR(20) NOT NULL DEFAULT 'LOW',
+                            confidence_score DOUBLE NOT NULL DEFAULT 0.0,
+                            positive_evidence_count INT DEFAULT 0,
+                            negative_evidence_count INT DEFAULT 0,
+                            lift_metric VARCHAR(255) NOT NULL,
+                            status VARCHAR(50) NOT NULL DEFAULT 'EMERGING',
+                            last_validated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                            INDEX idx_atenea_patterns_status (user_id, status, confidence_level),
+                            INDEX idx_atenea_patterns_type (user_id, platform, pattern_type),
+                            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+                        CREATE TABLE IF NOT EXISTS atenea_feedback_loop (
+                            id INT AUTO_INCREMENT PRIMARY KEY,
+                            user_id INT NOT NULL DEFAULT 1,
+                            creation_memory_id INT NOT NULL,
+                            published_post_id INT NULL,
+                            predicted_angle VARCHAR(50) NOT NULL,
+                            matched_pattern_ids TEXT,
+                            actual_performance_tier VARCHAR(50) DEFAULT 'PENDING',
+                            validated_outcome INT DEFAULT 0,
+                            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                            INDEX idx_atenea_fback_creation (user_id, creation_memory_id),
+                            INDEX idx_atenea_fback_post (published_post_id),
+                            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+                    ");
+                }
+            } catch (Throwable $e) {
+                error_log("Atenea Continuous Learning Engine migration notice: " . $e->getMessage());
             }
 
             // Ensure AI model, token quota & presence columns in users

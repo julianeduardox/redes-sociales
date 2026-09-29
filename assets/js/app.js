@@ -652,7 +652,7 @@ const App = {
   },
 
   switchTab(tab, updateHistory = true) {
-    const validTabs = ['inbox', 'highlights', 'leads', 'urgent', 'spam', 'planner', 'radar', 'analytics', 'settings', 'meta', 'users'];
+    const validTabs = ['inbox', 'highlights', 'leads', 'urgent', 'spam', 'planner', 'radar', 'atenea-learning', 'analytics', 'settings', 'meta', 'users'];
     const activeTab = validTabs.includes(tab) ? tab : 'inbox';
     this.activeTab = activeTab;
     
@@ -688,6 +688,7 @@ const App = {
     const settingsView = document.getElementById('view-settings');
     const plannerView = document.getElementById('view-planner');
     const radarView = document.getElementById('view-radar');
+    const ateneaLearningView = document.getElementById('view-atenea-learning');
     const analyticsView = document.getElementById('view-analytics');
     const metaView = document.getElementById('view-meta');
     const usersView = document.getElementById('view-users');
@@ -696,6 +697,7 @@ const App = {
     if (settingsView) settingsView.style.display = (activeTab === 'settings') ? 'block' : 'none';
     if (plannerView) plannerView.style.display = (activeTab === 'planner') ? 'block' : 'none';
     if (radarView) radarView.style.display = (activeTab === 'radar') ? 'block' : 'none';
+    if (ateneaLearningView) ateneaLearningView.style.display = (activeTab === 'atenea-learning') ? 'block' : 'none';
     if (analyticsView) analyticsView.style.display = (activeTab === 'analytics') ? 'block' : 'none';
     if (metaView) metaView.style.display = (activeTab === 'meta') ? 'block' : 'none';
     if (usersView) usersView.style.display = (activeTab === 'users') ? 'block' : 'none';
@@ -715,6 +717,10 @@ const App = {
           break;
         case 'radar':
           topbarTitle.textContent = 'Radar de Creadores & Re-creación Estoica';
+          break;
+        case 'atenea-learning':
+          topbarTitle.textContent = 'Atenea Intelligence — Motor de Aprendizaje Continuo (@fortaleza_imparable)';
+          if (window.AteneaLearningController) AteneaLearningController.loadOverview();
           break;
         case 'analytics':
           topbarTitle.textContent = 'Métricas de Audiencia & Meta Graph API';
