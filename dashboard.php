@@ -559,6 +559,8 @@ $isMetaConnected = ($activeAccountsCount > 0);
             <span id="radar-posts-count-badge" style="font-size: 0.78rem; color: var(--text-dim);">0 posts</span>
             <select id="radar-sort-select" class="sort-select">
               <option value="engagement">🔥 Mayor Engagement</option>
+              <option value="opportunity">🎯 Mayor Oportunidad Viral</option>
+              <option value="creative_fit">🏛️ Mayor Afinidad Fortaleza</option>
               <option value="likes">❤️ Más Likes</option>
               <option value="recent">📅 Más Recientes</option>
             </select>

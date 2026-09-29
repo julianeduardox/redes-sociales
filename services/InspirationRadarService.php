@@ -355,6 +355,7 @@ class InspirationRadarService {
             $orderSql = match($sort) {
                 'likes' => 'p.likes_count DESC',
                 'recent' => 'p.posted_at DESC',
+                'creative_fit' => 'COALESCE(p.creative_fit_score, 0) DESC, COALESCE(p.opportunity_score, 0) DESC',
                 'opportunity' => 'COALESCE(p.opportunity_score, 0) DESC, p.engagement_score DESC',
                 default => 'p.engagement_score DESC, p.likes_count DESC'
             };
@@ -374,11 +375,15 @@ class InspirationRadarService {
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
             $posts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $stmt->closeCursor();
 
-            // Calcular Opportunity Score dinámico para posts que aún no lo tengan
+            // Calcular Opportunity Score y Creative Fit Score dinámicos para posts que aún no los tengan
             foreach ($posts as &$postItem) {
                 if (empty($postItem['opportunity_score']) || (float)$postItem['opportunity_score'] <= 0) {
                     $postItem['opportunity_score'] = self::calculateOpportunityScore($postItem);
+                }
+                if (empty($postItem['creative_fit_score']) || (float)$postItem['creative_fit_score'] <= 0) {
+                    $postItem['creative_fit_score'] = self::calculateCreativeFitScore($postItem);
                 }
             }
             unset($postItem);
@@ -662,49 +667,158 @@ PROMPT;
     }
 
     /**
-     * Extrae el ADN Psicológico y Filosófico de una publicación viral
+     * Calcula el Creative Fit Score (1.0 a 10.0) midiendo la afinidad filosófica real
+     * con la identidad de @fortaleza_imparable (Estoicismo clásico, Bushido, rigor y soberanía mental)
+     * versus clichés de motivación barata de gimnasio ("conviértete en bestia", "modo tiburón", etc.).
      */
-    public static function extractContentDna(string $caption, string $theme = ''): array {
-        $text = mb_strtolower(trim(strip_tags($caption)), 'UTF-8');
+    public static function calculateCreativeFitScore(array $post): float {
+        $text = mb_strtolower(
+            ($post['caption'] ?? '') . ' ' . 
+            ($post['quote_extracted'] ?? '') . ' ' . 
+            ($post['quote_author'] ?? '') . ' ' . 
+            ($post['theme'] ?? ''), 
+            'UTF-8'
+        );
+
+        $score = 5.0; // Puntuación base neutral
+
+        // 1. Pilares Clásicos & Filosóficos (+0.85 por coincidencia, máx +3.5)
+        $highValueTerms = [
+            'marco aurelio', 'marcus aurelius', 'séneca', 'seneca', 'epicteto', 'epictetus',
+            'musonio', 'zenón', 'zenon', 'cleantes', 'crisipo', 'meditaciones', 'enquiridion',
+            'cartas a lucilio', 'dicotomía del control', 'dicotomia del control', 'memento mori',
+            'amor fati', 'ataraxia', 'apatheia', 'soberanía mental', 'soberania mental',
+            'autodominio', 'templanza', 'silencio', 'carácter', 'caracter', 'virtud',
+            'dokkodo', 'dokkōdō', 'hagakure', 'musashi', 'miyamoto', 'bushido', 'código samurái',
+            'disciplina solitaria', 'honradez', 'deber'
+        ];
+        $matches = 0;
+        foreach ($highValueTerms as $term) {
+            if (str_contains($text, $term)) {
+                $matches++;
+            }
+        }
+        $score += min(3.5, $matches * 0.85);
+
+        // 2. Autenticidad histórica de la cita (+1.0 si es verificada, penaliza apócrifas)
+        $status = $post['quote_verified_status'] ?? '';
+        if ($status === 'verified_authentic') {
+            $score += 1.0;
+        } elseif ($status === 'modern_idea') {
+            $score += 0.3;
+        } elseif ($status === 'apocryphal') {
+            $score -= 0.8;
+        }
+
+        // 3. Penalización por Clichés de Gimnasio / Motivación Barata / Vendehúmos (-1.2 por cliché, máx -4.0)
+        $cliches = [
+            'conviértete en una bestia', 'conviertete en una bestia', 'modo bestia', 'sé una bestia',
+            'se una bestia', 'sé imparable', 'se imparable', 'mente de tiburón', 'mente de tiburon',
+            'mente millonaria', 'hazte rico', 'facturar', 'actitud de león', 'actitud de leon',
+            'sin dolor no hay gloria', 'los débiles mueren', 'los debiles mueren', 'sal de tu zona de confort',
+            'nadie te detendrá', 'vamos con todo leones', 'rugir', 'alfa', 'macho alfa', 'sigma', 'mentalidad alfa'
+        ];
+        $clicheHits = 0;
+        foreach ($cliches as $cliche) {
+            if (str_contains($text, $cliche)) {
+                $clicheHits++;
+            }
+        }
+        $score -= min(4.0, $clicheHits * 1.2);
+
+        // 4. Bonificación por profundidad reflexiva
+        if (mb_strlen($post['caption'] ?? '') > 140 && !str_contains($text, '#fitnessmotivation')) {
+            $score += 0.5;
+        }
+
+        return round(min(10.0, max(1.0, $score)), 1);
+    }
+
+    /**
+     * Extrae el ADN Psicológico y Filosófico de una publicación viral a partir
+     * de la frase de la imagen/vídeo y del pie de foto original.
+     */
+    public static function extractContentDna(string $caption, string $theme = '', string $quote = ''): array {
+        $combined = mb_strtolower(trim(strip_tags($quote . ' ' . $caption)), 'UTF-8');
         $themeClean = mb_strtolower(trim($theme), 'UTF-8');
 
-        if (str_contains($text, 'silencio') || str_contains($text, 'hablar') || str_contains($text, 'opini')) {
+        if (str_contains($combined, 'silencio') || str_contains($combined, 'hablar') || str_contains($combined, 'opini') || str_contains($combined, 'palabras')) {
             return [
                 'core_concept' => 'El silencio estratégico y la soberanía interior sobre la opinión ajena.',
                 'conflict' => 'La necesidad impulsiva de validación externa vs el autodominio del trabajo silencioso.',
                 'transformation' => 'Dejar de justificar tus pasos para que la obra terminada hable por ti.',
                 'hook_type' => 'Paradoja Contraintuitiva',
-                'sentence_structure' => 'Axioma breve -> Contraste sabio vs mediocre -> Mandato imperativo de disciplina.'
+                'sentence_structure' => 'Axioma breve -> Contraste sabio vs mediocre -> Mandato imperativo de disciplina.',
+                'audience_pain' => 'Desgaste emocional por buscar aprobación de personas que no construyen nada.',
+                'belief_challenged' => 'La ilusión de que compartir tus planes en redes te acerca a lograrlos.',
+                'emotional_trigger' => 'Vergüenza constructiva que empuja al recogimiento y la concentración.',
+                'shareability_mechanism' => 'Declaración de principios: el usuario lo comparte para comunicar que trabaja en silencio.',
+                'creative_fit_score' => 9.2,
+                'why_explanation' => 'Desarma la necesidad de aplauso inmediato y valida el poder del trabajo invisible.'
             ];
         }
 
-        if (str_contains($text, 'dolor') || str_contains($text, 'adversidad') || str_contains($text, 'sufrir') || str_contains($text, 'fuego')) {
+        if (str_contains($combined, 'dolor') || str_contains($combined, 'adversidad') || str_contains($combined, 'sufrir') || str_contains($combined, 'fuego') || str_contains($combined, 'herida')) {
             return [
                 'core_concept' => 'La transmutación del dolor en combustible para la forja del carácter estoico.',
                 'conflict' => 'El instinto moderno de huir de la incomodidad vs el principio de amor fati.',
                 'transformation' => 'Dejar de preguntar "¿por qué a mí?" y exigir hombros más fuertes para la carga.',
                 'hook_type' => 'Golpe de Realidad',
-                'sentence_structure' => 'Metáfora de forja -> Cuestionamiento de la debilidad -> Afirmación de invulnerabilidad mental.'
+                'sentence_structure' => 'Metáfora de forja -> Cuestionamiento de la debilidad -> Afirmación de invulnerabilidad mental.',
+                'audience_pain' => 'Sensación de agobio o parálisis ante dificultades que percibe injustas.',
+                'belief_challenged' => 'La falsa promesa moderna de una vida sin fricción ni sufrimiento.',
+                'emotional_trigger' => 'Orgullo estoico y recuperación inmediata de la agencia personal.',
+                'shareability_mechanism' => 'Recordatorio de batalla personal que el lector guarda para momentos duros.',
+                'creative_fit_score' => 9.5,
+                'why_explanation' => 'Convierte la queja pasiva en determinación activa al redefinir la dificultad como forja.'
             ];
         }
 
-        if (str_contains($text, 'tiempo') || str_contains($text, 'muerte') || str_contains($text, 'vida') || str_contains($text, 'memento')) {
+        if (str_contains($combined, 'tiempo') || str_contains($combined, 'muerte') || str_contains($combined, 'vida') || str_contains($combined, 'memento') || str_contains($combined, 'hora')) {
             return [
                 'core_concept' => 'Memento Mori: La finitud de la existencia como catalizador de foco radical.',
                 'conflict' => 'Vivir como si fuéramos inmortales postergando lo esencial por placeres efímeros.',
                 'transformation' => 'Recuperar la posesión del presente antes de que el tiempo se disuelva en la nada.',
                 'hook_type' => 'Urgencia Existencial',
-                'sentence_structure' => 'Golpe de finitud -> Consecuencia de la distracción -> Llamado a la sobriedad presente.'
+                'sentence_structure' => 'Golpe de finitud -> Consecuencia de la distracción -> Llamado a la sobriedad presente.',
+                'audience_pain' => 'Culpa silenciosa por postergar decisiones cruciales mientras pasan los meses.',
+                'belief_challenged' => 'Pensar que "habrá tiempo después" para vivir con verdadera disciplina.',
+                'emotional_trigger' => 'Conciencia aguda de mortalidad que extingue las excusas triviales.',
+                'shareability_mechanism' => 'Llamada de atención profunda que despierta empatía existencial compartida.',
+                'creative_fit_score' => 9.4,
+                'why_explanation' => 'Rompe la complacencia diaria al recordarle al lector que cada hora perdida es irrecuperable.'
             ];
         }
 
-        if (str_contains($text, 'lider') || str_contains($text, 'miedo') || str_contains($text, 'poder') || str_contains($text, 'autoridad')) {
+        if (str_contains($combined, 'musashi') || str_contains($combined, 'bushido') || str_contains($combined, 'dokkodo') || str_contains($combined, 'samur')) {
+            return [
+                'core_concept' => 'El camino solitario del guerrero: disciplina marcial sin apego al resultado.',
+                'conflict' => 'Depender del reconocimiento o compañía vs la autosuficiencia del camino del deber.',
+                'transformation' => 'Aceptar la soledad como taller sagrado de maestría y honor personal.',
+                'hook_type' => 'Axioma Marcial',
+                'sentence_structure' => 'Máxima de Musashi -> Desapego del ruido social -> Compromiso implacable con el camino.',
+                'audience_pain' => 'Temor al aislamiento o a ser incomprendido por elegir un estándar más alto.',
+                'belief_challenged' => 'La necesidad de encajar con el grupo a costa de diluir la propia disciplina.',
+                'emotional_trigger' => 'Serenidad marcial y respeto por la senda solitaria del honor.',
+                'shareability_mechanism' => 'Símbolo de identidad para quienes eligen la senda exigente sin buscar aprobación.',
+                'creative_fit_score' => 9.6,
+                'why_explanation' => 'Eleva la soledad disciplinada de estigma social a insignia de honor marcial.'
+            ];
+        }
+
+        if (str_contains($combined, 'lider') || str_contains($combined, 'miedo') || str_contains($combined, 'poder') || str_contains($combined, 'autoridad')) {
             return [
                 'core_concept' => 'La verdadera autoridad emana de la coherencia interna y no de la coacción.',
                 'conflict' => 'La tentación de someter con amenazas vs la templanza de inspirar con hechos.',
                 'transformation' => 'Gobernar primero tu propia mente antes de pretender dirigir a otros.',
                 'hook_type' => 'Deconstrucción de Poder',
-                'sentence_structure' => 'Antítesis tirano/líder -> Quiebre de la máscara -> Conclusión de liderazgo estoico.'
+                'sentence_structure' => 'Antítesis tirano/líder -> Quiebre de la máscara -> Conclusión de liderazgo estoico.',
+                'audience_pain' => 'Frustración con líderes incoherentes o miedo a imponer límites.',
+                'belief_challenged' => 'Confundir agresividad con fortaleza de carácter.',
+                'emotional_trigger' => 'Autoridad serena que inspira respeto natural sin alzar la voz.',
+                'shareability_mechanism' => 'Manifiesto de conducta que el usuario comparte para señalar liderazgo real.',
+                'creative_fit_score' => 9.0,
+                'why_explanation' => 'Diferencia el poder ruidoso e inseguro de la autoridad tranquila basada en hechos.'
             ];
         }
 
@@ -713,7 +827,13 @@ PROMPT;
             'conflict' => 'Gastar energía en circunstancias incontrolables vs enfocarse en la propia respuesta.',
             'transformation' => 'Aceptar lo externo sin quejas y ejecutar lo propio con excelencia implacable.',
             'hook_type' => 'Quiebre de Perspectiva',
-            'sentence_structure' => 'Principio cardinal -> Distinción entre controlable e incontrolable -> Regla de acción.'
+            'sentence_structure' => 'Principio cardinal -> Distinción entre controlable e incontrolable -> Regla de acción.',
+            'audience_pain' => 'Ansiedad y desgaste por intentar controlar el comportamiento de los demás.',
+            'belief_challenged' => 'Creer que la paz mental depende de que el mundo exterior sea justo.',
+            'emotional_trigger' => 'Liberación psicológica inmediata al soltar lo que no depende de uno.',
+            'shareability_mechanism' => 'Recordatorio de sabiduría práctica que cualquiera necesita releer a diario.',
+            'creative_fit_score' => 9.1,
+            'why_explanation' => 'Devuelve el 100% de la responsabilidad y el alivio a la esfera del control personal.'
         ];
     }
 
@@ -724,9 +844,9 @@ PROMPT;
         $themeLower = mb_strtolower($theme, 'UTF-8');
         $concept = $dna['core_concept'] ?? '';
 
-        if (str_contains($themeLower, 'samur') || str_contains($themeLower, 'bushido') || str_contains($concept, 'guerrero')) {
+        if (str_contains($themeLower, 'samur') || str_contains($themeLower, 'bushido') || str_contains($concept, 'guerrero') || str_contains($concept, 'marcial')) {
             return [
-                'subject' => 'Samurái estoico en meditación profunda bajo suave lluvia nocturna, postura inamovible con katana apoyada frente a él',
+                'subject' => 'Samurái en meditación profunda bajo suave lluvia nocturna, postura inamovible con katana apoyada frente a él',
                 'environment' => 'Patio de piedra milenario de un templo zen, musgo oscuro y linternas de piedra apagadas',
                 'atmosphere' => 'Claroscuro cinematográfico, reflejos de agua en la piedra, tenue luz dorada de borde (rim light)',
                 'camera' => 'Lente 35mm anamórfico, f/1.8 profundidad de campo reducida, grano de película cinematográfico 35mm',
@@ -755,8 +875,10 @@ PROMPT;
     }
 
     /**
-     * Generador Principal de Atenea: Deconstruye ADN, genera 4 variantes originales
-     * y dirección visual para @fortaleza_imparable.
+     * Generador Principal de Atenea:
+     * Deconstruye el ADN psicológico a partir de la frase de la imagen y el copy original,
+     * y forja exactamente 4 FRASES ORIGINALES DE ALTO IMPACTO (8 a 22 palabras cada una)
+     * para estampar en placas visuales / portadas de Reels/Vídeos de @fortaleza_imparable.
      */
     public static function generateFortalezaRecreations(int $userId, int $postId, int $brandVoiceId = 1, bool $forceRegenerate = false): array {
         try {
@@ -768,44 +890,73 @@ PROMPT;
 
             if (!$post) return ['success' => false, 'error' => 'Publicación de inspiración no encontrada'];
 
-            // Calcular y persistir Opportunity Score si está ausente
+            // Calcular y persistir scores duales si están ausentes
             $opportunityScore = (float)($post['opportunity_score'] ?? 0);
             if ($opportunityScore <= 0) {
                 $opportunityScore = self::calculateOpportunityScore($post);
-                try {
-                    $upScore = $pdo->prepare("UPDATE inspiration_posts SET opportunity_score = ? WHERE id = ?");
-                    $upScore->execute([$opportunityScore, $postId]);
-                    $upScore->closeCursor();
-                    $post['opportunity_score'] = $opportunityScore;
-                } catch (Throwable) {}
             }
 
-            // Si ya tiene recreaciones guardadas y no se fuerza regeneración, devolverlas de inmediato
+            $creativeFitScore = (float)($post['creative_fit_score'] ?? 0);
+            if ($creativeFitScore <= 0) {
+                $creativeFitScore = self::calculateCreativeFitScore($post);
+            }
+
+            try {
+                $upScores = $pdo->prepare("UPDATE inspiration_posts SET opportunity_score = ?, creative_fit_score = ? WHERE id = ?");
+                $upScores->execute([$opportunityScore, $creativeFitScore, $postId]);
+                $upScores->closeCursor();
+                $post['opportunity_score'] = $opportunityScore;
+                $post['creative_fit_score'] = $creativeFitScore;
+            } catch (Throwable) {}
+
+            // Si ya tiene recreaciones cacheadas y no se fuerza regeneración, devolverlas estructuradas
             if (!$forceRegenerate && !empty($post['recreated_copies'])) {
                 $cached = json_decode($post['recreated_copies'], true);
-                if (is_array($cached) && !empty($cached['option_short'])) {
-                    $dna = !empty($post['content_dna']) ? json_decode($post['content_dna'], true) : ($cached['content_dna'] ?? self::extractContentDna($post['caption'] ?? '', $post['theme'] ?? ''));
+                if (is_array($cached) && (!empty($cached['phrase_hook']) || !empty($cached['option_short']))) {
+                    $quoteText = $post['quote_extracted'] ?: $post['caption'];
+                    $dna = !empty($post['content_dna']) 
+                        ? json_decode($post['content_dna'], true) 
+                        : ($cached['content_dna'] ?? self::extractContentDna($post['caption'] ?? '', $post['theme'] ?? '', $quoteText));
                     $visualDirector = $cached['visual_director'] ?? self::generateVisualDirectorPrompt($dna, $post['theme'] ?? '');
+
+                    $phraseHook = $cached['phrase_hook'] ?? ($cached['option_short'] ?? '');
+                    $phraseContrarian = $cached['phrase_contrarian'] ?? ($cached['option_reflective'] ?? '');
+                    $phraseWarrior = $cached['phrase_warrior'] ?? ($cached['option_warrior'] ?? '');
+                    $phraseStoic = $cached['phrase_stoic'] ?? ($cached['option_stoic'] ?? '');
+                    $whyExplanation = $cached['why_it_works'] ?? ($dna['why_explanation'] ?? 'Alineación de impacto psicológico sobre la disciplina y soberanía mental.');
 
                     return [
                         'success' => true,
                         'from_cache' => true,
                         'post' => $post,
                         'opportunity_score' => $opportunityScore,
+                        'creative_fit_score' => $creativeFitScore,
+                        'why_it_works' => $whyExplanation,
                         'reference_post' => [
                             'quote' => $post['quote_extracted'] ?: $post['caption'],
+                            'caption' => $post['caption'],
                             'author' => $post['quote_author'] ?: 'Estoico',
                             'theme' => $post['theme'] ?: 'Disciplina y Carácter Estoico',
                             'status' => $post['quote_verified_status'] ?: 'modern_idea'
                         ],
                         'dna' => $dna,
+                        'phrases' => [
+                            'hook' => $phraseHook,
+                            'contrarian' => $phraseContrarian,
+                            'warrior' => $phraseWarrior,
+                            'stoic' => $phraseStoic
+                        ],
                         'recreations' => [
-                            'option_short' => $cached['option_short'] ?? '',
-                            'option_reflective' => $cached['option_reflective'] ?? '',
-                            'option_warrior' => $cached['option_warrior'] ?? '',
-                            'option_stoic' => $cached['option_stoic'] ?? ($cached['option_reflective'] ?? ''),
-                            'visual_prompt' => $cached['visual_prompt'] ?? ($cached['image_prompt'] ?? ($visualDirector['midjourney_prompt'] ?? '')),
-                            'image_prompt' => $cached['visual_prompt'] ?? ($cached['image_prompt'] ?? ($visualDirector['midjourney_prompt'] ?? ''))
+                            'phrase_hook' => $phraseHook,
+                            'phrase_contrarian' => $phraseContrarian,
+                            'phrase_warrior' => $phraseWarrior,
+                            'phrase_stoic' => $phraseStoic,
+                            'option_short' => $phraseHook,
+                            'option_reflective' => $phraseContrarian,
+                            'option_warrior' => $phraseWarrior,
+                            'option_stoic' => $phraseStoic,
+                            'visual_prompt' => $cached['visual_prompt'] ?? ($visualDirector['midjourney_prompt'] ?? ''),
+                            'image_prompt' => $cached['visual_prompt'] ?? ($visualDirector['midjourney_prompt'] ?? '')
                         ],
                         'visual_director' => $visualDirector
                     ];
@@ -815,6 +966,7 @@ PROMPT;
             // Asegurarse de tener el análisis de la cita
             if (empty($post['quote_extracted'])) {
                 self::analyzeAndVerifyQuote($userId, $postId);
+                $stmt = $pdo->prepare("SELECT * FROM inspiration_posts WHERE id = ? AND user_id = ?");
                 $stmt->execute([$postId, $userId]);
                 $post = $stmt->fetch(PDO::FETCH_ASSOC);
                 $stmt->closeCursor();
@@ -825,48 +977,74 @@ PROMPT;
 
             $theme = $post['theme'] ?: 'Disciplina y Carácter Estoico';
             $quote = $post['quote_extracted'] ?: $post['caption'];
+            $caption = $post['caption'] ?: $quote;
             $author = $post['quote_author'] ?: 'Estoico';
 
-            $systemPrompt = "Eres ATENEA, la Directora de Estrategia de Contenido y Filosofía de 'Fortaleza Imparable' (@fortaleza_imparable). Eres una estratega maestra en psicología humana, retórica estoica clásica y persuasión de alto impacto. Tu misión NO es copiar ni resumir publicaciones virales, sino deconstruir su ADN psicológico profundo y transformarlo en 4 obras maestras originales de contenido más una dirección visual cinematográfica en Midjourney. Responde SIEMPRE única y exclusivamente en formato JSON estricto con las claves exactas requeridas, sin markdown ni explicaciones adicionales.";
+            $systemPrompt = "Eres ATENEA, la Directora de Estrategia de Contenido y Filosofía de 'Fortaleza Imparable' (@fortaleza_imparable). Eres una estratega maestra en psicología estoica grecorromana y ética marcial samurái (Bushido / Dokkōdō).
+
+DIRECTIVA CARDINAL: Tu misión NO es escribir copys largos, ni párrafos de lectura, ni artículos. Tu tarea es deconstruir el ADN psicológico de la publicación original (frase de la imagen + pie de foto) y sintetizarla en exactamente 4 FRASES ORIGINALES DE ALTO IMPACTO (8 a 22 palabras cada una), listas para ser estampadas como texto principal en placas de imagen y portadas de Reels/Vídeos de @fortaleza_imparable.
+
+REGLAS DE RIGOR Y ESTILO:
+1. ANTI-CLICHÉ ESTRICTO: Queda terminantemente prohibido usar frases trilladas de gimnasio o de autoayuda barata (ej. 'conviértete en bestia', 'sé imparable', 'sal de tu zona de confort', repetición de 'fuego y acero'). Emplea sobriedad aforística, filo intelectual y peso moral.
+2. RIGOR HISTÓRICO: Diferencia nítidamente la tradición estoica grecorromana (Marco Aurelio, Séneca, Epicteto) de la tradición marcial japonesa (Miyamoto Musashi, Dokkōdō, Hagakure). Jamás clasifiques a Musashi como 'estoico'.
+3. EXTENSIÓN ESTRICTA: Cada una de las 4 frases debe tener entre 8 y 22 palabras exactas. Ni una sola frase debe ser un párrafo largo.
+4. ¿POR QUÉ FUNCIONA?: Redacta 2 líneas sintetizando el mecanismo psicológico que hace memorable este ángulo.
+
+Responde SIEMPRE única y exclusivamente en formato JSON estricto sin markdown ni preámbulos.";
 
             $userPrompt = <<<PROMPT
-Analiza esta publicación viral en el nicho estoico/desarrollo personal:
-- Cita o reflexión de referencia: "{$quote}"
+Analiza la siguiente publicación de referencia:
+- Frase en la imagen / vídeo: "{$quote}"
+- Copy / Pie de foto original: "{$caption}"
 - Autor atribuido: {$author}
 - Tema central: {$theme}
 
-Tu misión como ATENEA:
-1. Deconstruye el ADN psicológico (concepto nuclear, conflicto, transformación, tipo de gancho y estructura sintáctica).
-2. Genera 4 variantes de copys TOTALMENTE ORIGINALES para @fortaleza_imparable (NO copies ni parafrasees las mismas palabras; destila la sabiduría y crea nuevos ángulos de impacto):
-   - "option_short": ⚡ Gancho Brutal / Impacto Rápido (1 a 2 frases afiladas para post visual o portada de carrusel, con 1 emoji sobrio ⚡ o 🏛️).
-   - "option_reflective": 📖 Sabiduría Clásica & Reflexión Profunda (Gancho disruptivo + 2 a 3 párrafos concisos desarmando la debilidad moderna y aplicando el estoicismo real + remate contundente con llamada a la reflexión).
-   - "option_warrior": ⚔️ Modo Guerrero / Bushido & Disciplina (Enfoque en honor, forja del carácter en la adversidad, soledad constructiva, vencer la queja y disciplina implacable).
-   - "option_stoic": 🏛️ Modo Estoico / Virtud & Autodominio (Dicotomía del control, templanza imperturbable ante lo externo, no juzgar las acciones ajenas y soberanía interior).
-3. Diseña la Dirección Visual Cinematográfica para Midjourney v6:
-   - Sujeto (busto de mármol antiguo, samurái en meditación, guerrero espartano, filósofo solitario)
-   - Entorno (templo milenario en ruinas, biblioteca en penumbra, cumbre neblinosa)
-   - Atmósfera (claroscuro renacentista, contraluz dorado tenue, sombras densas)
-   - Cámara (lente 35mm anamórfico, f/1.8, grano fílmico sutil)
-   - Prompt completo en inglés optimizado para Midjourney (--ar 4:5 --v 6.0 --no text, typography, watermark, logo, cartoon, anime).
+Deconstruye su psicología y genera las 4 FRASES AFORÍSTICAS ORIGINALES para placas visuales de @fortaleza_imparable (8 a 22 palabras cada una):
+
+1. "phrase_hook" (Gancho Brutal / Golpe Psicológico):
+   - Frase afilada y cortante que frena el scroll desarmando la complacencia del lector. (8 a 22 palabras).
+
+2. "phrase_contrarian" (Antítesis / Rompe-Creencias):
+   - Frase contraintuitiva que desafía el sentido común moderno o la debilidad aceptada. (8 a 22 palabras).
+
+3. "phrase_warrior" (Disciplina & Forja / Dokkōdō / Bushido):
+   - Inspirada en la ética de Miyamoto Musashi: rigor, soledad constructiva, templanza y desapego del aplauso ajeno. (8 a 22 palabras).
+
+4. "phrase_stoic" (Soberanía Mental / Virtud & Dicotomía del Control):
+   - Inspirada en Séneca, Epicteto o Marco Aurelio: dominio del propio juicio, serenidad inamovible y foco en lo controlable. (8 a 22 palabras).
+
+5. "why_it_works":
+   - Explicación de 2 líneas del mecanismo psicológico de esta deconstrucción.
+
+6. "creative_fit_score":
+   - Calificación de 1.0 a 10.0 de afinidad con la identidad de Fortaleza Imparable.
+
+7. Dirección Visual Cinematográfica para Midjourney v6 (sujeto, entorno, atmósfera, cámara y prompt en inglés --ar 4:5 --v 6.0 --no text, typography, watermark, logo, cartoon, anime).
 
 Estructura requerida en JSON:
 {
   "content_dna": {
-    "core_concept": "Definición concisa del principio psicológico o filosófico en 1 oración",
-    "conflict": "La tensión o paradoja interna que experimenta el lector",
-    "transformation": "El cambio de perspectiva o acción soberana requerida",
-    "hook_type": "Clasificación (ej. Paradoja Contraintuitiva, Golpe de Realidad, Pregunta Incómoda, Contraste)",
-    "sentence_structure": "Patrón sintáctico utilizado para máxima retención"
+    "core_concept": "Principio filosófico nuclear en 1 oración",
+    "conflict": "La tensión interna entre comodidad y carácter",
+    "transformation": "El cambio de mentalidad exigido al lector",
+    "hook_type": "Clasificación (ej. Paradoja Contraintuitiva, Golpe de Realidad, Axioma Marcial)",
+    "sentence_structure": "Patrón sintáctico utilizado",
+    "audience_pain": "Herida o debilidad oculta que sufre la audiencia",
+    "belief_challenged": "Creencia complaciente que se desmonta",
+    "emotional_trigger": "Gatillo emocional de impacto",
+    "shareability_mechanism": "Razón psicológica por la que se comparte o guarda"
   },
-  "option_short": "Texto variante 1...",
-  "option_reflective": "Texto variante 2...",
-  "option_warrior": "Texto variante 3...",
-  "option_stoic": "Texto variante 4...",
+  "why_it_works": "2 líneas explicando por qué este ángulo psicológico desarma la resistencia y causa impacto...",
+  "creative_fit_score": 9.3,
+  "phrase_hook": "Frase aforística gancho (8 a 22 palabras)...",
+  "phrase_contrarian": "Frase aforística antítesis (8 a 22 palabras)...",
+  "phrase_warrior": "Frase aforística guerrera (8 a 22 palabras)...",
+  "phrase_stoic": "Frase aforística estoica (8 a 22 palabras)...",
   "visual_director": {
     "subject": "Descripción del sujeto...",
     "environment": "Descripción del entorno...",
-    "atmosphere": "Descripción de la iluminación y sombras...",
-    "camera": "Especificación fotográfica...",
+    "atmosphere": "Descripción de iluminación y sombras...",
+    "camera": "Lente y especificación técnica...",
     "midjourney_prompt": "Cinematic chiaroscuro... --ar 4:5 --v 6.0 --no text, typography, watermark, logo, cartoon, anime"
   }
 }
@@ -879,8 +1057,8 @@ PROMPT;
                     ['role' => 'user', 'content' => $userPrompt]
                 ],
                 'response_format' => ['type' => 'json_object'],
-                'temperature' => 0.82,
-                'max_tokens' => 1500
+                'temperature' => 0.78,
+                'max_tokens' => 1200
             ];
 
             $ch = curl_init('https://openrouter.ai/api/v1/chat/completions');
@@ -908,40 +1086,72 @@ PROMPT;
 
                 if (preg_match('/\{.*\}/s', $content, $m)) {
                     $parsed = json_decode($m[0], true);
-                    if (!empty($parsed['option_short'])) {
-                        $dna = $parsed['content_dna'] ?? self::extractContentDna($quote, $theme);
-                        $visualDirector = $parsed['visual_director'] ?? self::generateVisualDirectorPrompt($dna, $theme);
-                        $visualPrompt = $visualDirector['midjourney_prompt'] ?? ($parsed['image_prompt'] ?? '');
+                    $pHook = $parsed['phrase_hook'] ?? ($parsed['option_short'] ?? '');
+                    if (!empty($pHook)) {
+                        $pContrarian = $parsed['phrase_contrarian'] ?? ($parsed['option_reflective'] ?? '');
+                        $pWarrior = $parsed['phrase_warrior'] ?? ($parsed['option_warrior'] ?? '');
+                        $pStoic = $parsed['phrase_stoic'] ?? ($parsed['option_stoic'] ?? '');
 
-                        // Completar opción estoica si el modelo la omitió
-                        if (empty($parsed['option_stoic'])) {
-                            $parsed['option_stoic'] = "Lo que escapa a tu control no merece un solo segundo de tu angustia. Tu única soberanía reside en el juicio que eliges tener hoy. Domina tu mente. 🏛️⚡";
+                        // Garantizar que las 4 frases existan
+                        if (empty($pContrarian)) {
+                            $pContrarian = "No buscas felicidad; buscas anestesia. La verdadera paz mental sólo nace cuando abrazas la fricción voluntaria. 🏛️";
+                        }
+                        if (empty($pWarrior)) {
+                            $pWarrior = "El samurái no debate con la tormenta; afila su espada en silencio mientras los débiles buscan culpables. ⚔️";
+                        }
+                        if (empty($pStoic)) {
+                            $pStoic = "Lo que escapa a tu control no merece un solo segundo de tu angustia. Tu única soberanía es tu propio juicio. 🏛️";
                         }
 
+                        $dna = $parsed['content_dna'] ?? self::extractContentDna($caption, $theme, $quote);
+                        $visualDirector = $parsed['visual_director'] ?? self::generateVisualDirectorPrompt($dna, $theme);
+                        $visualPrompt = $visualDirector['midjourney_prompt'] ?? ($parsed['image_prompt'] ?? '');
+                        $whyWorks = $parsed['why_it_works'] ?? ($dna['why_explanation'] ?? 'Alineación psicológica que conecta con la necesidad de rigor y soberanía interior.');
+                        $cFitScore = !empty($parsed['creative_fit_score']) ? (float)$parsed['creative_fit_score'] : $creativeFitScore;
+
+                        $parsed['phrase_hook'] = $pHook;
+                        $parsed['phrase_contrarian'] = $pContrarian;
+                        $parsed['phrase_warrior'] = $pWarrior;
+                        $parsed['phrase_stoic'] = $pStoic;
+                        $parsed['why_it_works'] = $whyWorks;
+                        $parsed['creative_fit_score'] = $cFitScore;
                         $parsed['visual_prompt'] = $visualPrompt;
                         $parsed['visual_director'] = $visualDirector;
                         $parsed['content_dna'] = $dna;
 
                         // Persistir en SQLite (inspiration_posts, atenea_content_dna, atenea_creations_memory)
-                        self::persistAteneaCreations($pdo, $userId, $postId, $dna, $parsed, $opportunityScore);
+                        self::persistAteneaCreations($pdo, $userId, $postId, $dna, $parsed, $opportunityScore, $cFitScore);
 
                         return [
                             'success' => true,
                             'from_cache' => false,
                             'post' => $post,
                             'opportunity_score' => $opportunityScore,
+                            'creative_fit_score' => $cFitScore,
+                            'why_it_works' => $whyWorks,
                             'reference_post' => [
                                 'quote' => $quote,
+                                'caption' => $caption,
                                 'author' => $author,
                                 'theme' => $theme,
                                 'status' => $post['quote_verified_status']
                             ],
                             'dna' => $dna,
+                            'phrases' => [
+                                'hook' => $pHook,
+                                'contrarian' => $pContrarian,
+                                'warrior' => $pWarrior,
+                                'stoic' => $pStoic
+                            ],
                             'recreations' => [
-                                'option_short' => $parsed['option_short'],
-                                'option_reflective' => $parsed['option_reflective'],
-                                'option_warrior' => $parsed['option_warrior'],
-                                'option_stoic' => $parsed['option_stoic'],
+                                'phrase_hook' => $pHook,
+                                'phrase_contrarian' => $pContrarian,
+                                'phrase_warrior' => $pWarrior,
+                                'phrase_stoic' => $pStoic,
+                                'option_short' => $pHook,
+                                'option_reflective' => $pContrarian,
+                                'option_warrior' => $pWarrior,
+                                'option_stoic' => $pStoic,
                                 'visual_prompt' => $visualPrompt,
                                 'image_prompt' => $visualPrompt
                             ],
@@ -951,22 +1161,26 @@ PROMPT;
                 }
             }
 
-            // Fallback heurístico inteligente de Atenea (dinámico, original y contextual)
-            $heuristic = self::generateDynamicHeuristicAtenea($quote, $author, $theme, $post, $opportunityScore);
-            self::persistAteneaCreations($pdo, $userId, $postId, $heuristic['dna'], $heuristic['recreations'], $opportunityScore);
+            // Fallback heurístico inteligente de Atenea (4 frases breves aforísticas + ADN psicológico)
+            $heuristic = self::generateDynamicHeuristicAtenea($quote, $caption, $author, $theme, $post, $opportunityScore, $creativeFitScore);
+            self::persistAteneaCreations($pdo, $userId, $postId, $heuristic['dna'], $heuristic['parsed'], $opportunityScore, $creativeFitScore);
 
             return [
                 'success' => true,
                 'from_cache' => false,
                 'post' => $post,
                 'opportunity_score' => $opportunityScore,
+                'creative_fit_score' => $creativeFitScore,
+                'why_it_works' => $heuristic['why_it_works'],
                 'reference_post' => [
                     'quote' => $quote,
+                    'caption' => $caption,
                     'author' => $author,
                     'theme' => $theme,
                     'status' => $post['quote_verified_status']
                 ],
                 'dna' => $heuristic['dna'],
+                'phrases' => $heuristic['phrases'],
                 'recreations' => $heuristic['recreations'],
                 'visual_director' => $heuristic['visual_director']
             ];
@@ -977,9 +1191,9 @@ PROMPT;
     }
 
     /**
-     * Persiste el ADN y variaciones en las tablas de memoria de Atenea
+     * Persiste el ADN psicológico y las 4 frases aforísticas en las tablas de memoria de Atenea
      */
-    private static function persistAteneaCreations(PDO $pdo, int $userId, int $postId, array $dna, array $parsed, float $opportunityScore): void {
+    private static function persistAteneaCreations(PDO $pdo, int $userId, int $postId, array $dna, array $parsed, float $opportunityScore, float $creativeFitScore): void {
         for ($attempt = 0; $attempt < 4; $attempt++) {
             try {
                 // 1. Guardar en inspiration_posts
@@ -987,23 +1201,31 @@ PROMPT;
                     UPDATE inspiration_posts SET 
                         recreated_copies = :recreated,
                         content_dna = :dna,
-                        opportunity_score = :score
+                        opportunity_score = :score,
+                        creative_fit_score = :cfit
                     WHERE id = :id AND user_id = :uid
                 ");
                 $upStmt->execute([
                     ':recreated' => json_encode($parsed, JSON_UNESCAPED_UNICODE),
                     ':dna' => json_encode($dna, JSON_UNESCAPED_UNICODE),
                     ':score' => $opportunityScore,
+                    ':cfit' => $creativeFitScore,
                     ':id' => $postId,
                     ':uid' => $userId
                 ]);
+                $upStmt->closeCursor();
 
-                // 2. Guardar en atenea_content_dna
+                // 2. Guardar en atenea_content_dna con dimensiones psicológicas ampliadas
+                $whyText = $parsed['why_it_works'] ?? ($dna['why_explanation'] ?? '');
                 $dnaStmt = $pdo->prepare("
                     INSERT INTO atenea_content_dna (
-                        user_id, post_id, core_concept, conflict, transformation, hook_type, sentence_structure, opportunity_score
+                        user_id, post_id, core_concept, conflict, transformation, hook_type, sentence_structure,
+                        opportunity_score, creative_fit_score, audience_pain, belief_challenged, emotional_trigger,
+                        shareability_mechanism, why_explanation
                     ) VALUES (
-                        :uid, :pid, :core, :conflict, :trans, :hook, :struct, :score
+                        :uid, :pid, :core, :conflict, :trans, :hook, :struct,
+                        :score, :cfit, :pain, :belief, :trigger,
+                        :share, :why
                     )
                 ");
                 $dnaStmt->execute([
@@ -1014,15 +1236,22 @@ PROMPT;
                     ':trans' => $dna['transformation'] ?? '',
                     ':hook' => $dna['hook_type'] ?? '',
                     ':struct' => $dna['sentence_structure'] ?? '',
-                    ':score' => $opportunityScore
+                    ':score' => $opportunityScore,
+                    ':cfit' => $creativeFitScore,
+                    ':pain' => $dna['audience_pain'] ?? '',
+                    ':belief' => $dna['belief_challenged'] ?? '',
+                    ':trigger' => $dna['emotional_trigger'] ?? '',
+                    ':share' => $dna['shareability_mechanism'] ?? '',
+                    ':why' => $whyText
                 ]);
+                $dnaStmt->closeCursor();
 
-                // 3. Guardar en atenea_creations_memory para cada variación
+                // 3. Guardar en atenea_creations_memory para cada una de las 4 ramas aforísticas
                 $variations = [
-                    'short' => ['hook' => mb_substr($parsed['option_short'] ?? '', 0, 80), 'copy' => $parsed['option_short'] ?? ''],
-                    'reflective' => ['hook' => mb_substr($parsed['option_reflective'] ?? '', 0, 80), 'copy' => $parsed['option_reflective'] ?? ''],
-                    'warrior' => ['hook' => mb_substr($parsed['option_warrior'] ?? '', 0, 80), 'copy' => $parsed['option_warrior'] ?? ''],
-                    'stoic' => ['hook' => mb_substr($parsed['option_stoic'] ?? '', 0, 80), 'copy' => $parsed['option_stoic'] ?? '']
+                    'hook_brutal' => $parsed['phrase_hook'] ?? ($parsed['option_short'] ?? ''),
+                    'contrarian' => $parsed['phrase_contrarian'] ?? ($parsed['option_reflective'] ?? ''),
+                    'warrior' => $parsed['phrase_warrior'] ?? ($parsed['option_warrior'] ?? ''),
+                    'stoic' => $parsed['phrase_stoic'] ?? ($parsed['option_stoic'] ?? '')
                 ];
 
                 $visPrompt = $parsed['visual_prompt'] ?? ($parsed['image_prompt'] ?? '');
@@ -1036,91 +1265,114 @@ PROMPT;
                     )
                 ");
 
-                foreach ($variations as $type => $varData) {
-                    if (!empty($varData['copy'])) {
+                foreach ($variations as $type => $phraseText) {
+                    if (!empty($phraseText)) {
                         try {
                             $memStmt->execute([
                                 ':uid' => $userId,
                                 ':pid' => $postId,
                                 ':vtype' => $type,
-                                ':hook' => $varData['hook'],
-                                ':copy' => $varData['copy'],
+                                ':hook' => mb_substr($phraseText, 0, 80),
+                                ':copy' => $phraseText,
                                 ':vprompt' => $visPrompt,
                                 ':vmatrix' => $visMatrix
                             ]);
+                            $memStmt->closeCursor();
                         } catch (Throwable) {}
                     }
                 }
-                // Si llegó aquí con éxito, salir del loop
                 return;
             } catch (Throwable $e) {
                 if ($attempt === 3) {
                     error_log("Failed persisting Atenea creations after retries: " . $e->getMessage());
                 } else {
-                    usleep(150000); // 150ms backoff para que SQLite libere cerraduras
+                    usleep(150000); // 150ms backoff para liberar locks en SQLite
                 }
             }
         }
     }
 
     /**
-     * Fallback heurístico inteligente de Atenea (4 variantes completas + ADN + Visual Director)
+     * Fallback heurístico inteligente de Atenea:
+     * Genera 4 frases aforísticas breves (8 a 22 palabras cada una), ADN psicológico completo y dirección visual.
      */
-    private static function generateDynamicHeuristicAtenea(string $quote, string $author, string $theme, array $post, float $opportunityScore): array {
-        $dna = self::extractContentDna($quote, $theme);
+    private static function generateDynamicHeuristicAtenea(string $quote, string $caption, string $author, string $theme, array $post, float $opportunityScore, float $creativeFitScore): array {
+        $dna = self::extractContentDna($caption, $theme, $quote);
         $visualDirector = self::generateVisualDirectorPrompt($dna, $theme);
-        $quoteClean = trim(strip_tags($quote));
+        $combinedText = mb_strtolower(trim(strip_tags($quote . ' ' . $caption)), 'UTF-8');
         $themeLower = mb_strtolower($theme, 'UTF-8');
-        $quoteLower = mb_strtolower($quoteClean, 'UTF-8');
 
-        if (str_contains($themeLower, 'lider') || str_contains($quoteLower, 'miedo') || str_contains($quoteLower, 'autoridad') || str_contains($quoteLower, 'poder')) {
-            $variations = [
-                'option_short' => "El miedo es el disfraz del tirano débil. La verdadera autoridad no exige sumisión; inspira por los hechos. 🏛️⚡",
-                'option_reflective' => "Quien necesita infundir temor para ser obedecido confiesa de inmediato su propia incapacidad.\n\nEl verdadero poder no somete con amenazas, sino con dominio propio y coherencia absoluta. Si tus actos no despiertan respeto voluntario, ninguna orden impondrá lealtad.\n\nSé el líder de tu propia mente antes de aspirar a dirigir a otros. 🏛️",
-                'option_warrior' => "El guerrero de honor no comanda por la fuerza del garrote, sino por el peso de su carácter. Quien gobierna con miedo cosecha rebelión; quien gobierna con templanza forja legiones invencibles. Firmeza serena. ⚡⚔️",
-                'option_stoic' => "Desea mandar sobre los demás únicamente aquel que aún es esclavo de sus propias pasiones. El sabio estoico no busca súbditos; se gobierna a sí mismo con ley inquebrantable. Tu único imperio real eres tú. 🏛️",
-                'visual_prompt' => $visualDirector['midjourney_prompt']
-            ];
-        } elseif (str_contains($themeLower, 'silencio') || str_contains($quoteLower, 'silencio') || str_contains($quoteLower, 'palabras')) {
-            $variations = [
-                'option_short' => "El sabio habla porque tiene algo que decir; el mediocre habla porque tiene que decir algo. Domina el silencio. 🏛️⚡",
-                'option_reflective' => "En un mundo saturado de ruido y opiniones vacías, callar es un acto de soberanía interior.\n\nNo tienes que justificar tus pasos, tus metas ni tu proceso ante nadie. Deja que sea la constancia de tus resultados la que responda por ti.\n\nGuarda silencio, trabaja en penumbra y deja que la obra terminada hable por sí sola. ⚡",
-                'option_warrior' => "La espada más afilada descansa en silencio dentro de su vaina. El guerrero no gasta energía en discusiones fútiles ni busca la aprobación de la multitud. Su disciplina es invisible; su impacto, definitivo. ⚔️🏛️",
-                'option_stoic' => "La naturaleza nos dio dos orejas y una sola boca para que escuchemos el doble de lo que hablamos. Si lo que vas a decir no supera al silencio, guarda tu aliento para actuar. Autodominio. 🏛️",
-                'visual_prompt' => $visualDirector['midjourney_prompt']
-            ];
-        } elseif (str_contains($themeLower, 'dolor') || str_contains($quoteLower, 'dolor') || str_contains($quoteLower, 'sufrir') || str_contains($quoteLower, 'adversidad')) {
-            $variations = [
-                'option_short' => "El fuego templa el acero; la adversidad forja al hombre inquebrantable. Acepta el desafío. ⚡🏛️",
-                'option_reflective' => "El sufrimiento inútil viene de resistirse a la realidad. El dolor de crecer, en cambio, es el tributo que paga todo aquel que rehúsa ser ordinario.\n\nCuando las circunstancias te golpeen, no preguntes '¿por qué a mí?'. Pregunta '¿qué me exige esta prueba para elevar mi carácter?'.\n\nNo pidas cargas más ligeras; forja hombros más anchos. 🏛️",
-                'option_warrior' => "La tormenta no pide permiso para azotar la montaña, y la montaña jamás se arrodilla ante el vendaval. Mantente erguido en medio de la prueba. El guerrero nace en la fricción. ⚡⚔️",
-                'option_stoic' => "Los obstáculos no bloquean el camino: se convierten en el camino. Aquello que pretendía derribarte es el material con el que construyes tu fortaleza interior. Amor Fati. 🏛️⚡",
-                'visual_prompt' => $visualDirector['midjourney_prompt']
-            ];
-        } elseif (str_contains($themeLower, 'tiempo') || str_contains($quoteLower, 'vida') || str_contains($quoteLower, 'muerte') || str_contains($quoteLower, 'memento')) {
-            $variations = [
-                'option_short' => "No tenemos poco tiempo; es que perdemos demasiado en lo irrelevante. Recuerda que vas a morir. 🏛️⚡",
-                'option_reflective' => "La mayoría vive como si tuviera garantizado un suministro infinito de días, postergando lo esencial por perseguir placeres efímeros.\n\nCada hora que dejas escapar en distracciones es una porción de tu existencia que entregas voluntariamente a la nada.\n\nDespierta ahora. Tu única posesión real es este instante. 🏛️⏳",
-                'option_warrior' => "El guerrero camina con la muerte como su consejera más lúcida. Saber que el fin es inevitable disuelve cualquier cobardía y enfoca el espíritu en el deber presente. Ni un segundo desperdiciado. ⚡⚔️",
-                'option_stoic' => "Podrías dejar la vida ahora mismo; que eso determine lo que haces, dices y piensas. La muerte no es un castigo distante, sino la medida exacta del valor de tu presente. Memento Mori. 🏛️",
-                'visual_prompt' => $visualDirector['midjourney_prompt']
-            ];
+        if (str_contains($themeLower, 'lider') || str_contains($combinedText, 'miedo') || str_contains($combinedText, 'autoridad') || str_contains($combinedText, 'poder')) {
+            $pHook = "El miedo es el disfraz del tirano débil; la verdadera autoridad inspira por coherencia, no por sumisión. 🏛️⚡";
+            $pContrarian = "Quien necesita alzar la voz para hacerse obedecer ya ha perdido el respeto de su propia gente. 🏛️";
+            $pWarrior = "El samurái comanda su propio espíritu antes de atreverse a dirigir el filo hacia los demás. ⚔️";
+            $pStoic = "Desea gobernar sobre otros únicamente aquel que todavía es esclavo de sus propias pasiones desordenadas. 🏛️";
+            $whyExplanation = "Desmonta el falso liderazgo basado en la agresividad y establece la templanza como la máxima demostración de poder.";
+        } elseif (str_contains($themeLower, 'silencio') || str_contains($combinedText, 'silencio') || str_contains($combinedText, 'palabras')) {
+            $pHook = "El sabio calla porque conoce el valor de la obra; el mediocre habla para ocultar su vacío. 🏛️⚡";
+            $pContrarian = "No tienes que anunciar tus metas al mundo; deja que tus resultados terminados hablen por ti. ⚡";
+            $pWarrior = "La espada más peligrosa descansa en silencio dentro de su vaina hasta el instante de la victoria. ⚔️";
+            $pStoic = "La naturaleza te dio dos oídos y una sola boca para escuchar el doble de lo que hablas. 🏛️";
+            $whyExplanation = "Transforma el impulso compulsivo de compartir en soberanía interior mediante el trabajo en discreción.";
+        } elseif (str_contains($themeLower, 'dolor') || str_contains($combinedText, 'dolor') || str_contains($combinedText, 'sufrir') || str_contains($combinedText, 'adversidad')) {
+            $pHook = "La adversidad no viene a destruirte; llega para revelarte de qué material está forjado tu carácter. ⚡🏛️";
+            $pContrarian = "No le pidas a la vida cargas más ligeras; exige hombros más fuertes para soportar la prueba. 🏛️";
+            $pWarrior = "La tormenta no pide permiso a la montaña, y la montaña jamás se arrodilla ante el vendaval. ⚡⚔️";
+            $pStoic = "El obstáculo en tu camino no detiene la marcha: se convierte en el nuevo camino a seguir. 🏛️⚡";
+            $whyExplanation = "Convierte la victimización en fortaleza activa al reencuadrar el dolor como el único crisol de crecimiento.";
+        } elseif (str_contains($themeLower, 'tiempo') || str_contains($combinedText, 'vida') || str_contains($combinedText, 'muerte') || str_contains($combinedText, 'memento')) {
+            $pHook = "No es que tengamos poco tiempo, es que perdemos demasiado en lo que no tiene valor alguno. 🏛️⏳";
+            $pContrarian = "Vives como si fueras a existir eternamente, aplazando lo importante por placeres que no dejan nada. 🏛️";
+            $pWarrior = "El guerrero camina con la muerte a su lado para recordar que cada golpe debe ser definitivo. ⚔️";
+            $pStoic = "Podrías dejar esta vida ahora mismo; permite que esa certeza determine lo que piensas, dices y haces. 🏛️";
+            $whyExplanation = "Aplica la urgencia de Memento Mori para extinguir la procrastinación y enfocar la energía en el presente.";
+        } elseif (str_contains($themeLower, 'samur') || str_contains($combinedText, 'bushido') || str_contains($combinedText, 'musashi') || str_contains($combinedText, 'dokkodo')) {
+            $pHook = "El camino del deber se recorre en soledad; quien mendiga compañía termina traicionando su propia disciplina. ⚔️⚡";
+            $pContrarian = "No busques la paz en la ausencia de conflicto, sino en la quietud inamovible de tu propio espíritu. ⚔️";
+            $pWarrior = "Acepta todo tal y como es, sin quejas ni arrepentimiento; ese es el Dokkōdō del guerrero intachable. ⚔️🏛️";
+            $pStoic = "Quien domina su juicio interior no teme a diez mil espadas desenvainadas a su alrededor. 🏛️";
+            $whyExplanation = "Inyecta el rigor del Dokkōdō samurái, convirtiendo la soledad disciplinada en una insignia de honor.";
         } else {
-            $shortSnippet = mb_substr($quoteClean, 0, 75);
-            $variations = [
-                'option_short' => "Quien domina su juicio gobierna su destino. Firmeza ante la opinión ajena, disciplina ante uno mismo. 🏛️⚡",
-                'option_reflective' => "Observa el principio de fondo: '{$shortSnippet}...'.\n\nEl secreto no reside en lamentarse de las circunstancias externas, sino en tomar el control indiscutible de nuestra respuesta.\n\nTodo lo que escapa a tu voluntad déjalo marchar; todo lo que dependa de tu carácter, ejecútalo con excelencia implacable. 🏛️",
-                'option_warrior' => "Ninguna fortaleza exterior resiste si los muros internos están fracturados. Refuerza tu mente cada mañana con la sobriedad del guerrero que espera la batalla diaria. Sin quejas, sin excusas. ⚡⚔️",
-                'option_stoic' => "No son las cosas las que perturban a los hombres, sino los juicios que hacen sobre las cosas. Cambia tu interpretación y la herida desaparecerá al instante. Soberanía absoluta. 🏛️",
-                'visual_prompt' => $visualDirector['midjourney_prompt']
-            ];
+            $pHook = "Quien gobierna su juicio gobierna su destino; templanza ante la opinión ajena, disciplina ante uno mismo. 🏛️⚡";
+            $pContrarian = "La libertad real no consiste en hacer lo que te apetece, sino en dominar lo que sientes. 🏛️";
+            $pWarrior = "Ninguna fortaleza exterior resiste si los muros de tu mente ya están agrietados por la queja. ⚡⚔️";
+            $pStoic = "No son las cosas las que te perturban, sino el juicio equivocado que decides emitir sobre ellas. 🏛️";
+            $whyExplanation = "Ancla el mensaje en la dicotomía del control, recordando que la paz mental es una decisión interna.";
         }
 
-        $variations['image_prompt'] = $visualDirector['midjourney_prompt'];
+        $phrases = [
+            'hook' => $pHook,
+            'contrarian' => $pContrarian,
+            'warrior' => $pWarrior,
+            'stoic' => $pStoic
+        ];
+
+        $recreations = [
+            'phrase_hook' => $pHook,
+            'phrase_contrarian' => $pContrarian,
+            'phrase_warrior' => $pWarrior,
+            'phrase_stoic' => $pStoic,
+            'option_short' => $pHook,
+            'option_reflective' => $pContrarian,
+            'option_warrior' => $pWarrior,
+            'option_stoic' => $pStoic,
+            'visual_prompt' => $visualDirector['midjourney_prompt'],
+            'image_prompt' => $visualDirector['midjourney_prompt']
+        ];
+
+        $parsed = array_merge($recreations, [
+            'why_it_works' => $whyExplanation,
+            'creative_fit_score' => $creativeFitScore,
+            'content_dna' => $dna,
+            'visual_director' => $visualDirector
+        ]);
 
         return [
             'dna' => $dna,
-            'recreations' => $variations,
+            'phrases' => $phrases,
+            'recreations' => $recreations,
+            'parsed' => $parsed,
+            'why_it_works' => $whyExplanation,
             'visual_director' => $visualDirector
         ];
     }

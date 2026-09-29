@@ -300,6 +300,7 @@ const RadarController = {
               <span class="radar-stat-pill comments" title="Comentarios">💬 ${commentsFormatted}</span>
               ${p.engagement_score > 0 ? `<span class="radar-stat-pill score" title="Índice de Viralidad">🔥 ${Math.round(p.engagement_score)} pts</span>` : ''}
               ${p.opportunity_score > 0 ? `<span class="radar-stat-pill opportunity" title="Score de Oportunidad Viral de Atenea">🎯 ${Number(p.opportunity_score).toFixed(1)}/10</span>` : ''}
+              ${p.creative_fit_score > 0 ? `<span class="radar-stat-pill creative-fit" title="Score de Afinidad Filosófica con Fortaleza Imparable">🏛️ ${Number(p.creative_fit_score).toFixed(1)}/10</span>` : ''}
             </div>
 
             <div class="radar-post-status-row">
@@ -315,7 +316,7 @@ const RadarController = {
           <div class="radar-post-actions">
             <button type="button" class="btn-recreate-fortaleza" onclick="RadarController.openRecreateModal(${p.id})">
               <span>🏛️ Atenea Studio</span>
-              <span class="btn-badge-brand">4 Copys + Midjourney</span>
+              <span class="btn-badge-brand">4 Frases + Midjourney</span>
             </button>
           </div>
         </div>
@@ -503,13 +504,16 @@ const RadarController = {
       if (recData.success && recData.data) {
         const postObj = recData.data.post || recData.data.reference_post || {};
         const recreationsObj = recData.data.recreations || {};
+        const phrasesObj = recData.data.phrases || {};
         const dnaObj = recData.data.dna || {};
         const visualDirectorObj = recData.data.visual_director || {};
         const oppScore = recData.data.opportunity_score || postObj.opportunity_score || 0;
+        const creativeFitScore = recData.data.creative_fit_score || postObj.creative_fit_score || 0;
+        const whyItWorks = recData.data.why_it_works || dnaObj.why_explanation || '';
 
-        this.renderRecreationStudio(postObj, recreationsObj, postId, dnaObj, visualDirectorObj, oppScore);
+        this.renderRecreationStudio(postObj, recreationsObj, postId, dnaObj, visualDirectorObj, oppScore, creativeFitScore, whyItWorks, phrasesObj);
         if (forceRegenerate) {
-          App.showToast('¡Nuevas 4 variaciones y dirección visual generadas por Atenea!', 'success');
+          App.showToast('¡Nuevas 4 frases aforísticas generadas por Atenea para @fortaleza_imparable!', 'success');
         }
       } else {
         container.innerHTML = `
@@ -528,18 +532,21 @@ const RadarController = {
     }
   },
 
-  renderRecreationStudio(post, recreations, postId = null, dna = null, visualDirector = null, opportunityScore = null) {
+  renderRecreationStudio(post, recreations, postId = null, dna = null, visualDirector = null, opportunityScore = null, creativeFitScore = null, whyItWorks = '', phrases = null) {
     const container = document.getElementById('recreate-modal-content');
     if (!container) return;
 
     post = post || {};
     recreations = recreations || {};
+    phrases = phrases || {};
     const currentId = postId || post.id || 0;
 
     // ADN Psicológico
     dna = dna || recreations.content_dna || (post.content_dna ? (typeof post.content_dna === 'string' ? JSON.parse(post.content_dna) : post.content_dna) : null) || {};
     visualDirector = visualDirector || recreations.visual_director || {};
     const scoreVal = opportunityScore || post.opportunity_score || 0;
+    const cFitVal = creativeFitScore || post.creative_fit_score || dna.creative_fit_score || 0;
+    const whyExplanation = whyItWorks || dna.why_explanation || 'Desarma la complacencia y ancla el impacto en la soberanía interior y la disciplina.';
 
     const quoteStatus = post.quote_verified_status || post.status || 'pending';
     let statusClass = 'verified';
@@ -556,52 +563,97 @@ const RadarController = {
       statusDesc = 'Concepto original o adaptación moderna sin autor clásico específico.';
     }
 
-    const optShort = recreations.option_short || '';
-    const optReflective = recreations.option_reflective || '';
-    const optWarrior = recreations.option_warrior || '';
-    const optStoic = recreations.option_stoic || recreations.option_reflective || '';
+    // 4 Frases Aforísticas cortas (8 a 22 palabras cada una)
+    const phraseHook = phrases.hook || recreations.phrase_hook || recreations.option_short || '';
+    const phraseContrarian = phrases.contrarian || recreations.phrase_contrarian || recreations.option_reflective || '';
+    const phraseWarrior = phrases.warrior || recreations.phrase_warrior || recreations.option_warrior || '';
+    const phraseStoic = phrases.stoic || recreations.phrase_stoic || recreations.option_stoic || '';
     const visualPrompt = visualDirector.midjourney_prompt || recreations.visual_prompt || recreations.image_prompt || '';
+
+    const countWords = (t) => t ? t.trim().split(/\s+/).filter(Boolean).length : 0;
+
+    // Frase en imagen original vs Copy/pie de foto original
+    const originalQuote = post.quote_extracted || post.quote || post.caption || '';
+    const originalCaption = post.caption || '';
 
     container.innerHTML = `
       <div class="recreation-studio-layout">
 
-        <!-- Columna Izquierda: Origen, ADN y Dirección Visual -->
+        <!-- Columna Izquierda: Origen Dual, Scores, Insight y ADN -->
         <div class="recreation-left-col">
           <div class="recreation-source-card">
-            <div class="studio-section-label">ORIGEN DE LA INSPIRACIÓN</div>
+            <div class="studio-section-label">ORIGEN DE LA INSPIRACIÓN (ENTRADA DUAL)</div>
             <div class="source-header-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
               <span class="source-creator">@${App.escapeHtml(post.creator_username || 'nicho')}</span>
               <div style="display: flex; gap: 6px; align-items: center;">
                 <span class="source-likes">❤️ ${this.formatNumber(post.likes_count || 0)}</span>
-                ${scoreVal > 0 ? `<span class="radar-stat-pill opportunity" style="font-size: 0.72rem; padding: 2px 7px;">🎯 ${Number(scoreVal).toFixed(1)}/10</span>` : ''}
+                ${scoreVal > 0 ? `<span class="radar-stat-pill opportunity" style="font-size: 0.72rem; padding: 2px 7px;" title="Score de Oportunidad Viral">🎯 ${Number(scoreVal).toFixed(1)}/10</span>` : ''}
+                ${cFitVal > 0 ? `<span class="radar-stat-pill creative-fit" style="font-size: 0.72rem; padding: 2px 7px;" title="Afinidad con Fortaleza Imparable">🏛️ ${Number(cFitVal).toFixed(1)}/10</span>` : ''}
               </div>
             </div>
-            <div class="source-caption-box">
-              "${App.escapeHtml(post.caption || '')}"
+
+            <!-- Frase en la imagen original -->
+            <span class="source-dual-label">📸 Frase en Imagen / Portada:</span>
+            <div class="source-caption-box" style="font-weight: 700; color: #fff; margin-bottom: 8px;">
+              "${App.escapeHtml(originalQuote)}"
+            </div>
+
+            <!-- Pie de foto / Copy original -->
+            ${originalCaption && originalCaption !== originalQuote ? `
+              <span class="source-dual-label">📝 Copy / Pie de Foto:</span>
+              <div class="source-caption-box" style="font-size: 0.78rem; max-height: 80px;">
+                "${App.escapeHtml(originalCaption)}"
+              </div>
+            ` : ''}
+          </div>
+
+          <!-- ¿Por qué funciona? (Mecanismo Psicológico de Atenea) -->
+          <div class="why-works-card">
+            <div class="why-works-title">
+              <span>💡</span> ¿Por qué funciona? (Mecanismo Psicológico)
+            </div>
+            <div class="why-works-text">
+              ${App.escapeHtml(whyExplanation)}
             </div>
           </div>
 
-          <!-- ADN Psicológico de Atenea -->
+          <!-- ADN Psicológico Extendido -->
           <div class="dna-card">
             <div class="dna-title">
-              <span>🧬</span> ADN Psicológico (Atenea Strategy)
+              <span>🧬</span> ADN Psicológico & Filosófico
             </div>
             <div class="dna-grid">
               <div class="dna-item">
                 <span class="dna-label">Concepto Nuclear</span>
-                <span class="dna-value">${App.escapeHtml(dna.core_concept || 'Soberanía mental y dicotomía del control ante los embates de la vida.')}</span>
+                <span class="dna-value">${App.escapeHtml(dna.core_concept || 'Soberanía mental y dicotomía del control ante la adversidad.')}</span>
               </div>
+              ${dna.audience_pain ? `
               <div class="dna-item">
-                <span class="dna-label">Conflicto Humano</span>
-                <span class="dna-value">${App.escapeHtml(dna.conflict || 'Impulso de reaccionar vs autodominio del trabajo silencioso.')}</span>
+                <span class="dna-label">Herida Oculta de la Audiencia</span>
+                <span class="dna-value" style="color: #fca5a5;">${App.escapeHtml(dna.audience_pain)}</span>
               </div>
+              ` : ''}
+              ${dna.belief_challenged ? `
               <div class="dna-item">
-                <span class="dna-label">Transformación</span>
-                <span class="dna-value">${App.escapeHtml(dna.transformation || 'Aceptar lo externo y forjar excelencia implacable.')}</span>
+                <span class="dna-label">Creencia Desafiada</span>
+                <span class="dna-value" style="color: #fde047;">${App.escapeHtml(dna.belief_challenged)}</span>
               </div>
+              ` : ''}
+              ${dna.emotional_trigger ? `
               <div class="dna-item">
-                <span class="dna-label">Estilo de Gancho</span>
-                <span class="dna-value" style="color: #cbd5e1;">${App.escapeHtml((dna.hook_type ? dna.hook_type + ' • ' : '') + (dna.sentence_structure || 'Estructura clásica'))}</span>
+                <span class="dna-label">Gatillo Emocional</span>
+                <span class="dna-value" style="color: #93c5fd;">${App.escapeHtml(dna.emotional_trigger)}</span>
+              </div>
+              ` : ''}
+              ${dna.shareability_mechanism ? `
+              <div class="dna-item">
+                <span class="dna-label">Mecanismo de Viralidad / Guardado</span>
+                <span class="dna-value" style="color: #86efac;">${App.escapeHtml(dna.shareability_mechanism)}</span>
+              </div>
+              ` : ''}
+              <div class="dna-item">
+                <span class="dna-label">Estilo de Gancho & Sintaxis</span>
+                <span class="dna-value" style="color: #cbd5e1;">${App.escapeHtml((dna.hook_type ? dna.hook_type + ' • ' : '') + (dna.sentence_structure || 'Estructura aforística sobria'))}</span>
               </div>
             </div>
           </div>
@@ -642,20 +694,20 @@ const RadarController = {
               ${App.escapeHtml(visualPrompt || 'Cinematic dark fine art portrait of Marcus Aurelius in obsidian marble, chiaroscuro lighting, 8k --ar 4:5 --v 6.0 --no text, typography')}
             </div>
             <span style="font-size: 0.72rem; color: var(--text-dim); display: block; margin-top: 6px;">
-              💡 Listo para pegar en Midjourney Discord (--ar 4:5 vertical para Instagram).
+              💡 Formato vertical --ar 4:5 listo para portadas de Reels o placas en @fortaleza_imparable.
             </span>
           </div>
         </div>
 
-        <!-- Columna Derecha: 4 Copys Re-creados por Atenea -->
+        <!-- Columna Derecha: 4 Frases Aforísticas para Placas de @fortaleza_imparable -->
         <div class="recreation-right-col">
-          <div class="recreations-header" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px;">
+          <div class="recreations-header" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 8px;">
             <div>
               <h4 style="font-size: 1.15rem; font-weight: 800; color: #fff; margin: 0 0 4px 0;">
-                🏛️ 4 Variaciones Estratégicas por Atenea
+                🏛️ 4 Frases de Alto Impacto para Placas / Reels
               </h4>
               <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0;">
-                Copys 100% originales calibrados para la voz de @fortaleza_imparable. Haz clic en Copiar o Aprobar.
+                Frases aforísticas afiladas (8 a 22 palabras) forjadas por Atenea para estampar en imagen o portada.
               </p>
             </div>
             ${currentId ? `
@@ -665,76 +717,88 @@ const RadarController = {
             ` : ''}
           </div>
 
-          <!-- Opción 1: Gancho Brutal -->
-          <div class="copy-variation-card">
-            <div class="copy-card-top">
+          <!-- Frase 1: Gancho Brutal / Golpe Psicológico -->
+          <div class="phrase-plate-card">
+            <div class="phrase-plate-header">
               <div class="copy-angle-tag direct">
-                ⚡ Opción 1: Gancho Brutal / Impacto Rápido
+                ⚡ Opción 1: Gancho Brutal / Golpe Psicológico
               </div>
-              <div style="display: flex; gap: 6px;">
-                <button type="button" class="btn-approve-action" onclick="RadarController.saveVariationStatus(${currentId}, 'short', this)">
+              <div style="display: flex; gap: 6px; align-items: center;">
+                <span class="word-count-pill">${countWords(phraseHook)} palabras</span>
+                <button type="button" class="btn-approve-action" onclick="RadarController.saveVariationStatus(${currentId}, 'hook_brutal', this)">
                   ⭐ Aprobar
                 </button>
-                <button type="button" class="btn-copy-action" onclick="RadarController.copyText('${App.escapeHtml(optShort.replace(/'/g, "\\'"))}', this)">
-                  📋 Copiar
+                <button type="button" class="btn-copy-action" onclick="RadarController.copyText('${App.escapeHtml(phraseHook.replace(/'/g, "\\'"))}', this)">
+                  📋 Copiar Frase
                 </button>
               </div>
             </div>
-            <div class="copy-content-box">${this.formatCopyText(optShort)}</div>
+            <div class="phrase-plate-box">
+              <p class="phrase-plate-text">“${App.escapeHtml(phraseHook)}”</p>
+            </div>
           </div>
 
-          <!-- Opción 2: Lección Profunda -->
-          <div class="copy-variation-card">
-            <div class="copy-card-top">
+          <!-- Frase 2: Antítesis / Rompe-Creencias -->
+          <div class="phrase-plate-card">
+            <div class="phrase-plate-header">
               <div class="copy-angle-tag reflective">
-                📖 Opción 2: Sabiduría Clásica / Reflexión Profunda
+                🔄 Opción 2: Antítesis / Rompe-Creencias
               </div>
-              <div style="display: flex; gap: 6px;">
-                <button type="button" class="btn-approve-action" onclick="RadarController.saveVariationStatus(${currentId}, 'reflective', this)">
+              <div style="display: flex; gap: 6px; align-items: center;">
+                <span class="word-count-pill">${countWords(phraseContrarian)} palabras</span>
+                <button type="button" class="btn-approve-action" onclick="RadarController.saveVariationStatus(${currentId}, 'contrarian', this)">
                   ⭐ Aprobar
                 </button>
-                <button type="button" class="btn-copy-action" onclick="RadarController.copyText('${App.escapeHtml(optReflective.replace(/'/g, "\\'"))}', this)">
-                  📋 Copiar
+                <button type="button" class="btn-copy-action" onclick="RadarController.copyText('${App.escapeHtml(phraseContrarian.replace(/'/g, "\\'"))}', this)">
+                  📋 Copiar Frase
                 </button>
               </div>
             </div>
-            <div class="copy-content-box">${this.formatCopyText(optReflective)}</div>
+            <div class="phrase-plate-box">
+              <p class="phrase-plate-text">“${App.escapeHtml(phraseContrarian)}”</p>
+            </div>
           </div>
 
-          <!-- Opción 3: Modo Guerrero -->
-          <div class="copy-variation-card">
-            <div class="copy-card-top">
+          <!-- Frase 3: Bushido & Disciplina de Guerra (Dokkōdō / Musashi) -->
+          <div class="phrase-plate-card">
+            <div class="phrase-plate-header">
               <div class="copy-angle-tag warrior">
-                ⚔️ Opción 3: Modo Guerrero / Bushido & Disciplina
+                ⚔️ Opción 3: Bushido / Disciplina de Guerra (Musashi)
               </div>
-              <div style="display: flex; gap: 6px;">
+              <div style="display: flex; gap: 6px; align-items: center;">
+                <span class="word-count-pill">${countWords(phraseWarrior)} palabras</span>
                 <button type="button" class="btn-approve-action" onclick="RadarController.saveVariationStatus(${currentId}, 'warrior', this)">
                   ⭐ Aprobar
                 </button>
-                <button type="button" class="btn-copy-action" onclick="RadarController.copyText('${App.escapeHtml(optWarrior.replace(/'/g, "\\'"))}', this)">
-                  📋 Copiar
+                <button type="button" class="btn-copy-action" onclick="RadarController.copyText('${App.escapeHtml(phraseWarrior.replace(/'/g, "\\'"))}', this)">
+                  📋 Copiar Frase
                 </button>
               </div>
             </div>
-            <div class="copy-content-box">${this.formatCopyText(optWarrior)}</div>
+            <div class="phrase-plate-box">
+              <p class="phrase-plate-text">“${App.escapeHtml(phraseWarrior)}”</p>
+            </div>
           </div>
 
-          <!-- Opción 4: Modo Estoico -->
-          <div class="copy-variation-card">
-            <div class="copy-card-top">
+          <!-- Frase 4: Soberanía Mental / Estoicismo Clásico -->
+          <div class="phrase-plate-card">
+            <div class="phrase-plate-header">
               <div class="copy-angle-tag stoic">
-                🏛️ Opción 4: Modo Estoico / Virtud & Autodominio
+                🏛️ Opción 4: Soberanía Mental / Estoicismo Clásico
               </div>
-              <div style="display: flex; gap: 6px;">
+              <div style="display: flex; gap: 6px; align-items: center;">
+                <span class="word-count-pill">${countWords(phraseStoic)} palabras</span>
                 <button type="button" class="btn-approve-action" onclick="RadarController.saveVariationStatus(${currentId}, 'stoic', this)">
                   ⭐ Aprobar
                 </button>
-                <button type="button" class="btn-copy-action" onclick="RadarController.copyText('${App.escapeHtml(optStoic.replace(/'/g, "\\'"))}', this)">
-                  📋 Copiar
+                <button type="button" class="btn-copy-action" onclick="RadarController.copyText('${App.escapeHtml(phraseStoic.replace(/'/g, "\\'"))}', this)">
+                  📋 Copiar Frase
                 </button>
               </div>
             </div>
-            <div class="copy-content-box">${this.formatCopyText(optStoic)}</div>
+            <div class="phrase-plate-box">
+              <p class="phrase-plate-text">“${App.escapeHtml(phraseStoic)}”</p>
+            </div>
           </div>
 
         </div>

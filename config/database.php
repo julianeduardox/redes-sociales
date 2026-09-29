@@ -182,7 +182,7 @@ class Database {
             }
 
             // Concurrency Optimization: Cache schema state with PRAGMA user_version to skip redundant DDL checks on every request
-            $targetSchemaVersion = 20261001;
+            $targetSchemaVersion = 20261003;
             $currentSchemaVersion = 0;
             if ($driver === 'sqlite') {
                 try {
@@ -1584,6 +1584,9 @@ class Database {
                     if (!in_array('opportunity_score', $inspColNames)) {
                         $pdo->exec("ALTER TABLE inspiration_posts ADD COLUMN opportunity_score REAL DEFAULT 0.0");
                     }
+                    if (!in_array('creative_fit_score', $inspColNames)) {
+                        $pdo->exec("ALTER TABLE inspiration_posts ADD COLUMN creative_fit_score REAL DEFAULT 0.0");
+                    }
                     if (!in_array('content_dna', $inspColNames)) {
                         $pdo->exec("ALTER TABLE inspiration_posts ADD COLUMN content_dna TEXT");
                     }
@@ -1600,6 +1603,12 @@ class Database {
                             hook_type TEXT,
                             sentence_structure TEXT,
                             opportunity_score REAL DEFAULT 0.0,
+                            creative_fit_score REAL DEFAULT 0.0,
+                            audience_pain TEXT,
+                            belief_challenged TEXT,
+                            emotional_trigger TEXT,
+                            shareability_mechanism TEXT,
+                            why_explanation TEXT,
                             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
                         );
@@ -1620,6 +1629,28 @@ class Database {
                         );
                         CREATE INDEX IF NOT EXISTS idx_atenea_mem_user ON atenea_creations_memory(user_id, inspiration_post_id, variation_type);
                     ");
+
+                    // Ensure new psychological DNA columns exist if table was already created
+                    $dnaCols = $pdo->query("PRAGMA table_info(atenea_content_dna)")->fetchAll(PDO::FETCH_ASSOC);
+                    $dnaColNames = array_column($dnaCols, 'name');
+                    if (!in_array('audience_pain', $dnaColNames)) {
+                        $pdo->exec("ALTER TABLE atenea_content_dna ADD COLUMN audience_pain TEXT");
+                    }
+                    if (!in_array('belief_challenged', $dnaColNames)) {
+                        $pdo->exec("ALTER TABLE atenea_content_dna ADD COLUMN belief_challenged TEXT");
+                    }
+                    if (!in_array('emotional_trigger', $dnaColNames)) {
+                        $pdo->exec("ALTER TABLE atenea_content_dna ADD COLUMN emotional_trigger TEXT");
+                    }
+                    if (!in_array('shareability_mechanism', $dnaColNames)) {
+                        $pdo->exec("ALTER TABLE atenea_content_dna ADD COLUMN shareability_mechanism TEXT");
+                    }
+                    if (!in_array('creative_fit_score', $dnaColNames)) {
+                        $pdo->exec("ALTER TABLE atenea_content_dna ADD COLUMN creative_fit_score REAL DEFAULT 0.0");
+                    }
+                    if (!in_array('why_explanation', $dnaColNames)) {
+                        $pdo->exec("ALTER TABLE atenea_content_dna ADD COLUMN why_explanation TEXT");
+                    }
                 } elseif ($driver === 'mysql') {
                     $mCols = self::getTableColumns($pdo, 'inspiration_posts');
                     if (!in_array('recreated_copies', $mCols)) {
