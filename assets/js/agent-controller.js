@@ -321,6 +321,18 @@ const AgentController = {
       return;
     }
 
+    if (this.isGeneratingModalSuggestions) {
+      App.showToast('⏳ Hermes está forjando las 3 sugerencias con IA (toma unos 5-8 seg). Por favor espera un momento para tomar la captura completa.', 'warning', 4500);
+      return;
+    }
+
+    const replies = this.modalActiveReplies || {};
+    const hasAnyReply = replies && (replies.engagement || replies.conversion || replies.support);
+    if (!hasAnyReply) {
+      App.showToast('⚠️ Las 3 sugerencias aún no se han terminado de generar para este comentario. Espera a que aparezcan o haz clic en "🔄 Regenerar".', 'warning', 4500);
+      return;
+    }
+
     const c = this.modalActiveComment;
     const author = c.author_name || c.author_handle || 'Usuario';
     const handle = c.author_handle ? (c.author_handle.startsWith('@') ? c.author_handle : '@' + c.author_handle) : '@comunidad';
@@ -328,8 +340,13 @@ const AgentController = {
     const platform = (c.platform || 'Social').toUpperCase();
     const score = c.highlight_score || 0;
     const sentiment = (c.sentiment || 'neutral').toUpperCase();
-    const replies = this.modalActiveReplies || {};
     const customText = (document.getElementById('modal-reply-text-input')?.value || '').trim();
+
+    // Check if customText is genuinely a custom edition (not just a verbatim copy of one of the 3 variants)
+    const isCustomEdited = customText && 
+      customText !== (replies.engagement || '').trim() && 
+      customText !== (replies.conversion || '').trim() && 
+      customText !== (replies.support || '').trim();
 
     App.showToast('📸 Generando captura visual en alta resolución...', 'info');
 
@@ -373,7 +390,7 @@ const AgentController = {
 
       let customH = 0;
       let customLines = [];
-      if (customText) {
+      if (isCustomEdited) {
         customLines = getLines(customText, width - 140, '16px system-ui, -apple-system, Segoe UI, Roboto');
         customH = 65 + customLines.length * 24;
       }
@@ -509,11 +526,11 @@ const AgentController = {
         '#a855f7'
       );
 
-      // Custom Text (if present)
-      if (customText) {
+      // Custom Text (only rendered if user actually modified or wrote custom text)
+      if (isCustomEdited) {
         drawVariantCard(
           '✍️ Respuesta Personalizada Redactada',
-          'Lista para publicación o guardado',
+          'Modificada manualmente por el usuario',
           customLines,
           customH,
           'rgba(245, 158, 11, 0.5)',
@@ -781,6 +798,10 @@ const AgentController = {
     }
 
     this.modalActiveComment = targetComment;
+    this.modalActiveReplies = null;
+    this.modalSelectedVariant = null;
+    const textInput = document.getElementById('modal-reply-text-input');
+    if (textInput) textInput.value = '';
     this.populateModalCommentsDropdown(targetComment.id);
     this.updateModalFollowerContext(targetComment);
 
@@ -908,6 +929,10 @@ const AgentController = {
     const comment = App.commentsList.find(c => c.id == commentId);
     if (comment) {
       this.modalActiveComment = comment;
+      this.modalActiveReplies = null;
+      this.modalSelectedVariant = null;
+      const textInput = document.getElementById('modal-reply-text-input');
+      if (textInput) textInput.value = '';
       this.updateModalFollowerContext(comment);
       this.loadModalSuggestions(comment);
     }
@@ -934,10 +959,20 @@ const AgentController = {
     const container = document.getElementById('modal-suggestions-container');
     if (!container) return;
 
+    this.isGeneratingModalSuggestions = true;
+    this.modalActiveReplies = null;
+
+    const captureBtn = document.getElementById('btn-modal-capture-image');
+    if (captureBtn) {
+      captureBtn.disabled = true;
+      captureBtn.style.opacity = '0.6';
+      captureBtn.innerHTML = '<span>⏳ Generando IA...</span>';
+    }
+
     container.innerHTML = `
       <div style="grid-column: 1 / -1; padding: 28px; text-align: center; color: var(--text-muted);">
         <div style="display: inline-block; width: 28px; height: 28px; border: 3px solid rgba(99,102,241,0.3); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 10px;"></div>
-        <p style="font-size: 0.85rem; font-weight: 700; color: #fff;">Forjando 3 sugerencias (Reflexiva, Motivacional y Comunitaria)...</p>
+        <p style="font-size: 0.85rem; font-weight: 700; color: #fff;">Forjando 3 sugerencias con IA (Reflexiva, Motivacional y Comunitaria)...</p>
         <span style="font-size: 0.74rem; color: var(--text-dim);">Adaptando el mensaje a la filosofía estoica y voz de marca</span>
       </div>
     `;
@@ -968,19 +1003,39 @@ const AgentController = {
         }
         this.selectModalVariant(defaultVar);
       } else {
+        this.modalActiveReplies = null;
         container.innerHTML = `
           <div style="grid-column: 1 / -1; padding: 16px; color: var(--accent-rose); font-size: 0.84rem; background: rgba(244,63,94,0.1); border-radius: 8px;">
             ⚠️ No se pudieron generar sugerencias: ${this.escapeHtml(res.error || 'Error desconocido')}
+            <div style="margin-top: 10px;">
+              <button type="button" class="btn-modal-sugg-action" onclick="AgentController.refreshModalSuggestions()" style="background: rgba(244,63,94,0.2); color: #fff; cursor: pointer; padding: 6px 12px; border-radius: 6px;">
+                🔄 Reintentar Ahora
+              </button>
+            </div>
           </div>
         `;
       }
     } catch (err) {
       console.error(err);
+      this.modalActiveReplies = null;
       container.innerHTML = `
         <div style="grid-column: 1 / -1; padding: 16px; color: var(--accent-rose); font-size: 0.84rem; background: rgba(244,63,94,0.1); border-radius: 8px;">
           ⚠️ Error de conexión con el motor de IA.
+          <div style="margin-top: 10px;">
+            <button type="button" class="btn-modal-sugg-action" onclick="AgentController.refreshModalSuggestions()" style="background: rgba(244,63,94,0.2); color: #fff; cursor: pointer; padding: 6px 12px; border-radius: 6px;">
+              🔄 Reintentar Ahora
+            </button>
+          </div>
         </div>
       `;
+    } finally {
+      this.isGeneratingModalSuggestions = false;
+      const captureBtn = document.getElementById('btn-modal-capture-image');
+      if (captureBtn) {
+        captureBtn.disabled = false;
+        captureBtn.style.opacity = '1';
+        captureBtn.innerHTML = '<span>📸 Capturar Imagen</span>';
+      }
     }
   },
 
