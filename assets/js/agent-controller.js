@@ -109,12 +109,48 @@ const AgentController = {
     }
   },
 
+  getLanguageBadgeHtml(replies) {
+    if (!replies) return '';
+    const lang = (replies.detected_language || replies.detected_comment_language || '').toLowerCase();
+    const respLang = (replies.response_language || lang).toLowerCase();
+    const conf = replies.language_confidence !== undefined && replies.language_confidence !== null ? Math.round(replies.language_confidence * 100) : null;
+    const isAmbiguous = Boolean(replies.requires_human_review && (lang === 'und' || lang === 'mixed' || !['es', 'pt', 'en'].includes(lang)));
+
+    if (!lang && !respLang) return '';
+
+    let flag = '🌐';
+    let name = 'Multilingüe';
+    if (lang === 'pt') { flag = '🇵🇹'; name = 'Português'; }
+    else if (lang === 'en') { flag = '🇬🇧'; name = 'English'; }
+    else if (lang === 'es') { flag = '🇪🇸'; name = 'Español'; }
+
+    if (isAmbiguous) {
+      return `
+        <div style="grid-column: 1 / -1; display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.35); color: #fbbf24; font-size: 0.72rem; font-weight: 600; margin-bottom: 8px; width: fit-content;">
+          <span>⚠️ Idioma no confirmado · Requiere revisión humana</span>
+        </div>
+      `;
+    }
+
+    const confLabel = conf !== null ? ` · ${conf}% certeza` : '';
+    const respLabel = respLang && respLang !== lang ? ` (Respuesta en ${respLang.toUpperCase()})` : '';
+
+    return `
+      <div style="grid-column: 1 / -1; display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: rgba(99, 102, 241, 0.12); border: 1px solid rgba(99, 102, 241, 0.25); color: #a5b4fc; font-size: 0.72rem; font-weight: 600; margin-bottom: 8px; width: fit-content;">
+        <span>${flag} ${name} detectado${confLabel}${respLabel}</span>
+      </div>
+    `;
+  },
+
   // Render the 3 variant cards in side copilot
   renderSuggestionCards(replies) {
     const suggestionsContainer = document.getElementById('suggestions-container');
     if (!suggestionsContainer) return;
 
+    const badgeHtml = this.getLanguageBadgeHtml(replies);
+
     suggestionsContainer.innerHTML = `
+      ${badgeHtml}
       <!-- Connection & Empathy Card -->
       <div class="suggestion-card active" id="card-variant-engagement" onclick="AgentController.selectVariant('engagement')">
         <div class="suggestion-header">
@@ -198,8 +234,83 @@ const AgentController = {
       navigator.clipboard.writeText(text).then(() => {
         App.showToast('¡Texto copiado al portapapeles! 📋', 'success');
       }).catch(() => {
-        App.showToast('No se pudo copiar automáticamente.', 'error');
+        this.fallbackCopyText(text, '¡Texto copiado al portapapeles! 📋');
       });
+    } else {
+      this.fallbackCopyText(text, '¡Texto copiado al portapapeles! 📋');
+    }
+  },
+
+  fallbackCopyText(text, successMsg = '¡Copiado al portapapeles! 📋') {
+    try {
+      const el = document.createElement('textarea');
+      el.value = text;
+      el.setAttribute('readonly', '');
+      el.style.position = 'fixed';
+      el.style.left = '-9999px';
+      el.style.top = '-9999px';
+      document.body.appendChild(el);
+      el.focus();
+      el.select();
+      const successful = document.execCommand('copy');
+      document.body.removeChild(el);
+      if (successful) {
+        App.showToast(successMsg, 'success');
+      } else {
+        App.showToast('No se pudo copiar automáticamente.', 'error');
+      }
+    } catch (e) {
+      App.showToast('No se pudo copiar automáticamente.', 'error');
+    }
+  },
+
+  // Copy structured summary of modal assistant (comment + 3 variants + strategy + custom text)
+  copyFullModalSummary() {
+    if (!this.modalActiveComment) {
+      App.showToast('No hay ningún comentario cargado en el asistente.', 'info');
+      return;
+    }
+
+    const c = this.modalActiveComment;
+    const author = c.author_name || c.author_handle || 'Usuario';
+    const text = c.comment_text || '';
+    const platform = (c.platform || 'Social').toUpperCase();
+    const score = c.highlight_score || 0;
+    const replies = this.modalActiveReplies || {};
+    const customText = (document.getElementById('modal-reply-text-input')?.value || '').trim();
+
+    let summary = `═══════════════════════════════════════════════════\n`;
+    summary += `🪄 ASISTENTE DE RESPUESTAS XINDRO (HERMES AI)\n`;
+    summary += `═══════════════════════════════════════════════════\n\n`;
+    summary += `💬 COMENTARIO SELECCIONADO:\n`;
+    summary += `• Autor: ${author} (${platform})\n`;
+    summary += `• Score de Impacto: ${score}/100\n`;
+    summary += `• Sentimiento / Intención: ${c.sentiment || 'neutro'} | ${c.intent || 'general'}\n`;
+    summary += `• Texto: "${text}"\n\n`;
+    summary += `───────────────────────────────────────────────────\n`;
+    summary += `💡 SUGERENCIAS FORJADAS POR LA IA:\n`;
+    summary += `───────────────────────────────────────────────────\n\n`;
+    summary += `1️⃣ [Conexión & Empatía]:\n${replies.engagement || 'N/A'}\n\n`;
+    summary += `2️⃣ [Sabiduría & Fortaleza Estoica]:\n${replies.conversion || 'N/A'}\n\n`;
+    summary += `3️⃣ [Impulso & Determinación]:\n${replies.support || 'N/A'}\n\n`;
+
+    if (replies.engagement_tips) {
+      summary += `💡 [Estrategia de Conexión]:\n${replies.engagement_tips}\n\n`;
+    }
+
+    if (customText) {
+      summary += `✍️ [Texto Personalizado / Editado]:\n${customText}\n\n`;
+    }
+    summary += `═══════════════════════════════════════════════════\n`;
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(summary).then(() => {
+        App.showToast('¡Resumen completo del asistente copiado al portapapeles! 📋✨', 'success');
+      }).catch(() => {
+        this.fallbackCopyText(summary, '¡Resumen completo del asistente copiado al portapapeles! 📋✨');
+      });
+    } else {
+      this.fallbackCopyText(summary, '¡Resumen completo del asistente copiado al portapapeles! 📋✨');
     }
   },
 
@@ -589,7 +700,10 @@ const AgentController = {
     const container = document.getElementById('modal-suggestions-container');
     if (!container) return;
 
+    const badgeHtml = this.getLanguageBadgeHtml(replies);
+
     container.innerHTML = `
+      ${badgeHtml}
       <!-- Variant 1: Connection & Empathy -->
       <div class="modal-suggestion-card card-reflection active" id="modal-card-engagement" onclick="AgentController.selectModalVariant('engagement')">
         <div class="modal-suggestion-header">
@@ -762,8 +876,7 @@ const AgentController = {
         } else {
           App.showToast(`Error: ${res.error || 'No se pudo enviar la respuesta.'}`, 'error');
         }
-        App.closeModal('modal-assistant-replies');
-        await App.loadComments();
+        // Do NOT close the modal on error so the assistant remains visible for capture or edits
       }
     } catch (err) {
       console.error(err);
@@ -1069,19 +1182,54 @@ const AgentController = {
     return this.startLiveAutopilot();
   },
 
-  // Save a chosen variant as permanent Gold Example to train Gemini
-  async saveAsGoldExample(variantType, isModal = false) {
+  // Save a chosen variant or the customized textarea text as permanent Gold Example to train Hermes
+  async saveAsGoldExample(variantType = null, isModal = false) {
     const comment = isModal ? this.modalActiveComment : this.activeComment;
-    const replies = isModal ? this.modalActiveReplies : this.activeReplies;
-    if (!comment || !replies || !replies[variantType]) {
-      App.showToast('No hay una sugerencia generada para guardar como Ejemplo de Oro.', 'error');
+    if (!comment) {
+      App.showToast('No hay un comentario activo seleccionado.', 'error');
       return;
     }
-    const replyText = (replies[variantType] || '').trim();
+
+    const modalTextarea = isModal ? document.getElementById('modal-reply-text-input') : document.getElementById('reply-text-input');
+    const textareaVal = (modalTextarea ? modalTextarea.value : '').trim();
+
+    const replies = isModal ? this.modalActiveReplies : this.activeReplies;
+    const activeVar = variantType || (isModal ? this.modalSelectedVariant : this.selectedVariant) || 'engagement';
+    let replyText = '';
+    let originalSuggestion = '';
+    let wasEdited = false;
+
+    if (replies && replies[activeVar]) {
+      originalSuggestion = (replies[activeVar] || '').trim();
+    }
+
+    if (variantType && replies && replies[variantType]) {
+      // If the user modified the textarea after selecting this variant, prioritize the user's customized words!
+      if (textareaVal.length > 0 && textareaVal !== originalSuggestion) {
+        replyText = textareaVal;
+        wasEdited = true;
+      } else {
+        replyText = originalSuggestion;
+      }
+    } else if (textareaVal.length > 0) {
+      replyText = textareaVal;
+      wasEdited = !!(originalSuggestion && originalSuggestion !== textareaVal);
+    } else if (originalSuggestion) {
+      replyText = originalSuggestion;
+    } else if (replies && (replies.engagement || replies.conversion || replies.support)) {
+      replyText = (replies[activeVar] || replies.engagement || replies.conversion || replies.support || '').trim();
+    }
+
+    if (!replyText) {
+      App.showToast('Escribe o selecciona una respuesta antes de guardar como Ejemplo de Oro.', 'error');
+      return;
+    }
+
     const commentText = (comment.comment_text || '').trim();
     const commentId = parseInt(comment.id, 10);
+    const brandVoiceId = parseInt(comment.brand_voice_id || comment.effective_brand_voice_id || 1, 10);
 
-    App.showToast('⭐ Guardando como Ejemplo de Oro para Gemini...', 'info');
+    App.showToast('⭐ Guardando como Ejemplo de Oro para Hermes...', 'info');
 
     try {
       const response = await App.fetchWithCsrf('api/comments.php', {
@@ -1091,12 +1239,14 @@ const AgentController = {
           comment_id: commentId,
           comment_text: commentText,
           reply_text: replyText,
-          brand_voice_id: comment.brand_voice_id || 1
+          original_suggestion: originalSuggestion,
+          was_edited: wasEdited,
+          brand_voice_id: brandVoiceId
         })
       });
       const res = await response.json();
       if (res.success) {
-        App.showToast(res.message || '⭐ ¡Ejemplo de Oro guardado! Gemini lo usará como estándar.', 'success');
+        App.showToast(res.message || '⭐ ¡Ejemplo de Oro guardado con éxito! Hermes lo usará como estándar.', 'success');
       } else {
         App.showToast(res.error || 'No se pudo guardar el Ejemplo de Oro.', 'error');
       }

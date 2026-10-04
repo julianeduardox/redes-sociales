@@ -8,6 +8,7 @@
 
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
+@set_time_limit(90);
 
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/settings.php';
@@ -48,7 +49,7 @@ $action = match($method) {
 };
 
 // CSRF check for mutations
-$mutatingActions = ['add_creator', 'remove_creator', 'sync_creator', 'sync_all', 'import_post', 'verify_quote', 'recreate', 'save_creation_status'];
+$mutatingActions = ['add_creator', 'remove_creator', 'sync_creator', 'sync_all', 'import_post', 'verify_quote', 'recreate', 'save_creation_status', 'extract_vision_text', 'save_visual_text'];
 if (in_array($action, $mutatingActions, true)) {
     $csrfToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? $input['csrf_token'] ?? '';
     $sessionToken = $_SESSION['csrf_token'] ?? '';
@@ -101,7 +102,8 @@ switch ($action) {
         if ($creatorId <= 0) {
             jsonResponse(false, null, 'ID de creador requerido', 'INVALID_ID');
         }
-        $res = InspirationRadarService::removeCreator($userId, $creatorId);
+        $deletePosts = !isset($input['delete_posts']) || (bool)$input['delete_posts'];
+        $res = InspirationRadarService::removeCreator($userId, $creatorId, $deletePosts);
         jsonResponse($res['success'], $res['success'] ? $res : null, $res['error'] ?? '');
     }
 
@@ -142,14 +144,38 @@ switch ($action) {
         jsonResponse($res['success'], $res['success'] ? $res : null, $res['error'] ?? '');
     }
 
+    case 'extract_vision_text': {
+        $postId = (int)($input['post_id'] ?? 0);
+        $overrideMediaUrl = !empty($input['media_url']) ? trim($input['media_url']) : null;
+        if ($postId <= 0) {
+            jsonResponse(false, null, 'ID de publicación requerido', 'INVALID_ID');
+        }
+        $res = InspirationRadarService::extractOverlayTextWithVision($userId, $postId, $overrideMediaUrl);
+        jsonResponse($res['success'], $res['success'] ? $res : null, $res['error'] ?? '');
+    }
+
+    case 'save_visual_text': {
+        $postId = (int)($input['post_id'] ?? 0);
+        $text = (string)($input['visual_text'] ?? '');
+        if ($postId <= 0) {
+            jsonResponse(false, null, 'ID de publicación requerido', 'INVALID_ID');
+        }
+        $res = InspirationRadarService::saveVisualText($userId, $postId, $text);
+        jsonResponse($res['success'], $res['success'] ? $res : null, $res['error'] ?? '');
+    }
+
     case 'recreate': {
         $postId = (int)($input['post_id'] ?? 0);
         $brandVoiceId = (int)($input['brand_voice_id'] ?? 1);
         $forceRegenerate = !empty($input['force_regenerate']);
+        $sourceType = trim($input['source_type'] ?? 'inspiration');
+        $customVisualText = isset($input['custom_visual_text']) ? (string)$input['custom_visual_text'] : null;
+        $customCaption = isset($input['custom_caption']) ? (string)$input['custom_caption'] : null;
+
         if ($postId <= 0) {
             jsonResponse(false, null, 'ID de publicación requerido', 'INVALID_ID');
         }
-        $res = InspirationRadarService::generateFortalezaRecreations($userId, $postId, $brandVoiceId, $forceRegenerate);
+        $res = InspirationRadarService::generateFortalezaRecreations($userId, $postId, $brandVoiceId, $forceRegenerate, $sourceType, $customVisualText, $customCaption);
         jsonResponse($res['success'], $res['success'] ? $res : null, $res['error'] ?? '');
     }
 

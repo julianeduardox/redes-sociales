@@ -23,20 +23,292 @@ class AiAgentService {
     public const COMMERCIAL_SALES_ACTIVE = false;
 
     /**
-     * Evaluate if a comment is suitable for Auto-Responder or if it should be marked as SPAM / FOREIGN / STICKER
+     * Conservative Local Language Detector for Supported Social Languages (ES, PT, EN)
+     *
+     * @param string $text
+     * @return array{language: string, confidence: float, source: string, is_supported: bool, is_ambiguous: bool, scores?: array}
      */
-    public static function evaluateCommentSuitability(string $commentText, string $allowedLang = 'es', ?array $attachment = null): array {
+    public static function detectSupportedLanguage(string $text): array {
+        $clean = trim($text);
+        if (empty($clean)) {
+            return [
+                'language' => 'und',
+                'confidence' => 0.0,
+                'source' => 'local_detector',
+                'is_supported' => false,
+                'is_ambiguous' => true
+            ];
+        }
+
+        // Clean URLs, handles and punctuation to evaluate linguistic signals
+        $withoutMentions = preg_replace('/@[a-z0-9_\.]+/iu', ' ', $clean);
+        $withoutUrls = preg_replace('/https?:\/\/\S+/iu', ' ', $withoutMentions);
+        $plainLettersOnly = preg_replace('/[^\p{L}\s]/u', ' ', $withoutUrls);
+        $textLower = mb_strtolower(trim($withoutUrls), 'UTF-8');
+
+        $words = preg_split('/\s+/u', mb_strtolower(trim($plainLettersOnly), 'UTF-8'), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $wordCount = count($words);
+
+        // Pure emojis, symbols or less than 3 letters
+        $letterCount = mb_strlen(preg_replace('/\s+/u', '', $plainLettersOnly), 'UTF-8');
+        if ($letterCount < 3 || $wordCount === 0) {
+            return [
+                'language' => 'und',
+                'confidence' => 0.0,
+                'source' => 'local_detector',
+                'is_supported' => false,
+                'is_ambiguous' => true
+            ];
+        }
+
+        $scoreEs = 0.0;
+        $scorePt = 0.0;
+        $scoreEn = 0.0;
+
+        // ══════════════════════════════════════════════════════════════════
+        // 1. Distinctive Spanish Signals
+        // ══════════════════════════════════════════════════════════════════
+        if (str_contains($clean, '¿') || str_contains($clean, '¡') || str_contains($textLower, 'ñ')) {
+            $scoreEs += 3.5;
+        }
+
+        $esDistinctive = [
+            'qué', 'cómo', 'cuándo', 'dónde', 'por qué', 'también', 'además', 'gracias', 'muchas gracias',
+            'bueno', 'buenos', 'buenas', 'vida', 'hacer', 'tenemos', 'nosotros', 'ustedes', 'firmeza',
+            'camino', 'hermano', 'hermana', 'guerrero', 'disciplina', 'estoico', 'estoicismo', 'pensar',
+            'está', 'están', 'estoy', 'tiempo', 'siempre', 'nuestro', 'nuestra', 'nuestros', 'nuestras',
+            'verdad', 'momento', 'hoy', 'mañana', 'ayer', 'buen día', 'saludos', 'abrazo', 'foco', 'totalmente',
+            'acuerdo', 'increíble', 'maravilloso', 'fuerza', 'adelante', 'éxito', 'mente', 'consejo', 'pregunta'
+        ];
+        foreach ($esDistinctive as $token) {
+            if (preg_match('/(?:\b|^)' . preg_quote($token, '/') . '(?:\b|$)/iu', $textLower)) {
+                $scoreEs += 2.2;
+            }
+        }
+
+        $esCommon = ['el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas', 'de', 'en', 'por', 'con', 'sin', 'pero', 'muy', 'más', 'este', 'esta', 'esto', 'estos', 'estas', 'es', 'al', 'del', 'su', 'sus'];
+        foreach ($esCommon as $token) {
+            if (preg_match('/(?:\b|^)' . preg_quote($token, '/') . '(?:\b|$)/iu', $textLower)) {
+                $scoreEs += 1.0;
+            }
+        }
+
+        // ══════════════════════════════════════════════════════════════════
+        // 2. Distinctive Portuguese Signals
+        // ══════════════════════════════════════════════════════════════════
+        if (preg_match('/[ãõ]/u', $textLower) || preg_match('/(?:ção|ções|ência|ência)\b/iu', $textLower)) {
+            $scorePt += 3.2;
+        }
+
+        $ptDistinctive = [
+            'não', 'você', 'vocês', 'vitória', 'vitorias', 'derrota', 'derrotas', 'obrigado', 'obrigada',
+            'muito obrigado', 'muito obrigada', 'também', 'então', 'nosso', 'nossa', 'nossos', 'nossas',
+            'segundo', 'comentário', 'atenção', 'coração', 'ação', 'ações', 'isso', 'isto', 'aquilo',
+            'atual', 'atuais', 'fazer', 'está', 'estão', 'estou', 'bom dia', 'boa tarde', 'boa noite',
+            'abraço', 'força', 'caminho', 'guerreiro', 'tudo', 'hoje',
+            'amanhã', 'ontem', 'verdade', 'irmão', 'irmã', 'foco', 'com certeza', 'valeu',
+            'parabéns', 'perfeito', 'incrível', 'sucesso', 'pergunta', 'conselho', 'postagem'
+        ];
+        foreach ($ptDistinctive as $token) {
+            if (preg_match('/(?:\b|^)' . preg_quote($token, '/') . '(?:\b|$)/iu', $textLower)) {
+                $scorePt += 2.2;
+            }
+        }
+
+        $ptCommon = ['o', 'a', 'os', 'as', 'do', 'da', 'dos', 'das', 'no', 'na', 'nos', 'nas', 'pelo', 'pela', 'pelos', 'pelas', 'com', 'sem', 'mas', 'muito', 'mais', 'é', 'um', 'uma', 'uns', 'umas', 'seu', 'sua', 'seus', 'suas'];
+        foreach ($ptCommon as $token) {
+            if (preg_match('/(?:\b|^)' . preg_quote($token, '/') . '(?:\b|$)/iu', $textLower)) {
+                $scorePt += 1.2;
+            }
+        }
+
+        // ══════════════════════════════════════════════════════════════════
+        // 3. Distinctive English Signals
+        // ══════════════════════════════════════════════════════════════════
+        $enDistinctive = [
+            'what', 'where', 'when', 'which', 'who', 'why', 'how', 'thank you', 'thanks', 'because',
+            'your', 'yours', 'with', 'without', 'please', 'awesome', 'great', 'about', 'would', 'could',
+            'should', 'there', 'their', 'they', 'people', 'really', 'today', 'looking', 'always', 'good',
+            'nice', 'love', 'post', 'view', 'picture', 'beautiful', 'brother', 'strength', 'discipline',
+            'journey', 'path', 'focus', 'morning', 'afternoon', 'night', 'mindset', 'stoic', 'stoicism',
+            'mind', 'life', 'work', 'well said', 'keep it up', 'proud', 'amazing', 'question', 'advice',
+            'success', 'victory', 'defeat', 'system', 'current'
+        ];
+        foreach ($enDistinctive as $token) {
+            if (preg_match('/(?:\b|^)' . preg_quote($token, '/') . '(?:\b|$)/iu', $textLower)) {
+                $scoreEn += 2.2;
+            }
+        }
+
+        $enCommon = ['the', 'and', 'is', 'are', 'was', 'were', 'have', 'has', 'had', 'this', 'that', 'these', 'those', 'from', 'to', 'for', 'in', 'on', 'at', 'by', 'it', 'its', 'you', 'we', 'they', 'i', 'my', 'me', 'of', 'so', 'but', 'can', 'will', 'do', 'did', 'be', 'been'];
+        foreach ($enCommon as $token) {
+            if (preg_match('/(?:\b|^)' . preg_quote($token, '/') . '(?:\b|$)/iu', $textLower)) {
+                $scoreEn += 1.2;
+            }
+        }
+
+        // Shared words between Spanish and Portuguese (distributed neutrally)
+        $sharedEsPt = ['que', 'para', 'como', 'por', 'de', 'vida', 'disciplina', 'mente', 'tempo', 'sempre', 'sistema'];
+        foreach ($sharedEsPt as $token) {
+            if (preg_match('/(?:\b|^)' . preg_quote($token, '/') . '(?:\b|$)/iu', $textLower)) {
+                $scoreEs += 0.5;
+                $scorePt += 0.5;
+            }
+        }
+
+        $scores = ['es' => $scoreEs, 'pt' => $scorePt, 'en' => $scoreEn];
+        arsort($scores);
+        $topLang = array_key_first($scores);
+        $topScore = $scores[$topLang];
+        $secondLang = array_keys($scores)[1];
+        $secondScore = $scores[$secondLang];
+        $totalScore = array_sum($scores);
+
+        if ($totalScore <= 0.8 || $topScore < 1.4) {
+            return [
+                'language' => 'und',
+                'confidence' => 0.35,
+                'source' => 'local_detector',
+                'is_supported' => false,
+                'is_ambiguous' => true,
+                'scores' => $scores
+            ];
+        }
+
+        // Mixed Language Check: if second language is strong and represents >= 30% of total score
+        if ($secondScore >= 1.8 && ($secondScore / $totalScore) >= 0.30) {
+            return [
+                'language' => 'mixed',
+                'confidence' => 0.50,
+                'source' => 'local_detector',
+                'is_supported' => false,
+                'is_ambiguous' => true,
+                'details' => ['primary' => $topLang, 'secondary' => $secondLang],
+                'scores' => $scores
+            ];
+        }
+
+        // Confidence calculation based on dominance margin and evidence strength
+        $margin = ($topScore - $secondScore) / max(1.0, $totalScore);
+        $evidenceFactor = min(1.0, $topScore / 6.0);
+        $confidence = round(min(0.98, max(0.50, 0.55 + ($margin * 0.30) + ($evidenceFactor * 0.15))), 2);
+
+        $isAmbiguous = ($confidence < 0.65 || $wordCount <= 3);
+
+        return [
+            'language' => $topLang,
+            'confidence' => $confidence,
+            'source' => 'local_detector',
+            'is_supported' => in_array($topLang, ['es', 'pt', 'en'], true),
+            'is_ambiguous' => $isAmbiguous,
+            'scores' => $scores
+        ];
+    }
+
+    /**
+     * Post-Generation Language Validator
+     * Strictly differentiates strong contradictions vs brief/ambiguous replies
+     *
+     * @param string $reply
+     * @param string $expectedLanguage ('es'|'pt'|'en')
+     * @param string $commentText
+     * @return array
+     */
+    public static function validateReplyLanguage(string $reply, string $expectedLanguage, string $commentText = ''): array {
+        $clean = trim($reply);
+        if (empty($clean)) {
+            return [
+                'valid' => false,
+                'reason' => 'EMPTY_RESPONSE',
+                'action' => 'NO_REPLY',
+                'reply' => ''
+            ];
+        }
+
+        $expected = in_array(strtolower($expectedLanguage), ['es', 'pt', 'en'], true) ? strtolower($expectedLanguage) : 'es';
+        $words = preg_split('/\s+/u', $clean, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $wordCount = count($words);
+
+        // Check for pure emojis or very short replies (e.g. "É isso. 👏", "Well said.", "Totalmente.")
+        if ($wordCount <= 3) {
+            return [
+                'valid' => true,
+                'is_ambiguous' => true,
+                'detected_language' => $expected,
+                'confidence' => 0.70,
+                'reason' => 'SHORT_REPLY_ACCEPTED',
+                'action' => 'REPLY',
+                'reply' => $clean
+            ];
+        }
+
+        $detected = self::detectSupportedLanguage($clean);
+
+        // 1. Strong Contradiction Check: If detected language is confirmed in another supported language
+        // with high confidence (>= 0.75) and clearly different from expected
+        if ($detected['is_supported'] && !$detected['is_ambiguous'] && $detected['language'] !== $expected && $detected['confidence'] >= 0.75) {
+            return [
+                'valid' => false,
+                'is_ambiguous' => false,
+                'is_contradiction' => true,
+                'detected_language' => $detected['language'],
+                'expected_language' => $expected,
+                'confidence' => $detected['confidence'],
+                'reason' => 'CONTRADICTORY_LANGUAGE',
+                'action' => 'NO_REPLY',
+                'reply' => ''
+            ];
+        }
+
+        // 2. Ambiguous or inconclusive detection: keep reply for human review, do not mark as corrupt/invalid
+        if ($detected['is_ambiguous'] || $detected['confidence'] < 0.65) {
+            return [
+                'valid' => true,
+                'is_ambiguous' => true,
+                'detected_language' => $detected['language'],
+                'expected_language' => $expected,
+                'confidence' => $detected['confidence'],
+                'reason' => 'AMBIGUOUS_LANGUAGE_REVIEW_NEEDED',
+                'action' => 'REPLY',
+                'requires_human_review' => true,
+                'reply' => $clean
+            ];
+        }
+
+        // 3. Language matches expected
+        return [
+            'valid' => true,
+            'is_ambiguous' => false,
+            'detected_language' => $detected['language'],
+            'expected_language' => $expected,
+            'confidence' => $detected['confidence'],
+            'reason' => 'LANGUAGE_MATCHED',
+            'action' => 'REPLY',
+            'reply' => $clean
+        ];
+    }
+
+    /**
+     * Evaluate if a comment is suitable for Auto-Responder or if it should be marked as SPAM / TOXIC / STICKER
+     */
+    public static function evaluateCommentSuitability(string $commentText, string $allowedLang = 'any', ?array $attachment = null): array {
         $text = trim($commentText);
         $textLower = mb_strtolower($text, 'UTF-8');
 
-        // 1. Check for Link Spam / Crypto / Bot Promotion
+        // 1. Check for Link Spam / Crypto / Bot Promotion / Unsolicited Commercial CTA
         $spamPatterns = [
             'http://', 'https://', 'www.', '.com', '.io', '.xyz', '.net', '.org', 't.me/', 'wa.me/',
             'telegram', 'whatsapp', 'send pic on', 'promote on', 'promote it on', 'dm me on', 'inbox me on',
             'check my bio', 'clic en mi bio', 'ganar dinero', 'inversion segura', 'inversión segura',
             'trabajo desde casa', 'crypto', 'bitcoin', 'binance', 'forex', 'trading bot', 'free followers',
             'ganar seguidores', 'hacks', 'recupero cuentas', 'recuperar cuenta', 'dm us on', 'send dm to',
-            'follow us on', 'check out our', 'hire me', 'investment platform', 'tinder', 'onlyfans'
+            'follow us on', 'check out our', 'hire me', 'investment platform', 'tinder', 'onlyfans',
+            'compra aquí', 'compra aqui', 'comprar aquí', 'comprar aqui', 'vendo', 'descuento especial',
+            'oferta por tiempo limitado', 'sígueme en mi página', 'sigueme en mi pagina', 'sígueme en mi canal',
+            'sigueme en mi canal', 'entra a mi canal', 'unete a mi canal', 'únete a mi canal', 'suscríbete a mi canal',
+            'subscribete', 'precios por dm', 'informes por dm', 'escríbeme al privado', 'escribeme al privado',
+            'gana dinero facil', 'gana dinero fácil', 'trabaja conmigo',
+            'ganhe dinheiro facil', 'ganhe dinheiro fácil', 'renda extra', 'trabalhe em casa'
         ];
 
         foreach ($spamPatterns as $sp) {
@@ -45,7 +317,8 @@ class AiAgentService {
                     'status' => 'spam',
                     'should_reply' => false,
                     'reason' => '🚫 Marcado como Spam / Bot promocional o enlace externo para revisión',
-                    'category' => 'spam'
+                    'category' => 'spam',
+                    'action' => 'NO_REPLY'
                 ];
             }
         }
@@ -78,17 +351,24 @@ class AiAgentService {
             'mierda', 'puta', 'putas', 'puto', 'putos', 'hdp', 'hijo de puta', 'hija de puta', 'malparido',
             'malparidos', 'sinvergüenza', 'sinverguenza', 'sinvergüenzas', 'asqueroso', 'asquerosa',
             'muérete', 'muerete', 'inútil', 'inutil', 'inútiles', 'payaso', 'payasos', 'asco de cuenta',
-            'csm', 'csmr', 'ctm', 'ctmr', 'alv', 'chupala', 'pendejo', 'pendejos', 'pendeja', 'pendejas', 'pendejada'
+            'csm', 'csmr', 'ctm', 'ctmr', 'alv', 'chupala', 'pendejo', 'pendejos', 'pendeja', 'pendejas', 'pendejada',
+            // Portuguese toxic & insult terms
+            'lixo', 'babaca', 'arrombado', 'otario', 'otário', 'canalha', 'desgraçado', 'desgracado', 'safado',
+            'golpista', 'filho da puta', 'vai se foder', 'merda de conta',
+            // English toxic & insult terms
+            'garbage', 'trash', 'idiot', 'idiots', 'stupid', 'scammer', 'scammers', 'scam', 'asshole',
+            'bullshit', 'loser', 'piece of shit', 'fuck off', 'moron'
         ];
 
-        // 1.55 Check for Hostile Bot-Shaming or AI Mockery Attack (Silencio Operativo Inmediato)
+        // 1.55 Check for Hostile Bot-Shaming or AI Mockery Attack (Silencio Operativo Inmediato - HARASSMENT)
         $isBotAttack = (bool)preg_match('/\b(esa ia|es una ia|pinche bot|bot mediocre|ni escribir sabe|ia de mierda|ia csmr?|maldita ia|eres un bot|eres una ia)\b/iu', $textLower);
         if ($isBotAttack) {
             return [
                 'status' => 'toxic',
                 'should_reply' => false,
                 'reason' => '🛡️ Silencio Operativo: Ataque o burla hostil hacia el sistema/IA. Bloqueado en Autopilot para no entrar en polémicas ni validar al troll.',
-                'category' => 'toxic_hostile'
+                'category' => 'HARASSMENT',
+                'action' => 'NO_REPLY'
             ];
         }
 
@@ -99,70 +379,82 @@ class AiAgentService {
                         'status' => 'toxic',
                         'should_reply' => false,
                         'reason' => '🛡️ Silencio Operativo: Comentario con insultos directos o toxicidad severa detectada. Bloqueado en Autopilot para no alimentar al hater ni darle visibilidad algorítmica.',
-                        'category' => 'toxic_hostile'
+                        'category' => 'HARASSMENT',
+                        'action' => 'NO_REPLY'
                     ];
                 }
             }
         }
 
-        // 2. Check for Foreign Language if language is strictly Spanish
-        if ($allowedLang === 'es') {
-            $englishPhrases = [
-                'check dm', 'nice post', 'follow me', 'follow back', 'love this', 'amazing post',
-                'great shot', 'check out', 'hit me up', 'reach out', 'send dm', 'let me know',
-                'thank you so much', 'good morning', 'nice one', 'so inspiring',
-                'proud of you', 'keep it up', 'well said', 'what a view', 'awesome capture',
-                'great content', 'dm to get', 'link in bio', 'great post', 'beautiful picture'
-            ];
-
-            foreach ($englishPhrases as $ep) {
-                if (str_contains($textLower, $ep)) {
-                    return [
-                        'status' => 'spam',
-                        'should_reply' => false,
-                        'reason' => '🌐 Marcado para revisión: Comentario en idioma extranjero (Inglés detectado)',
-                        'category' => 'foreign_language'
-                    ];
-                }
-            }
-
-            $englishWords = ['\bthe\b', '\band\b', '\bwith\b', '\bfrom\b', '\bhave\b', '\bthis\b', '\bthat\b', '\bwhat\b', '\byour\b', '\babout\b', '\bwould\b', '\bthere\b', '\btheir\b', '\bwill\b', '\bwhich\b', '\bvery\b', '\bbecause\b', '\bwhere\b', '\bpeople\b', '\breally\b', '\bcould\b', '\bshould\b', '\bplease\b', '\btoday\b', '\blooking\b', '\balways\b', '\bawesome\b', '\bgreat\b', '\bnice\b', '\bpost\b', '\bpicture\b'];
-            $spanishWords = ['\bel\b', '\bla\b', '\blos\b', '\blas\b', '\bun\b', '\buna\b', '\bde\b', '\ben\b', '\bque\b', '\bqué\b', '\bpor\b', '\bpara\b', '\bcon\b', '\bsin\b', '\bsobre\b', '\beste\b', '\besta\b', '\besto\b', '\bcomo\b', '\bcómo\b', '\bpero\b', '\bgracias\b', '\bbuen\b', '\bbuena\b', '\bvida\b', '\btodo\b', '\btoda\b', '\bmuy\b', '\bmas\b', '\bmás\b', '\bmensaje\b', '\bprecio\b', '\binfo\b'];
-
-            $engCount = 0;
-            foreach ($englishWords as $ew) {
-                if (preg_match('/' . $ew . '/iu', $textLower)) {
-                    $engCount++;
-                }
-            }
-
-            $spaCount = 0;
-            foreach ($spanishWords as $sw) {
-                if (preg_match('/' . $sw . '/iu', $textLower)) {
-                    $spaCount++;
-                }
-            }
-
-            if ($engCount >= 2 && $spaCount === 0) {
+        // 2. Multilingual Bot Spam & Malicious Solicitations (ES, PT, EN)
+        // Detects actual automated spam/solicitation regardless of language, NEVER penalizing legitimate conversational comments
+        $botSpamPatterns = [
+            '/\b(?:dm me to (?:invest|earn|get)|send dm to @|check out @|contact @[a-z0-9_]+ on telegram)\b/iu',
+            '/\b(?:whatsapp\s*(?:me|us|directly)?\s*[:\+]?\s*\d{7,}|chama no whats|fala no whatsapp)\b/iu',
+            '/\b(?:ganhe dinheiro rapido|renda extra com|investimento seguro com|lucro garantido)\b/iu',
+            '/\b(?:binary options|forex trading expert|crypto mining|bitcoin trading|trading bot)\b/iu',
+            '/\b(?:telegram\s*[:@]\s*[a-z0-9_]{4,}|t\.me\/[a-z0-9_]+)\b/iu',
+            '/\b(?:promoted? on @|promote it on @|send pic on @|share on @)\b/iu',
+        ];
+        foreach ($botSpamPatterns as $bsp) {
+            if (preg_match($bsp, $textLower)) {
                 return [
                     'status' => 'spam',
                     'should_reply' => false,
-                    'reason' => '🌐 Marcado para revisión: Comentario en idioma extranjero (Inglés detectado)',
-                    'category' => 'foreign_language'
+                    'reason' => '🚫 Silencio Operativo: Patrón de spam promocional o bot externo detectado (NO_REPLY)',
+                    'category' => 'SPAM_BOT',
+                    'action' => 'NO_REPLY'
                 ];
             }
         }
 
-        // 3. Check for Stickers / Pure Emojis (No text / fewer than 2 letters)
-        $isStickerMarker = str_starts_with($text, '[Sticker') || str_starts_with($text, '[GIF') || !empty($attachment);
-        if ($isStickerMarker) {
-            $stickerEval = self::classifyStickerSentiment($attachment ?? [], $commentText);
+        // 3. Check for Visual Attachments (Stickers, GIFs, Photos, Flyers)
+        if (!empty($attachment)) {
+            $attachType = strtolower($attachment['type'] ?? '');
+            $isPhotoOrImage = in_array($attachType, ['photo', 'image', 'share', 'album']) || !empty($attachment['media']['image']);
+
+            if ($isPhotoOrImage && $attachType !== 'sticker' && $attachType !== 'animated_image_share') {
+                // Check if the image attachment has commercial / promotional signals (Flyer, QR, Ad)
+                $imgEval = self::classifyImageAttachment($attachment, $commentText);
+                if ($imgEval['is_promotional']) {
+                    return [
+                        'status' => 'spam',
+                        'should_reply' => false,
+                        'reason' => '🚫 Silencio Operativo: Imagen clasificada como flyer/afiche promocional o publicidad (NO_REPLY)',
+                        'category' => 'PROMOTIONAL_IMAGE',
+                        'action' => 'NO_REPLY'
+                    ];
+                }
+                // Legitimate photo/quote image -> allow normal flow
+            } else {
+                // Regular Sticker / GIF from platform catalogue
+                $stickerEval = self::classifyStickerSentiment($attachment, $commentText);
+                if ($stickerEval['sentiment'] === 'mocking') {
+                    return [
+                        'status' => 'ignored',
+                        'should_reply' => false,
+                        'reason' => '🛡️ Silencio Operativo: Sticker de burla o doble sentido negativo ignorado en Autopilot',
+                        'category' => 'mocking_sticker',
+                        'action' => 'NO_REPLY'
+                    ];
+                }
+                return [
+                    'status' => 'valid',
+                    'should_reply' => true,
+                    'reason' => '🎨 Sticker amigable de la comunidad (apto para respuesta ágil)',
+                    'category' => 'friendly_sticker',
+                    'description' => $stickerEval['description'] ?? 'Sticker amigable'
+                ];
+            }
+        } elseif (str_starts_with($text, '[Sticker') || str_starts_with($text, '[GIF')) {
+            $stickerEval = self::classifyStickerSentiment([], $commentText);
             if ($stickerEval['sentiment'] === 'mocking') {
                 return [
                     'status' => 'ignored',
                     'should_reply' => false,
-                    'reason' => '🛡️ Silencio Operativo: Sticker de burla o doble sentido negativo ignorado en Autopilot',
-                    'category' => 'mocking_sticker'
+                    'reason' => '🛡️ Silencio Operativo: Sticker de burla ignorado en Autopilot',
+                    'category' => 'mocking_sticker',
+                    'action' => 'NO_REPLY'
                 ];
             }
             return [
@@ -196,12 +488,31 @@ class AiAgentService {
             ];
         }
 
-        // 4. Valid comment
+        // 4. Language suitability check
+        $detLang = self::detectSupportedLanguage($text);
+        if ($allowedLang !== 'any') {
+            if ($detLang['is_supported'] && $detLang['language'] !== $allowedLang && $detLang['confidence'] >= 0.70) {
+                return [
+                    'status' => 'blocked_unsupported_language',
+                    'should_reply' => false,
+                    'reason' => "🛡️ Silencio Operativo: Idioma '{$detLang['language']}' no admitido por la voz de marca (configurada en '{$allowedLang}').",
+                    'category' => 'UNSUPPORTED_LANGUAGE',
+                    'action' => 'NO_REPLY',
+                    'detected_language' => $detLang['language'],
+                    'language_confidence' => $detLang['confidence']
+                ];
+            }
+        }
+
+        // 5. Valid comment
         return [
             'status' => 'valid',
             'should_reply' => true,
             'reason' => '✅ Comentario legítimo apto para responder',
-            'category' => 'valid'
+            'category' => 'valid',
+            'detected_language' => $detLang['language'],
+            'language_confidence' => $detLang['confidence'],
+            'is_language_ambiguous' => $detLang['is_ambiguous']
         ];
     }
 
@@ -251,110 +562,143 @@ class AiAgentService {
     }
 
     /**
-     * Detect follower gender context (female, male, neutral) from author name and comment text
+     * Detect follower gender context (female, male, neutral) strictly from comment text.
+     * HERMES v2.1: NEVER assume gender or name from author profile, handle or Meta profile.
+     * If the comment text does not explicitly declare gender, status is strictly 'neutral'.
      * Returns: ['gender' => 'female'|'male'|'neutral', 'first_name' => string, 'confidence' => float, 'reason' => string]
      */
     public static function detectGenderContext(?string $authorName, string $commentText = ''): array {
-        $cleanFirstName = self::extractCleanFirstName($authorName);
-        $nameLower = mb_strtolower($cleanFirstName, 'UTF-8');
         $commentLower = mb_strtolower($commentText, 'UTF-8');
 
-        // Text explicit markers take absolute priority
+        // Extract name ONLY if explicitly written by user in the comment text
+        $explicitFirstName = '';
+        if (preg_match('/\b(me llamo|mi nombre es|soy)\s+([a-záéíóúñ]+)\b/iu', $commentText, $mName)) {
+            $explicitFirstName = mb_convert_case($mName[2], MB_CASE_TITLE, 'UTF-8');
+        }
+
+        // Text explicit markers take absolute priority - ONLY checked in comment text
         if (preg_match('/\b(soy mujer|como mujer|de mujer|siendo mujer|agradecida|cansada|encantada|preparada|dispuesta|sola|tranquila|segura|abrumada|orgullosa|madre|abuela|esposa|chica|niña|mujer)\b/iu', $commentLower)) {
             return [
                 'gender' => 'female',
-                'first_name' => $cleanFirstName,
+                'first_name' => $explicitFirstName,
                 'confidence' => 0.98,
-                'reason' => 'Autoidentificación o concordancia gramatical femenina en el comentario'
+                'reason' => 'Autoidentificación o concordancia gramatical femenina explícita en el comentario'
             ];
         }
 
         if (preg_match('/\b(soy hombre|como hombre|de hombre|siendo hombre|agradecido|cansado|encantado|preparado|dispuesto|solo|tranquilo|seguro|abrumado|orgulloso|padre|abuelo|esposo|chico|niño|hombre)\b/iu', $commentLower)) {
             return [
                 'gender' => 'male',
-                'first_name' => $cleanFirstName,
+                'first_name' => $explicitFirstName,
                 'confidence' => 0.95,
-                'reason' => 'Autoidentificación o concordancia gramatical masculina en el comentario'
+                'reason' => 'Autoidentificación o concordancia gramatical masculina explícita en el comentario'
             ];
         }
 
-        // Female names dictionary (Spanish & Latin American popular names)
-        $femaleNames = [
-            'angela', 'angy', 'marisol', 'imma', 'inma', 'helen', 'cristina', 'nuria', 'alma', 'laura',
-            'maria', 'maría', 'carmen', 'ana', 'isabel', 'patricia', 'marta', 'rosa', 'sofia', 'sofía',
-            'andrea', 'veronica', 'verónica', 'lucia', 'lucía', 'elena', 'paula', 'daniela', 'sara', 'claudia',
-            'beatriz', 'natalia', 'lorena', 'monica', 'mónica', 'adriana', 'teresa', 'alicia', 'silvia', 'alejandra',
-            'pilar', 'rocio', 'rocío', 'mercedes', 'irene', 'raquel', 'julia', 'victoria', 'esther', 'eva',
-            'susana', 'gloria', 'vanessa', 'vanesa', 'sandra', 'diana', 'sonia', 'marina', 'noelia', 'miriam',
-            'carla', 'celia', 'nerea', 'blanca', 'tamara', 'lidia', 'begoña', 'yolanda', 'amparo', 'consuelo',
-            'esperanza', 'lourdes', 'montserrat', 'gemma', 'aurora', 'paloma', 'josefina', 'antonia', 'francisca',
-            'dolores', 'manuela', 'concepción', 'encarnación', 'magaly', 'wendy', 'katherine', 'jessica', 'jennifer',
-            'stephany', 'stephanie', 'karina', 'gabriela', 'valeria', 'camila', 'guadalupe', 'juana', 'margarita',
-            'rosario', 'leticia', 'cecilia', 'belen', 'belén', 'jazmin', 'jazmín', 'genesis', 'génesis', 'ximena',
-            'jimena', 'mariana', 'estefania', 'estefanía', 'carolina', 'paola', 'fabiana', 'marcela', 'elvira',
-            'jadau', 'yadira', 'dayana', 'daiana', 'nayeli', 'grecia', 'xochitl', 'citlali', 'yamileth', 'yamilet',
-            'maricarmen', 'mariel', 'mariela', 'danitza', 'denisse', 'denis', 'sarahi', 'sarai', 'karely', 'keyla',
-            'nayla', 'naomi', 'noemi', 'noemí', 'ruth', 'mirtha', 'mirta', 'gladys', 'gladis', 'luz', 'maritza',
-            'janeth', 'yaneth', 'yanet', 'yuri', 'yuridia', 'socorro', 'remedios', 'milagros', 'paz', 'inés', 'ines'
+        // HERMES v2.1 Rule: Never infer gender from authorName or profile handle. Strictly neutral.
+        return [
+            'gender' => 'neutral',
+            'first_name' => $explicitFirstName,
+            'confidence' => 1.0,
+            'reason' => 'Género neutro (no declarado explícitamente en el comentario)'
+        ];
+    }
+
+    /**
+     * Hermes v2: Evaluate Image Attachment for Promotional / Commercial Spam
+     * Differentiates promotional flyers / ads / QR codes from legitimate user photos or stoic quote images.
+     */
+    public static function classifyImageAttachment(array $attachment, string $commentText = '', ?string $apiKey = null): array {
+        $type = strtolower($attachment['type'] ?? '');
+        $title = strtolower($attachment['title'] ?? '');
+        $desc = strtolower($attachment['description'] ?? '');
+        $url = strtolower($attachment['url'] ?? '');
+        $targetUrl = strtolower($attachment['target']['url'] ?? '');
+        $imgSrc = $attachment['media']['image']['src'] ?? '';
+        $textLower = mb_strtolower($commentText, 'UTF-8');
+        $fullMetadata = "$type $title $desc $url $targetUrl $textLower";
+
+        // 1. Metadata & Text Promotional Signals (Flyer, Event, QR, Sales, Nibiru, Conspiracies, Commercial Channels)
+        $promoPatterns = [
+            'flyer', 'cartel', 'promocion', 'promoción', 'descuento', 'precio', 'qr', 'codigo qr', 'código qr',
+            'nibiru', 'planeta x', 'fin se acerca', 'conferencia', 'evento', 'taller', 'curso', 'seminario',
+            'inversión', 'inversion', 'crypto', 'afiche', 'publicidad', 'anuncio', 'canal de telegram',
+            'canal de youtube', 'contactanos', 'contáctanos', 'informes al', 'inbox me', 'send pic',
+            'ciencia del energismo', 'despierta', 'siguenos', 'síguenos'
         ];
 
-        // Male names dictionary
-        $maleNames = [
-            'crisanto', 'carlos', 'mijail', 'ernesto', 'plutarco', 'jorge', 'edgard', 'edgar', 'julian', 'julián',
-            'sergio', 'hernando', 'andres', 'andrés', 'hugo', 'jose', 'josé', 'luis', 'juan', 'pedro',
-            'antonio', 'manuel', 'francisco', 'david', 'javier', 'fernando', 'daniel', 'miguel', 'alejandro', 'pablo',
-            'jesus', 'jesús', 'angel', 'ángel', 'rafael', 'marcos', 'marco', 'mario', 'ruben', 'rubén',
-            'diego', 'adrian', 'adrián', 'alvaro', 'álvaro', 'ivan', 'iván', 'victor', 'víctor', 'cristian',
-            'christian', 'hector', 'héctor', 'raul', 'raúl', 'gabriel', 'oscar', 'óscar', 'gonzalo', 'lucas',
-            'mateo', 'martin', 'martín', 'rodrigo', 'roberto', 'ignacio', 'santiago', 'felipe', 'alfonso', 'ricardo',
-            'joaquin', 'joaquín', 'eduardo', 'celestino', 'garuvita', 'jalad', 'enrique', 'guillermo', 'cesar', 'césar',
-            'gustavo', 'ramon', 'ramón', 'alberto', 'arturo', 'jaime', 'salvador', 'tomas', 'tomás', 'vicente',
-            'emilio', 'julio', 'marcelo', 'german', 'germán', 'federico', 'marian', 'mariano', 'felix', 'félix'
-        ];
-
-        if (!empty($nameLower)) {
-            if (in_array($nameLower, $femaleNames, true)) {
+        foreach ($promoPatterns as $pat) {
+            if (str_contains($fullMetadata, $pat)) {
                 return [
-                    'gender' => 'female',
-                    'first_name' => $cleanFirstName,
-                    'confidence' => 0.95,
-                    'reason' => "Nombre de pila femenino reconocido ('$cleanFirstName')"
-                ];
-            }
-            if (in_array($nameLower, $maleNames, true)) {
-                return [
-                    'gender' => 'male',
-                    'first_name' => $cleanFirstName,
-                    'confidence' => 0.95,
-                    'reason' => "Nombre de pila masculino reconocido ('$cleanFirstName')"
-                ];
-            }
-            // Morphological rule: Spanish first names ending in 'a' are overwhelmingly female
-            $maleExceptionsEndingInA = ['borja', 'luca', 'sasha', 'elias', 'josua', 'mustafa'];
-            if (str_ends_with($nameLower, 'a') && !in_array($nameLower, $maleExceptionsEndingInA, true) && mb_strlen($nameLower, 'UTF-8') >= 3) {
-                return [
-                    'gender' => 'female',
-                    'first_name' => $cleanFirstName,
-                    'confidence' => 0.85,
-                    'reason' => "Terminación morfológica femenina en español ('-a')"
-                ];
-            }
-            // Morphological rule: Spanish first names ending in 'o' are overwhelmingly male
-            if (str_ends_with($nameLower, 'o') && $nameLower !== 'amparo' && $nameLower !== 'consuelo' && $nameLower !== 'rosario' && mb_strlen($nameLower, 'UTF-8') >= 3) {
-                return [
-                    'gender' => 'male',
-                    'first_name' => $cleanFirstName,
-                    'confidence' => 0.85,
-                    'reason' => "Terminación morfológica masculina en español ('-o')"
+                    'is_promotional' => true,
+                    'status' => 'spam',
+                    'reason' => "Metadatos o texto con patrón promocional/publicitario: '$pat'",
+                    'description' => 'Flyer o cartel promocional publicitario'
                 ];
             }
         }
 
+        // 2. Vision Check via OpenRouter if image URL is available and key is configured
+        $resolvedApiKey = !empty($apiKey) ? $apiKey : Settings::get('openrouter_api_key', '');
+        if (!empty($resolvedApiKey) && !empty($imgSrc) && filter_var($imgSrc, FILTER_VALIDATE_URL)) {
+            try {
+                $payload = [
+                    'model' => 'openai/gpt-4o-mini',
+                    'messages' => [
+                        [
+                            'role' => 'user',
+                            'content' => [
+                                [
+                                    'type' => 'text',
+                                    'text' => 'Analiza esta imagen adjunta a un comentario de Facebook/Instagram. ¿Es un FLYER/CARTEL PUBLICITARIO, ANUNCIO COMERCIAL, AFICHE DE EVENTO, CÓDIGO QR O PROPAGANDA COMERCIAL/SPAM ("promotional_ad")? ¿O es una IMAGEN LEGÍTIMA de un seguidor como una frase estoica/reflexión personal, fotografía personal sin venta o meme amigable ("legitimate_content")? Responde en JSON estricto: {"category": "promotional_ad" | "legitimate_content", "description": "breve descripcion"}'
+                                ],
+                                [
+                                    'type' => 'image_url',
+                                    'image_url' => ['url' => $imgSrc]
+                                ]
+                            ]
+                        ]
+                    ],
+                    'response_format' => ['type' => 'json_object']
+                ];
+
+                $ch = curl_init('https://openrouter.ai/api/v1/chat/completions');
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_POST, true);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+                curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                    'Content-Type: application/json',
+                    'Authorization: Bearer ' . $resolvedApiKey
+                ]);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 6);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+                $res = curl_exec($ch);
+                curl_close($ch);
+
+                if ($res) {
+                    $json = json_decode($res, true);
+                    $content = $json['choices'][0]['message']['content'] ?? '';
+                    $parsed = json_decode($content, true);
+                    if (!empty($parsed['category']) && $parsed['category'] === 'promotional_ad') {
+                        return [
+                            'is_promotional' => true,
+                            'status' => 'spam',
+                            'reason' => 'Visión AI detectó flyer o anuncio promocional: ' . ($parsed['description'] ?? ''),
+                            'description' => $parsed['description'] ?? 'Flyer publicitario'
+                        ];
+                    }
+                }
+            } catch (Throwable $e) {
+                error_log("Image Vision Check Error: " . $e->getMessage());
+            }
+        }
+
+        // Default: If no commercial/promotional signals, treat as legitimate user image
         return [
-            'gender' => 'neutral',
-            'first_name' => $cleanFirstName,
-            'confidence' => 0.50,
-            'reason' => 'Género neutro o no determinado con certeza'
+            'is_promotional' => false,
+            'status' => 'valid',
+            'reason' => 'Imagen legítima sin señales de publicidad comercial',
+            'description' => 'Imagen legítima de seguidor'
         ];
     }
 
@@ -479,27 +823,35 @@ class AiAgentService {
     }
 
     /**
-     * Failsafe Post-Processing Guard: Ensure no "hermano" slips through to female or neutral users
+     * Failsafe Post-Processing Guard: Ensure no gender vocatives or assumptions slip through when undeclared.
+     * HERMES v2.1: Prohibits hermano, hermana, amigo, amiga, guerrero, guerrera, campeón, campeona, bienvenido, bienvenida.
      */
     public static function sanitizeGenderVocatives(string $reply, string $gender, string $firstName = ''): string {
         if ($gender === 'female') {
-            // Replace masculine vocatives with female name or "guerrera" / "amiga"
-            $replacement = !empty($firstName) ? $firstName : 'guerrera';
+            $replacement = !empty($firstName) ? $firstName : '';
             $reply = preg_replace('/\bhermano\b/iu', $replacement, $reply);
-            $reply = preg_replace('/\bhermanos\b/iu', 'guerreras', $reply);
-            $reply = preg_replace('/\bamigo\b/iu', !empty($firstName) ? $firstName : 'amiga', $reply);
-            $reply = preg_replace('/\bamigos\b/iu', 'amigas', $reply);
-            $reply = preg_replace('/\bcamarada\b/iu', 'guerrera', $reply);
-            $reply = preg_replace('/\bcamaradas\b/iu', 'guerreras', $reply);
-            $reply = preg_replace('/\bcompa\b/iu', !empty($firstName) ? $firstName : 'guerrera', $reply);
-            $reply = preg_replace('/\bbro\b/iu', !empty($firstName) ? $firstName : 'guerrera', $reply);
-            $reply = preg_replace('/\brey\b/iu', 'reina', $reply);
-        } elseif ($gender === 'neutral') {
-            // Strictly eliminate any assumed gender vocative (amigo/hermano/etc.) to keep the message universal and clean
-            $patternMiddle = '/,?\s*\b(amigo|amiga|amigos|amigas|hermano|hermana|hermanos|hermanas|camarada|camaradas|compa|compas|bro|rey|reina)\b/iu';
-            $patternStart = '/\b(amigo|amiga|amigos|amigas|hermano|hermana|hermanos|hermanas|camarada|camaradas|compa|compas|bro|rey|reina),?\s*/iu';
+            $reply = preg_replace('/\bhermanos\b/iu', '', $reply);
+            $reply = preg_replace('/\bamigo\b/iu', $replacement, $reply);
+            $reply = preg_replace('/\bamigos\b/iu', '', $reply);
+            $reply = preg_replace('/\bcamarada\b/iu', $replacement, $reply);
+            $reply = preg_replace('/\bcamaradas\b/iu', '', $reply);
+            $reply = preg_replace('/\bcompa\b/iu', $replacement, $reply);
+            $reply = preg_replace('/\bbro\b/iu', $replacement, $reply);
+            $reply = preg_replace('/\brey\b/iu', '', $reply);
+            $reply = preg_replace('/\bguerrero\b/iu', '', $reply);
+            $reply = preg_replace('/\bcampe[oó]n\b/iu', '', $reply);
+            $reply = preg_replace('/\bbienvenido\b/iu', 'gracias por sumarte', $reply);
+        } elseif ($gender === 'male') {
+            $replacement = !empty($firstName) ? $firstName : '';
+            // Hermes v2.1: Keep tone sober and avoid hype vocatives even for men
+            $reply = preg_replace('/\b(rey|campe[oó]n|guerrero|bro|compa)\b/iu', $replacement, $reply);
+        } else {
+            // Strictly eliminate any assumed gender vocative to keep the message universal and clean
+            $patternStart = '/(^|[.!?]\s*)\b(amigo|amiga|amigos|amigas|hermano|hermana|hermanos|hermanas|guerrero|guerrera|guerreros|guerreras|campe[oó]n|campeona|campeones|campeonas|bienvenido|bienvenida|bienvenidos|bienvenidas|nuevo guerrero|nueva guerrera|camarada|camaradas|compa|compas|bro|rey|reina)\b\s*,?\s*/iu';
+            $patternMiddle = '/,?\s*\b(amigo|amiga|amigos|amigas|hermano|hermana|hermanos|hermanas|guerrero|guerrera|guerreros|guerreras|campe[oó]n|campeona|campeones|campeonas|bienvenido|bienvenida|bienvenidos|bienvenidas|nuevo guerrero|nueva guerrera|camarada|camaradas|compa|compas|bro|rey|reina)\b\s*,?/iu';
+            $reply = preg_replace($patternStart, '$1', $reply);
             $reply = preg_replace($patternMiddle, '', $reply);
-            $reply = preg_replace($patternStart, '', $reply);
+            $reply = preg_replace('/^\s*,\s*/u', '', $reply);
             // Capitalize sentence beginnings if a leading vocative was stripped
             $reply = preg_replace_callback('/(^|[.!?]\s+)([a-záéíóúñ])/u', function($m) {
                 return $m[1] . mb_strtoupper($m[2], 'UTF-8');
@@ -513,11 +865,13 @@ class AiAgentService {
     /**
      * Universal Intent & Sentiment Commercial Classifier
      */
-    public static function analyzeComment(string $commentText, string $postCaption = '', int $likesCount = 0, string $authorName = '', ?array $attachment = null): array {
-        $suitability = self::evaluateCommentSuitability($commentText, 'es', $attachment);
+    public static function analyzeComment(string $commentText, string $postCaption = '', int $likesCount = 0, string $authorName = '', ?array $attachment = null, string $allowedLang = 'any'): array {
+        $suitability = self::evaluateCommentSuitability($commentText, $allowedLang, $attachment);
+        $langDetection = self::detectSupportedLanguage($commentText);
         if (!$suitability['should_reply']) {
-            $isToxic = ($suitability['status'] === 'toxic' || $suitability['category'] === 'toxic_hostile');
+            $isToxic = ($suitability['status'] === 'toxic' || $suitability['category'] === 'toxic_hostile' || $suitability['category'] === 'HARASSMENT');
             return [
+                'action' => 'NO_REPLY',
                 'sentiment' => $isToxic ? 'toxic' : ($suitability['status'] === 'spam' ? 'spam' : 'neutral'),
                 'intent' => $suitability['category'],
                 'highlight_score' => $isToxic ? 15 : ($suitability['status'] === 'spam' ? 10 : 25),
@@ -527,13 +881,19 @@ class AiAgentService {
                 'autopilot_ready' => false,
                 'autopilot_status' => 'ignored',
                 'autopilot_reason' => $suitability['reason'],
-                'detected_keywords' => $isToxic ? ['toxic_severe'] : []
+                'detected_keywords' => $isToxic ? ['toxic_severe'] : [],
+                'detected_language' => $langDetection['language'],
+                'language_confidence' => $langDetection['confidence'],
+                'language_source' => $langDetection['source'],
+                'is_language_supported' => $langDetection['is_supported'],
+                'is_language_ambiguous' => $langDetection['is_ambiguous']
             ];
         }
 
         // Special handling for friendly sticker reactions
         if ($suitability['category'] === 'friendly_sticker') {
             return [
+                'action' => 'REPLY',
                 'sentiment' => 'positive',
                 'intent' => 'friendly_sticker_reaction',
                 'highlight_score' => 80,
@@ -547,34 +907,20 @@ class AiAgentService {
             ];
         }
 
-        // Special handling for visual / sticker / emoji reactions (e.g. 🦚, 🦁, 👏👏, 🔥, ❤️, 💪, 🙌)
+        // Special handling for pure emoji reactions (HERMES v2: EMOJI_ONLY intent)
         if ($suitability['category'] === 'emoji_reaction') {
-            if (str_contains($commentText, '🦚') || str_contains($commentText, '🦁')) {
-                return [
-                    'sentiment' => 'positive',
-                    'intent' => 'visual_sticker_reaction',
-                    'highlight_score' => 85,
-                    'commercial_priority' => 80,
-                    'is_highlighted' => 0,
-                    'highlight_reason' => '🎨 Reacción visual con sticker o emoji representativo',
-                    'autopilot_ready' => true,
-                    'autopilot_status' => 'ready',
-                    'autopilot_reason' => '✔ Apto para Autopilot (Agradecimiento visual rápido y enérgico)',
-                    'detected_keywords' => ['visual_sticker']
-                ];
-            }
-
             return [
+                'action' => 'REPLY',
                 'sentiment' => 'positive',
-                'intent' => 'emoji_reaction',
+                'intent' => 'EMOJI_ONLY',
                 'highlight_score' => 75,
                 'commercial_priority' => 70,
                 'is_highlighted' => 0,
-                'highlight_reason' => 'Reacción de apoyo y entusiasmo con emojis',
+                'highlight_reason' => 'Reacción de solo emojis de la comunidad (política minimalista 1-2 emojis o máx 3 palabras)',
                 'autopilot_ready' => true,
                 'autopilot_status' => 'ready',
                 'autopilot_reason' => 'Reacción positiva con emojis lista para auto-responder',
-                'detected_keywords' => ['emoji_reaction']
+                'detected_keywords' => ['emoji_only']
             ];
         }
 
@@ -920,8 +1266,120 @@ class AiAgentService {
                            ($hasQuestionMark || $hasBuyingTerm || str_starts_with($textLower, 'cómo ') || str_starts_with($textLower, 'como ') || str_starts_with($textLower, 'donde ') || str_starts_with($textLower, 'dónde '));
         $hasQuestion     = $hasQuestionMark || $hasBuyingTerm || $hasQuestionWord;
 
+        // ══════════════════════════════════════════════════════════════════════
+        // HERMES v2 Pattern Detectors (Explicit Taxonomy Calibration)
+        // ══════════════════════════════════════════════════════════════════════
+
+        // 1. Troll Provocation (Mocking without constructive argument -> NO_REPLY)
+        $isTrollProvocation = (bool)preg_match('/\b(otra cuenta de frases|frases motivacionales vac[ií]as|frases vac[ií]as|puro humo|vendehumos|vende humo|pura payasada|filosof[ií]a barata|payasos|payaso|charlatanes|charlat[aá]n)\b/iu', $textLower)
+            || (preg_match('/[😂🤣😹]/u', $commentText) && preg_match('/\b(cuenta|frases|humo|payaso|chiste|tonter[ií]a)\b/iu', $textLower));
+
+        // 2. Explicit New Follower (Requires explicit statement, never assume on brief words)
+        $newFollowerPatterns = [
+            'te sigo', 'los sigo', 'nueva por aquí', 'nueva por aqui', 'nuevo por aquí', 'nuevo por aqui',
+            'acabo de seguirte', 'acabo de seguir la página', 'acabo de seguir la pagina',
+            'soy nueva seguidora', 'soy nuevo seguidor', 'nueva seguidora', 'nuevo seguidor',
+            'empecé a seguirte', 'empece a seguirte', 'primera vez que veo tu página',
+            'primera vez que veo tu pagina', 'me uno a la página', 'me uno a la pagina', 'me acabo de unir'
+        ];
+        $isExplicitNewFollower = false;
+        foreach ($newFollowerPatterns as $nfp) {
+            if (str_contains($textLower, $nfp)) {
+                $isExplicitNewFollower = true;
+                break;
+            }
+        }
+
+        // 3. Greeting Only (Cordial greetings under 5 words)
+        $isGreetingOnly = (bool)preg_match('/^(hola|holas|buenos d[ií]as|buen d[ií]a|buenas tardes|buenas noches|saludos|un saludo|bendiciones|muchas bendiciones)[!.\s\p{P}]*$/iu', trim($commentText));
+
+        // 4. Disagreement (Reasoned disagreement with post thesis -> CAN REPLY with stoic distinction)
+        $isDisagreement = (bool)preg_match('/\b(no estoy de acuerdo|no comparto|discrepo|eso no es as[ií]|no es as[ií]|no creo que sea|aguantarlo todo no|no significa aguantar|no todo se aguanta|no se trata de aguantar)\b/iu', $textLower);
+
+        // 5. Criticism (Critique of depth, phrasing or oversimplification -> CAN REPLY with sobriety)
+        $isCriticism = (bool)preg_match('/\b(demasiado simplista|simplista|fuera de contexto|no creo que funcione as[ií]|muy superficial|falta profundizar|no funciona as[ií]|mal interpretado|interpretaci[oó]n err[oó]nea|demasiado b[aá]sico|frase incompleta)\b/iu', $textLower);
+
+        // 6. Brief Agreement (Validation of truth, 1 to 5 words, e.g. "Importante", "Clave", "Exacto")
+        $briefAgreementPatterns = [
+            'importante', 'clave', 'fundamental', 'necesario', 'exacto', 'exactamente',
+            'así es', 'asi es', 'totalmente', 'tal cual', 'muy cierto', 'cierto', 'sierto',
+            'de acuerdo', 'sin duda', 'correcto', 'total', 'es verdad', 'gran verdad',
+            'pura verdad', '100%', '100', 'muy real', 'así mismo', 'asi mismo'
+        ];
+        $isBriefAgreement = false;
+        $cleanWords = preg_split('/\s+/u', trim($commentText), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        if (count($cleanWords) <= 5 && !$isDisagreement && !$isCriticism) {
+            foreach ($briefAgreementPatterns as $bap) {
+                if (str_contains($textLower, $bap)) {
+                    $isBriefAgreement = true;
+                    break;
+                }
+            }
+        }
+
+        // 7. Personal Story / Struggle (Anecdote of loss, personal trial, fatigue, job loss)
+        $charCount = mb_strlen(trim($commentText), 'UTF-8');
+        $hasPersonalStory = (bool)preg_match('/\b(cuando perdí|cuando perdi|mi trabajo|mi condición|mi condicion|falta de concentración|falta de concentracion|durante años|durante anos|con el tiempo entendí|con el tiempo entendi|he aprendido|aprendí que|aprendi que|en mi caso|mi experiencia|me costó|me costo|mi vida|mi familia|mi dolor|mi enfermedad|mi situación|mi situacion|estoy pasando por|lo viví|lo vivi|me pasó|me paso)\b/iu', $textLower)
+            || ($charCount > 70 && preg_match('/\b(entendí|entendi|aprendí|aprendi|sentí|senti|descubrí|descubri|pensé|pense|sufrí|sufri|luché|luche)\b/iu', $textLower));
+
         // Priority Classification (Layer 1 & Layer 2)
-        if (!empty($foundVenting)) {
+        if ($isTrollProvocation) {
+            $sentiment = 'negative';
+            $intent = 'TROLL_PROVOCATION';
+            $score = 30;
+            $highlightReason = '🛡️ Silencio Operativo: Provocación troll superficial sin contenido constructivo (NO_REPLY)';
+            $autopilotReady = false;
+            $autopilotStatus = 'ignored';
+            $autopilotReason = 'Silencio operativo: Provocación troll superficial sin contenido constructivo';
+        } elseif ($isExplicitNewFollower) {
+            $sentiment = 'positive';
+            $intent = 'NEW_FOLLOWER';
+            $score = 95;
+            $highlightReason = '🏛️ Nuevo Seguidor Verificado: Señal explícita de seguimiento para bienvenida sobria';
+            $autopilotReady = true;
+            $autopilotStatus = 'ready';
+            $autopilotReason = '✔ Apto para Autopilot (Bienvenida sobria a Fortaleza Imparable)';
+        } elseif ($hasPersonalStory) {
+            $sentiment = 'reflective_pain';
+            $intent = 'PERSONAL_STORY';
+            $score = 98;
+            $highlightReason = '🏛️ Experiencia o Lucha Personal: Anécdota o desahogo profundo que amerita respuesta estoica estructurada';
+            $autopilotReady = true;
+            $autopilotStatus = 'ready';
+            $autopilotReason = '✔ Apto para Autopilot (Reconocimiento + Idea Central + Reflexión Breve)';
+        } elseif ($isDisagreement) {
+            $sentiment = 'neutral';
+            $intent = 'DISAGREEMENT';
+            $score = 85;
+            $highlightReason = '⚖️ Desacuerdo Respetuoso: Cuestionamiento de perspectiva; responder con distinción estoica serena';
+            $autopilotReady = true;
+            $autopilotStatus = 'ready';
+            $autopilotReason = '✔ Apto para Autopilot (Distinción serena sin confrontar ni superioridad)';
+        } elseif ($isCriticism) {
+            $sentiment = 'neutral';
+            $intent = 'CRITICISM';
+            $score = 80;
+            $highlightReason = '🔍 Crítica Constructiva al Contenido: Responder con sobriedad y claridad conceptual';
+            $autopilotReady = true;
+            $autopilotStatus = 'ready';
+            $autopilotReason = '✔ Apto para Autopilot (Respuesta sobria y clara a la crítica)';
+        } elseif ($isGreetingOnly) {
+            $sentiment = 'positive';
+            $intent = 'GREETING';
+            $score = 75;
+            $highlightReason = '👋 Saludo Cordial Breve: Responder con saludo cordial breve de 4 a 8 palabras';
+            $autopilotReady = true;
+            $autopilotStatus = 'ready';
+            $autopilotReason = '✔ Apto para Autopilot (Saludo breve y sobrio)';
+        } elseif ($isBriefAgreement) {
+            $sentiment = 'positive';
+            $intent = 'BRIEF_AGREEMENT';
+            $score = 88;
+            $highlightReason = '🏛️ Acuerdo / Validación Breve: Comentario de 1 palabra o frase corta confirmando el valor del post';
+            $autopilotReady = true;
+            $autopilotStatus = 'ready';
+            $autopilotReason = '✔ Apto para Autopilot (Ratificación estoica concisa de 4 a 8 palabras sin bienvenida)';
+        } elseif (!empty($foundVenting)) {
             $sentiment = 'neutral';
             $intent = 'emotional_venting_resilience';
             $score = 92;
@@ -1096,12 +1554,16 @@ class AiAgentService {
             $autopilotReason = '✔ Apto para Autopilot (Agradecimiento cálido de la comunidad)';
         }
 
-        // Question mark boost
+        // Question mark boost & QUESTION intent
         if (str_contains($commentText, '?') || str_contains($commentText, '¿')) {
-            if ($sentiment === 'neutral') {
+            if ($sentiment === 'neutral' || $intent === 'general' || $intent === 'general_conversation') {
                 $sentiment = 'question';
-                $score = 80;
+                $intent = 'QUESTION';
+                $score = 85;
                 $highlightReason = '❓ Pregunta de la comunidad que espera respuesta';
+                $autopilotReady = true;
+                $autopilotStatus = 'ready';
+                $autopilotReason = '✔ Apto para Autopilot (Respuesta a pregunta conceptual/práctica)';
             }
         }
 
@@ -1122,7 +1584,10 @@ class AiAgentService {
         $score = min(100, max(10, $score));
         $isHighlighted = ($score >= 80) ? 1 : 0;
 
+        $action = ($intent === 'TROLL_PROVOCATION' || $intent === 'HARASSMENT' || (!$autopilotReady && $autopilotStatus === 'ignored')) ? 'NO_REPLY' : 'REPLY';
+
         return [
+            'action' => $action,
             'sentiment' => $sentiment,
             'intent' => $intent,
             'highlight_score' => $score,
@@ -1132,7 +1597,12 @@ class AiAgentService {
             'autopilot_ready' => $autopilotReady,
             'autopilot_status' => $autopilotStatus,
             'autopilot_reason' => $autopilotReason,
-            'detected_keywords' => $keywords
+            'detected_keywords' => $keywords,
+            'detected_language' => $langDetection['language'],
+            'language_confidence' => $langDetection['confidence'],
+            'language_source' => $langDetection['source'],
+            'is_language_supported' => $langDetection['is_supported'],
+            'is_language_ambiguous' => $langDetection['is_ambiguous']
         ];
     }
 
@@ -1204,8 +1674,12 @@ class AiAgentService {
         $replyIndex = (int)($runtimeOverrides['reply_index'] ?? 0);
         $postId = (int)($runtimeOverrides['post_id'] ?? 0);
         $rotKey = abs(crc32($authorName . $replyIndex . $postId . date('Ymd')));
-        $nameVocative = self::extractCleanFirstName($authorName);
-        $nameVocative = $nameVocative ? " $nameVocative" : '';
+        // Hard constraint: NEVER hallucinate or assume user names. Only use name if explicit in comment text
+        $explicitName = '';
+        if (preg_match('/\b(me llamo|mi nombre es|soy)\s+([a-záéíóúñ]+)\b/iu', $commentText, $mName)) {
+            $explicitName = mb_convert_case($mName[2], MB_CASE_TITLE, 'UTF-8');
+        }
+        $nameVocative = !empty($explicitName) ? " $explicitName" : '';
 
         $brandName = $runtimeOverrides['brand_name'] ?? ($brandVoice['brand_name'] ?? Settings::get('brand_name', 'Xindro Studio'));
         $personaName = $runtimeOverrides['persona_name'] ?? ($brandVoice['persona_name'] ?? 'Alex — Asistente de Marca');
@@ -1252,7 +1726,7 @@ class AiAgentService {
         }
 
         $aiProvider = $runtimeOverrides['ai_provider'] ?? Settings::get('ai_provider', 'openrouter');
-        $openrouterKey = Settings::get('openrouter_api_key', '');
+        $openrouterKey = $runtimeOverrides['openrouter_api_key'] ?? Settings::get('openrouter_api_key', '');
         
         // Priority: runtime override > user's assigned model from admin > system setting
         $userAssignedModel = !empty($userAiConfig['ai_model']) ? trim($userAiConfig['ai_model']) : '';
@@ -1277,49 +1751,129 @@ class AiAgentService {
         $usedTokens = (int)($userAiConfig['used_tokens'] ?? 0);
         $isTokensExhausted = ($userRole !== 'admin') && ($maxTokens > 0 && $usedTokens >= $maxTokens);
 
-        // Try OpenRouter API first if configured and user has remaining quota
-        if ($aiProvider === 'openrouter' && !empty($openrouterKey) && !$isTokensExhausted) {
-            $analysis = self::analyzeComment($commentText, $postCaption, 0, $authorName);
+        // Resolve Brand Voice language & Comment Language Detection
+        $configuredLanguage = $runtimeOverrides['language'] ?? ($brandVoice['language'] ?? 'es');
+        $langDetection = self::detectSupportedLanguage($commentText);
+
+        // Resolve Final Target Language:
+        $resolvedLanguage = 'es';
+        $isAmbiguousLanguage = false;
+
+        if ($configuredLanguage === 'any') {
+            if ($langDetection['is_supported'] && $langDetection['confidence'] >= 0.65) {
+                $resolvedLanguage = $langDetection['language'];
+            } else {
+                $resolvedLanguage = 'es';
+                $isAmbiguousLanguage = true;
+            }
+        } else {
+            $resolvedLanguage = in_array($configuredLanguage, ['es', 'pt', 'en'], true) ? $configuredLanguage : 'es';
+        }
+
+        // Pre-Flight Suitability & Safety Gate (HERMES v2.1 Fail-Closed)
+        $attachment = $runtimeOverrides['attachment'] ?? null;
+        $analysis = self::analyzeComment($commentText, $postCaption, 0, $authorName, $attachment, $configuredLanguage);
+        $commentIntent = $analysis['intent'] ?? 'general_conversation';
+
+        if (($analysis['action'] ?? '') === 'NO_REPLY' || !($analysis['autopilot_ready'] ?? true)) {
+            return [
+                'action' => 'NO_REPLY',
+                'source' => 'hermes_safety_guard',
+                'reason' => 'SAFETY_FILTER_TRIGGERED',
+                'engagement' => '',
+                'conversion' => '',
+                'support' => '',
+                'detected_language' => $langDetection['language'],
+                'language_confidence' => $langDetection['confidence'],
+                'language_source' => $langDetection['source'],
+                'response_language' => $resolvedLanguage,
+                'requires_human_review' => true,
+                'engagement_tips' => $analysis['highlight_reason'] ?? 'Silencio operativo (NO_REPLY)'
+            ];
+        }
+
+        // Try OpenRouter API first if configured and user has remaining quota (or mock provided)
+        if ($aiProvider === 'openrouter' && (!empty($openrouterKey) || isset($runtimeOverrides['mock_openrouter_response'])) && !$isTokensExhausted) {
             $openrouterResult = self::callOpenRouterApi(
                 $authorName, $commentText, $platform, $postCaption, 
-                $brandName, $personaName, $brandIndustry, $brandTone, $brandDescription, $language,
+                $brandName, $personaName, $brandIndustry, $brandTone, $brandDescription, $resolvedLanguage,
                 $warmthLevel, $depthLevel, $energyLevel,
                 $closingQuestionRule, $emojiStyle, $keyPhrases, $forbiddenPhrases, $fewShotExamples,
                 $openrouterKey, $openrouterModel,
                 $targetUserId, $pdo,
-                $postAuthor, $lengthCategory, $recentThreadReplies, $analysis, $learningExamples
+                $postAuthor, $lengthCategory, $recentThreadReplies, $analysis, $learningExamples,
+                $runtimeOverrides
             );
-            if ($openrouterResult !== null && !empty($openrouterResult['engagement'])) {
-                $sanitized = self::sanitizeRepliesWithForbidden($openrouterResult, $forbiddenPhrases);
-                $genderCtx = self::detectGenderContext($authorName, $commentText);
-                foreach ($sanitized as $k => $v) {
-                    if (is_string($v)) {
-                        $sanitized[$k] = self::sanitizeGenderVocatives($v, $genderCtx['gender'], $genderCtx['first_name']);
+            if ($openrouterResult !== null) {
+                if (($openrouterResult['action'] ?? '') === 'NO_REPLY') {
+                    $openrouterResult['requires_human_review'] = true;
+                    if (empty($openrouterResult['reason'])) {
+                        $openrouterResult['reason'] = 'AI_UNAVAILABLE_OR_INVALID';
                     }
+                    $openrouterResult['target_language'] = $resolvedLanguage;
+                    $openrouterResult['detected_language'] = $langDetection['language'];
+                    $openrouterResult['language_confidence'] = $langDetection['confidence'];
+                    $openrouterResult['language_source'] = $langDetection['source'];
+                    $openrouterResult['response_language'] = $resolvedLanguage;
+                    return $openrouterResult;
                 }
-                return $sanitized;
+                if (!empty($openrouterResult['engagement'])) {
+                    // Pre-publication check on source: reject any heuristic origin
+                    if (str_starts_with($openrouterResult['source'] ?? '', 'heuristic')) {
+                        return [
+                            'action' => 'NO_REPLY',
+                            'reason' => 'HEURISTIC_SOURCE_FORBIDDEN',
+                            'source' => 'fail_closed',
+                            'engagement' => '',
+                            'conversion' => '',
+                            'support' => '',
+                            'target_language' => $resolvedLanguage,
+                            'detected_language' => $langDetection['language'],
+                            'language_confidence' => $langDetection['confidence'],
+                            'language_source' => $langDetection['source'],
+                            'response_language' => $resolvedLanguage,
+                            'requires_human_review' => true,
+                            'engagement_tips' => 'Respuestas heurísticas bloqueadas para publicación pública en HERMES v2.1.'
+                        ];
+                    }
+                    $sanitized = self::sanitizeRepliesWithForbidden($openrouterResult, $forbiddenPhrases);
+                    $genderCtx = self::detectGenderContext($authorName, $commentText);
+                    foreach ($sanitized as $k => $v) {
+                        if (is_string($v)) {
+                            $sanitized[$k] = self::sanitizeGenderVocatives($v, $genderCtx['gender'], $genderCtx['first_name']);
+                        }
+                    }
+                    $sanitized['target_language'] = $resolvedLanguage;
+                    $sanitized['detected_language'] = $openrouterResult['detected_comment_language'] ?? $langDetection['language'];
+                    $sanitized['language_confidence'] = $langDetection['confidence'];
+                    $sanitized['language_source'] = $langDetection['source'];
+                    $sanitized['response_language'] = $openrouterResult['response_language'] ?? $resolvedLanguage;
+                    if ($isAmbiguousLanguage || $langDetection['is_ambiguous'] || !empty($openrouterResult['requires_human_review'])) {
+                        $sanitized['requires_human_review'] = true;
+                    }
+                    return $sanitized;
+                }
             }
         }
 
-        // Fallback / Standalone: High-Context Calibrated Zero-Token Heuristic Engine (Modules 1-5 Deep)
-        $localResult = self::generateHeuristicReplies(
-            $authorName, $commentText, $platform, $postCaption, 
-            $brandName, $personaName, $brandIndustry, $brandTone, $brandDescription, $language,
-            $warmthLevel, $depthLevel, $energyLevel,
-            $closingQuestionRule, $emojiStyle, $keyPhrases, $forbiddenPhrases, $fewShotExamples,
-            $replyIndex,
-            $postId,
-            $recentThreadReplies
-        );
-
-        $finalLocal = self::sanitizeRepliesWithForbidden($localResult, $forbiddenPhrases);
-        $genderCtx = self::detectGenderContext($authorName, $commentText);
-        foreach ($finalLocal as $k => $v) {
-            if (is_string($v)) {
-                $finalLocal[$k] = self::sanitizeGenderVocatives($v, $genderCtx['gender'], $genderCtx['first_name']);
-            }
-        }
-        return $finalLocal;
+        // HERMES v2.1 RULE: Never substitute failed AI responses with heuristic text for public replies.
+        // Heuristics are strictly restricted to internal classification, spam and toxicity detection.
+        // Public output must strictly return Fail-Closed NO_REPLY with requires_human_review = true.
+        return [
+            'action' => 'NO_REPLY',
+            'reason' => 'AI_UNAVAILABLE_OR_INVALID',
+            'source' => 'fail_closed',
+            'engagement' => '',
+            'conversion' => '',
+            'support' => '',
+            'target_language' => $resolvedLanguage,
+            'detected_language' => $langDetection['language'],
+            'language_confidence' => $langDetection['confidence'],
+            'language_source' => $langDetection['source'],
+            'response_language' => $resolvedLanguage,
+            'requires_human_review' => true,
+            'engagement_tips' => 'OpenRouter no disponible o respuesta no válida. Comentario retenido para revisión humana supervisada (HERMES v2.1 Fail-Closed).'
+        ];
     }
 
     /**
@@ -1443,8 +1997,12 @@ class AiAgentService {
         array $recentThreadReplies = []
     ): array {
         $cleanComment = trim($commentText);
-        $isGeneric = self::isGenericAuthorName($authorName);
-        $displayName = $isGeneric ? '' : self::extractCleanFirstName($authorName);
+        // Hard constraint: NEVER hallucinate or assume user names. Only use name if explicit in comment text
+        $explicitName = '';
+        if (preg_match('/\b(me llamo|mi nombre es|soy)\s+([a-záéíóúñ]+)\b/iu', $cleanComment, $mName)) {
+            $explicitName = mb_convert_case($mName[2], MB_CASE_TITLE, 'UTF-8');
+        }
+        $displayName = $explicitName;
         $nameVocative = (!empty($displayName) && $warmthLevel >= 45) ? ", $displayName" : '';
 
         if ($analysis === null) {
@@ -1505,15 +2063,184 @@ class AiAgentService {
         };
 
         // ══════════════════════════════════════════════════════════════════════
+        // HERMES v2 DEDICATED INTENT HANDLERS (Master Voice & Proportionality)
+        // ══════════════════════════════════════════════════════════════════════
+
+        // 1. TROLL PROVOCATION & HARASSMENT (Strict Silencio Operativo - NO_REPLY)
+        if ($intent === 'TROLL_PROVOCATION' || $intent === 'HARASSMENT') {
+            return [
+                'action' => 'NO_REPLY',
+                'source' => 'heuristic_calibrated',
+                'engagement' => '',
+                'conversion' => '',
+                'support' => '',
+                'engagement_tips' => '🛡️ Silencio Operativo: Provocación troll superficial o acoso. Decisión estricta: NO_REPLY.'
+            ];
+        }
+
+        // 2. EMOJI ONLY (Policy: ~70% pure emoji, ~30% 1-3 words + 1 emoji)
+        if ($intent === 'EMOJI_ONLY') {
+            $pureEmojiPool = [
+                '🔥🏛️',
+                '🏛️✨',
+                '🔥',
+                '🤝🏛️',
+                '🙌✨',
+                '👊🏛️',
+                '🏛️'
+            ];
+            $shortWordPool = [
+                'Firmeza total. 🏛️',
+                'Así es. 🔥',
+                'Fuerza. 👊',
+                'Paso firme. ⚡',
+                'Constancia diaria. 🏛️'
+            ];
+            return [
+                'action' => 'REPLY',
+                'source' => 'heuristic_calibrated',
+                'engagement' => $pick($pureEmojiPool),
+                'conversion' => $pick($pureEmojiPool, 1),
+                'support' => $pick($shortWordPool, 2),
+                'engagement_tips' => 'Minimalismo proporcional: 1-2 emojis o micro-frase de 1-3 palabras.'
+            ];
+        }
+
+        // 3. BRIEF AGREEMENT (Validation of truth in 1 word or minimal phrase -> 4 to 10 words, CERO welcome)
+        if ($intent === 'BRIEF_AGREEMENT') {
+            $briefAgreementPool = [
+                'Así es. Foco en lo esencial.',
+                'Totalmente. La constancia lo es todo. 🏛️',
+                'Exacto. Lo que depende de uno es lo que cuenta.',
+                'Paso firme y mente clara. 🏛️',
+                'Así es. Templanza y discernimiento diario.',
+                'Totalmente de acuerdo. Fuerza en el camino. 🏛️'
+            ];
+            return [
+                'action' => 'REPLY',
+                'source' => 'heuristic_calibrated',
+                'engagement' => $pick($briefAgreementPool),
+                'conversion' => $pick($briefAgreementPool, 1),
+                'support' => $pick($briefAgreementPool, 2),
+                'engagement_tips' => '🏛️ Ratificación estoica concisa (4-10 palabras) sin bienvenidas falsas.'
+            ];
+        }
+
+        // 4. GREETING (Cordial brief greeting -> 4 to 8 words, CERO welcome ceremonial)
+        if ($intent === 'GREETING') {
+            $greetingPool = [
+                '¡Hola! Qué gusto saludarte. Un gran abrazo. 🤝',
+                '¡Saludos! Que tengas un excelente día. ✨',
+                '¡Hola! Un saludo fraterno y buena jornada. 🏛️',
+                '¡Buenos días! Fuerte abrazo y mente clara hoy. 🤝'
+            ];
+            return [
+                'action' => 'REPLY',
+                'source' => 'heuristic_calibrated',
+                'engagement' => $pick($greetingPool),
+                'conversion' => $pick($greetingPool, 1),
+                'support' => $pick($greetingPool, 2),
+                'engagement_tips' => '👋 Saludo cordial y sobrio de 4-8 palabras.'
+            ];
+        }
+
+        // 5. NEW FOLLOWER (Explicit statement of following -> 6 to 12 words varied & natural)
+        if ($intent === 'NEW_FOLLOWER') {
+            $newFollowerPool = [
+                'Gracias por sumarte. 🙌',
+                'Gracias por estar aquí. Que el contenido te aporte. 🏛️',
+                'Un gusto tenerte por aquí. Seguimos trabajando en ello. 🤝',
+                'Gracias por seguir el contenido. Seguimos en el camino. 🏛️'
+            ];
+            return [
+                'action' => 'REPLY',
+                'source' => 'heuristic_calibrated',
+                'engagement' => $pick($newFollowerPool),
+                'conversion' => $pick($newFollowerPool, 1),
+                'support' => $pick($newFollowerPool, 2),
+                'engagement_tips' => '🏛️ Bienvenida sobria y natural sin plantillas repetitivas.'
+            ];
+        }
+
+        // 6. DISAGREEMENT (Reasoned disagreement -> 12 to 25 words with stoic distinction)
+        if ($intent === 'DISAGREEMENT') {
+            $disagreePool = [
+                'Se entiende tu punto. La templanza no es pasividad ante lo injusto, sino claridad para actuar sin ira. 🏛️',
+                'Válida perspectiva. El autodominio no exige callar, sino elegir con lucidez nuestras batallas. 🤝',
+                'Respetable criterio. Cada situación exige discernimiento; la calma interior es el punto de partida para decidir bien. 🏛️'
+            ];
+            return [
+                'action' => 'REPLY',
+                'source' => 'heuristic_calibrated',
+                'engagement' => $pick($disagreePool),
+                'conversion' => $pick($disagreePool, 1),
+                'support' => $pick($disagreePool, 2),
+                'engagement_tips' => '⚖️ Distinción serena ante el desacuerdo, sin entrar en debates ni pretender ganar.'
+            ];
+        }
+
+        // 7. CRITICISM (Constructive critique of content depth -> 12 to 25 words sober & open)
+        if ($intent === 'CRITICISM') {
+            $criticismPool = [
+                'Punto válido. En pocas líneas se sintetiza una idea, pero la práctica real requiere discernimiento y profundidad diaria. 🏛️',
+                'Comprendo tu punto. Ninguna frase reemplaza el criterio propio; lo valioso es llevar la reflexión a los hechos. 🤝',
+                'Agradezco la crítica. La filosofía estoica es exigente y los matices importan; seguimos buscando aportar valor real. ✨'
+            ];
+            return [
+                'action' => 'REPLY',
+                'source' => 'heuristic_calibrated',
+                'engagement' => $pick($criticismPool),
+                'conversion' => $pick($criticismPool, 1),
+                'support' => $pick($criticismPool, 2),
+                'engagement_tips' => '🔍 Respuesta sobria a la crítica constructiva sin reactividad defensiva.'
+            ];
+        }
+
+        // 8. PERSONAL STORY (Anecdote of loss, personal trial, fatigue -> empathy before aphorism)
+        if ($intent === 'PERSONAL_STORY') {
+            $personalStoryPool = [
+                'Lo siento por lo que estás atravesando. Perder algo por lo que trabajaste duele. Ojalá este contenido te acompañe en el camino.',
+                'Gracias por compartirlo. Hay momentos en que toca asimilar el golpe y avanzar un paso a la vez con respeto a tu proceso. 🤝',
+                'Cuesta mucho cuando las cosas no salen como uno espera. Mucha fuerza y serenidad para este momento. 🏛️'
+            ];
+            return [
+                'action' => 'REPLY',
+                'source' => 'heuristic_calibrated',
+                'engagement' => $pick($personalStoryPool),
+                'conversion' => $pick($personalStoryPool, 1),
+                'support' => $pick($personalStoryPool, 2),
+                'engagement_tips' => '🏛️ Empatía humana sobria y escucha respetuosa antes que aforismos estoicos.'
+            ];
+        }
+
+        // 9. QUESTION (Direct conceptual or practical answer)
+        if ($intent === 'QUESTION') {
+            $questionPool = [
+                'El estoicismo no busca eliminar las emociones, sino aprender a gobernar nuestra respuesta consciente ante ellas. 🏛️',
+                'La clave está en separar con calma lo que depende de ti de lo que escapa a tu control. Foco en tus acciones. 🏛️✨',
+                'Se aplica en las pequeñas decisiones cotidianas: responder con serenidad en lugar de reaccionar impulsivamente. 🤝'
+            ];
+            return [
+                'action' => 'REPLY',
+                'source' => 'heuristic_calibrated',
+                'engagement' => $pick($questionPool),
+                'conversion' => $pick($questionPool, 1),
+                'support' => $pick($questionPool, 2),
+                'engagement_tips' => '❓ Respuesta directa y fundamentada a la pregunta del seguidor.'
+            ];
+        }
+
+        // ══════════════════════════════════════════════════════════════════════
         // CASE 0: Toxicidad Hostil / Insultos Graves (Silencio Operativo / Sobriedad)
         // ══════════════════════════════════════════════════════════════════════
         if ($intent === 'toxic_hostile') {
             return [
+                'action' => 'NO_REPLY',
                 'source' => 'heuristic_calibrated',
-                'engagement' => "En esta comunidad priorizamos el respeto mutuo. Cualquier duda o consulta sobre nuestros proyectos puede canalizarse con gusto por mensaje privado. Saludos.",
-                'conversion' => "Fomentamos un espacio constructivo y de respeto. Toda consulta formal se atiende por mensaje privado.",
-                'support' => "El criterio y la templanza se demuestran con respeto. Te deseamos lo mejor en tu camino.",
-                'engagement_tips' => '🛡️ Silencio Operativo: No responder públicamente a insultos graves para no alimentar al hater ni darle tracción algorítmica.'
+                'engagement' => '',
+                'conversion' => '',
+                'support' => '',
+                'engagement_tips' => '🛡️ Silencio Operativo: No responder públicamente a insultos graves.'
             ];
         }
 
@@ -2454,22 +3181,22 @@ class AiAgentService {
         // ══════════════════════════════════════════════════════════════════════
         if ($isShort) {
             $generalPool = [
-                "¡Gracias por estar presente{$nameVocative}! Un gran saludo. 🤝✨",
-                "¡Un gusto leerte{$nameVocative}! Seguimos firmes sumando valor juntos. 🙌",
-                "¡Mucho aprecio por el apoyo constante{$nameVocative}! Adelante con todo. ⚡",
-                "¡Qué buena onda leerte{$nameVocative}! ¡Vamos por más! 👊✨",
-                "¡Agradecidos con tu presencia{$nameVocative}! Un fuerte abrazo. 🤝🚀",
-                "¡Así se habla{$nameVocative}! Saludos con toda la energía. ⚡"
+                "Gracias por el apoyo. Me alegra que resuene contigo. 🤝",
+                "Gracias. Seguimos aportando valor y criterio en cada publicación. 🏛️",
+                "Un gusto compartir estas reflexiones. Foco en lo esencial. ✨",
+                "Gracias por pasar y dejar tu aporte. Seguimos firmes. 🏛️",
+                "Agradecidos con tu presencia en la conversación. 🤝",
+                "Totalmente de acuerdo. Paso firme y mente clara. 🏛️"
             ];
             $generalConvert = [
-                "¡Esa es la actitud{$nameVocative}! Quien domina sus impulsos y elige la constancia vence cualquier obstáculo. 🏛️⚡",
-                "¡Agradecidos con tu presencia! Foco innegociable en mantener el estándar diario y la templanza interior. 🎯🏛️",
-                "La verdadera victoria se construye en silencio con disciplina cotidiana. ¡Seguimos firmes! 🏛️✨"
+                "Así es. Quien domina sus impulsos y elige la constancia mantiene el rumbo. 🏛️",
+                "Foco innegociable en mantener el estándar diario y la templanza interior. 🎯🏛️",
+                "La verdadera fortaleza se forja en silencio con disciplina cotidiana. 🏛️✨"
             ];
             $generalSupport = [
-                "Agradecemos tu presencia en la comunidad{$nameVocative}. ¡Un fuerte abrazo! 🏛️",
+                "Gracias por estar presente en la comunidad. Un saludo. 🏛️",
                 "Un honor contar con tu participación. Seguimos firmes aportando valor cada día. 🏛️✨",
-                "La constancia de nuestra comunidad es lo que nos impulsa. ¡Un saludo fraternal{$nameVocative}! 🏛️🤝"
+                "La constancia de nuestra comunidad es lo que nos impulsa. Un saludo fraternal. 🏛️🤝"
             ];
             return [
                 'source' => 'heuristic_calibrated',
@@ -2481,21 +3208,21 @@ class AiAgentService {
         }
 
         $generalMediumPool = [
-            "Una perspectiva muy interesante{$nameVocative}. Gracias por dejar tu reflexión y sumar valor a la conversación. 🎯",
-            "¡Totalmente de acuerdo{$nameVocative}! Gracias por compartir tu punto de vista con la comunidad. 🤝✨",
-            "Un punto de vista muy valioso{$nameVocative}. Da gusto contar con aportes reflexivos en esta comunidad. 🙌",
-            "¡Muchas gracias por sumar tu voz a la conversación{$nameVocative}! Seguimos firmes creando contenido de valor. ⚡",
-            "Apreciamos mucho que dediques tiempo a interactuar y reflexionar con nosotros{$nameVocative}. ¡Seguimos adelante! 🏛️✨",
-            "Comentarios enriquecedores como el tuyo le dan un sentido mucho mayor a esta comunidad{$nameVocative}. ¡Vamos por más! 👊🔥"
+            "Una perspectiva muy interesante. Gracias por dejar tu reflexión y sumar valor a la conversación. 🎯",
+            "Totalmente de acuerdo. Gracias por compartir tu punto de vista con la comunidad. 🤝✨",
+            "Un punto de vista muy valioso. Da gusto contar con aportes reflexivos en esta comunidad. 🙌",
+            "Muchas gracias por sumar tu voz a la conversación. Seguimos firmes creando contenido con criterio. 🏛️",
+            "Coincido con tu análisis. Llevar la reflexión a los hechos cotidianos es lo que marca la diferencia. 🏛️✨",
+            "Comentarios reflexivos como el tuyo enriquecen el debate en esta comunidad. Un saludo. 🤝"
         ];
         $generalMediumConvert = [
-            "¡Totalmente! Cuando alineas tu mente con principios sólidos de autodominio, nada externo puede perturbarte. 🏛️⚡",
-            "Para continuar forjando carácter, el mayor reto es la constancia silenciosa día tras día. ¡Firmeza total{$nameVocative}! 🎯🏛️",
+            "Totalmente. Cuando alineas tu mente con principios sólidos de autodominio, nada externo puede perturbarte. 🏛️⚡",
+            "Para continuar forjando carácter, el mayor reto es la constancia silenciosa día tras día. Firmeza en el camino. 🎯🏛️",
             "La templanza cotidiana es la mayor armadura ante la adversidad. Un honor compartir este camino en comunidad. 🏛️✨"
         ];
         $generalMediumSupport = [
-            "¡Un gran saludo{$nameVocative}! Encantados de leerte y tener tu participación reflexiva en nuestra comunidad. 🏛️",
-            "La claridad de criterio se construye compartiendo y debatiendo ideas sólidas. Gracias por tu aporte{$nameVocative}. 🏛️✨",
+            "Un gran saludo. Encantados de leerte y tener tu participación reflexiva en nuestra comunidad. 🏛️",
+            "La claridad de criterio se construye compartiendo y debatiendo ideas sólidas. Gracias por tu aporte. 🏛️✨",
             "Seguimos firmes compartiendo principios que fortalezcan el criterio y la templanza en el día a día. 🏛️🤝"
         ];
 
@@ -2547,7 +3274,7 @@ class AiAgentService {
         string $apiKey, string $model = 'nousresearch/hermes-3-llama-3.1-70b',
         int $targetUserId = 0, ?PDO $pdo = null,
         string $postAuthor = 'general', string $lengthCategory = 'medium', array $recentThreadReplies = [], ?array $commentAnalysis = null,
-        array $learningExamples = []
+        array $learningExamples = [], array $runtimeOverrides = []
     ): ?array {
         $prompt = self::buildUniversalPrompt(
             $authorName, $commentText, $platform, $postCaption,
@@ -2575,10 +3302,64 @@ class AiAgentService {
             ($wordCount <= 3 && in_array(mb_strtolower(trim($commentText), 'UTF-8'), ['amen', 'amén', 'top', 'total', 'exacto', 'de una', 'asi es', 'así es', 'tal cual', 'de acuerdo', '100%']))
         );
 
-        if ($isPureEmojiOrShort) {
-            $systemPromptContent = "Eres Hermes, gestor de comunidad de Fortaleza Imparable. El seguidor dejó una reacción rápida, emoji o sticker. Responde con calidez humana, autenticidad y frescura (1 sola frase ágil, aproximadamente 6 a 15 palabras, con 1 emoji sobrio). Evita discursos solemnes o fórmulas prefabricadas repetitivas. Responde en JSON estructurado.";
+        $intent = $commentAnalysis['intent'] ?? 'general_conversation';
+
+        if ($intent === 'EMOJI_ONLY') {
+            $systemPromptContent = "Eres Hermes, voz oficial de la comunidad Fortaleza Imparable. El seguidor comentó ÚNICAMENTE con emojis. Tu regla central es la sobriedad y la proporcionalidad estricta.
+POLÍTICA: En la gran mayoría de casos (~70%), responde ÚNICAMENTE con 1 o 2 emojis relevantes (ej. 🔥🏛️, 🏛️✨, 🤝, 🙌, 💪). CERO PALABRAS.
+En el ~30% restante, si el contexto lo hace más natural, puedes responder con MÁXIMO 1 a 3 palabras contundentes más 1 emoji (ej. 'Firmeza total. 🏛️' o 'Así es. 🔥').
+PROHIBICIÓN ABSOLUTA: Queda TERMINANTEMENTE PROHIBIDO escribir oraciones de más de 3 palabras, párrafos, discursos, bienvenidas o preguntas de cierre. NUNCA trates de sonar profundo ante un simple emoji.
+PROHIBICIÓN TOTAL DE JERGA: Prohibido decir 'ñero', 'bro', 'pana', 'compa', etc.
+Responde en JSON estructurado.";
+        } elseif ($intent === 'BRIEF_AGREEMENT') {
+            $systemPromptContent = "Eres Hermes, voz oficial de Fortaleza Imparable. El seguidor dejó un acuerdo breve de 1 palabra o frase mínima (ej. 'Importante', 'Exacto', 'Clave').
+Responde con sobriedad y proporcionalidad (1 sola frase de 4 a 10 palabras que valide el punto central con foco estoico, ej. 'Así es. Foco en lo esencial.' o 'Totalmente. La constancia lo es todo. 🏛️').
+PROHIBICIÓN TOTAL DE NOMBRES INVENTADOS: Queda TERMINANTEMENTE PROHIBIDO inventar o usar nombres de pila (NUNCA digas 'Así es, Luis' ni asumas nombres). Habla directamente.
+PROHIBICIÓN TERMINANTE DE BIENVENIDA: Queda estrictamente prohibido dar bienvenidas a la comunidad, decir 'gracias por sumarte', o asumir que es nuevo seguidor.
+PROHIBICIÓN TOTAL DE PREGUNTAS Y CLICHÉS: Cero preguntas cliché de bot o coach ('¿En qué buscas aplicarlo?'), cero frases vacías de autoayuda ('La perseverancia es la clave del éxito').
+PROHIBICIÓN TOTAL DE JERGA: Prohibido 'ñero', 'bro', 'pana', etc.
+Responde en JSON estructurado.";
+        } elseif ($intent === 'GREETING') {
+            $systemPromptContent = "Eres Hermes, voz oficial de Fortaleza Imparable. El seguidor envió un saludo breve. Responde con un saludo cordial, educado y sobrio (1 frase de 4 a 8 palabras, ej. '¡Hola! Qué gusto saludarte. Un gran abrazo. 🤝').
+PROHIBICIÓN TOTAL DE NOMBRES INVENTADOS: Cero nombres de pila si el usuario no los escribió.
+PROHIBICIÓN TOTAL: Cero discursos de iniciación estoica, cero preguntas reflexivas, cero jergas ('ñero', 'bro').
+Responde en JSON estructurado.";
+        } elseif ($intent === 'NEW_FOLLOWER') {
+            $systemPromptContent = "Eres Hermes, voz oficial de Fortaleza Imparable. El seguidor indica explícitamente que es nuevo seguidor.
+Brinda un agradecimiento o bienvenida sobria y natural (1 frase de 6 a 12 palabras).
+VARIACIÓN OBLIGATORIA (No uses siempre la misma plantilla 'Bienvenido a la comunidad'):
+- 'Gracias por sumarte. 🙌'
+- 'Gracias por estar aquí. Que el contenido te aporte. 🏛️'
+- 'Un gusto tenerte por aquí. Seguimos trabajando en ello. 🤝'
+- 'Gracias por seguir el contenido. Seguimos en el camino. 🏛️'
+PROHIBICIÓN TOTAL DE NOMBRES INVENTADOS: NUNCA uses un nombre si el usuario no lo escribió en su comentario.
+Cero adulaciones exageradas o jerga callejera.
+Responde en JSON estructurado.";
+        } elseif ($intent === 'DISAGREEMENT') {
+            $systemPromptContent = "Eres Hermes, voz oficial de Fortaleza Imparable. El seguidor expresa un desacuerdo respetuoso con el postulado de la publicación.
+Responde con serenidad estoica y respeto (1 a 2 frases breves, 12 a 25 palabras). No debatas para 'ganar' la discusión; ofrece una distinción estoica clara con elegancia y calma interior.
+PROHIBICIÓN DE NOMBRES INVENTADOS: No uses nombres asumidos.
+Responde en JSON estructurado.";
+        } elseif ($intent === 'CRITICISM') {
+            $systemPromptContent = "Eres Hermes, voz oficial de Fortaleza Imparable. El seguidor hace una crítica constructiva a la profundidad del contenido.
+Responde con sobriedad estoica y apertura reflexiva (1 a 2 frases breves, 12 a 25 palabras), aceptando el valor del discernimiento práctico sin reactividad defensiva.
+PROHIBICIÓN DE NOMBRES INVENTADOS: No uses nombres asumidos.
+Responde en JSON estructurado.";
+        } elseif ($intent === 'PERSONAL_STORY' || $intent === 'emotional_venting_resilience' || $intent === 'existential_doubt') {
+            $systemPromptContent = "Eres Hermes, voz oficial de Fortaleza Imparable. El seguidor comparte una vivencia difícil, pérdida, fracaso o desahogo.
+EMPATÍA ANTES QUE AFORISMOS: Prioriza la empatía humana genuina, la presencia sobria y la escucha respetuosa (15 a 30 palabras).
+PROHIBICIÓN DE SENTENCIAS O AFORISMOS SOLEMNES: NUNCA conviertas el dolor o fracaso del seguidor en una conferencia estoica abstracta ('El fracaso forja el carácter; levantarse con temple es la victoria estoica'). Prefiere validar su sentir con sobriedad humana ('Lamento por lo que estás atravesando. Perder algo por lo que trabajaste duele. Ojalá este contenido te acompañe en el camino.').
+PROHIBICIÓN TOTAL DE NOMBRES INVENTADOS: NUNCA uses un nombre de pila si el seguidor no lo escribió en el texto.
+PROHIBICIÓN ABSOLUTA: CERO emojis festivos insensibles (🔥/❤️/😂 ante el dolor), CERO optimismo ingenuo, CERO jerga callejera.
+Responde en JSON estructurado.";
         } else {
-            $systemPromptContent = "Eres Hermes, la voz e inteligencia de la comunidad Fortaleza Imparable (filosofía estoica, mentalidad, crecimiento y autodominio personal). Tu misión es responder como un ser humano sabio, empático, cercano y reflexivo. Tienes total libertad para pensar, razonar el contexto del seguidor y redactar respuestas genuinas (10 a 30 palabras). Si el seguidor expresa una duda o dolor, respóndele con comprensión serena; si reflexiona, nutre su idea con profundidad práctica. QUEDA TERMINANTEMENTE PROHIBIDO sonar como un bot predecible o recitar frases de molde. Varía continuamente tu vocabulario e ideas (templanza, presencia, constancia, dominio interior). Responde en JSON estructurado.";
+            $systemPromptContent = "Eres Hermes, la voz de Fortaleza Imparable (filosofía estoica, criterio y autodominio). Tu misión es responder como una persona real, con sobriedad, criterio y naturalidad (8 a 20 palabras). Responde directamente a lo que el seguidor plantea.
+PROHIBICIÓN ABSOLUTA DE INVENTAR CONTEXTO O NOMBRES (HALLUCINATED_CONTEXT): Si el usuario no escribió su nombre en el comentario, NUNCA te dirijas a él por un nombre de pila.
+PROHIBICIÓN DE CLICHÉS MOTIVACIONALES GENÉRICOS: Queda TERMINANTEMENTE PROHIBIDO usar frases de autoayuda intercambiables como 'La perseverancia es la clave del éxito', 'Juntos somos más fuertes', 'El éxito está en tus manos', 'Nunca te rindas', 'Sigue luchando', 'El espíritu indomable'.
+PROHIBICIÓN TOTAL DE JERGA: Queda TERMINANTEMENTE PROHIBIDO 'ñero', 'bro', 'pana', 'compa', 'wey'.
+PROHIBICIÓN TOTAL DE PREGUNTAS CLICHÉ: Prohibido cerrar con '¿En qué buscas aplicarlo?'.
+PROHIBICIÓN DE FALSAS BIENVENIDAS: Solo da la bienvenida si el usuario dice explícitamente que es nuevo seguidor.
+Responde en JSON estructurado.";
         }
 
         $payload = [
@@ -2601,22 +3382,48 @@ class AiAgentService {
 
         $appUrl = Settings::get('app_url', 'http://localhost/Redes%20sociales');
 
-        $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'Content-Type: application/json',
-            'Authorization: Bearer ' . $apiKey,
-            'HTTP-Referer' => $appUrl,
-            'X-Title: XINDRO Social AI'
-        ]);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 15);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+        $executeCurl = function(array $p) use ($url, $apiKey, $appUrl) {
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($p));
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Content-Type: application/json',
+                'Authorization: Bearer ' . $apiKey,
+                'HTTP-Referer' => $appUrl,
+                'X-Title: XINDRO Social AI'
+            ]);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+            $res = curl_exec($ch);
+            $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            return [$code, $res];
+        };
 
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+        // Support Mock OpenRouter Response for Deterministic & Isolated Testing
+        if (isset($runtimeOverrides['mock_openrouter_response'])) {
+            $mock = $runtimeOverrides['mock_openrouter_response'];
+            if ($mock === null || $mock === false || $mock === 'NETWORK_ERROR') {
+                return null;
+            }
+            if (is_callable($mock)) {
+                $mock = $mock($commentText, $language);
+            }
+            if (is_array($mock) && isset($mock['action']) && $mock['action'] === 'NO_REPLY') {
+                return $mock;
+            }
+            $httpCode = 200;
+            $mockContent = is_array($mock) ? json_encode($mock, JSON_UNESCAPED_UNICODE) : (string)$mock;
+            $response = json_encode([
+                'choices' => [
+                    ['message' => ['content' => $mockContent]]
+                ],
+                'usage' => ['total_tokens' => 0]
+            ], JSON_UNESCAPED_UNICODE);
+        } else {
+            [$httpCode, $response] = $executeCurl($payload);
+        }
 
         if ($httpCode === 200 && $response) {
             $resData = json_decode($response, true);
@@ -2640,60 +3447,138 @@ class AiAgentService {
             $parsed = json_decode($content, true);
 
             if ($parsed && isset($parsed['engagement'])) {
-                // Post-Processing Humano: Respetar la inteligencia y libertad de Hermes
-                if ($isPureEmojiOrShort) {
-                    foreach (['engagement', 'conversion', 'support'] as $k) {
-                        if (!empty($parsed[$k])) {
-                            // Limpiar preguntas interrogativas que desentonan con un simple emoji
-                            $parsed[$k] = trim(preg_replace('/\s*[¿\?][^.!?]*[.?]?/u', '', $parsed[$k]));
+                // Pre-Publication Validation (HERMES v2 Quality Gate)
+                $val = self::validateAndSanitizeReply($parsed['engagement'], $intent, 0, $commentText);
+
+                if (!$val['valid']) {
+                    // Attempt Regeneration with Strict Intent Constraint (Non-mechanical)
+                    $retryConstraint = ($intent === 'EMOJI_ONLY')
+                        ? "La salida DEBE contener ÚNICAMENTE 1 o 2 emojis relevantes (o máximo 1-3 palabras + 1 emoji). CERO oraciones largas. CERO párrafos."
+                        : "Tu respuesta anterior violó la regla de calidad '{$val['reason']}' (detalle: " . ($val['token'] ?? '') . "). NO uses jerga ('ñero', 'bro', 'pana'), NO inventes nombres si el usuario no los escribió, NO uses clichés de coach ('la perseverancia es la clave del éxito'), NO des bienvenidas falsas, mantén sobriedad y responde exactamente al comentario.";
+
+                    $retryPayload = $payload;
+                    $retryPayload['messages'] = [
+                        ['role' => 'system', 'content' => $systemPromptContent],
+                        ['role' => 'user', 'content' => $prompt],
+                        ['role' => 'assistant', 'content' => $content],
+                        ['role' => 'user', 'content' => "CORRECCIÓN OBLIGATORIA: $retryConstraint Genera de nuevo las 3 opciones JSON válidas."]
+                    ];
+
+                    [$httpCode2, $response2] = isset($runtimeOverrides['mock_openrouter_response'])
+                        ? [200, $response]
+                        : $executeCurl($retryPayload);
+
+                    if ($httpCode2 === 200 && $response2) {
+                        $resData2 = json_decode($response2, true);
+                        $content2 = $resData2['choices'][0]['message']['content'] ?? '';
+                        $content2 = preg_replace('/^```(?:json)?\s*/i', '', trim($content2));
+                        $content2 = preg_replace('/\s*```$/', '', trim($content2));
+                        $parsed2 = json_decode($content2, true);
+
+                        if ($parsed2 && isset($parsed2['engagement'])) {
+                            $val2 = self::validateAndSanitizeReply($parsed2['engagement'], $intent, 1, $commentText);
+                            if ($val2['valid']) {
+                                $parsed = $parsed2;
+                            } else {
+                                // Fail-Closed: Return NO_REPLY instead of publishing flawed or broken output
+                                return [
+                                    'action' => 'NO_REPLY',
+                                    'source' => 'hermes_validator_fail_closed',
+                                    'reason' => $val2['reason'],
+                                    'engagement' => '',
+                                    'conversion' => '',
+                                    'support' => '',
+                                    'engagement_tips' => 'Falló validación de calidad tras reintento (' . $val2['reason'] . ')'
+                                ];
+                            }
                         }
+                    } else {
+                        // Fail-closed if retry request fails
+                        return [
+                            'action' => 'NO_REPLY',
+                            'source' => 'hermes_validator_fail_closed',
+                            'reason' => $val['reason'],
+                            'engagement' => '',
+                            'conversion' => '',
+                            'support' => '',
+                            'engagement_tips' => 'Falló validación inicial y reintento no conectó'
+                        ];
                     }
                 }
 
-                // Respaldo de variedad solo si alguna opción quedó vacía (sin sobreescribir la respuesta de Hermes)
-                $nameVoc = self::extractCleanFirstName($authorName);
-                $nameVoc = !empty($nameVoc) ? " $nameVoc" : '';
-                $freshGoldenFallbacks = [
-                    'engagement' => [
-                        "¡Totalmente de acuerdo{$nameVoc}! La serenidad y el foco son el camino. 🏛️✨",
-                        "¡Muchas gracias{$nameVoc}! Qué bueno que esta reflexión resuene contigo. ✨",
-                        "¡Muchas gracias por acompañarnos y sumar tan buena energía! 🙌✨",
-                        "¡Así se habla{$nameVoc}! Pequeñas victorias diarias forjan el carácter. 👊",
-                        "¡Ese es el camino{$nameVoc}! Paso firme y mente clara. 🔥🏛️",
-                        "Apreciamos mucho tu presencia y constancia en la comunidad{$nameVoc}. 🤝✨"
-                    ],
-                    'conversion' => [
-                        "¡Ese es el espíritu{$nameVoc}! Un día a la vez forjando la templanza. 💪🔥",
-                        "Totalmente de acuerdo{$nameVoc}. Fuerza y serenidad en el camino. 🏛️✨",
-                        "¡Firmeza total{$nameVoc}! Quien vence sus excusas es imbatible. 👊🏛️",
-                        "¡Seguimos firmes{$nameVoc}! Foco total en lo que sí depende de ti. ⚡",
-                        "¡Así se habla{$nameVoc}! Determinación absoluta día a día. ⚡💪"
-                    ],
-                    'support' => [
-                        "¡Puro impulso{$nameVoc}! Adelante con calma y determinación. 🏛️💪",
-                        "¡Amén y muchas gracias por las bendiciones y la buena vibra! 🙌✨",
-                        "¡Esa es la actitud{$nameVoc}! Seguimos aprendiendo y creciendo juntos. 🤝⚡",
-                        "¡Firmeza total{$nameVoc}! El tiempo siempre acomoda cada cosa en su lugar. 🏛️✨",
-                        "¡Hermandad pura{$nameVoc}! Fuerza y sabiduría para tu camino. 🏛️🤝"
-                    ]
-                ];
+                // Post-Generation Language Verification: Check for strong contradictory language
+                $langCheck = self::validateReplyLanguage($parsed['engagement'], $language, $commentText);
+                if (!$langCheck['valid'] && !empty($langCheck['is_contradiction'])) {
+                    return [
+                        'action' => 'NO_REPLY',
+                        'source' => 'hermes_language_validator_fail_closed',
+                        'reason' => 'INVALID_AI_OUTPUT_LANGUAGE',
+                        'engagement' => '',
+                        'conversion' => '',
+                        'support' => '',
+                        'detected_comment_language' => $parsed['detected_comment_language'] ?? ($commentAnalysis['detected_language'] ?? $language),
+                        'response_language' => $langCheck['detected_language'] ?? 'unknown',
+                        'requires_human_review' => true,
+                        'engagement_tips' => 'El idioma generado (' . ($langCheck['detected_language'] ?? 'desconocido') . ') no coincide con el idioma esperado (' . $language . '). Comentario retenido para revisión humana.'
+                    ];
+                }
 
-                foreach (['engagement', 'conversion', 'support'] as $k) {
-                    if (empty(trim($parsed[$k] ?? ''))) {
-                        $pool = $freshGoldenFallbacks[$k] ?? $freshGoldenFallbacks['engagement'];
-                        $parsed[$k] = $pool[array_rand($pool)];
+                $engagement = trim($parsed['engagement'] ?? '');
+                if (empty($engagement)) {
+                    return [
+                        'action' => 'NO_REPLY',
+                        'source' => 'fail_closed',
+                        'reason' => 'EMPTY_AI_OUTPUT',
+                        'engagement' => '',
+                        'conversion' => '',
+                        'support' => '',
+                        'requires_human_review' => true,
+                        'engagement_tips' => 'La IA no devolvió texto de respuesta para engagement.'
+                    ];
+                }
+
+                $conversion = trim($parsed['conversion'] ?? '');
+                if (!empty($conversion)) {
+                    $valC = self::validateAndSanitizeReply($conversion, $intent, 1, $commentText, 'openrouter');
+                    if ($valC['valid']) {
+                        $langC = self::validateReplyLanguage($conversion, $language, $commentText);
+                        if (!$langC['valid'] && !empty($langC['is_contradiction'])) {
+                            $conversion = '';
+                        }
+                    } else {
+                        $conversion = '';
                     }
                 }
 
-                $tipNotice = 'Respuesta generada con OpenRouter (' . htmlspecialchars($selectedModel) . ') adaptada a tu voz de marca.';
+                $support = trim($parsed['support'] ?? '');
+                if (!empty($support)) {
+                    $valS = self::validateAndSanitizeReply($support, $intent, 1, $commentText, 'openrouter');
+                    if ($valS['valid']) {
+                        $langS = self::validateReplyLanguage($support, $language, $commentText);
+                        if (!$langS['valid'] && !empty($langS['is_contradiction'])) {
+                            $support = '';
+                        }
+                    } else {
+                        $support = '';
+                    }
+                }
+
+                $detectedCommentLang = $parsed['detected_comment_language'] ?? ($commentAnalysis['detected_language'] ?? $language);
+                $responseLang = $parsed['response_language'] ?? $language;
+
+                $tipNotice = 'Respuesta generada con OpenRouter (' . htmlspecialchars($selectedModel) . ') adaptada a la voz HERMES v2.1.';
                 if ($tokensUsed > 0) {
                     $tipNotice .= ' [Consumo: ' . number_format($tokensUsed) . ' tokens]';
                 }
                 return [
+                    'action' => 'REPLY',
                     'source' => 'openrouter_' . str_replace(['/', ':', '.'], '_', $selectedModel),
-                    'engagement' => $parsed['engagement'] ?? '',
-                    'conversion' => $parsed['conversion'] ?? '',
-                    'support' => $parsed['support'] ?? '',
+                    'engagement' => $engagement,
+                    'conversion' => $conversion,
+                    'support' => $support,
+                    'detected_comment_language' => $detectedCommentLang,
+                    'response_language' => $responseLang,
+                    'requires_human_review' => !empty($langCheck['requires_human_review']) || !empty($commentAnalysis['is_language_ambiguous']),
                     'tokens_used' => $tokensUsed,
                     'engagement_tips' => $parsed['engagement_tips'] ?? $tipNotice
                 ];
@@ -2712,47 +3597,55 @@ class AiAgentService {
      * - Module 4: Clean First Name Extraction & Anti-Bot Sanitization
      * - Module 5: Thread Memory & Deduplication against recent post replies
      */
-    private static function buildUniversalPrompt(
+    public static function buildUniversalPrompt(
         string $authorName, string $commentText, string $platform, string $postCaption,
-        string $brandName, string $personaName, string $brandIndustry, string $brandTone, string $brandDescription, string $language,
-        int $warmthLevel, int $depthLevel, int $energyLevel,
-        string $closingQuestionRule, string $emojiStyle, array $keyPhrases, array $forbiddenPhrases, array $fewShotExamples,
+        string $brandName, string $personaName, string $brandIndustry, string $brandTone, string $brandDescription, string $language = 'es',
+        int $warmthLevel = 85, int $depthLevel = 75, int $energyLevel = 80,
+        string $closingQuestionRule = 'always', string $emojiStyle = 'moderate', array $keyPhrases = [], array $forbiddenPhrases = [], array $fewShotExamples = [],
         string $postAuthor = 'general', string $lengthCategory = 'medium', array $recentThreadReplies = [], ?array $commentAnalysis = null,
         array $learningExamples = []
     ): string {
-        // Module 4: Clean Name Extraction & Follower Gender Context
+        // Module 4: Follower Gender Context & Explicit Name Extraction
         $genderCtx = self::detectGenderContext($authorName, $commentText);
         $gender = $genderCtx['gender'];
-        $cleanFirstName = $genderCtx['first_name'];
+
+        // Hard constraint: NEVER address the user by name unless explicitly written in comment text
+        $explicitName = '';
+        if (preg_match('/\b(me llamo|mi nombre es|soy)\s+([a-záéíóúñ]+)\b/iu', $commentText, $mName)) {
+            $explicitName = mb_convert_case($mName[2], MB_CASE_TITLE, 'UTF-8');
+        }
 
         $nameInstruction = "";
-        if (!empty($cleanFirstName)) {
-            $nameInstruction = "- El nombre de pila verificado del seguidor es \"$cleanFirstName\". Úsalo de forma natural y orgánica (puede ser al inicio o integrado fluidamente en la oración). NUNCA inventes nombres, ni uses caracteres raros como '@' o números de perfil.";
+        if (!empty($explicitName)) {
+            $nameInstruction = "- El seguidor se presentó explícitamente en su comentario como \"$explicitName\". Puedes dirigirte a él/ella por este nombre con sobriedad y respeto estoico.";
         } else {
-            $nameInstruction = "- El perfil del seguidor no tiene un nombre personal reconocible (ej. cuenta comercial o pseudónimo numérico). NO inventes ningún nombre ni uses su handle de usuario. Dirígete a él de forma directa y cercana sin vocativo artificial.";
+            $nameInstruction = "- REGLA INQUEBRANTABLE: PROHIBICIÓN ABSOLUTA DE INVENTAR O USAR NOMBRES (HALLUCINATED_NAME):\n"
+                . "El seguidor NO ha escrito su nombre en el texto del comentario. Queda TERMINANTEMENTE PROHIBIDO usar el nombre de su perfil ('$authorName'), inventar un nombre, deducirlo o asumir un nombre de pila. NUNCA digas 'Hola [Nombre]', 'Gracias, [Nombre]', 'Así es, [Nombre]' ni 'Lamento tu pérdida, [Nombre]'. Dirígete a la persona de forma directa, humana y sobria, sin vocativos inventados.";
         }
 
         $genderInstruction = "";
         if ($gender === 'female') {
-            $nameRef = !empty($cleanFirstName) ? "\"$cleanFirstName\"" : "un trato femenino respetuoso";
-            $genderInstruction = "DIRECTIVA ESTRICTA DE GÉNERO [SEGUIDORA MUJER - PROHIBICIÓN TOTAL DE 'HERMANO' Y 'BIENVENIDO']:\n"
-                . "- La seguidora ha sido identificada con certeza como MUJER (Nombre: \"$cleanFirstName\" / Indicios en comentario).\n"
-                . "- PROHIBICIÓN TOTAL Y TERMINANTE: Queda ESTRICTAMENTE PROHIBIDO decirle \"hermano\", \"amigo\", \"rey\", \"bienvenido\" o cualquier término masculino. Usar términos masculinos con una mujer delata inmediatamente que eres un bot.\n"
-                . "- TRATAMIENTO OBLIGATORIO: Dirígete a ella usando $nameRef, o vocativos afines como \"guerrera\", \"hermana\", o bien de forma cercana y cálida sin género forzado (ej. '¡Un abrazo grande, guerrera!', 'Totalmente, $cleanFirstName', 'Así se habla', 'Con toda la fuerza', '¡Bienvenida a la comunidad!').";
+            $nameMention = !empty($explicitName) ? "Dirígete a ella como \"$explicitName\"" : "Dirígete a ella de forma cercana y cálida sin género forzado ni nombres inventados";
+            $genderInstruction = "DIRECTIVA ESTRICTA DE GÉNERO [SEGUIDORA MUJER (DECLARADO EN TEXTO) - PROHIBICIÓN TOTAL DE 'HERMANO' Y 'BIENVENIDO']:\n"
+                . "- La seguidora indicó explícitamente ser mujer en el comentario.\n"
+                . "- PROHIBICIÓN TOTAL Y TERMINANTE: Queda ESTRICTAMENTE PROHIBIDO decirle \"hermano\", \"amigo\", \"rey\", \"bienvenido\" o cualquier término masculino.\n"
+                . "- TRATAMIENTO OBLIGATORIO: $nameMention. NUNCA inventes nombres de pila ni uses clichés.";
         } elseif ($gender === 'male') {
-            $genderInstruction = "DIRECTIVA DE GÉNERO [SEGUIDOR HOMBRE]:\n"
-                . "- El seguidor es un hombre (Nombre: \"$cleanFirstName\"). Puedes usar su nombre de pila, o vocativos como \"hermano\" o \"guerrero\" con moderación orgánica y respeto estoico.";
+            $nameMention = !empty($explicitName) ? "El seguidor indicó explícitamente su nombre (\"$explicitName\")." : "CERO nombres de pila inventados.";
+            $genderInstruction = "DIRECTIVA DE GÉNERO [SEGUIDOR HOMBRE (DECLARADO EN TEXTO)]:\n"
+                . "- El seguidor declaró explícitamente ser hombre en el texto. Mantén tono sobrio, respetuoso y humano. $nameMention Evita superlativos de coach o excesos de confianza.";
         } else {
-            $genderInstruction = "DIRECTIVA ESTRICTA DE GÉNERO [GÉNERO NEUTRO / NO ESPECIFICADO O USUARIO DE FACEBOOK]:\n"
-                . "- El perfil no indica género con certeza o es un nombre ambiguo / 'Usuario de Facebook'.\n"
-                . "- PROHIBICIÓN TERMINANTE DE SESGO MASCULINO: Queda ESTRICTAMENTE PROHIBIDO usar palabras con género marcado como \"bienvenido\", \"bienvenida\", \"hermano\", \"amigo\", \"guerrero\" o \"campeón\".\n"
-                . "- TRATAMIENTO OBLIGATORIO: Usa SIEMPRE fórmulas 100% universales y neutras gramaticalmente que suenen impecables para cualquier persona. Ejemplos obligatorios:\n"
-                . "  * '¡Qué alegría tenerte en la comunidad de Fortaleza Imparable! ✨'\n"
-                . "  * '¡Un gran saludo y muchas gracias por acompañarnos! 🤝'\n"
-                . "  * '¡Muchísimas gracias por sumarte y por tan buena energía! 🙌'\n"
-                . "  * 'Totalmente de acuerdo. Fuerza y constancia en el camino. 🏛️✨'\n"
-                . "  * '¡Así se habla! Paso firme y mente clara. ⚡'\n"
-                . "- Jamás asumas masculinidad por defecto.";
+            $genderInstruction = "DIRECTIVA ESTRICTA DE GÉNERO [GÉNERO NO DECLARADO EN TEXTO - OBLIGATORIO NEUTRO]:\n"
+                . "- El texto del comentario no declara género de forma explícita.\n"
+                . "- PROHIBICIÓN TERMINANTE DE TÉRMINOS CON GÉNERO: Queda TERMINANTEMENTE PROHIBIDO usar \"hermano\", \"hermana\", \"amigo\", \"amiga\", \"guerrero\", \"guerrera\", \"campeón\", \"campeona\", \"bienvenido\", \"bienvenida\", \"nuevo guerrero\".\n"
+                . "- TRATAMIENTO OBLIGATORIO: Usa SIEMPRE fórmulas 100% universales y neutras gramaticalmente:\n"
+                . "  * 'Gracias por sumarte. 🙌'\n"
+                . "  * 'Un gusto tenerte por aquí.'\n"
+                . "  * 'Gracias por compartirlo.'\n"
+                . "  * 'Se entiende tu punto.'\n"
+                . "  * 'Lamento que hayas pasado por eso.'\n"
+                . "  * 'Totalmente de acuerdo. Foco en lo esencial. 🏛️'\n"
+                . "- Jamás asumas masculinidad ni género por defecto.";
         }
 
         // Module 2: Philosophical & Cultural Post Context
@@ -2781,7 +3674,13 @@ class AiAgentService {
         $charCount = mb_strlen(trim($commentText), 'UTF-8');
         $wordsArray = preg_split('/\s+/u', trim($commentText), -1, PREG_SPLIT_NO_EMPTY) ?: [];
         $wordCount = count($wordsArray);
+        // Module 1: Proportionality & Length Directives (HERMES v2 Engine)
+        $charCount = mb_strlen(trim($commentText), 'UTF-8');
+        $wordsArray = preg_split('/\s+/u', trim($commentText), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $wordCount = count($wordsArray);
         $textNoEmoji = trim(preg_replace('/[\x{1F600}-\x{1F64F}\x{1F300}-\x{1F5FF}\x{1F680}-\x{1F6FF}\x{1F700}-\x{1F77F}\x{1F780}-\x{1F7FF}\x{1F800}-\x{1F8FF}\x{1F900}-\x{1F9FF}\x{1FA00}-\x{1FA6F}\x{1FA70}-\x{1FAFF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}\x{2300}-\x{23FF}\x{2B50}\x{200D}\x{FE0F}\s\p{P}]/u', '', $commentText));
+
+        $intent = $commentAnalysis['intent'] ?? 'general_conversation';
 
         // Detección de saludos cordiales breves (ej. "Saludos", "Hola", "Buenos días", "Excelente", etc.)
         $isGreetingComment = (bool)preg_match('/^(saludos|saludo|hola|holas|buen d[ií]a|buenos d[ií]as|buenas tardes|buenas noches|bendiciones|gracias|muchas gracias|excelente)[!.\s]*$/iu', trim($commentText));
@@ -2797,31 +3696,62 @@ class AiAgentService {
         $isStickerComment = str_starts_with($commentText, '[Sticker') || str_starts_with($commentText, '[GIF') || (($commentAnalysis['intent'] ?? '') === 'friendly_sticker_reaction');
 
         $proportionalityDirective = "";
-        if ($isGreetingComment) {
-            $proportionalityDirective = "DIRECTIVA EXCLUSIVA PARA SALUDO O MENSAJE CORTO CORDIAL (MÁXIMO 6 A 12 PALABRAS, 1 SOLA FRASE):\n"
-                . "- El seguidor envió un saludo breve (ej. 'Saludos', 'Hola', 'Buenos días', 'Bendiciones', con o sin sticker/emoji).\n"
-                . "- REGLA DE ORO: Responde de forma muy agradable, cálida, humana y BREVE (1 sola frase, entre 6 y 12 palabras).\n"
-                . "- REMATE: Termina con 1 emoji cálido o afín (✨, 🤝, 🙌, 🏛️, 👊).\n"
-                . "- REGLA DE GÉNERO NEUTRO: NUNCA digas 'bienvenido' ni 'hermano' a menos que sea un hombre verificado. Usa giros neutros como '¡Saludos! Qué alegría tenerte por aquí, un fuerte abrazo.' o '¡Un gran saludo! Muchísimas gracias por el apoyo y la energía.'\n"
-                . "- PROHIBICIÓN ABSOLUTA: CERO discursos solemnes de iniciación, CERO reflexiones existenciales y CERO preguntas de cierre.";
-            $closingQuestionRule = "DESACTIVADA (Es un saludo breve. Queda terminantemente prohibido hacer preguntas de cierre).";
+        if ($intent === 'EMOJI_ONLY') {
+            $proportionalityDirective = "DIRECTIVA EXCLUSIVA PARA COMENTARIO DE SOLO EMOJIS (HERMES v2 - PROPORCIONALIDAD MINIMALISTA):\n"
+                . "- El seguidor comentó ÚNICAMENTE con emojis.\n"
+                . "- POLÍTICA DE CALIBRACIÓN: En aproximadamente el 70% de las respuestas, responde ÚNICAMENTE con 1 o 2 emojis relevantes (ej. 🔥, 🏛️✨, 🤝, 🙌, 💪). CERO PALABRAS.\n"
+                . "- En el ~30% restante, si el contexto lo hace más natural, puedes responder con MÁXIMO 1 a 3 palabras contundentes más 1 emoji (ej. 'Firmeza total. 🏛️' o 'Así es. 🔥').\n"
+                . "- PROHIBICIÓN ABSOLUTA: Queda TERMINANTEMENTE PROHIBIDO escribir oraciones de más de 3 palabras, párrafos, discursos, bienvenidas o preguntas de cierre. NUNCA trates de sonar profundo ante un simple emoji.";
+            $closingQuestionRule = "DESACTIVADA (Es un comentario de emojis; prohibido hacer preguntas).";
+        } elseif ($intent === 'BRIEF_AGREEMENT') {
+            $proportionalityDirective = "DIRECTIVA EXCLUSIVA PARA ACUERDO BREVE O VALIDACIÓN DE 1 PALABRA (MÁXIMO 4 A 10 PALABRAS):\n"
+                . "- El seguidor comentó con una sola palabra o frase mínima de acuerdo (ej. 'Importante', 'Exacto', 'Clave', 'Totalmente').\n"
+                . "- Responde con sobriedad y proporcionalidad, ratificando el punto central de forma estoica y directa (entre 4 y 10 palabras, ej. 'Así es. Foco en lo esencial.', 'Totalmente. La constancia lo es todo. 🏛️', 'Exacto. Lo que depende de uno es lo que cuenta.').\n"
+                . "- PROHIBICIÓN ABSOLUTA DE BIENVENIDA: Queda TERMINANTEMENTE PROHIBIDO darle la bienvenida a la comunidad, decir 'gracias por sumarte', o asumir que es nuevo seguidor.\n"
+                . "- PROHIBICIÓN ABSOLUTA DE PREGUNTAS: Cero preguntas cliché de bot o coach ('¿En qué buscas aplicarlo?').";
+            $closingQuestionRule = "DESACTIVADA (Es un acuerdo breve; prohibido hacer preguntas de cierre).";
+        } elseif ($intent === 'GREETING' || $isGreetingComment) {
+            $proportionalityDirective = "DIRECTIVA EXCLUSIVA PARA SALUDO BREVE (MÁXIMO 4 A 8 PALABRAS):\n"
+                . "- El seguidor envió un saludo cordial breve (ej. 'Hola', 'Buenos días', 'Saludos').\n"
+                . "- Responde con cordialidad educada y sobria (entre 4 y 8 palabras, ej. '¡Hola! Qué gusto saludarte. Un gran abrazo. 🤝').\n"
+                . "- PROHIBICIÓN ABSOLUTA: Cero discursos solemnes de iniciación, cero bienvenidas ceremoniales, cero preguntas de cierre.";
+            $closingQuestionRule = "DESACTIVADA (Es un saludo breve; prohibido hacer preguntas).";
+        } elseif ($intent === 'NEW_FOLLOWER') {
+            $proportionalityDirective = "DIRECTIVA PARA NUEVO SEGUIDOR VERIFICADO (6 A 12 PALABRAS):\n"
+                . "- El seguidor indicó explícitamente que es nuevo seguidor o acaba de seguir la cuenta.\n"
+                . "- Brinda un agradecimiento o bienvenida sobria y natural (6 a 12 palabras). Variaciones obligatorias (evita decir siempre 'Bienvenido a la comunidad'):\n"
+                . "  * 'Gracias por sumarte. 🙌'\n"
+                . "  * 'Gracias por estar aquí. Que el contenido te aporte. 🏛️'\n"
+                . "  * 'Un gusto tenerte por aquí. Seguimos trabajando en ello. 🤝'\n"
+                . "- PROHIBICIÓN: NUNCA uses nombres inventados ni adulaciones.";
+        } elseif ($intent === 'DISAGREEMENT') {
+            $proportionalityDirective = "DIRECTIVA PARA DESACUERDO (12 A 25 PALABRAS):\n"
+                . "- El seguidor discrepa respetuosamente con el postulado de la publicación.\n"
+                . "- Responde con serenidad estoica y respeto. No debatas para 'ganar' la discusión; ofrece una distinción estoica clara con elegancia y calma interior (ej. 'Se entiende tu punto. La templanza no es pasividad ante lo injusto, sino claridad para actuar sin ira. 🏛️').";
+            $closingQuestionRule = "DESACTIVADA (Es un desacuerdo; desescalar con calma).";
+        } elseif ($intent === 'CRITICISM') {
+            $proportionalityDirective = "DIRECTIVA PARA CRÍTICA AL CONTENIDO (12 A 25 PALABRAS):\n"
+                . "- El seguidor critica la profundidad o formulación del post (ej. 'demasiado simplista', 'fuera de contexto').\n"
+                . "- Responde con sobriedad estoica y apertura reflexiva, sin ponerte a la defensiva (ej. 'Punto válido. En pocas líneas se sintetiza una idea, pero la práctica real requiere discernimiento y profundidad diaria. 🏛️').";
+            $closingQuestionRule = "DESACTIVADA";
+        } elseif ($intent === 'PERSONAL_STORY') {
+            $proportionalityDirective = "DIRECTIVA PARA EXPERIENCIA O LUCHA PERSONAL (EMPATÍA ANTES QUE AFORISMO):\n"
+                . "- El seguidor comparte una vivencia difícil, pérdida, fracaso o desahogo.\n"
+                . "- REGLA DE ORO: Prioriza la empatía humana, la escucha y el respeto antes que una sentencia estoica automática. NUNCA respondas con sermones moralistas sentenciosos (ej. evitar 'El fracaso forja el carácter; levantarse con temple es la victoria estoica').\n"
+                . "- PREFERENCIA: 'Lo siento por lo que estás atravesando. Perder algo por lo que trabajaste duele. Ojalá este contenido te acompañe en el camino.'\n"
+                . "- CERO emojis festivos (🔥/❤️/😂 ante el dolor), CERO optimismo ingenuo, CERO lecciones no solicitadas.";
         } elseif ($isStickerComment) {
             $proportionalityDirective = "DIRECTIVA EXCLUSIVA PARA RESPUESTA A STICKER AMIGABLE (MÁXIMO 5 A 8 PALABRAS):\n"
                 . "- El seguidor comentó con un STICKER o GIF AMIGABLE de apoyo, acuerdo o afecto.\n"
-                . "- REGLA DE ORO: Responde de forma muy agradable, cálida y ULTRA BREVE (ESTRICTAMENTE ENTRE 5 Y 8 PALABRAS, 1 SOLA FRASE).\n"
-                . "- REMATE: Termina con 1 emoji cálido o afín (✨, 🤝, 👏, 🫂, 🏛️, 👊, 🔥).\n"
-                . "- REGLA DE GÉNERO: Respeta la neutralidad y la prohibición estricta de 'hermano' o 'bienvenido'.\n"
-                . "- PROHIBICIÓN ABSOLUTA: Cero discursos solemnes, cero reflexiones existenciales y CERO preguntas de cierre.";
-            $closingQuestionRule = "DESACTIVADA (Es un sticker. Queda terminantemente prohibido hacer preguntas de cierre).";
+                . "- Responde de forma agradable, cálida y ULTRA BREVE (ESTRICTAMENTE ENTRE 5 Y 8 PALABRAS, 1 SOLA FRASE).\n"
+                . "- REMATE: Termina con 1 emoji cálido o afín (✨, 🤝, 🏛️, 👊).\n"
+                . "- PROHIBICIÓN ABSOLUTA: Cero discursos solemnes, cero preguntas de cierre.";
+            $closingQuestionRule = "DESACTIVADA";
         } elseif ($isShortComment) {
-            $proportionalityDirective = "REGLA DE RESPUESTA A REACCIÓN O ACUERDO BREVE (HUMANO Y CERCANO - LIBERTAD HERMES):\n"
-                . "- El seguidor dejó un emoji, sticker o acuerdo breve (ej. 'Amén', 'Exacto !', 'Gran verdad', 'Brutal', 'Totalmente', 'Hermoso ❤️').\n"
-                . "- Responde de forma ágil, humana, cálida y natural (1 sola frase, aproximadamente 6 a 15 palabras).\n"
-                . "- REMATE: Termina con 1 emoji sobrio y respetuoso (✨, 👍, 👊, 🙌, 🔥, 💪, 🏛️).\n"
-                . "- VARIEDAD OBLIGATORIA: Cada seguidor es único. Varía ampliamente tus expresiones y enfoques (disciplina diaria, templanza, autodominio, calma mental, foco en lo esencial, paso firme). NUNCA repitas la misma frase ni estructuras calcadas.\n"
-                . "- PROHIBICIÓN DE PREGUNTAS: Queda ESTRICTAMENTE PROHIBIDO formular preguntas de cierre a simples reacciones.";
-
-            $closingQuestionRule = "DESACTIVADA (El comentario es corto; queda estrictamente prohibido formular preguntas de cierre).";
+            $proportionalityDirective = "REGLA DE RESPUESTA A REACCIÓN O ACUERDO BREVE (4 A 10 PALABRAS):\n"
+                . "- El seguidor dejó un emoji o acuerdo breve. Responde de forma sobria, ágil y contundente (4 a 10 palabras).\n"
+                . "- CERO discursos de bienvenida, CERO preguntas de cierre.";
+            $closingQuestionRule = "DESACTIVADA";
         } elseif ($lengthCategory === 'long') {
             $proportionalityDirective = "PROPORCIONALIDAD ESTRICTA: El comentario del seguidor es reflexivo o extenso (>80 caracteres). Tu respuesta debe ser humana, empática y con sustancia estoica (entre 15 y 30 palabras).";
         } else {
@@ -2829,7 +3759,6 @@ class AiAgentService {
         }
 
         // Module 3: Intent Tactical Guidance
-        $intent = $commentAnalysis['intent'] ?? 'general_conversation';
         $commentLower = mb_strtolower($commentText, 'UTF-8');
         $intentGuidance = "";
 
@@ -2912,7 +3841,30 @@ class AiAgentService {
         $fewShotText = '';
         if (!empty($fewShotExamples)) {
             $fewShotText .= "EJEMPLOS DE ORO DE LA MARCA (Imita este estilo exacto y nivel de naturalidad):\n";
-            foreach (array_slice($fewShotExamples, 0, 4) as $idx => $ex) {
+            // Filter or prioritize examples matching current intent
+            $examplesToShow = [];
+            foreach ($fewShotExamples as $ex) {
+                $tag = $ex['tag'] ?? '';
+                if ($intent === 'EMOJI_ONLY' && str_contains($tag, 'emojis')) {
+                    $examplesToShow[] = $ex;
+                } elseif ($intent === 'BRIEF_AGREEMENT' && (str_contains($tag, 'acuerdo') || str_contains($tag, 'minimo'))) {
+                    $examplesToShow[] = $ex;
+                } elseif ($intent === 'GREETING' && str_contains($tag, 'saludo')) {
+                    $examplesToShow[] = $ex;
+                } elseif ($intent === 'NEW_FOLLOWER' && str_contains($tag, 'seguidora')) {
+                    $examplesToShow[] = $ex;
+                } elseif ($intent === 'DISAGREEMENT' && str_contains($tag, 'desacuerdo')) {
+                    $examplesToShow[] = $ex;
+                } elseif ($intent === 'PERSONAL_STORY' && (str_contains($tag, 'experiencia') || str_contains($tag, 'mujer'))) {
+                    $examplesToShow[] = $ex;
+                } elseif ($intent === 'QUESTION' && str_contains($tag, 'pregunta')) {
+                    $examplesToShow[] = $ex;
+                }
+            }
+            if (empty($examplesToShow)) {
+                $examplesToShow = array_slice($fewShotExamples, 0, 5);
+            }
+            foreach ($examplesToShow as $idx => $ex) {
                 $c = $ex['comment'] ?? '';
                 $r = $ex['reply'] ?? '';
                 $fewShotText .= "Ejemplo #" . ($idx + 1) . ":\n- Comentario de Seguidor: \"$c\"\n- Respuesta Maestra Ideal: \"$r\"\n\n";
@@ -2923,14 +3875,58 @@ class AiAgentService {
         $cleanPostCaption = addslashes($postCaption);
 
         $optionsInstructions = "";
-        if ($isShortComment) {
+        if ($intent === 'EMOJI_ONLY') {
+            $optionsInstructions = <<<OPTS
+INSTRUCCIÓN PARA COMENTARIO DE SOLO EMOJIS (HERMES v2 - PROPORCIONALIDAD ESTRICTA):
+El seguidor comentó únicamente con emojis. Genera 3 opciones de respuesta:
+1. "engagement": [1-2 Emojis]: ÚNICAMENTE 1 o 2 emojis relevantes (ej. '🔥🏛️' o '🏛️✨'). CERO PALABRAS.
+2. "conversion": [1-2 Emojis]: 1 o 2 emojis (ej. '🤝🏛️' o '🙌✨'). CERO PALABRAS.
+3. "support": [Micro-frase]: MÁXIMO 1 a 3 palabras contundentes con 1 emoji (ej. 'Firmeza total. 🏛️' o 'Así es. 🔥').
+PROHIBICIÓN TERMINANTE: CERO oraciones largas, CERO párrafos, CERO discursos.
+OPTS;
+        } elseif ($intent === 'BRIEF_AGREEMENT') {
+            $optionsInstructions = <<<OPTS
+INSTRUCCIÓN PARA ACUERDO BREVE (HERMES v2 - 4 A 10 PALABRAS):
+El seguidor dejó un acuerdo de 1 palabra o frase mínima (ej. 'Importante', 'Exacto', 'Clave').
+Genera 3 opciones de respuesta sobrias y proporcionales (4 a 10 palabras cada una):
+1. "engagement": [Ratificación Serena]: 'Así es. Foco en lo esencial.'
+2. "conversion": [Principio Estoico Breve]: 'Totalmente. La constancia diaria marca la diferencia. 🏛️'
+3. "support": [Firmeza y Templanza]: 'Exacto. Lo que depende de uno es lo que cuenta.'
+PROHIBICIÓN TERMINANTE: CERO bienvenidas a la comunidad, CERO discursos, CERO preguntas de cierre.
+OPTS;
+        } elseif ($intent === 'GREETING') {
+            $optionsInstructions = <<<OPTS
+INSTRUCCIÓN PARA SALUDO BREVE:
+Genera 3 opciones cordiales y sobrias de 4 a 8 palabras (ej. '¡Hola! Qué gusto saludarte. Un gran abrazo. 🤝'). CERO discursos ni bienvenidas solemnes.
+OPTS;
+        } elseif ($intent === 'NEW_FOLLOWER') {
+            $optionsInstructions = <<<OPTS
+INSTRUCCIÓN PARA NUEVO SEGUIDOR VERIFICADO:
+Genera 3 opciones de bienvenida sobria y cálida de 8 a 15 palabras (ej. 'Bienvenido a Fortaleza Imparable. Aquí forjamos carácter y templanza día a día. 🏛️').
+OPTS;
+        } elseif ($intent === 'DISAGREEMENT') {
+            $optionsInstructions = <<<OPTS
+INSTRUCCIÓN PARA DESACUERDO:
+Genera 3 opciones con serenidad estoica y distinción conceptual clara (12 a 25 palabras). No confrontes ni intentes ganar la discusión.
+OPTS;
+        } elseif ($intent === 'CRITICISM') {
+            $optionsInstructions = <<<OPTS
+INSTRUCCIÓN PARA CRÍTICA AL CONTENIDO:
+Genera 3 opciones sobrias y reflexivas (12 a 25 palabras), aceptando la perspectiva con madurez estoica sin ponerte a la defensiva.
+OPTS;
+        } elseif ($intent === 'PERSONAL_STORY') {
+            $optionsInstructions = <<<OPTS
+INSTRUCCIÓN PARA LUCHA O HISTORIA PERSONAL:
+Genera 3 opciones con empatía humana sobria (15 a 30 palabras): reconocimiento del reto, idea central de resiliencia y templanza estoica. CERO emojis festivos (🔥/❤️/😂 ante el dolor).
+OPTS;
+        } elseif ($isShortComment) {
             $optionsInstructions = <<<OPTS
 INSTRUCCIÓN PARA COMENTARIO BREVE O REACCIÓN (LIBERTAD Y VARIEDAD - HERMES):
-El seguidor dejó una reacción breve o acuerdo. Genera 3 VARIACIONES DIFERENTES Y FRESCAS DE RESPUESTA (1 sola frase ágil, 6 a 15 palabras cada una):
-1. "engagement": [Validación Cálida & Humana]: Acuerdo auténtico y natural con 1 emoji (ej. 'Totalmente de acuerdo, la disciplina interior lo cambia todo 🏛️' o '¡Muchas gracias! Me alegra que esta reflexión te acompañe hoy ✨').
-2. "conversion": [Impulso Estoico Breve]: Determinación y templanza sin ventas (ej. 'Fuerza y foco en el camino, paso a paso 🏛️✨' o '¡Ese es el espíritu! Un día a la vez forjando el carácter 💪🔥').
-3. "support": [Hermandad & Firmeza]: Remate contundente y fraternal sin soporte técnico (ej. '¡Así se habla! Con toda la constancia 👊⚡' o 'El tiempo y la calma siempre ponen todo en su lugar 🏛️').
-DIRECTIVA DE VARIEDAD: Cero discursos solemnes, cero preguntas forzadas y máxima frescura en cada opción, alternando enfoques de constancia, serenidad y autodominio.
+El seguidor dejó una reacción breve o acuerdo. Genera 3 variaciones ágiles de 4 a 10 palabras cada una:
+1. "engagement": [Validación Cálida & Humana]: Acuerdo auténtico y natural con 1 emoji.
+2. "conversion": [Impulso Estoico Breve]: Determinación y templanza sin ventas.
+3. "support": [Hermandad & Firmeza]: Remate contundente y fraternal sin soporte técnico.
+DIRECTIVA DE VARIEDAD: Cero discursos solemnes, cero preguntas forzadas y máxima frescura en cada opción.
 OPTS;
         } else {
             if (!self::COMMERCIAL_SALES_ACTIVE) {
@@ -2950,12 +3946,23 @@ OPTS;
             }
         }
 
+        $langNames = ['es' => 'ESPAÑOL', 'pt' => 'PORTUGUÊS', 'en' => 'ENGLISH'];
+        $langName = $langNames[strtolower($language)] ?? strtoupper($language);
+
+        $languageStrictDirective = <<<LANG
+DIRECTIVA ESTRICTA DE IDIOMA Y NO TRADUCCIÓN (OBLIGATORIA):
+- IDIOMA OBLIGATORIO DE RESPUESTA: $langName ($language).
+- REGLA INQUEBRANTABLE: Responde exclusivamente en $langName. NUNCA traduzcas ni respondas por defecto en español si el idioma esperado es portugués o inglés. No mezcles idiomas salvo nombres propios, citas exactas o términos universales inevitables.
+- Cada una de las 3 opciones (engagement, conversion, support) DEBE estar redactada con fluidez nativa y natural en $langName.
+LANG;
+
         return <<<PROMPT
 Eres "$personaName", el estratega oficial de comunicación y gestor de comunidad de la marca "$brandName" en $platform.
 Industria / Nicho: $brandIndustry.
 Directrices y personalidad de la marca: $brandDescription.
 Tono configurado: $brandTone.
-Idioma obligatorio de respuesta: $language.
+
+$languageStrictDirective
 
 CALIBRACIÓN DE IDENTIDAD:
 - Nivel de Cercanía & Calidez: $warmthLevel% (Trata a la persona con amabilidad y calidez genuina).
@@ -2988,7 +3995,7 @@ REGLAS ESTRICTAS DE FILOSOFÍA ESTOICA Y VERACIDAD (OBLIGATORIAS):
 2. CERO ACCIONES NO REALIZADAS: NUNCA afirmes haber enviado un mensaje directo (DM), correo o realizado acciones externas ("te acabo de enviar un DM", "ya te escribí").
 3. CONSULTAS DE ACCESO O PRECIOS: Si alguien pregunta por costos o cursos, aclara amablemente que compartimos reflexiones libres y principios estoicos sin catálogo de venta activo, e invita a un DM si desea charlar fraternalmente.
 4. PREGUNTAS CONCEPTUALES Y FILOSÓFICAS: Si el seguidor consulta sobre un concepto, metodología o filosofía estoica (ej. Dicotomía del control, memento mori, amor fati), responde con fundamento, claridad y valor práctico. NUNCA desvíes preguntas conceptuales a soporte técnico de pedidos o reclamos.
-5. COMENTARIOS DE SOLO EMOJIS O REACCIONES: Si el comentario del seguidor consiste en emojis (ej. 👏👏, 🔥, ❤️, 💪, 🙌) o palabras mínimas ('Totalmente', 'Top', 'Crack'), responde de forma ULTRA BREVE Y CON CHISPA (MÁXIMO 5 A 12 PALABRAS), usando emojis expresivos de reciprocidad (ej. '¡A tope con esa energía! 🔥 Un fuerte abrazo.', '¡Puro fuego! Seguimos con todo. 🔥💪', '¡Esa es la actitud! ⚡🙌'). QUEDA TERMINANTEMENTE PROHIBIDO redactar párrafos explicativos, discursos solemnes o formular preguntas de cierre a un simple emoji.
+5. COMENTARIOS DE SOLO EMOJIS: Si el seguidor comentó solo emojis (ej. 👏👏, 🔥, ❤️, 💪, 🙌), responde de forma MINIMALISTA (~70% solo 1-2 emojis sobrios como 🔥🏛️ o 🤝✨, ~30% 1 a 3 palabras contundentes + 1 emoji como 'Firmeza total. 🏛️' o 'Así es. 🔥'). QUEDA TERMINANTEMENTE PROHIBIDO redactar párrafos explicativos, discursos solemnes, oraciones largas o formular preguntas de cierre a un simple emoji.
 6. COMENTARIOS BURLONES, CHISTES O MEMES: Si el seguidor hace un chiste, broma, ironía o comentario cómico (ej. 'al cazo', 'carnitas', risas, emojis 😝/😂), NUNCA te pongas solemne, NUNCA agradezcas como corporación formal ("Apreciamos que dediques tiempo a reflexionar...") y NUNCA hagas preguntas existenciales ("¿cómo buscas aplicarlo hoy?"). Responde con complicidad, ingenio y risa ("Jajaja...", "😅"), manteniendo la respuesta corta y humana.
 7. VOCATIVO Y NICKNAMES: Si el seguidor tiene un usuario con números (ej. Samuelongo380) o apodos no verificados, NUNCA uses ese handle como nombre de pila. Habla de tú a tú directamente y con fluidez natural sin vocativos forzados.
 8. LECTURA CRÍTICA Y RESPUESTAS DIRECTAS: Si el seguidor hace una pregunta puntual (ej. "¿Quién era ese Minamoto?", "¿De quién es la frase?"), RESPONDE DIRECTAMENTE a lo que pregunta con precisión histórica y cultural (¡CUIDADO: Minamoto no Yoshitsune NO es Miyamoto Musashi!). Jamás te vayas por las ramas ni des discursos genéricos cuando te hacen una pregunta concreta.
@@ -2996,6 +4003,10 @@ REGLAS ESTRICTAS DE FILOSOFÍA ESTOICA Y VERACIDAD (OBLIGATORIAS):
 10. GÉNERO Y PROHIBICIÓN DE 'HERMANO' A MUJERES: Si la seguidora es mujer (identificada arriba), queda TERMINANTEMENTE PROHIBIDO decirle "hermano". Trátala por su nombre, o como "guerrera", "hermana", o con cercanía sin género masculino. Si el género no se conoce, no asumas "hermano" por defecto.
 11. STICKERS O GIFS AMIGABLES: Si el seguidor comentó con un sticker de apoyo (apretón de manos, aplauso, ¡Cierto!, emoción/afecto), responde de forma muy agradable, breve (5 a 8 palabras) y con 1 emoji afín.
 12. LIBERTAD CREATIVA Y CERO MULETILLAS O DISPARATES: Piensa y reflexiona como un ser humano sabio, empático y consciente. Si alguien expresa una queja, pregunta dolorosa o reflexión existencial sobre la miseria o la dificultad, NUNCA respondas con plantillas de agradecimiento ("gracias por apoyar") ni frases mecánicas. Varía siempre tu vocabulario abordando la virtud, la resiliencia y la dicotomía del control con lenguaje renovado y genuino.
+13. BIENVENIDAS RESTRINGIDAS Y VARIADAS: NUNCA des la bienvenida a la comunidad a quien deje un simple acuerdo ('Importante', 'Exacto'), una reflexión o emojis. La bienvenida se reserva EXCLUSIVAMENTE para quienes manifiesten explícitamente ser nuevos seguidores ('te sigo', 'nueva por aquí'). Cuando se dé, NO uses siempre la misma frase ("Bienvenido a la comunidad"). Varía de forma sobria y natural: "Gracias por sumarte. 🙌", "Gracias por estar aquí. Que el contenido te aporte.", "Un gusto tenerte por aquí. Seguimos trabajando en ello. 🤝".
+14. ERRADICACIÓN TOTAL DE JERGA: Queda TERMINANTEMENTE PROHIBIDO usar palabras de jerga callejera como 'ñero', 'bro', 'brother', 'pana', 'compa', 'wey', 'parce', 'máquina', 'rey', 'campeón'.
+15. PROHIBICIÓN ABSOLUTA DE INVENTAR CONTEXTO Y NOMBRES (HALLUCINATED_CONTEXT): Hermes NO puede inventar nombres, profesiones, vivencias, relaciones personales ni atribuir emociones no expresadas. Si el usuario NO escribió explícitamente su nombre en su comentario (ej. "Me llamo...", "Soy..."), NUNCA te dirijas a él por un nombre de pila. Queda TERMINANTEMENTE PROHIBIDO saludar con "Hola [Nombre]", "Gracias, [Nombre]", "Así es, [Nombre]" ni "Lamento tu pérdida, [Nombre]". Habla de forma directa y sobria.
+16. REDUCCIÓN DE CLICHÉS MOTIVACIONALES GENÉRICOS: Queda TERMINANTEMENTE PROHIBIDO usar clichés de autoayuda o frases motivacionales intercambiables como "La perseverancia es la clave del éxito", "Juntos somos más fuertes", "Nunca te rindas", "Sigue luchando", "El éxito está en tus manos", "El espíritu indomable", "Que la disciplina guíe siempre tu camino". Hermes responde con criterio real y específico al comentario, no con aforismos predecibles.
 
 $fewShotText
 
@@ -3007,9 +4018,11 @@ $optionsInstructions
 
 Responde únicamente en formato JSON válido:
 {
-  "engagement": "texto de respuesta 1",
-  "conversion": "texto de respuesta 2",
-  "support": "texto de respuesta 3",
+  "detected_comment_language": "código de idioma detectado del seguidor (es, pt o en)",
+  "response_language": "$language",
+  "engagement": "texto de respuesta 1 en $langName",
+  "conversion": "texto de respuesta 2 en $langName",
+  "support": "texto de respuesta 3 en $langName",
   "engagement_tips": "breve tip estratégico de por qué esta respuesta conecta con la audiencia"
 }
 PROMPT;
@@ -3019,14 +4032,17 @@ PROMPT;
      * Find best matching few-shot master example
      */
     private static function findMatchingFewShotExample(string $commentText, array $examples): ?array {
-        $textLower = mb_strtolower($commentText, 'UTF-8');
+        $textTrim = trim(mb_strtolower($commentText, 'UTF-8'), " .!?\t\n\r\0\x0B");
         foreach ($examples as $ex) {
-            $exComment = mb_strtolower($ex['comment'] ?? '', 'UTF-8');
+            $exComment = trim(mb_strtolower($ex['comment'] ?? '', 'UTF-8'), " .!?\t\n\r\0\x0B");
             if (!empty($exComment)) {
+                if ($textTrim === $exComment) {
+                    return $ex;
+                }
                 $words = explode(' ', $exComment);
                 $matchCount = 0;
                 foreach ($words as $w) {
-                    if (mb_strlen($w) > 3 && str_contains($textLower, $w)) {
+                    if (mb_strlen($w) > 3 && str_contains($textTrim, $w)) {
                         $matchCount++;
                     }
                 }
@@ -3113,8 +4129,8 @@ PROMPT;
         int $seed = 0,
         array $recentReplies = []
     ): string {
-        $displayName = self::extractCleanFirstName($authorName);
-        $nameVocative = (!empty($displayName) && $warmthLevel >= 40) ? " $displayName" : '';
+        // HERMES v2.1: Never use authorName or profile handles in replies
+        $nameVocative = '';
 
         // Block A: Saludo / Reconocimiento (10 variantes)
         if ($warmthLevel <= 35) {
@@ -3385,8 +4401,13 @@ PROMPT;
     ): array {
         if (empty($res)) return $res;
 
-        // Skip tone modulation for hostile/toxic comments to preserve strict security and sobriety
-        if ($intent === 'toxic_hostile' || ($res['source'] ?? '') === 'toxic_hostile') {
+        // Skip tone modulation for hostile/toxic comments or NO_REPLY to preserve strict security and sobriety
+        if ($intent === 'toxic_hostile' || $intent === 'HARASSMENT' || $intent === 'TROLL_PROVOCATION' || ($res['action'] ?? '') === 'NO_REPLY') {
+            return $res;
+        }
+
+        // For EMOJI_ONLY, preserve strict minimal output without adding words or questions
+        if ($intent === 'EMOJI_ONLY') {
             return $res;
         }
 
@@ -3394,7 +4415,7 @@ PROMPT;
         $cleanLen = mb_strlen($cleanComment, 'UTF-8');
         $isTagOnly = (bool)preg_match('/^(@[\w\.\-]+\s*)+$/u', $cleanComment);
         $isVisualReaction = ($intent === 'visual_sticker_reaction' || $intent === 'emoji_reaction');
-        $isShort = ($cleanLen <= 25) || $isTagOnly || $isVisualReaction;
+        $isShort = ($cleanLen <= 25) || $isTagOnly || $isVisualReaction || in_array($intent, ['BRIEF_AGREEMENT', 'GREETING']);
 
         $emojiRegex = '/[\x{1F600}-\x{1F64F}\x{1F300}-\x{1F5FF}\x{1F680}-\x{1F6FF}\x{1F700}-\x{1F77F}\x{1F780}-\x{1F7FF}\x{1F800}-\x{1F8FF}\x{1F900}-\x{1F9FF}\x{1FA00}-\x{1FA6F}\x{1FA70}-\x{1FAFF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}\x{2300}-\x{23FF}\x{2B50}\x{200D}\x{FE0F}]/u';
 
@@ -3464,8 +4485,8 @@ PROMPT;
                     $text
                 );
             } elseif ($energyLevel >= 85) {
-                // Tier 4: High Energy / Hype
-                if ($isShort && $field === 'engagement' && !str_contains($text, '⚡') && !str_contains($text, '🔥') && !str_contains($text, '💪')) {
+                // Tier 4: High Energy / Hype (Never for brief agreements, greetings, criticisms or disagreements)
+                if ($isShort && $field === 'engagement' && !in_array($intent, ['BRIEF_AGREEMENT', 'GREETING', 'DISAGREEMENT', 'CRITICISM', 'EMOJI_ONLY']) && !str_contains($text, '⚡') && !str_contains($text, '🔥') && !str_contains($text, '💪')) {
                     $text = rtrim($text, ' .') . ' ¡Con toda la fuerza! ⚡🔥';
                 }
                 $text = str_replace(['👍', '🤝'], ['💪', '⚡'], $text);
@@ -3482,7 +4503,7 @@ PROMPT;
             if ($closingQuestionRule === 'never') {
                 $text = preg_replace('/\s*¿[^?]+\?\s*$/u', '', $text);
             } elseif (($closingQuestionRule === 'always' || ($closingQuestionRule === 'relevant' && $rotKey % 2 === 0)) && $field === 'engagement') {
-                if (!$isShort && !str_contains($text, '?') && !str_contains($text, '¿')) {
+                if (!$isShort && !in_array($intent, ['BRIEF_AGREEMENT', 'GREETING', 'DISAGREEMENT', 'CRITICISM', 'EMOJI_ONLY', 'humor_banter_joke']) && !str_contains($text, '?') && !str_contains($text, '¿')) {
                     if ($postAuthor === 'seneca') {
                         $questions = [
                             ' ¿Sientes que estás priorizando lo que realmente está bajo tu control hoy? ⏳',
@@ -3555,27 +4576,300 @@ PROMPT;
     }
 
     /**
+     * HERMES v2: Robust Linguistic Blacklist Check with Unicode Normalization and Tokenization
+     * Prevents false positives (e.g. 'compañero' is NOT 'compa') while detecting slang variants ('ñero', 'ñerito', etc.)
+     */
+    public static function checkBlacklistViolation(string $text): ?string {
+        $normalized = mb_strtolower(trim($text), 'UTF-8');
+        // Strip accents for base form comparison
+        $unaccented = strtr($normalized, [
+            'á'=>'a','é'=>'e','í'=>'i','ó'=>'o','ú'=>'u','ü'=>'u','ñ'=>'ñ'
+        ]);
+
+        // 1. Multi-word forbidden phrases (street slang / generic coach hype)
+        $forbiddenPhrases = [
+            'ñero de camino', 'ñeros de camino', 'maquina total', 'máquina total', 'rey mio', 'rey mío',
+            'vamos con todo', 'a romperla', 'a por todas', 'sigamos creciendo juntos',
+            'la comunidad de guerreros', 'comunidad de guerreros', 'esa energia', 'esa energía',
+            'esa vibra', 'nunca te rindas', 'el exito esta en tus manos', 'el éxito está en tus manos',
+            'el universo conspira', 'todo pasa por algo', 'tu vibracion atraera', 'tu vibración atraerá',
+            'somos un bot', 'soy un bot', 'soy una ia', 'somos una ia', 'como ia', 'como modelo de lenguaje'
+        ];
+
+        foreach ($forbiddenPhrases as $fp) {
+            if (preg_match('/\b' . preg_quote($fp, '/') . '\b/iu', $unaccented) || preg_match('/\b' . preg_quote($fp, '/') . '\b/iu', $normalized)) {
+                return $fp;
+            }
+        }
+
+        // 2. Tokenize by non-letter boundaries for exact token matching
+        $tokens = preg_split('/[^\p{L}\p{N}]+/u', $unaccented, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        // Exact forbidden tokens and controlled variants (avoiding substring false positives like compañero)
+        $forbiddenTokens = [
+            'ñero', 'ñeros', 'ñerito', 'ñeritos', 'ñerita', 'ñeritas', 'ñerazo',
+            'bro', 'brother', 'brothers', 'broder',
+            'pana', 'panas', 'panita', 'panitas',
+            'parce', 'parces', 'parcero', 'parceros', 'parcerito',
+            'wey', 'weyes', 'guey', 'güey', 'gueyes',
+            'compa', 'compas', 'compadre', 'compadres', 'compita',
+            'man', 'manes',
+            'crack', 'cracks',
+            'maquina', 'maquinas', 'máquina', 'máquinas',
+            'jefe', 'jefazo',
+            'rey', 'reicito',
+            'campeon', 'campeona', 'campeones', 'campeonas',
+            'figura', 'figuras',
+            'bestia', 'animal',
+            'tio', 'tios', 'tía', 'tias',
+            'colega', 'colegas'
+        ];
+
+        foreach ($tokens as $t) {
+            if (in_array($t, $forbiddenTokens, true)) {
+                return $t;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * HERMES v2.1: Output Pre-Publication Validator (Fail-Closed)
+     * Verifies:
+     * - Source validation: rejects any heuristic public response (HEURISTIC_SOURCE_FORBIDDEN)
+     * - Blacklist check
+     * - False Welcomes check
+     * - Proportionality for EMOJI_ONLY
+     * - Bot admission check
+     * - Generic Coach clichés and questions
+     * - Gender Vocatives Check: rejects hermano, guerrero, campeón, etc., when gender is undeclared in commentText
+     * - Hallucinated Name Detection: rejects any profile or assumed name not explicitly written in commentText
+     * - Text Quality & Corruption Detection: rejects truncated text, broken fragments (rtir, rtes), or garbled output
+     */
+    public static function validateAndSanitizeReply(string $reply, string $intent = '', int $retryCount = 0, string $commentText = '', string $source = ''): array {
+        $clean = trim($reply);
+        if (empty($clean)) {
+            return ['valid' => false, 'reason' => 'EMPTY_RESPONSE', 'action' => 'NO_REPLY', 'reply' => ''];
+        }
+
+        // 0. Prohibit public replies from heuristic engine
+        if (!empty($source) && (str_starts_with($source, 'heuristic') || str_starts_with($source, 'local'))) {
+            return [
+                'valid' => false,
+                'reason' => 'HEURISTIC_SOURCE_FORBIDDEN',
+                'token' => $source,
+                'action' => 'NO_REPLY',
+                'reply' => ''
+            ];
+        }
+
+        $cleanLower = mb_strtolower($clean, 'UTF-8');
+        $cLower = mb_strtolower($commentText, 'UTF-8');
+
+        // 1. Blacklist check
+        $blacklistHit = self::checkBlacklistViolation($clean);
+        if ($blacklistHit !== null) {
+            return [
+                'valid' => false,
+                'reason' => 'BLACKLIST_VIOLATION',
+                'token' => $blacklistHit,
+                'action' => ($retryCount < 1 ? 'REGENERATE' : 'NO_REPLY'),
+                'reply' => ''
+            ];
+        }
+
+        // 2. Text Quality & Corrupted Words / Fragments Check
+        if (preg_match('/\b(rtes|rtir|rtiendo|compañ\b|ñer\b)\b/iu', $cleanLower, $mCorrupt)) {
+            return [
+                'valid' => false,
+                'reason' => 'CORRUPTED_TEXT',
+                'token' => $mCorrupt[1],
+                'action' => ($retryCount < 1 ? 'REGENERATE' : 'NO_REPLY'),
+                'reply' => ''
+            ];
+        }
+        if (preg_match('/\b(de|la|el|en|que|con|por|un|una)\s*$/iu', $clean)) {
+            return [
+                'valid' => false,
+                'reason' => 'TRUNCATED_TEXT',
+                'action' => ($retryCount < 1 ? 'REGENERATE' : 'NO_REPLY'),
+                'reply' => ''
+            ];
+        }
+
+        // 3. Gender Vocatives Check: Reject if commentText does not explicitly declare gender
+        $genderDeclared = false;
+        if (!empty($commentText)) {
+            $genderDeclared = (bool)preg_match('/\b(soy mujer|como mujer|de mujer|siendo mujer|agradecida|cansada|encantada|preparada|dispuesta|sola|tranquila|segura|abrumada|orgullosa|madre|abuela|esposa|chica|niña|mujer|soy hombre|como hombre|de hombre|siendo hombre|agradecido|cansado|encantado|preparado|dispuesto|solo|tranquilo|seguro|abrumado|orgulloso|padre|abuelo|esposo|chico|niño|hombre)\b/iu', $cLower);
+        }
+        if (!$genderDeclared) {
+            if (preg_match('/\b(hermano|hermana|hermanos|hermanas|amigo|amiga|amigos|amigas|guerrero|guerrera|guerreros|guerreras|campe[oó]n|campeona|campeones|campeonas|bienvenido|bienvenida|bienvenidos|bienvenidas|nuevo guerrero|nueva guerrera)\b/iu', $cleanLower, $mGen)) {
+                return [
+                    'valid' => false,
+                    'reason' => 'GENDER_ASSUMPTION',
+                    'token' => $mGen[1],
+                    'action' => ($retryCount < 1 ? 'REGENERATE' : 'NO_REPLY'),
+                    'reply' => ''
+                ];
+            }
+        }
+
+        // 4. False Welcome check: Never welcome someone unless intent is explicitly NEW_FOLLOWER
+        if ($intent !== 'NEW_FOLLOWER') {
+            $welcomePatterns = [
+                'bienvenido a la comunidad', 'bienvenida a la comunidad',
+                'bienvenido a fortaleza', 'bienvenida a fortaleza',
+                'sumarte a esta comunidad', 'sumarte a la comunidad',
+                'unirte a esta comunidad', 'unirte a la comunidad',
+                'bienvenido a nuestra comunidad', 'bienvenida a nuestra comunidad',
+                'gracias por unirte', 'gracias por sumarte',
+                'bienvenido', 'bienvenida'
+            ];
+            foreach ($welcomePatterns as $wp) {
+                if (preg_match('/\b' . preg_quote($wp, '/') . '\b/iu', $cleanLower)) {
+                    return [
+                        'valid' => false,
+                        'reason' => 'FALSE_WELCOME',
+                        'token' => $wp,
+                        'action' => ($retryCount < 1 ? 'REGENERATE' : 'NO_REPLY'),
+                        'reply' => ''
+                    ];
+                }
+            }
+        }
+
+        // 5. Proportionality for EMOJI_ONLY (Must not exceed 3 plain words)
+        if ($intent === 'EMOJI_ONLY') {
+            $wordsOnly = preg_split('/\s+/u', trim(preg_replace('/[\p{P}\p{S}]/u', '', $clean)), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+            if (count($wordsOnly) > 3) {
+                return [
+                    'valid' => false,
+                    'reason' => 'EMOJI_OVERRESPONSE',
+                    'action' => ($retryCount < 1 ? 'REGENERATE' : 'NO_REPLY'),
+                    'reply' => ''
+                ];
+            }
+        }
+
+        // 6. Bot admission check
+        if (preg_match('/\b(como modelo de lenguaje|como inteligencia artificial|soy una ia|soy un bot|somos una ia|somos un bot|como ia)\b/iu', $cleanLower)) {
+            return [
+                'valid' => false,
+                'reason' => 'BOT_ADMISSION',
+                'action' => ($retryCount < 1 ? 'REGENERATE' : 'NO_REPLY'),
+                'reply' => ''
+            ];
+        }
+
+        // 7. Generic Coach Cliché questions check
+        if (preg_match('/\b(en qu[eé] buscas aplicarlo|en qu[eé] situaci[oó]n buscas aplicarlo|cu[aá]l consideras tu mayor desaf[ií]o|c[oó]mo lo aplicas en tu vida)\b/iu', $cleanLower)) {
+            return [
+                'valid' => false,
+                'reason' => 'GENERIC_COACH_QUESTION',
+                'action' => ($retryCount < 1 ? 'REGENERATE' : 'NO_REPLY'),
+                'reply' => ''
+            ];
+        }
+
+        // 8. Generic Motivational Coach Clichés check
+        $coachCliches = [
+            'la perseverancia es la clave',
+            'la perseverancia es la llama',
+            'juntos somos más fuertes',
+            'nunca te rindas',
+            'sigue luchando',
+            'el éxito está en tus manos',
+            'el exito esta en tus manos',
+            'que la disciplina guíe siempre',
+            'espíritu indomable',
+            'espiritu indomable',
+            'vamos con todo a romperla',
+            'a romperla con todo',
+            'las cosas pasan por algo',
+            'el universo conspira',
+            'tú puedes vencer cualquier',
+            'tu puedes vencer cualquier'
+        ];
+        foreach ($coachCliches as $cc) {
+            if (str_contains($cleanLower, $cc)) {
+                return [
+                    'valid' => false,
+                    'reason' => 'GENERIC_COACH_CLICHE',
+                    'token' => $cc,
+                    'action' => ($retryCount < 1 ? 'REGENERATE' : 'NO_REPLY'),
+                    'reply' => ''
+                ];
+            }
+        }
+
+        // 9. Hallucinated Name Detection
+        // A name is ONLY allowed if explicitly present in commentText
+        if (preg_match_all('/(?:,\s*|\b(?:gracias|así es|asi es|hola|lamento|saludos|totalmente|de acuerdo|un gusto)\s+)([A-ZÁÉÍÓÚ][a-záéíóúñ]+)\b/u', $clean, $mNames)) {
+            $nonNames = ['a', 'al', 'por', 'de', 'en', 'con', 'mi', 'su', 'la', 'el', 'los', 'las', 'que', 'pero', 'foco', 'paso', 'totalmente', 'firmeza', 'buena', 'buen', 'muchas', 'gran', 'un', 'una', 'fortaleza', 'amigo', 'amiga', 'hermano', 'hermana', 'guerrero', 'guerrera', 'así', 'asi', 'gracias', 'hola', 'saludos', 'bienvenido', 'bienvenida', 'dios', 'fuerza', 'serenidad', 'mente', 'temple', 'carácter', 'caracter', 'disciplina', 'camino', 'respira', 'recuerda'];
+            foreach ($mNames[1] as $detectedName) {
+                if (!in_array(mb_strtolower($detectedName, 'UTF-8'), $nonNames, true)) {
+                    if (empty($commentText) || !preg_match('/\b' . preg_quote($detectedName, '/') . '\b/iu', $commentText)) {
+                        return [
+                            'valid' => false,
+                            'reason' => 'HALLUCINATED_NAME',
+                            'token' => $detectedName,
+                            'action' => ($retryCount < 1 ? 'REGENERATE' : 'NO_REPLY'),
+                            'reply' => ''
+                        ];
+                    }
+                }
+            }
+        }
+
+        // Common names check (rejecting profile names leaking into reply when absent in comment)
+        $commonNames = ['carlos', 'diego', 'ana', 'laura', 'luis', 'maría', 'maria', 'juan', 'pedro', 'jorge', 'elena', 'sofia', 'sofía', 'marcos', 'andres', 'andrés', 'claudia', 'hector', 'héctor', 'ricardo', 'axel', 'julian', 'julián', 'mario', 'roberto', 'manuel'];
+        foreach ($commonNames as $cn) {
+            if (preg_match('/\b' . preg_quote($cn, '/') . '\b/iu', $cleanLower)) {
+                if (empty($commentText) || !preg_match('/\b' . preg_quote($cn, '/') . '\b/iu', $cLower)) {
+                    return [
+                        'valid' => false,
+                        'reason' => 'HALLUCINATED_NAME',
+                        'token' => $cn,
+                        'action' => ($retryCount < 1 ? 'REGENERATE' : 'NO_REPLY'),
+                        'reply' => ''
+                    ];
+                }
+            }
+        }
+
+        return [
+            'valid' => true,
+            'reason' => 'VALIDATED',
+            'action' => 'REPLY',
+            'reply' => $clean
+        ];
+    }
+
+    /**
      * Guarantee no forbidden phrases appear in generated outputs
      */
     private static function sanitizeRepliesWithForbidden(array $res, array $forbiddenPhrases): array {
         $clicheAlternates = [
-            '¡Totalmente de acuerdo! La serenidad y el foco son el camino. 🏛️✨',
-            '¡Así es! Pequeñas victorias diarias forjan el carácter. 👊🏛️',
-            '¡Exacto! Foco en lo que sí depende de uno. ✨',
-            '¡Ese es el camino! Mente clara y paso firme. 🔥🏛️',
-            'Totalmente. La templanza diaria marca la verdadera diferencia. ⚡'
+            'Así es. Foco en lo esencial.',
+            'Pequeñas victorias diarias forjan el carácter. 🏛️',
+            'Foco en lo que sí depende de uno. ✨',
+            'Paso firme y mente clara. 🏛️',
+            'La templanza diaria marca la verdadera diferencia. ⚡'
         ];
         $altIdx = 0;
 
         foreach (['engagement', 'conversion', 'support'] as $key) {
             if (isset($res[$key]) && is_string($res[$key])) {
                 foreach ($forbiddenPhrases as $badPhrase) {
-                    if (!empty(trim($badPhrase))) {
-                        $res[$key] = str_ireplace(trim($badPhrase), '', $res[$key]);
+                    $trimmed = trim($badPhrase);
+                    if (!empty($trimmed)) {
+                        // Word-boundary replacement prevents cutting into valid words (e.g. compa in compartir)
+                        $res[$key] = preg_replace('/\b' . preg_quote($trimmed, '/') . '\b/iu', '', $res[$key]);
                     }
                 }
 
-                // Interceptar cliché obsesivo "con la verdad por delante/siempre adelante/como faro/como brújula"
+                // Interceptar cliché obsesivo
                 if (preg_match('/(?:con (?:toda )?la verdad|la verdad (?:siempre|como) (?:delante|adelante|faro|br[úu]jula|libera)|con la verdad (?:por|siempre)?\s*(?:delante|adelante|como faro))/iu', $res[$key])) {
                     $replacement = $clicheAlternates[$altIdx % count($clicheAlternates)];
                     $altIdx++;
@@ -3583,11 +4877,12 @@ PROMPT;
                 }
 
                 // Interceptar cualquier autoincriminación o respuesta tonta a ataques de bot
-                if (preg_match('/(?:jajaja,?\s*(?:muy cierto|tienes raz[oó]n|es verdad)|soy una ia|somos una ia|ni escribir s[eé])/iu', $res[$key])) {
+                if (preg_match('/(?:jajaja,?\s*(?:muy cierto|tienes raz[oó]n|es verdad)|soy una ia|somos una ia|ni escribir s[eé]|como ia|como modelo)/iu', $res[$key])) {
                     $res[$key] = 'La serenidad y el autodominio están por encima de cualquier ruido externo. Firmeza y buen camino. 🏛️';
                 }
 
-                $res[$key] = preg_replace('/\s+/', ' ', trim($res[$key]));
+                $res[$key] = preg_replace('/\s+([.,;:!?])/u', '$1', $res[$key]);
+                $res[$key] = preg_replace('/\s{2,}/u', ' ', trim($res[$key]));
             }
         }
         return $res;
@@ -3601,91 +4896,67 @@ PROMPT;
     }
 
     public static function getDefaultFewShotExamples(): array {
-        if (!self::COMMERCIAL_SALES_ACTIVE) {
-            return [
-                [
-                    'tag' => 'acuerdo_breve_sandra_soto',
-                    'comment' => 'Exacto !',
-                    'reply' => 'Totalmente de acuerdo. La serenidad y el autodominio marcan la diferencia. 🏛️✨'
-                ],
-                [
-                    'tag' => 'acuerdo_breve_rodolfo_alamos',
-                    'comment' => 'Que gran verdad',
-                    'reply' => '¡Así es! El mejor filtro es el tiempo. 👊'
-                ],
-                [
-                    'tag' => 'validacion_energética_julian_bustamante',
-                    'comment' => 'Brutal 🔥💪',
-                    'reply' => '¡Así se habla! Con toda la fuerza. 🔥👊'
-                ],
-                [
-                    'tag' => 'elogio_afectuoso_maria_alejandra',
-                    'comment' => 'Hermoso ❤️',
-                    'reply' => '¡Muchas gracias! Qué bueno que resuene contigo. ✨'
-                ],
-                [
-                    'tag' => 'acuerdo_espiritual_lucia_reck',
-                    'comment' => 'Así es!! bendiciones',
-                    'reply' => '¡Amén y muchas gracias por la buena vibra! 🙌✨'
-                ],
-                [
-                    'tag' => 'sticker_aprobacion_argenis',
-                    'comment' => '💯 [Sticker 100]',
-                    'reply' => '¡Muchas gracias por el apoyo y la buena energía! 🙌✨'
-                ],
-                [
-                    'tag' => 'compromiso_proceso_jimdwin',
-                    'comment' => 'Trabajando en eso!... 💪',
-                    'reply' => '¡Ese es el espíritu! Un día a la vez construyendo esa fortaleza. Dale con todo. 💪🔥'
-                ],
-                [
-                    'tag' => 'reflexion_filtro_tiempo_maria_eugenia',
-                    'comment' => 'Yooooooooo pienso no hay necesidad de Borrar a alguien ellos mismos se Borrarán Solo',
-                    'reply' => 'Totalmente de acuerdo, el tiempo solo acomoda las cosas y filtra a quien debe estar. 🎯'
-                ],
-                [
-                    'tag' => 'batalla_interna_juan_rios',
-                    'comment' => 'El único rival y enemigo real. Si le ganas sos imbatible.',
-                    'reply' => 'Totalmente de acuerdo. Vencerse a uno mismo es la batalla más dura pero la única que realmente importa. 🤝✨'
-                ],
-                [
-                    'tag' => 'cita_biblica_maximiliano',
-                    'comment' => 'Todo lo puedo en Cristo que me fortalece. Pablo Apóstol en la carta a los Filipenses.',
-                    'reply' => 'Amén. Una gran fuente de fortaleza espiritual que complementa la disciplina mental. Muchas gracias por compartirlo. 🙌'
-                ],
-                [
-                    'tag' => 'desahogo_personal_indigo',
-                    'comment' => 'Sabes qué difícil es aguantar a los hijosderemilputa todo el día... Quiere volverme demasiado fuerte',
-                    'reply' => 'Las batallas diarias son las que más temple exigen. Mantén la calma y enfócate en tu crecimiento mental. Ánimo. 🧠✨'
-                ],
-                [
-                    'tag' => 'moderacion_provocacion_enzo',
-                    'comment' => 'Para mi que eres marica',
-                    'reply' => 'Agradecemos tu tiempo y respeto hacia nuestra comunidad. ¡Que tengas un excelente día! ✨'
-                ]
-            ];
-        }
-
+        // HERMES v2 Official Master Few-Shot Examples (Fortaleza Imparable)
         return [
             [
-                'tag' => 'precio_leads',
-                'comment' => '¿Cuál es el precio del curso o programa y qué incluye?',
-                'reply' => '¡Hola {nombre}! Con gusto te comparto los detalles. El programa incluye acceso completo a las clases grabadas, módulos prácticos y soporte continuo. Puedes revisar los detalles e inscribirte directamente en el enlace de nuestra biografía, o enviarnos un DM si deseas asesoría personalizada. ¿Qué objetivo principal buscas alcanzar?'
+                'tag' => 'v2_ejemplo_1_emojis',
+                'comment' => '❤️🍀🔥',
+                'reply' => '🔥🏛️'
             ],
             [
-                'tag' => 'acuerdo_breve_sandra_soto',
-                'comment' => 'Exacto !',
-                'reply' => 'Totalmente de acuerdo. La constancia y el foco interior son la clave. 🏛️✨'
+                'tag' => 'v2_ejemplo_2_acuerdo',
+                'comment' => 'Importante.',
+                'reply' => 'Así es. Foco en lo esencial.'
             ],
             [
-                'tag' => 'validacion_energética_julian_bustamante',
-                'comment' => 'Brutal 🔥💪',
-                'reply' => '¡Así se habla! Con toda la fuerza. 🔥👊'
+                'tag' => 'v2_ejemplo_3_saludo',
+                'comment' => 'Buenos días.',
+                'reply' => 'Buenos días. Paso firme. 🏛️'
             ],
             [
-                'tag' => 'elogio_afectuoso_maria_alejandra',
-                'comment' => 'Hermoso ❤️',
-                'reply' => '¡Muchas gracias! Qué bueno que resuene contigo. ✨'
+                'tag' => 'v2_ejemplo_4_nueva_seguidora',
+                'comment' => 'Nueva por aquí. Acabo de seguir la página.',
+                'reply' => 'Bienvenida a Fortaleza Imparable. 🏛️'
+            ],
+            [
+                'tag' => 'v2_ejemplo_5_experiencia_personal',
+                'comment' => 'Durante años pensé que ser fuerte significaba no mostrar cansancio. Con el tiempo entendí que también hay fuerza en saber cuándo detenerse para poder continuar.',
+                'reply' => 'Reconocer nuestros límites también forma parte del autodominio. Descansar no siempre es retroceder; a veces es prepararse para continuar.'
+            ],
+            [
+                'tag' => 'v2_ejemplo_6_mujer_sin_jerga',
+                'comment' => 'Se trata de descansar y después retomar, pero no renunciar. Mi condición física y falta de concentración prolongada me impide terminar de una vez tareas que requieren mucho esfuerzo.',
+                'reply' => 'Exactamente. Saber dosificar el esfuerzo también es disciplina. No todo se conquista de una sola vez.'
+            ],
+            [
+                'tag' => 'v2_ejemplo_7_spam',
+                'comment' => 'Ciencia del Energismo [imagen: flyer promocional con QR, enlaces y publicidad]',
+                'reply' => 'NO_REPLY'
+            ],
+            [
+                'tag' => 'v2_ejemplo_8_desacuerdo',
+                'comment' => 'No estoy de acuerdo. Aguantarlo todo no significa ser fuerte.',
+                'reply' => 'Es una distinción importante. La fortaleza también consiste en saber qué merece ser soportado y qué debe cambiarse.'
+            ],
+            [
+                'tag' => 'v2_ejemplo_9_comentario_minimo',
+                'comment' => 'Clave.',
+                'reply' => 'Así es. Lo esencial primero. 🏛️'
+            ],
+            [
+                'tag' => 'v2_ejemplo_10_comentario_profundo',
+                'comment' => 'He aprendido que muchas veces no me derrotaban los problemas, sino mi necesidad de que las cosas ocurrieran exactamente como yo quería. Cuando acepté eso, empecé a vivir con mucha más calma.',
+                'reply' => 'Ahí aparece una de las lecciones más difíciles del autodominio: no controlar el mundo, sino nuestra relación con aquello que no podemos cambiar.'
+            ],
+            [
+                'tag' => 'v2_ejemplo_11_troll',
+                'comment' => 'Otra cuenta de frases motivacionales vacías 😂',
+                'reply' => 'NO_REPLY'
+            ],
+            [
+                'tag' => 'v2_ejemplo_12_pregunta',
+                'comment' => '¿Entonces el estoicismo significa no tener emociones?',
+                'reply' => 'No. El estoicismo no busca eliminar las emociones, sino aprender a gobernar nuestra respuesta ante ellas.'
             ]
         ];
     }
@@ -3740,9 +5011,23 @@ PROMPT;
      */
     public static function addGoldExampleToBrandVoice(PDO $pdo, int $brandVoiceId, int $userId, string $comment, string $reply): void {
         try {
-            $stmt = $pdo->prepare("SELECT few_shot_examples FROM brand_voices WHERE id = :id AND user_id = :uid LIMIT 1");
+            $stmt = $pdo->prepare("SELECT id, few_shot_examples FROM brand_voices WHERE id = :id AND user_id = :uid LIMIT 1");
             $stmt->execute([':id' => $brandVoiceId, ':uid' => $userId]);
-            $raw = $stmt->fetchColumn();
+            $bvRow = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            // If not found by given ID, fallback to the user's primary/active brand voice
+            if (!$bvRow) {
+                $stmt = $pdo->prepare("SELECT id, few_shot_examples FROM brand_voices WHERE user_id = :uid ORDER BY is_active DESC, id ASC LIMIT 1");
+                $stmt->execute([':uid' => $userId]);
+                $bvRow = $stmt->fetch(PDO::FETCH_ASSOC);
+            }
+
+            if (!$bvRow) {
+                return;
+            }
+
+            $brandVoiceId = (int)$bvRow['id'];
+            $raw = $bvRow['few_shot_examples'] ?? '';
             $examples = !empty($raw) ? json_decode($raw, true) : [];
             if (!is_array($examples)) $examples = [];
 
@@ -3767,6 +5052,7 @@ PROMPT;
                 ':id' => $brandVoiceId,
                 ':uid' => $userId
             ]);
+            CacheService::invalidateBrandVoice($userId);
         } catch (Throwable $e) {
             error_log("Error in addGoldExampleToBrandVoice: " . $e->getMessage());
         }

@@ -202,18 +202,25 @@ function processWebhookQueue(PDO $pdo, int $batchLimit = 50, ?int $specificQueue
                                 }
                             }
 
+                            // Resolve brand voice language
+                            $stmtBvLang = $pdo->prepare("SELECT language FROM brand_voices WHERE id = ?");
+                            $stmtBvLang->execute([$brandVoiceId]);
+                            $brandVoiceLanguage = (string)($stmtBvLang->fetchColumn() ?: 'any');
+
                             // Analyze with AI Engine
-                            $analysis = AiAgentService::analyzeComment($message, $postCaption, 0);
+                            $analysis = AiAgentService::analyzeComment($message, $postCaption, 0, $brandVoiceLanguage);
 
                             $insStmt = $pdo->prepare("
                                 INSERT INTO comments (
                                     user_id, post_id, platform, external_comment_id, author_name, author_handle,
                                     author_avatar, comment_text, sentiment, intent, highlight_score,
-                                    is_highlighted, highlight_reason, likes_count, status
+                                    is_highlighted, highlight_reason, likes_count, status,
+                                    detected_language, language_confidence, language_source
                                 ) VALUES (
                                     :user_id, :post_id, 'facebook', :ext_id, :author_name, :author_handle,
                                     :author_avatar, :comment_text, :sentiment, :intent, :highlight_score,
-                                    :is_highlighted, :highlight_reason, 0, 'pending'
+                                    :is_highlighted, :highlight_reason, 0, 'pending',
+                                    :dlang, :conf, :src
                                 )
                             ");
                             $insStmt->execute([
@@ -228,24 +235,45 @@ function processWebhookQueue(PDO $pdo, int $batchLimit = 50, ?int $specificQueue
                                 ':intent' => $analysis['intent'],
                                 ':highlight_score' => $analysis['highlight_score'],
                                 ':is_highlighted' => $analysis['is_highlighted'],
-                                ':highlight_reason' => $analysis['highlight_reason']
+                                ':highlight_reason' => $analysis['highlight_reason'],
+                                ':dlang' => $analysis['detected_language'] ?? null,
+                                ':conf' => $analysis['language_confidence'] ?? null,
+                                ':src' => $analysis['language_source'] ?? 'local_detector'
                             ]);
                             $newDbId = (int)$pdo->lastInsertId();
                             $commentsIngested++;
-                            cliLog("💬 Ingerido comentario Facebook: \"{$message}\" [Score: {$analysis['highlight_score']}]", 'success', $silent);
+                            cliLog("💬 Ingerido comentario Facebook: \"{$message}\" [Score: {$analysis['highlight_score']}] [Lang: " . ($analysis['detected_language'] ?? 'und') . "]", 'success', $silent);
 
                             // Execute Autopilot if enabled
                             if ($isAutopilot && $newDbId > 0) {
-                                $suitability = AiAgentService::evaluateCommentSuitability($message);
+                                $suitability = AiAgentService::evaluateCommentSuitability($message, $brandVoiceLanguage);
                                 if ($suitability['status'] === 'spam') {
-                                    $pdo->prepare("UPDATE comments SET status = 'spam', sentiment = 'spam', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
-                                        ->execute([':reason' => $suitability['reason'], ':id' => $newDbId, ':uid' => $targetUserId]);
+                                    $pdo->prepare("UPDATE comments SET status = 'blocked_spam', sentiment = 'spam', highlight_reason = :reason, detected_language = :dlang, language_confidence = :conf, language_source = 'local_detector' WHERE id = :id AND user_id = :uid")
+                                        ->execute([
+                                            ':reason' => $suitability['reason'], 
+                                            ':dlang' => $suitability['detected_language'] ?? null,
+                                            ':conf' => $suitability['language_confidence'] ?? null,
+                                            ':id' => $newDbId, 
+                                            ':uid' => $targetUserId
+                                        ]);
                                 } elseif ($suitability['status'] === 'ignored') {
-                                    $pdo->prepare("UPDATE comments SET status = 'ignored', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
-                                        ->execute([':reason' => $suitability['reason'], ':id' => $newDbId, ':uid' => $targetUserId]);
+                                    $pdo->prepare("UPDATE comments SET status = 'ignored', highlight_reason = :reason, detected_language = :dlang, language_confidence = :conf, language_source = 'local_detector' WHERE id = :id AND user_id = :uid")
+                                        ->execute([
+                                            ':reason' => $suitability['reason'], 
+                                            ':dlang' => $suitability['detected_language'] ?? null,
+                                            ':conf' => $suitability['language_confidence'] ?? null,
+                                            ':id' => $newDbId, 
+                                            ':uid' => $targetUserId
+                                        ]);
                                 } elseif ($suitability['status'] === 'toxic' || !$suitability['should_reply']) {
-                                    $pdo->prepare("UPDATE comments SET status = 'ignored', sentiment = 'toxic', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
-                                        ->execute([':reason' => $suitability['reason'], ':id' => $newDbId, ':uid' => $targetUserId]);
+                                    $pdo->prepare("UPDATE comments SET status = 'blocked_toxic', sentiment = 'toxic', highlight_reason = :reason, detected_language = :dlang, language_confidence = :conf, language_source = 'local_detector' WHERE id = :id AND user_id = :uid")
+                                        ->execute([
+                                            ':reason' => $suitability['reason'], 
+                                            ':dlang' => $suitability['detected_language'] ?? null,
+                                            ':conf' => $suitability['language_confidence'] ?? null,
+                                            ':id' => $newDbId, 
+                                            ':uid' => $targetUserId
+                                        ]);
                                     cliLog("🛡️ Autopilot Facebook: Comentario {$newDbId} bloqueado por toxicidad/silencio operativo", 'warning', $silent);
                                 } else {
                                     $replies = AiAgentService::generateReplies($senderName, $message, 'facebook', $postCaption, '', [
@@ -254,6 +282,11 @@ function processWebhookQueue(PDO $pdo, int $batchLimit = 50, ?int $specificQueue
                                         'brand_voice_id' => $brandVoiceId,
                                         'reply_index' => $repliesPosted
                                     ]);
+
+                                    $detLang = $replies['detected_language'] ?? ($replies['detected_comment_language'] ?? ($analysis['detected_language'] ?? null));
+                                    $confLang = $replies['language_confidence'] ?? ($analysis['language_confidence'] ?? null);
+                                    $srcLang = $replies['language_source'] ?? 'local_detector';
+                                    $respLang = $replies['response_language'] ?? null;
                                     
                                     $chosenVariant = 'engagement';
                                     if ($analysis['sentiment'] === 'lead' || str_starts_with($analysis['intent'], 'lead_')) {
@@ -261,35 +294,115 @@ function processWebhookQueue(PDO $pdo, int $batchLimit = 50, ?int $specificQueue
                                     } elseif ($analysis['sentiment'] === 'urgent' || $analysis['intent'] === 'customer_support' || $analysis['intent'] === 'support') {
                                         $chosenVariant = 'support';
                                     }
-                                    $chosenReply = $replies[$chosenVariant] ?? $replies['engagement'];
+                                    $chosenReply = trim($replies[$chosenVariant] ?? ($replies['engagement'] ?? ''));
 
-                                    $metaRes = MetaApiService::postReplyToMeta($newDbId, $chosenReply, $targetUserId);
-                                    if (!empty($metaRes['already_posted']) || !empty($metaRes['skipped'])) {
-                                        $pdo->prepare("UPDATE comments SET status = 'replied' WHERE id = :id AND user_id = :uid")->execute([':id' => $newDbId, ':uid' => $targetUserId]);
-                                        cliLog("ℹ️ Comentario {$newDbId} omitido (ya respondido o > 2h)", 'info', $silent);
-                                    } else {
-                                        $isPosted = !empty($metaRes['success']) ? 1 : 0;
+                                    // HERMES v2.1 Supervised Mode: Hold for human review if NO_REPLY or requires human review
+                                    if (($replies['action'] ?? '') === 'NO_REPLY' || !empty($replies['requires_human_review']) || empty($chosenReply)) {
+                                        $revStatus = 'pending_review';
+                                        if (($replies['reason'] ?? '') === 'AI_UNAVAILABLE_OR_INVALID') {
+                                            $revStatus = 'ai_unavailable';
+                                        } elseif (($replies['reason'] ?? '') === 'INVALID_AI_OUTPUT' || ($replies['reason'] ?? '') === 'INVALID_AI_OUTPUT_LANGUAGE' || str_contains($replies['source'] ?? '', 'validator')) {
+                                            $revStatus = 'invalid_ai_output';
+                                        }
+                                        $reasonNote = $replies['engagement_tips'] ?? 'IA no disponible o respuesta no válida. Pendiente de aprobación humana.';
 
-                                        $stmtRep = $pdo->prepare("
-                                            INSERT INTO replies (user_id, comment_id, reply_text, reply_type, tone_used, variant_type, is_posted_to_platform)
-                                            VALUES (:uid, :cid, :text, 'autopilot', 'auto_selected', :variant, :is_posted)
-                                        ");
-                                        $stmtRep->execute([
-                                            ':uid' => $targetUserId,
-                                            ':cid' => $newDbId,
-                                            ':text' => $chosenReply,
-                                            ':variant' => $chosenVariant,
-                                            ':is_posted' => $isPosted
+                                        $pdo->prepare("
+                                            UPDATE comments 
+                                            SET status = :status, 
+                                                highlight_reason = :reason,
+                                                detected_language = :dlang,
+                                                language_confidence = :conf,
+                                                language_source = :src,
+                                                response_language = :rlang
+                                            WHERE id = :id AND user_id = :uid
+                                        ")->execute([
+                                            ':status' => $revStatus, 
+                                            ':reason' => $reasonNote, 
+                                            ':dlang' => $detLang,
+                                            ':conf' => $confLang,
+                                            ':src' => $srcLang,
+                                            ':rlang' => $respLang,
+                                            ':id' => $newDbId, 
+                                            ':uid' => $targetUserId
                                         ]);
-
-                                        if ($isPosted) {
-                                            $pdo->prepare("UPDATE comments SET status = 'replied', highlight_reason = NULL WHERE id = :id AND user_id = :uid")->execute([':id' => $newDbId, ':uid' => $targetUserId]);
-                                            $repliesPosted++;
-                                            cliLog("🤖 Autopilot publicó respuesta a Facebook para: {$senderName}", 'success', $silent);
+                                        cliLog("🛑 Hermes v2.1: Comentario Facebook {$newDbId} retenido para revisión humana ({$revStatus})", 'info', $silent);
+                                    } else {
+                                        $metaRes = MetaApiService::postReplyToMeta($newDbId, $chosenReply, $targetUserId);
+                                        if (!empty($metaRes['already_posted']) || !empty($metaRes['skipped'])) {
+                                            $pdo->prepare("
+                                                UPDATE comments 
+                                                SET status = 'replied',
+                                                    detected_language = :dlang,
+                                                    language_confidence = :conf,
+                                                    language_source = :src,
+                                                    response_language = :rlang
+                                                WHERE id = :id AND user_id = :uid
+                                            ")->execute([
+                                                ':dlang' => $detLang,
+                                                ':conf' => $confLang,
+                                                ':src' => $srcLang,
+                                                ':rlang' => $respLang,
+                                                ':id' => $newDbId, 
+                                                ':uid' => $targetUserId
+                                            ]);
+                                            cliLog("ℹ️ Comentario {$newDbId} omitido (ya respondido o > 2h)", 'info', $silent);
                                         } else {
-                                            $errReason = $metaRes['error'] ?? 'Fallo al publicar respuesta en Facebook';
-                                            $pdo->prepare("UPDATE comments SET status = 'failed', highlight_reason = :reason WHERE id = :id AND user_id = :uid")->execute([':reason' => $errReason, ':id' => $newDbId, ':uid' => $targetUserId]);
-                                            cliLog("⚠️ Autopilot no pudo publicar respuesta a Facebook para: {$senderName} ({$errReason})", 'warning', $silent);
+                                            $isPosted = !empty($metaRes['success']) ? 1 : 0;
+
+                                            $stmtRep = $pdo->prepare("
+                                                INSERT INTO replies (user_id, comment_id, reply_text, reply_type, tone_used, variant_type, is_posted_to_platform)
+                                                VALUES (:uid, :cid, :text, 'autopilot', 'auto_selected', :variant, :is_posted)
+                                            ");
+                                            $stmtRep->execute([
+                                                ':uid' => $targetUserId,
+                                                ':cid' => $newDbId,
+                                                ':text' => $chosenReply,
+                                                ':variant' => $chosenVariant,
+                                                ':is_posted' => $isPosted
+                                            ]);
+
+                                            if ($isPosted) {
+                                                $pdo->prepare("
+                                                    UPDATE comments 
+                                                    SET status = 'replied', 
+                                                        highlight_reason = NULL,
+                                                        detected_language = :dlang,
+                                                        language_confidence = :conf,
+                                                        language_source = :src,
+                                                        response_language = :rlang
+                                                    WHERE id = :id AND user_id = :uid
+                                                ")->execute([
+                                                    ':dlang' => $detLang,
+                                                    ':conf' => $confLang,
+                                                    ':src' => $srcLang,
+                                                    ':rlang' => $respLang,
+                                                    ':id' => $newDbId, 
+                                                    ':uid' => $targetUserId
+                                                ]);
+                                                $repliesPosted++;
+                                                cliLog("🤖 Autopilot publicó respuesta a Facebook para: {$senderName}", 'success', $silent);
+                                            } else {
+                                                $errReason = $metaRes['error'] ?? 'Fallo al publicar respuesta en Facebook';
+                                                $pdo->prepare("
+                                                    UPDATE comments 
+                                                    SET status = 'failed', 
+                                                        highlight_reason = :reason,
+                                                        detected_language = :dlang,
+                                                        language_confidence = :conf,
+                                                        language_source = :src,
+                                                        response_language = :rlang
+                                                    WHERE id = :id AND user_id = :uid
+                                                ")->execute([
+                                                    ':reason' => $errReason, 
+                                                    ':dlang' => $detLang,
+                                                    ':conf' => $confLang,
+                                                    ':src' => $srcLang,
+                                                    ':rlang' => $respLang,
+                                                    ':id' => $newDbId, 
+                                                    ':uid' => $targetUserId
+                                                ]);
+                                                cliLog("⚠️ Autopilot no pudo publicar respuesta a Facebook para: {$senderName} ({$errReason})", 'warning', $silent);
+                                            }
                                         }
                                     }
                                 }
@@ -430,18 +543,25 @@ function processWebhookQueue(PDO $pdo, int $batchLimit = 50, ?int $specificQueue
                                 }
                             }
 
+                            // Resolve brand voice language
+                            $stmtBvLang = $pdo->prepare("SELECT language FROM brand_voices WHERE id = ?");
+                            $stmtBvLang->execute([$brandVoiceId]);
+                            $brandVoiceLanguage = (string)($stmtBvLang->fetchColumn() ?: 'any');
+
                             // Analyze with AI Engine
-                            $analysis = AiAgentService::analyzeComment($message, $postCaption, 0);
+                            $analysis = AiAgentService::analyzeComment($message, $postCaption, 0, $brandVoiceLanguage);
 
                             $insStmt = $pdo->prepare("
                                 INSERT INTO comments (
                                     user_id, post_id, platform, external_comment_id, author_name, author_handle,
                                     author_avatar, comment_text, sentiment, intent, highlight_score,
-                                    is_highlighted, highlight_reason, likes_count, status
+                                    is_highlighted, highlight_reason, likes_count, status,
+                                    detected_language, language_confidence, language_source
                                 ) VALUES (
                                     :user_id, :post_id, 'instagram', :ext_id, :author_name, :author_handle,
                                     :author_avatar, :comment_text, :sentiment, :intent, :highlight_score,
-                                    :is_highlighted, :highlight_reason, 0, 'pending'
+                                    :is_highlighted, :highlight_reason, 0, 'pending',
+                                    :dlang, :conf, :src
                                 )
                             ");
                             $insStmt->execute([
@@ -456,24 +576,45 @@ function processWebhookQueue(PDO $pdo, int $batchLimit = 50, ?int $specificQueue
                                 ':intent' => $analysis['intent'],
                                 ':highlight_score' => $analysis['highlight_score'],
                                 ':is_highlighted' => $analysis['is_highlighted'],
-                                ':highlight_reason' => $analysis['highlight_reason']
+                                ':highlight_reason' => $analysis['highlight_reason'],
+                                ':dlang' => $analysis['detected_language'] ?? null,
+                                ':conf' => $analysis['language_confidence'] ?? null,
+                                ':src' => $analysis['language_source'] ?? 'local_detector'
                             ]);
                             $newDbId = (int)$pdo->lastInsertId();
                             $commentsIngested++;
-                            cliLog("💬 Ingerido comentario Instagram: \"{$message}\" [Score: {$analysis['highlight_score']}]", 'success', $silent);
+                            cliLog("💬 Ingerido comentario Instagram: \"{$message}\" [Score: {$analysis['highlight_score']}] [Lang: " . ($analysis['detected_language'] ?? 'und') . "]", 'success', $silent);
 
                             // Execute Autopilot if enabled
                             if ($isAutopilot && $newDbId > 0) {
-                                $suitability = AiAgentService::evaluateCommentSuitability($message);
+                                $suitability = AiAgentService::evaluateCommentSuitability($message, $brandVoiceLanguage);
                                 if ($suitability['status'] === 'spam') {
-                                    $pdo->prepare("UPDATE comments SET status = 'spam', sentiment = 'spam', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
-                                        ->execute([':reason' => $suitability['reason'], ':id' => $newDbId, ':uid' => $targetUserId]);
+                                    $pdo->prepare("UPDATE comments SET status = 'blocked_spam', sentiment = 'spam', highlight_reason = :reason, detected_language = :dlang, language_confidence = :conf, language_source = 'local_detector' WHERE id = :id AND user_id = :uid")
+                                        ->execute([
+                                            ':reason' => $suitability['reason'], 
+                                            ':dlang' => $suitability['detected_language'] ?? null,
+                                            ':conf' => $suitability['language_confidence'] ?? null,
+                                            ':id' => $newDbId, 
+                                            ':uid' => $targetUserId
+                                        ]);
                                 } elseif ($suitability['status'] === 'ignored') {
-                                    $pdo->prepare("UPDATE comments SET status = 'ignored', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
-                                        ->execute([':reason' => $suitability['reason'], ':id' => $newDbId, ':uid' => $targetUserId]);
+                                    $pdo->prepare("UPDATE comments SET status = 'ignored', highlight_reason = :reason, detected_language = :dlang, language_confidence = :conf, language_source = 'local_detector' WHERE id = :id AND user_id = :uid")
+                                        ->execute([
+                                            ':reason' => $suitability['reason'], 
+                                            ':dlang' => $suitability['detected_language'] ?? null,
+                                            ':conf' => $suitability['language_confidence'] ?? null,
+                                            ':id' => $newDbId, 
+                                            ':uid' => $targetUserId
+                                        ]);
                                 } elseif ($suitability['status'] === 'toxic' || !$suitability['should_reply']) {
-                                    $pdo->prepare("UPDATE comments SET status = 'ignored', sentiment = 'toxic', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
-                                        ->execute([':reason' => $suitability['reason'], ':id' => $newDbId, ':uid' => $targetUserId]);
+                                    $pdo->prepare("UPDATE comments SET status = 'blocked_toxic', sentiment = 'toxic', highlight_reason = :reason, detected_language = :dlang, language_confidence = :conf, language_source = 'local_detector' WHERE id = :id AND user_id = :uid")
+                                        ->execute([
+                                            ':reason' => $suitability['reason'], 
+                                            ':dlang' => $suitability['detected_language'] ?? null,
+                                            ':conf' => $suitability['language_confidence'] ?? null,
+                                            ':id' => $newDbId, 
+                                            ':uid' => $targetUserId
+                                        ]);
                                     cliLog("🛡️ Autopilot Instagram: Comentario {$newDbId} bloqueado por toxicidad/silencio operativo", 'warning', $silent);
                                 } else {
                                     $replies = AiAgentService::generateReplies($senderUsername, $message, 'instagram', $postCaption, '', [
@@ -482,6 +623,11 @@ function processWebhookQueue(PDO $pdo, int $batchLimit = 50, ?int $specificQueue
                                         'brand_voice_id' => $brandVoiceId,
                                         'reply_index' => $repliesPosted
                                     ]);
+
+                                    $detLang = $replies['detected_language'] ?? ($replies['detected_comment_language'] ?? ($analysis['detected_language'] ?? null));
+                                    $confLang = $replies['language_confidence'] ?? ($analysis['language_confidence'] ?? null);
+                                    $srcLang = $replies['language_source'] ?? 'local_detector';
+                                    $respLang = $replies['response_language'] ?? null;
                                     
                                     $chosenVariant = 'engagement';
                                     if ($analysis['sentiment'] === 'lead' || str_starts_with($analysis['intent'], 'lead_')) {
@@ -489,35 +635,115 @@ function processWebhookQueue(PDO $pdo, int $batchLimit = 50, ?int $specificQueue
                                     } elseif ($analysis['sentiment'] === 'urgent' || $analysis['intent'] === 'customer_support' || $analysis['intent'] === 'support') {
                                         $chosenVariant = 'support';
                                     }
-                                    $chosenReply = $replies[$chosenVariant] ?? $replies['engagement'];
+                                    $chosenReply = trim($replies[$chosenVariant] ?? ($replies['engagement'] ?? ''));
 
-                                    $metaRes = MetaApiService::postReplyToMeta($newDbId, $chosenReply, $targetUserId);
-                                    if (!empty($metaRes['already_posted']) || !empty($metaRes['skipped'])) {
-                                        $pdo->prepare("UPDATE comments SET status = 'replied' WHERE id = :id AND user_id = :uid")->execute([':id' => $newDbId, ':uid' => $targetUserId]);
-                                        cliLog("ℹ️ Comentario {$newDbId} omitido (ya respondido o > 2h)", 'info', $silent);
-                                    } else {
-                                        $isPosted = !empty($metaRes['success']) ? 1 : 0;
+                                    // HERMES v2.1 Supervised Mode: Hold for human review if NO_REPLY or requires human review
+                                    if (($replies['action'] ?? '') === 'NO_REPLY' || !empty($replies['requires_human_review']) || empty($chosenReply)) {
+                                        $revStatus = 'pending_review';
+                                        if (($replies['reason'] ?? '') === 'AI_UNAVAILABLE_OR_INVALID') {
+                                            $revStatus = 'ai_unavailable';
+                                        } elseif (($replies['reason'] ?? '') === 'INVALID_AI_OUTPUT' || ($replies['reason'] ?? '') === 'INVALID_AI_OUTPUT_LANGUAGE' || str_contains($replies['source'] ?? '', 'validator')) {
+                                            $revStatus = 'invalid_ai_output';
+                                        }
+                                        $reasonNote = $replies['engagement_tips'] ?? 'IA no disponible o respuesta no válida. Pendiente de aprobación humana.';
 
-                                        $stmtRep = $pdo->prepare("
-                                            INSERT INTO replies (user_id, comment_id, reply_text, reply_type, tone_used, variant_type, is_posted_to_platform)
-                                            VALUES (:uid, :cid, :text, 'autopilot', 'auto_selected', :variant, :is_posted)
-                                        ");
-                                        $stmtRep->execute([
-                                            ':uid' => $targetUserId,
-                                            ':cid' => $newDbId,
-                                            ':text' => $chosenReply,
-                                            ':variant' => $chosenVariant,
-                                            ':is_posted' => $isPosted
+                                        $pdo->prepare("
+                                            UPDATE comments 
+                                            SET status = :status, 
+                                                highlight_reason = :reason,
+                                                detected_language = :dlang,
+                                                language_confidence = :conf,
+                                                language_source = :src,
+                                                response_language = :rlang
+                                            WHERE id = :id AND user_id = :uid
+                                        ")->execute([
+                                            ':status' => $revStatus, 
+                                            ':reason' => $reasonNote, 
+                                            ':dlang' => $detLang,
+                                            ':conf' => $confLang,
+                                            ':src' => $srcLang,
+                                            ':rlang' => $respLang,
+                                            ':id' => $newDbId, 
+                                            ':uid' => $targetUserId
                                         ]);
-
-                                        if ($isPosted) {
-                                            $pdo->prepare("UPDATE comments SET status = 'replied', highlight_reason = NULL WHERE id = :id AND user_id = :uid")->execute([':id' => $newDbId, ':uid' => $targetUserId]);
-                                            $repliesPosted++;
-                                            cliLog("🤖 Autopilot publicó respuesta a Instagram para: @{$senderUsername}", 'success', $silent);
+                                        cliLog("🛑 Hermes v2.1: Comentario Instagram {$newDbId} retenido para revisión humana ({$revStatus})", 'info', $silent);
+                                    } else {
+                                        $metaRes = MetaApiService::postReplyToMeta($newDbId, $chosenReply, $targetUserId);
+                                        if (!empty($metaRes['already_posted']) || !empty($metaRes['skipped'])) {
+                                            $pdo->prepare("
+                                                UPDATE comments 
+                                                SET status = 'replied',
+                                                    detected_language = :dlang,
+                                                    language_confidence = :conf,
+                                                    language_source = :src,
+                                                    response_language = :rlang
+                                                WHERE id = :id AND user_id = :uid
+                                            ")->execute([
+                                                ':dlang' => $detLang,
+                                                ':conf' => $confLang,
+                                                ':src' => $srcLang,
+                                                ':rlang' => $respLang,
+                                                ':id' => $newDbId, 
+                                                ':uid' => $targetUserId
+                                            ]);
+                                            cliLog("ℹ️ Comentario {$newDbId} omitido (ya respondido o > 2h)", 'info', $silent);
                                         } else {
-                                            $errReason = $metaRes['error'] ?? 'Fallo al publicar respuesta en Instagram';
-                                            $pdo->prepare("UPDATE comments SET status = 'failed', highlight_reason = :reason WHERE id = :id AND user_id = :uid")->execute([':reason' => $errReason, ':id' => $newDbId, ':uid' => $targetUserId]);
-                                            cliLog("⚠️ Autopilot no pudo publicar respuesta a Instagram para: @{$senderUsername} ({$errReason})", 'warning', $silent);
+                                            $isPosted = !empty($metaRes['success']) ? 1 : 0;
+
+                                            $stmtRep = $pdo->prepare("
+                                                INSERT INTO replies (user_id, comment_id, reply_text, reply_type, tone_used, variant_type, is_posted_to_platform)
+                                                VALUES (:uid, :cid, :text, 'autopilot', 'auto_selected', :variant, :is_posted)
+                                            ");
+                                            $stmtRep->execute([
+                                                ':uid' => $targetUserId,
+                                                ':cid' => $newDbId,
+                                                ':text' => $chosenReply,
+                                                ':variant' => $chosenVariant,
+                                                ':is_posted' => $isPosted
+                                            ]);
+
+                                            if ($isPosted) {
+                                                $pdo->prepare("
+                                                    UPDATE comments 
+                                                    SET status = 'replied', 
+                                                        highlight_reason = NULL,
+                                                        detected_language = :dlang,
+                                                        language_confidence = :conf,
+                                                        language_source = :src,
+                                                        response_language = :rlang
+                                                    WHERE id = :id AND user_id = :uid
+                                                ")->execute([
+                                                    ':dlang' => $detLang,
+                                                    ':conf' => $confLang,
+                                                    ':src' => $srcLang,
+                                                    ':rlang' => $respLang,
+                                                    ':id' => $newDbId, 
+                                                    ':uid' => $targetUserId
+                                                ]);
+                                                $repliesPosted++;
+                                                cliLog("🤖 Autopilot publicó respuesta a Instagram para: @{$senderUsername}", 'success', $silent);
+                                            } else {
+                                                $errReason = $metaRes['error'] ?? 'Fallo al publicar respuesta en Instagram';
+                                                $pdo->prepare("
+                                                    UPDATE comments 
+                                                    SET status = 'failed', 
+                                                        highlight_reason = :reason,
+                                                        detected_language = :dlang,
+                                                        language_confidence = :conf,
+                                                        language_source = :src,
+                                                        response_language = :rlang
+                                                    WHERE id = :id AND user_id = :uid
+                                                ")->execute([
+                                                    ':reason' => $errReason, 
+                                                    ':dlang' => $detLang,
+                                                    ':conf' => $confLang,
+                                                    ':src' => $srcLang,
+                                                    ':rlang' => $respLang,
+                                                    ':id' => $newDbId, 
+                                                    ':uid' => $targetUserId
+                                                ]);
+                                                cliLog("⚠️ Autopilot no pudo publicar respuesta a Instagram para: @{$senderUsername} ({$errReason})", 'warning', $silent);
+                                            }
                                         }
                                     }
                                 }

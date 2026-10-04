@@ -6,7 +6,7 @@ const App = {
   activeTab: 'inbox',
   activePlatform: 'all',
   activeAccountId: 'all',
-  activeFilter: 'all',
+  activeFilter: 'pending_all',
   activePostId: null,
   viewDensity: localStorage.getItem('preferred_view_density') || 'cards',
   searchQuery: '',
@@ -14,7 +14,7 @@ const App = {
   commentsList: [],
   connectedAccounts: [],
   currentPage: 1,
-  pageSize: 6,
+  pageSize: 20,
 
   // Autonomous Background Heartbeat State
   heartbeatIntervalMs: 180000, // 3 minutes
@@ -53,7 +53,7 @@ const App = {
     // 1. Detect and restore active tab from URL hash or storage immediately on page load / F5
     const hash = window.location.hash ? window.location.hash.replace('#', '').trim() : '';
     let savedTab = hash || sessionStorage.getItem('xindro_active_tab') || localStorage.getItem('xindro_active_tab') || 'inbox';
-    const validTabs = ['inbox', 'highlights', 'leads', 'urgent', 'spam', 'planner', 'radar', 'analytics', 'settings', 'meta', 'users'];
+    const validTabs = ['inbox', 'highlights', 'leads', 'urgent', 'spam', 'planner', 'radar', 'atenea-learning', 'analytics', 'settings', 'meta', 'users'];
     const tabToRestore = validTabs.includes(savedTab) ? savedTab : 'inbox';
     this.switchTab(tabToRestore, false);
 
@@ -567,6 +567,7 @@ const App = {
         document.querySelectorAll('.filter-tag').forEach(t => t.classList.remove('active'));
         tag.classList.add('active');
         this.activeFilter = tag.dataset.filter;
+        this.currentPage = 1;
         this.loadComments();
       });
     });
@@ -762,7 +763,7 @@ const App = {
     } else if (activeTab === 'spam') {
       this.setFilterTag('spam');
     } else if (activeTab === 'inbox') {
-      this.setFilterTag('all');
+      this.setFilterTag('pending_all');
     } else if (activeTab === 'planner') {
       if (typeof PlannerController !== 'undefined') {
         PlannerController.loadPlanner();
@@ -788,6 +789,7 @@ const App = {
 
   setFilterTag(filterName) {
     this.activeFilter = filterName;
+    this.currentPage = 1;
     document.querySelectorAll('.filter-tag').forEach(t => {
       t.classList.toggle('active', t.dataset.filter === filterName);
     });
@@ -796,7 +798,7 @@ const App = {
 
   jumpToPostComments(postId) {
     this.activePostId = postId;
-    this.activeFilter = 'all';
+    this.activeFilter = 'pending_all';
     this.currentPage = 1;
     this.switchTab('inbox');
     this.loadComments();
@@ -817,7 +819,7 @@ const App = {
     if (!listContainer) return;
 
     try {
-      let url = `api/comments.php?platform=${encodeURIComponent(this.activePlatform)}&filter=${encodeURIComponent(this.activeFilter)}&search=${encodeURIComponent(this.searchQuery)}`;
+      let url = `api/comments.php?platform=${encodeURIComponent(this.activePlatform)}&filter=${encodeURIComponent(this.activeFilter)}&search=${encodeURIComponent(this.searchQuery)}&page=${encodeURIComponent(this.currentPage)}&limit=${encodeURIComponent(this.pageSize)}`;
       if (this.activeAccountId && this.activeAccountId !== 'all') {
         url += `&account_id=${encodeURIComponent(this.activeAccountId)}`;
       }
@@ -830,9 +832,30 @@ const App = {
 
       if (res.success) {
         this.commentsList = res.data || [];
+        this.pagination = res.pagination || {
+          current_page: this.currentPage,
+          per_page: this.pageSize,
+          total_items: this.commentsList.length,
+          total_pages: 1
+        };
+        this.totalPages = this.pagination.total_pages;
+
+        // Bounce-back: If current page is beyond total_pages, jump back to last valid page
+        if (this.pagination.total_pages > 0 && this.currentPage > this.pagination.total_pages) {
+          this.currentPage = this.pagination.total_pages;
+          await this.loadComments();
+          return;
+        }
+        if (this.commentsList.length === 0 && this.currentPage > 1) {
+          this.currentPage--;
+          await this.loadComments();
+          return;
+        }
+
         this.updateTopCounts(res.counts);
         this.updateActivePostBanner(this.commentsList);
-        this.renderComments(this.commentsList);
+        this.renderComments(this.commentsList, this.pagination);
+        this.updatePaginationControls(this.pagination);
       }
     } catch (err) {
       console.error(err);
@@ -869,6 +892,30 @@ const App = {
 
   updateTopCounts(counts) {
     if (!counts) return;
+
+    // Filter bar badges
+    const elPendAll = document.getElementById('tag-count-pending-all');
+    if (elPendAll) elPendAll.textContent = counts.pending_all_count ?? counts.pending_count ?? 0;
+
+    const elPendNew = document.getElementById('tag-count-pending-new');
+    if (elPendNew) elPendNew.textContent = counts.pending_new_count ?? counts.pending_count ?? 0;
+
+    const elAiReview = document.getElementById('tag-count-ai-review');
+    if (elAiReview) elAiReview.textContent = counts.ai_review_count ?? 0;
+
+    const elFailed = document.getElementById('tag-count-failed');
+    if (elFailed) elFailed.textContent = counts.failed_count ?? 0;
+
+    const elLeadsUrg = document.getElementById('tag-count-leads-urgent');
+    if (elLeadsUrg) elLeadsUrg.textContent = counts.leads_urgent_count ?? counts.leads_count ?? 0;
+
+    const elReplied = document.getElementById('tag-count-replied');
+    if (elReplied) elReplied.textContent = counts.replied_count ?? 0;
+
+    const elArchived = document.getElementById('tag-count-archived');
+    if (elArchived) elArchived.textContent = counts.archived_count ?? 0;
+
+    // Header quick stats pills
     const leadsPill = document.getElementById('count-pill-leads');
     const urgentPill = document.getElementById('count-pill-urgent');
     const scorePill = document.getElementById('count-pill-highlighted');
@@ -882,7 +929,7 @@ const App = {
     const badgeHigh = document.getElementById('badge-count-highlights');
     const badgeLeads = document.getElementById('badge-count-leads');
 
-    if (badgeInbox) badgeInbox.textContent = counts.pending_count || '0';
+    if (badgeInbox) badgeInbox.textContent = counts.pending_all_count ?? counts.pending_count ?? '0';
     if (badgeHigh) badgeHigh.textContent = ((counts.highlighted_count || 0) + (counts.leads_count || 0)) || '0';
     if (badgeLeads) badgeLeads.textContent = counts.leads_count || '0';
     
@@ -902,23 +949,21 @@ const App = {
     }
   },
 
-  renderComments(comments) {
+  renderComments(comments, pagination) {
     const listContainer = document.getElementById('comments-stream');
     const counterDisplay = document.getElementById('feed-counter-display');
     if (!listContainer) return;
 
-    const totalItems = comments.length;
-    const totalPages = Math.ceil(totalItems / this.pageSize) || 1;
-    if (this.currentPage > totalPages) this.currentPage = totalPages;
-    if (this.currentPage < 1) this.currentPage = 1;
+    const totalItems = pagination ? pagination.total_items : comments.length;
+    const totalPages = pagination ? pagination.total_pages : 1;
+    const curPage = pagination ? pagination.current_page : this.currentPage;
+    const pSize = pagination ? pagination.per_page : (this.pageSize || 20);
 
-    const startIdx = (this.currentPage - 1) * this.pageSize;
-    const endIdx = Math.min(startIdx + this.pageSize, totalItems);
-    const pageComments = comments.slice(startIdx, endIdx);
+    const startIdx = totalItems === 0 ? 0 : (curPage - 1) * pSize + 1;
+    const endIdx = totalItems === 0 ? 0 : (curPage - 1) * pSize + comments.length;
 
-    const pendingCount = comments.filter(c => c.status === 'pending').length;
     if (counterDisplay) {
-      counterDisplay.textContent = `Mostrando ${totalItems === 0 ? 0 : startIdx + 1} - ${endIdx} de ${totalItems} comentarios (${pendingCount} pendientes)`;
+      counterDisplay.textContent = `Mostrando ${startIdx} - ${endIdx} de ${totalItems} comentarios`;
     }
 
     if (comments.length === 0) {
@@ -930,20 +975,23 @@ const App = {
             <p style="font-size: 0.84rem; margin-top: 6px; color: #94a3b8; max-width: 460px; margin-left: auto; margin-right: auto;">
               Cuando ejecutes la limpieza semanal o archives comentarios resueltos, aparecerán aquí para tu consulta histórica.
             </p>
-            <button class="btn-primary-action" style="margin: 16px auto 0; padding: 7px 16px; font-size: 0.8rem; background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.35); color: #c7d2fe;" onclick="App.setFilterTag('all')">
-              📥 Volver a Bandeja Activa
+            <button class="btn-primary-action" style="margin: 16px auto 0; padding: 7px 16px; font-size: 0.8rem; background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.35); color: #c7d2fe;" onclick="App.setFilterTag('pending_all')">
+              📥 Volver a Pendientes
             </button>
           </div>
         `;
-      } else {
+      } else if (this.activeFilter === 'pending_all' || this.activeFilter === 'pending_new') {
         listContainer.innerHTML = `
           <div style="padding: 50px 20px; text-align: center; color: var(--text-dim);">
             <div style="font-size: 3rem; margin-bottom: 12px;">✨🎉</div>
             <h4 style="font-size: 1.15rem; color: #fff; font-weight: 800; font-family: 'Syne', sans-serif;">¡Bandeja Despejada (Inbox Zero)!</h4>
             <p style="font-size: 0.86rem; margin-top: 6px; color: #94a3b8; max-width: 480px; margin-left: auto; margin-right: auto; line-height: 1.55;">
-              ¡Excelente trabajo! No tienes comentarios pendientes ni sin responder. Tu bandeja de trabajo está 100% limpia y tus métricas de respuesta están al día.
+              ¡Excelente trabajo! No tienes comentarios pendientes que requieran tu atención. Tu bandeja de trabajo está 100% al día.
             </p>
             <div style="display: flex; justify-content: center; gap: 12px; margin-top: 18px; flex-wrap: wrap;">
+              <button type="button" class="btn-primary-action" style="padding: 8px 16px; font-size: 0.82rem; background: rgba(52, 211, 153, 0.15); border: 1px solid rgba(52, 211, 153, 0.35); color: #6ee7b7;" onclick="App.setFilterTag('replied')">
+                ✅ Ver Respondidos
+              </button>
               <button type="button" class="btn-primary-action" style="padding: 8px 16px; font-size: 0.82rem; background: rgba(99, 102, 241, 0.18); border: 1px solid rgba(99, 102, 241, 0.4); color: #c7d2fe;" onclick="App.openWeeklyReportModal()">
                 📊 Ver Reporte Semanal
               </button>
@@ -958,11 +1006,25 @@ const App = {
             </div>
           </div>
         `;
+      } else {
+        listContainer.innerHTML = `
+          <div style="padding: 50px 20px; text-align: center; color: var(--text-dim);">
+            <div style="font-size: 2.8rem; margin-bottom: 12px;">🔍</div>
+            <h4 style="font-size: 1.05rem; color: #fff; font-weight: 700;">No hay comentarios en esta categoría</h4>
+            <p style="font-size: 0.84rem; margin-top: 6px; color: #94a3b8; max-width: 460px; margin-left: auto; margin-right: auto;">
+              No se encontraron comentarios que coincidan con el filtro seleccionado.
+            </p>
+            <button class="btn-primary-action" style="margin: 16px auto 0; padding: 7px 16px; font-size: 0.8rem; background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.35); color: #c7d2fe;" onclick="App.setFilterTag('pending_all')">
+              📥 Volver a Pendientes
+            </button>
+          </div>
+        `;
       }
       return;
     }
 
     const isCompact = this.viewDensity === 'compact';
+    const pageComments = comments;
 
     const cardsHtml = pageComments.map(c => {
       const isSpam = c.status === 'spam' || c.sentiment === 'spam';
@@ -1160,12 +1222,49 @@ const App = {
   },
 
   changePage(newPage) {
-    const totalPages = Math.ceil(this.commentsList.length / this.pageSize) || 1;
-    if (newPage >= 1 && newPage <= totalPages) {
+    const totalPages = this.totalPages || 1;
+    if (newPage >= 1 && newPage <= totalPages && newPage !== this.currentPage) {
       this.currentPage = newPage;
-      this.renderComments(this.commentsList);
+      this.loadComments();
       const stream = document.getElementById('comments-stream');
       if (stream) stream.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  },
+
+  prevPage() {
+    this.changePage(this.currentPage - 1);
+  },
+
+  nextPage() {
+    this.changePage(this.currentPage + 1);
+  },
+
+  updatePaginationControls(pagination) {
+    const bar = document.getElementById('feed-pagination-bar');
+    const infoText = document.getElementById('pagination-info-text');
+    const currentDisplay = document.getElementById('pagination-current-display');
+    const btnPrev = document.getElementById('btn-pagination-prev');
+    const btnNext = document.getElementById('btn-pagination-next');
+
+    if (!bar) return;
+
+    if (!pagination || pagination.total_items === 0) {
+      bar.style.display = 'none';
+      return;
+    }
+
+    bar.style.display = 'flex';
+    if (infoText) {
+      infoText.textContent = `Página ${pagination.current_page} de ${pagination.total_pages} (${pagination.total_items} comentarios)`;
+    }
+    if (currentDisplay) {
+      currentDisplay.textContent = pagination.current_page;
+    }
+    if (btnPrev) {
+      btnPrev.disabled = pagination.current_page <= 1;
+    }
+    if (btnNext) {
+      btnNext.disabled = pagination.current_page >= pagination.total_pages;
     }
   },
 

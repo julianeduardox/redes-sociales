@@ -133,6 +133,32 @@ try {
 
         $replies = AiAgentService::generateReplies($authorName, $commentText, $platform, $postCaption, $overrideTone, $runtimeOverrides);
 
+        if ($commentId > 0 && !empty($replies)) {
+            try {
+                $detLang = $replies['detected_language'] ?? ($replies['detected_comment_language'] ?? null);
+                $confLang = $replies['language_confidence'] ?? null;
+                $srcLang = $replies['language_source'] ?? 'local_detector';
+                $respLang = $replies['response_language'] ?? null;
+
+                $upStmt = $pdo->prepare("
+                    UPDATE comments 
+                    SET detected_language = :dlang,
+                        language_confidence = :conf,
+                        language_source = :src,
+                        response_language = :rlang
+                    WHERE id = :id AND user_id = :uid
+                ");
+                $upStmt->execute([
+                    ':dlang' => $detLang,
+                    ':conf' => $confLang,
+                    ':src' => $srcLang,
+                    ':rlang' => $respLang,
+                    ':id' => $commentId,
+                    ':uid' => $userId
+                ]);
+            } catch (Throwable $e) {}
+        }
+
         echo json_encode([
             'success' => true,
             'brand_voice_id' => $commentBrandVoiceId,
@@ -255,7 +281,16 @@ try {
             exit;
         }
 
-        $suitability = AiAgentService::evaluateCommentSuitability($c['comment_text']);
+        // Resolve Brand Voice & Language before evaluating filters
+        $brandVoiceId = (int)($c['effective_brand_voice_id'] ?? 1);
+        $brandLang = 'any';
+        if ($brandVoiceId > 0) {
+            $bvStmt = $pdo->prepare("SELECT language FROM brand_voices WHERE id = :bvid LIMIT 1");
+            $bvStmt->execute([':bvid' => $brandVoiceId]);
+            $brandLang = $bvStmt->fetchColumn() ?: 'any';
+        }
+
+        $suitability = AiAgentService::evaluateCommentSuitability($c['comment_text'], $brandLang);
 
         if ($suitability['status'] === 'spam') {
             $pdo->prepare("UPDATE comments SET status = 'spam', sentiment = 'spam', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
@@ -291,8 +326,7 @@ try {
             exit;
         }
 
-        // Generate response with Gemini
-        $brandVoiceId = (int)($c['effective_brand_voice_id'] ?? 1);
+        // Generate response with Gemini / OpenRouter
         $commentPostId = (int)($c['post_id'] ?? 0);
         $replyIndex = Security::sanitizeInt($input['reply_index'] ?? 0, 0, 1000, 0);
 
@@ -303,13 +337,64 @@ try {
             'reply_index' => $replyIndex
         ]);
 
+        $detLang = $replies['detected_language'] ?? ($replies['detected_comment_language'] ?? null);
+        $confLang = $replies['language_confidence'] ?? null;
+        $srcLang = $replies['language_source'] ?? 'local_detector';
+        $respLang = $replies['response_language'] ?? null;
+
         $chosenVariant = 'engagement';
         if ($c['sentiment'] === 'lead' || str_starts_with($c['intent'], 'lead_')) {
             $chosenVariant = 'conversion';
         } elseif ($c['sentiment'] === 'urgent' || $c['intent'] === 'support') {
             $chosenVariant = 'support';
         }
-        $chosenReply = $replies[$chosenVariant] ?? $replies['engagement'];
+        $chosenReply = trim($replies[$chosenVariant] ?? ($replies['engagement'] ?? ''));
+
+        // HERMES v2.1 Supervised Mode: If NO_REPLY or requires_human_review, hold for human review
+        if (($replies['action'] ?? '') === 'NO_REPLY' || !empty($replies['requires_human_review']) || empty($chosenReply)) {
+            $revStatus = 'pending_review';
+            if (($replies['reason'] ?? '') === 'AI_UNAVAILABLE_OR_INVALID') {
+                $revStatus = 'ai_unavailable';
+            } elseif (($replies['reason'] ?? '') === 'INVALID_AI_OUTPUT' || ($replies['reason'] ?? '') === 'INVALID_AI_OUTPUT_LANGUAGE' || str_contains($replies['source'] ?? '', 'validator')) {
+                $revStatus = 'invalid_ai_output';
+            }
+            $reasonNote = $replies['engagement_tips'] ?? 'IA no disponible o respuesta no válida. Pendiente de aprobación humana.';
+
+            $pdo->prepare("
+                UPDATE comments 
+                SET status = :status, 
+                    highlight_reason = :reason,
+                    detected_language = :dlang,
+                    language_confidence = :conf,
+                    language_source = :src,
+                    response_language = :rlang
+                WHERE id = :id AND user_id = :uid
+            ")->execute([
+                ':status' => $revStatus, 
+                ':reason' => $reasonNote, 
+                ':dlang' => $detLang,
+                ':conf' => $confLang,
+                ':src' => $srcLang,
+                ':rlang' => $respLang,
+                ':id' => $c['id'], 
+                ':uid' => $userId
+            ]);
+
+            echo json_encode([
+                'success' => true,
+                'item' => [
+                    'comment_id' => (int)$c['id'],
+                    'author' => htmlspecialchars($c['author_name'], ENT_QUOTES, 'UTF-8'),
+                    'action' => 'pending_review',
+                    'reason' => $reasonNote,
+                    'status' => $revStatus,
+                    'detected_language' => $detLang,
+                    'requires_human_review' => true,
+                    'is_posted' => 0
+                ]
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            exit;
+        }
 
         // Post reply to Meta (manual single trigger from UI)
         $metaResult = MetaApiService::postReplyToMeta((int)$c['id'], $chosenReply, $userId, true);
@@ -376,10 +461,12 @@ try {
         // Fetch all pending comments for user (any score), ordered with priority
         $stmt = $pdo->prepare("
             SELECT c.*, p.caption as post_caption, p.account_id,
-                   COALESCE(p.brand_voice_id, a.brand_voice_id, 1) as effective_brand_voice_id
+                   COALESCE(p.brand_voice_id, a.brand_voice_id, 1) as effective_brand_voice_id,
+                   COALESCE(bv.language, 'any') as brand_voice_language
             FROM comments c 
             JOIN posts p ON c.post_id = p.id 
             LEFT JOIN accounts a ON p.account_id = a.id
+            LEFT JOIN brand_voices bv ON bv.id = COALESCE(p.brand_voice_id, a.brand_voice_id, 1)
             WHERE c.user_id = :user_id AND c.status = 'pending'
             ORDER BY c.highlight_score DESC, c.id DESC 
             LIMIT 25
@@ -394,17 +481,23 @@ try {
         $ignoredCount = 0;
 
         foreach ($pendingComments as $c) {
-            $suitability = AiAgentService::evaluateCommentSuitability($c['comment_text']);
+            $brandVoiceId = (int)($c['effective_brand_voice_id'] ?? 1);
+            $brandLang = !empty($c['brand_voice_language']) ? $c['brand_voice_language'] : 'any';
+
+            $suitability = AiAgentService::evaluateCommentSuitability($c['comment_text'], $brandLang);
 
             if ($suitability['status'] === 'spam') {
                 // Mark as spam for human review
                 $stmtUp = $pdo->prepare("
                     UPDATE comments 
-                    SET status = 'spam', sentiment = 'spam', highlight_reason = :reason 
+                    SET status = 'spam', sentiment = 'spam', highlight_reason = :reason,
+                        detected_language = :dlang, language_confidence = :conf, language_source = 'local_detector'
                     WHERE id = :id AND user_id = :uid
                 ");
                 $stmtUp->execute([
                     ':reason' => $suitability['reason'],
+                    ':dlang' => $suitability['detected_language'] ?? null,
+                    ':conf' => $suitability['language_confidence'] ?? null,
                     ':id' => $c['id'],
                     ':uid' => $userId
                 ]);
@@ -424,11 +517,14 @@ try {
                 // Pure emoji / sticker comment without text
                 $stmtUp = $pdo->prepare("
                     UPDATE comments 
-                    SET status = 'ignored', highlight_reason = :reason 
+                    SET status = 'ignored', highlight_reason = :reason,
+                        detected_language = :dlang, language_confidence = :conf, language_source = 'local_detector'
                     WHERE id = :id AND user_id = :uid
                 ");
                 $stmtUp->execute([
                     ':reason' => $suitability['reason'],
+                    ':dlang' => $suitability['detected_language'] ?? null,
+                    ':conf' => $suitability['language_confidence'] ?? null,
                     ':id' => $c['id'],
                     ':uid' => $userId
                 ]);
@@ -444,15 +540,19 @@ try {
                 continue;
             }
 
-            // Legitimate comment in Spanish (of any score) -> Generate and Post AI Reply with account's assigned brand voice!
-            $brandVoiceId = (int)($c['effective_brand_voice_id'] ?? 1);
+            // Legitimate comment in supported language -> Generate AI Reply
             $commentPostId = (int)($c['post_id'] ?? 0);
             $replies = AiAgentService::generateReplies($c['author_name'], $c['comment_text'], $c['platform'], $c['post_caption'], '', [
                 'user_id' => $userId,
                 'post_id' => $commentPostId,
                 'brand_voice_id' => $brandVoiceId,
-                'reply_index' => $processedCount
+                'reply_index' => count($processed)
             ]);
+
+            $detLang = $replies['detected_language'] ?? ($replies['detected_comment_language'] ?? null);
+            $confLang = $replies['language_confidence'] ?? null;
+            $srcLang = $replies['language_source'] ?? 'local_detector';
+            $respLang = $replies['response_language'] ?? null;
             
             // Select best variant
             $chosenVariant = 'engagement';
@@ -462,7 +562,51 @@ try {
                 $chosenVariant = 'support';
             }
 
-            $chosenReply = $replies[$chosenVariant] ?? $replies['engagement'];
+            $chosenReply = trim($replies[$chosenVariant] ?? ($replies['engagement'] ?? ''));
+
+            // HERMES v2.1 Supervised Mode: If NO_REPLY or requires_human_review, hold for human review
+            if (($replies['action'] ?? '') === 'NO_REPLY' || !empty($replies['requires_human_review']) || empty($chosenReply)) {
+                $revStatus = 'pending_review';
+                if (($replies['reason'] ?? '') === 'AI_UNAVAILABLE_OR_INVALID') {
+                    $revStatus = 'ai_unavailable';
+                } elseif (($replies['reason'] ?? '') === 'INVALID_AI_OUTPUT' || ($replies['reason'] ?? '') === 'INVALID_AI_OUTPUT_LANGUAGE' || str_contains($replies['source'] ?? '', 'validator')) {
+                    $revStatus = 'invalid_ai_output';
+                }
+                $reasonNote = $replies['engagement_tips'] ?? 'IA no disponible o respuesta no válida. Pendiente de aprobación humana.';
+
+                $stmtUp = $pdo->prepare("
+                    UPDATE comments 
+                    SET status = :status, 
+                        highlight_reason = :reason,
+                        detected_language = :dlang,
+                        language_confidence = :conf,
+                        language_source = :src,
+                        response_language = :rlang
+                    WHERE id = :id AND user_id = :uid
+                ");
+                $stmtUp->execute([
+                    ':status' => $revStatus, 
+                    ':reason' => $reasonNote, 
+                    ':dlang' => $detLang,
+                    ':conf' => $confLang,
+                    ':src' => $srcLang,
+                    ':rlang' => $respLang,
+                    ':id' => $c['id'], 
+                    ':uid' => $userId
+                ]);
+
+                $processed[] = [
+                    'comment_id' => (int)$c['id'],
+                    'author' => htmlspecialchars($c['author_name'], ENT_QUOTES, 'UTF-8'),
+                    'action' => 'pending_review',
+                    'reason' => $reasonNote,
+                    'status' => $revStatus,
+                    'detected_language' => $detLang,
+                    'requires_human_review' => true,
+                    'is_posted' => 0
+                ];
+                continue;
+            }
 
             // Post reply directly to Meta platform (Facebook / Instagram)
             $metaResult = MetaApiService::postReplyToMeta((int)$c['id'], $chosenReply, $userId);
@@ -483,8 +627,24 @@ try {
 
             if ($isPosted) {
                 // Update status to replied
-                $stmtUp = $pdo->prepare("UPDATE comments SET status = 'replied', highlight_reason = NULL WHERE id = :id AND user_id = :uid");
-                $stmtUp->execute([':id' => $c['id'], ':uid' => $userId]);
+                $stmtUp = $pdo->prepare("
+                    UPDATE comments 
+                    SET status = 'replied', 
+                        highlight_reason = NULL,
+                        detected_language = :dlang,
+                        language_confidence = :conf,
+                        language_source = :src,
+                        response_language = :rlang
+                    WHERE id = :id AND user_id = :uid
+                ");
+                $stmtUp->execute([
+                    ':dlang' => $detLang,
+                    ':conf' => $confLang,
+                    ':src' => $srcLang,
+                    ':rlang' => $respLang,
+                    ':id' => $c['id'], 
+                    ':uid' => $userId
+                ]);
 
                 $repliedCount++;
                 $processed[] = [
@@ -499,8 +659,25 @@ try {
             } else {
                 // Update status to failed and store error reason
                 $errReason = $metaResult['error'] ?? 'Fallo al publicar en Meta';
-                $stmtUp = $pdo->prepare("UPDATE comments SET status = 'failed', highlight_reason = :reason WHERE id = :id AND user_id = :uid");
-                $stmtUp->execute([':reason' => $errReason, ':id' => $c['id'], ':uid' => $userId]);
+                $stmtUp = $pdo->prepare("
+                    UPDATE comments 
+                    SET status = 'failed', 
+                        highlight_reason = :reason,
+                        detected_language = :dlang,
+                        language_confidence = :conf,
+                        language_source = :src,
+                        response_language = :rlang
+                    WHERE id = :id AND user_id = :uid
+                ");
+                $stmtUp->execute([
+                    ':reason' => $errReason, 
+                    ':dlang' => $detLang,
+                    ':conf' => $confLang,
+                    ':src' => $srcLang,
+                    ':rlang' => $respLang,
+                    ':id' => $c['id'], 
+                    ':uid' => $userId
+                ]);
 
                 $failedCount++;
                 $processed[] = [

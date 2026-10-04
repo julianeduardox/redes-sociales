@@ -357,11 +357,13 @@ $isMetaConnected = ($activeAccountsCount > 0);
           </div>
 
           <div class="filter-tags">
-            <button class="filter-tag active" data-filter="all">📥 Bandeja Activa</button>
-            <button class="filter-tag" data-filter="new" style="color: #60a5fa; border-color: rgba(96, 165, 250, 0.4);">✨ Nuevos</button>
-            <button class="filter-tag" data-filter="leads" style="color: #facc15; border-color: rgba(250, 204, 21, 0.4);">🎯 Leads & Destacados</button>
-            <button class="filter-tag" data-filter="urgent" style="color: #f87171; border-color: rgba(239, 68, 68, 0.4);">🛡️ Soporte & Alertas</button>
-            <button class="filter-tag" data-filter="archived" style="color: #94a3b8; border-color: rgba(148, 163, 184, 0.35);">🗄️ Histórico / Archivados</button>
+            <button class="filter-tag active" data-filter="pending_all">📥 Pendientes <span class="tag-badge" id="tag-count-pending-all">0</span></button>
+            <button class="filter-tag" data-filter="pending_new" style="color: #60a5fa; border-color: rgba(96, 165, 250, 0.4);">✨ Nuevos <span class="tag-badge" id="tag-count-pending-new">0</span></button>
+            <button class="filter-tag" data-filter="ai_review" style="color: #c084fc; border-color: rgba(192, 132, 252, 0.4);">🤖 Por Aprobar <span class="tag-badge" id="tag-count-ai-review">0</span></button>
+            <button class="filter-tag" data-filter="failed" style="color: #f87171; border-color: rgba(239, 68, 68, 0.4);">⚠️ Fallidos <span class="tag-badge" id="tag-count-failed">0</span></button>
+            <button class="filter-tag" data-filter="leads_urgent" style="color: #facc15; border-color: rgba(250, 204, 21, 0.4);">🎯 Leads & Urgentes <span class="tag-badge" id="tag-count-leads-urgent">0</span></button>
+            <button class="filter-tag" data-filter="replied" style="color: #34d399; border-color: rgba(52, 211, 153, 0.35);">✅ Respondidos <span class="tag-badge" id="tag-count-replied">0</span></button>
+            <button class="filter-tag" data-filter="archived" style="color: #94a3b8; border-color: rgba(148, 163, 184, 0.35);">🗄️ Histórico / Archivados <span class="tag-badge" id="tag-count-archived">0</span></button>
           </div>
 
           <div class="feed-toolbar-row">
@@ -391,6 +393,21 @@ $isMetaConnected = ($activeAccountsCount > 0);
 
         <div class="comments-scroll-area" id="comments-stream">
           <!-- Comments rendered dynamically -->
+        </div>
+
+        <div class="feed-pagination-bar" id="feed-pagination-bar" style="display: none;">
+          <div style="font-size: 0.82rem; color: #94a3b8;" id="pagination-info-text">
+            Página 1 de 1 (0 comentarios)
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button type="button" class="btn-pagination" id="btn-pagination-prev" onclick="App.prevPage()" disabled>
+              ◀ Anterior
+            </button>
+            <span id="pagination-current-display" style="font-size: 0.82rem; font-weight: 700; color: #818cf8; padding: 4px 10px; border-radius: 6px; background: rgba(99,102,241,0.12);">1</span>
+            <button type="button" class="btn-pagination" id="btn-pagination-next" onclick="App.nextPage()" disabled>
+              Siguiente ▶
+            </button>
+          </div>
         </div>
       </section>
 
@@ -515,7 +532,7 @@ $isMetaConnected = ($activeAccountsCount > 0);
             <div style="font-size: 0.92rem; font-weight: 800; color: #e2e8f0; display: flex; align-items: center; gap: 6px;">
               <span>🎯</span> Cuentas de Referencia en Monitoreo
             </div>
-            <span style="font-size: 0.76rem; color: var(--text-dim);">Instagram (Auto-Sync) & Facebook (Importación)</span>
+            <span style="font-size: 0.76rem; color: var(--text-dim);">📸 Instagram (Auto-Sync & Métricas) • Gestión con Eliminación Directa</span>
           </div>
           <div id="radar-creators-carousel" class="creators-carousel">
             <!-- Rendered dynamically by RadarController.renderCreators() -->
@@ -613,136 +630,342 @@ $isMetaConnected = ($activeAccountsCount > 0);
           <div style="color: var(--text-muted); font-size: 0.85rem;">Analizando correlaciones de audiencia y percentiles...</div>
         </div>
 
+        <!-- Subtabs Navigation -->
+        <div class="atenea-subtabs-nav" style="display: flex; gap: 8px; margin-bottom: 22px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 12px; flex-wrap: wrap;">
+          <button type="button" class="btn-subtab active" id="tab-btn-overview" onclick="AteneaLearningController.switchSubTab('overview')">
+            <span>📊 Resumen & Percentiles</span>
+          </button>
+          <button type="button" class="btn-subtab" id="tab-btn-predictions" onclick="AteneaLearningController.switchSubTab('predictions')">
+            <span>🔬 Predicción vs Resultado</span>
+            <span class="badge-subtab" id="badge-predictions-count" style="background: rgba(139,92,246,0.2); color: #c4b5fd; font-size: 0.72rem; padding: 2px 7px; border-radius: 10px; margin-left: 6px;">0</span>
+          </button>
+          <button type="button" class="btn-subtab" id="tab-btn-comparisons" onclick="AteneaLearningController.switchSubTab('comparisons')">
+            <span>🔬 Experimentos Naturales (A/B Twins)</span>
+            <span class="badge-subtab" id="badge-comparisons-count" style="background: rgba(16,185,129,0.2); color: #34d399; font-size: 0.72rem; padding: 2px 7px; border-radius: 10px; margin-left: 6px;">0</span>
+          </button>
+          <button type="button" class="btn-subtab" id="tab-btn-hypotheses" onclick="AteneaLearningController.switchSubTab('hypotheses')">
+            <span>🧬 Matriz de Hipótesis & Lifecycle</span>
+          </button>
+          <button type="button" class="btn-subtab" id="tab-btn-directives" onclick="AteneaLearningController.switchSubTab('directives')">
+            <span>🧠 Directivas en Vivo</span>
+          </button>
+          <button type="button" class="btn-subtab" id="tab-btn-double-brain" onclick="AteneaLearningController.switchSubTab('double-brain')">
+            <span>⚖️ Doble Cerebro (Nicho vs Propio)</span>
+          </button>
+        </div>
+
         <div id="atenea-learning-content">
-          <!-- KPI Cards Grid -->
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 22px;">
-            <div class="atenea-kpi-card">
-              <div style="font-size: 0.74rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">Publicaciones Indexadas</div>
-              <div style="font-size: 1.8rem; font-weight: 900; color: #fff; margin: 4px 0;" id="atenea-kpi-total-indexed">209</div>
-              <div style="font-size: 0.76rem; color: #a5b4fc; display: flex; gap: 8px;">
-                <span id="atenea-kpi-fb-count">112 Facebook</span> • <span id="atenea-kpi-ig-count">97 Instagram</span>
-              </div>
-            </div>
-
-            <div class="atenea-kpi-card">
-              <div style="font-size: 0.74rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">Fórmulas Ganadoras</div>
-              <div style="font-size: 1.8rem; font-weight: 900; color: #34d399; margin: 4px 0;" id="atenea-kpi-winners-count">7</div>
-              <div style="font-size: 0.76rem; color: #6ee7b7;">Top 10% y Top 20% de rendimiento</div>
-            </div>
-
-            <div class="atenea-kpi-card">
-              <div style="font-size: 0.74rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">Anti-Patrones Detectados</div>
-              <div style="font-size: 1.8rem; font-weight: 900; color: #f87171; margin: 4px 0;" id="atenea-kpi-anti-count">4</div>
-              <div style="font-size: 0.76rem; color: #fca5a5;">Franja inferior (Bottom 20% - Qué evitar)</div>
-            </div>
-
-            <div class="atenea-kpi-card">
-              <div style="font-size: 0.74rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">Nivel de Confianza</div>
-              <div style="font-size: 1.8rem; font-weight: 900; color: #38bdf8; margin: 4px 0;">ALTO</div>
-              <div style="font-size: 0.76rem; color: #7dd3fc;">Muestra estadística validada (n &ge; 15)</div>
-            </div>
-          </div>
-
-          <!-- Tiers Distribution Bar -->
-          <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: var(--radius-md); padding: 18px 22px; margin-bottom: 24px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-              <span style="font-size: 0.85rem; font-weight: 800; color: #fff;">Distribución de Rendimiento por Percentiles Normalizados</span>
-              <span style="font-size: 0.75rem; color: var(--text-dim);">Ponderado por Shares (Facebook) y Guardados/Alcance (Instagram)</span>
-            </div>
-
-            <div class="atenea-tier-progress-track">
-              <div id="tier-bar-top10" class="atenea-tier-seg top10" style="width: 10%;" title="Top 10%"></div>
-              <div id="tier-bar-top20" class="atenea-tier-seg top20" style="width: 10%;" title="Top 20%"></div>
-              <div id="tier-bar-avg" class="atenea-tier-seg avg" style="width: 60%;" title="Promedio"></div>
-              <div id="tier-bar-low20" class="atenea-tier-seg low20" style="width: 20%;" title="Bottom 20%"></div>
-            </div>
-
-            <div style="display: flex; justify-content: space-between; font-size: 0.74rem; color: #cbd5e1; flex-wrap: wrap; gap: 8px;">
-              <span style="display: flex; align-items: center; gap: 6px;">
-                <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: #10b981;"></span>
-                <span id="tier-label-top10">Top 10% (20 posts)</span>
-              </span>
-              <span style="display: flex; align-items: center; gap: 6px;">
-                <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: #06b6d4;"></span>
-                <span id="tier-label-top20">Top 20% (21 posts)</span>
-              </span>
-              <span style="display: flex; align-items: center; gap: 6px;">
-                <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: #6366f1;"></span>
-                <span id="tier-label-avg">Promedio (125 posts)</span>
-              </span>
-              <span style="display: flex; align-items: center; gap: 6px;">
-                <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: #ef4444;"></span>
-                <span id="tier-label-low20">Bottom 20% (43 posts)</span>
-              </span>
-            </div>
-          </div>
-
-          <!-- Two Columns: Top Formulas vs Anti-Patterns -->
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px;">
-            <!-- Column 1: Fórmulas Ganadoras -->
-            <div style="background: rgba(10, 15, 26, 0.7); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-md); padding: 20px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <span style="font-size: 1.2rem;">⭐</span>
-                  <h4 style="font-size: 1rem; font-weight: 800; color: #34d399; margin: 0;">Fórmulas Ganadoras Comprobadas</h4>
+          <!-- 1. SUBVIEW: RESUMEN & PERCENTILES -->
+          <div id="subtab-view-overview">
+            <!-- KPI Cards Grid -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 22px;">
+              <div class="atenea-kpi-card">
+                <div style="font-size: 0.74rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">Publicaciones Indexadas</div>
+                <div style="font-size: 1.8rem; font-weight: 900; color: #fff; margin: 4px 0;" id="atenea-kpi-total-indexed">215</div>
+                <div style="font-size: 0.76rem; color: #a5b4fc; display: flex; gap: 8px;">
+                  <span id="atenea-kpi-fb-count">115 Facebook</span> • <span id="atenea-kpi-ig-count">100 Instagram</span>
                 </div>
-                <span style="font-size: 0.74rem; color: var(--text-dim);">Top 10% - 20%</span>
               </div>
-              <div id="atenea-winners-list">
-                <!-- Rendered dynamically by AteneaLearningController -->
+
+              <div class="atenea-kpi-card">
+                <div style="font-size: 0.74rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">Experimentos A/B Gemelos</div>
+                <div style="font-size: 1.8rem; font-weight: 900; color: #34d399; margin: 4px 0;" id="atenea-kpi-comparisons-count">0</div>
+                <div style="font-size: 0.76rem; color: #6ee7b7;">Mismo concepto, diferente framing</div>
+              </div>
+
+              <div class="atenea-kpi-card">
+                <div style="font-size: 0.74rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">Hipótesis en Lifecycle</div>
+                <div style="font-size: 1.8rem; font-weight: 900; color: #c084fc; margin: 4px 0;" id="atenea-kpi-hypotheses-count">0</div>
+                <div style="font-size: 0.76rem; color: #e9d5ff;">Evaluadas con Wilson 95%</div>
+              </div>
+
+              <div class="atenea-kpi-card">
+                <div style="font-size: 0.74rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">Anti-Patrones Detectados</div>
+                <div style="font-size: 1.8rem; font-weight: 900; color: #f87171; margin: 4px 0;" id="atenea-kpi-anti-count">0</div>
+                <div style="font-size: 0.76rem; color: #fca5a5;">Franja baja (Bottom 20% - Qué evitar)</div>
               </div>
             </div>
 
-            <!-- Column 2: Anti-Patrones -->
-            <div style="background: rgba(10, 15, 26, 0.7); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: var(--radius-md); padding: 20px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <span style="font-size: 1.2rem;">⚠️</span>
-                  <h4 style="font-size: 1rem; font-weight: 800; color: #f87171; margin: 0;">Anti-Patrones (Qué Evitar)</h4>
+            <!-- Continuous Percentiles Matrix -->
+            <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: var(--radius-md); padding: 18px 22px; margin-bottom: 24px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <span style="font-size: 0.85rem; font-weight: 800; color: #fff;">Distribución Continua de Rendimiento (Ranking Percentilar)</span>
+                <span style="font-size: 0.75rem; color: var(--text-dim);">Ponderado por Shares (Facebook) y Guardados/Alcance (Instagram)</span>
+              </div>
+
+              <div class="atenea-tier-progress-track">
+                <div id="tier-bar-p90" class="atenea-tier-seg top10" style="width: 10%;" title="P90 (Top 10%)"></div>
+                <div id="tier-bar-p75" class="atenea-tier-seg top20" style="width: 15%;" title="P75 (Top 25%)"></div>
+                <div id="tier-bar-p50" class="atenea-tier-seg avg" style="width: 25%;" title="P50 (Medio)"></div>
+                <div id="tier-bar-p25" class="atenea-tier-seg low20" style="width: 25%;" style="background: #f59e0b;" title="P25 (Bajo)"></div>
+                <div id="tier-bar-p10" class="atenea-tier-seg low20" style="width: 25%;" title="P10 (Bottom 20%)"></div>
+              </div>
+
+              <div style="display: flex; justify-content: space-between; font-size: 0.74rem; color: #cbd5e1; flex-wrap: wrap; gap: 8px;">
+                <span style="display: flex; align-items: center; gap: 6px;">
+                  <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: #10b981;"></span>
+                  <span id="tier-label-p90">P90 - Top 10% (0)</span>
+                </span>
+                <span style="display: flex; align-items: center; gap: 6px;">
+                  <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: #06b6d4;"></span>
+                  <span id="tier-label-p75">P75 - Alto (0)</span>
+                </span>
+                <span style="display: flex; align-items: center; gap: 6px;">
+                  <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: #6366f1;"></span>
+                  <span id="tier-label-p50">P50 - Medio (0)</span>
+                </span>
+                <span style="display: flex; align-items: center; gap: 6px;">
+                  <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: #f59e0b;"></span>
+                  <span id="tier-label-p25">P25 - Bajo (0)</span>
+                </span>
+                <span style="display: flex; align-items: center; gap: 6px;">
+                  <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: #ef4444;"></span>
+                  <span id="tier-label-p10">P10 - Bottom 20% (0)</span>
+                </span>
+              </div>
+            </div>
+
+            <!-- Top Performing Posts vs Low Performing Posts -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+              <div>
+                <div style="font-size: 0.92rem; font-weight: 800; color: #34d399; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                  <span>🏆</span> Publicaciones Históricas de Mayor Impacto (Top 5)
                 </div>
-                <span style="font-size: 0.74rem; color: var(--text-dim);">Bottom 20%</span>
+                <div id="atenea-top-posts-grid" style="display: flex; flex-direction: column; gap: 10px;">
+                  <!-- Injected dynamically -->
+                </div>
               </div>
-              <div id="atenea-anti-patterns-list">
-                <!-- Rendered dynamically by AteneaLearningController -->
+
+              <div>
+                <div style="font-size: 0.92rem; font-weight: 800; color: #f87171; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                  <span>📉</span> Publicaciones Históricas de Menor Impacto (Bottom 5 - Auditoría)
+                </div>
+                <div id="atenea-low-posts-grid" style="display: flex; flex-direction: column; gap: 10px;">
+                  <!-- Injected dynamically -->
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- Directivas en Vivo Inyectadas en Atenea -->
-          <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(139, 92, 246, 0.25); border-radius: var(--radius-md); padding: 20px; margin-bottom: 24px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 1.2rem;">🧠</span>
-                <h4 style="font-size: 0.95rem; font-weight: 800; color: #c084fc; margin: 0;">Directivas Empíricas Inyectadas en el Prompt de Atenea</h4>
+          <!-- 1.B SUBVIEW: PREDICCIÓN VS RESULTADO REAL (FASE 5) -->
+          <div id="subtab-view-predictions" style="display: none;">
+            <!-- Epistemological Banner -->
+            <div style="background: rgba(139, 92, 246, 0.08); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 12px; padding: 18px; margin-bottom: 20px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <div>
+                  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                    <span style="font-size: 1.3rem;">🔬</span>
+                    <h4 style="font-size: 1.05rem; font-weight: 800; color: #c4b5fd; margin: 0;">Ciclo de Predicción vs Resultado Real & Learning Ledger</h4>
+                  </div>
+                  <p style="font-size: 0.83rem; color: #cbd5e1; margin: 0; line-height: 1.5; max-width: 900px;">
+                    Atenea aprende qué hipótesis sobreviven al contraste con nuevos resultados. Las predicciones son <strong>promesas falsables registradas antes de publicar</strong>. Las observaciones individuales no demuestran causalidad ni se auto-promocionan sin acumulación estadística.
+                  </p>
+                </div>
+                <button type="button" class="btn-primary-action" style="background: linear-gradient(135deg, #7c3aed, #4f46e5); font-weight: 700; font-size: 0.82rem; padding: 8px 16px;" onclick="AteneaLearningController.openNewPredictionModal()">
+                  <span>➕ Formular Predicción Falsable</span>
+                </button>
               </div>
-              <span style="font-size: 0.72rem; color: #a5b4fc; background: rgba(139, 92, 246, 0.15); padding: 3px 8px; border-radius: 4px;">Inyección Automática en Vivo</span>
             </div>
-            <pre id="atenea-live-directives-code" class="atenea-directives-terminal">Cargando directivas empíricas...</pre>
+
+            <!-- Prediction Accuracy & Stats Grid -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 22px;">
+              <div class="atenea-kpi-card" style="border-left: 3px solid #8b5cf6;">
+                <div style="font-size: 0.72rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">Predicciones Registradas</div>
+                <div style="font-size: 1.7rem; font-weight: 900; color: #fff; margin: 4px 0;" id="pred-kpi-total">0</div>
+                <div style="font-size: 0.74rem; color: #a5b4fc;" id="pred-kpi-evaluated-label">0 evaluadas con resultado</div>
+              </div>
+
+              <div class="atenea-kpi-card" style="border-left: 3px solid #10b981;">
+                <div style="font-size: 0.72rem; font-weight: 700; color: #34d399; text-transform: uppercase;">Confirmadas</div>
+                <div style="font-size: 1.7rem; font-weight: 900; color: #34d399; margin: 4px 0;" id="pred-kpi-confirmed">0</div>
+                <div style="font-size: 0.74rem; color: #6ee7b7;" id="pred-kpi-confirmed-rate">Tasa: 0.0% (n=0)</div>
+              </div>
+
+              <div class="atenea-kpi-card" style="border-left: 3px solid #ef4444;">
+                <div style="font-size: 0.72rem; font-weight: 700; color: #f87171; text-transform: uppercase;">Contradichas (Errores)</div>
+                <div style="font-size: 1.7rem; font-weight: 900; color: #f87171; margin: 4px 0;" id="pred-kpi-contradicted">0</div>
+                <div style="font-size: 0.74rem; color: #fca5a5;" id="pred-kpi-contradicted-rate">Tasa: 0.0% (n=0)</div>
+              </div>
+
+              <div class="atenea-kpi-card" style="border-left: 3px solid #f59e0b;">
+                <div style="font-size: 0.72rem; font-weight: 700; color: #fbbf24; text-transform: uppercase;">Inconclusas</div>
+                <div style="font-size: 1.7rem; font-weight: 900; color: #fbbf24; margin: 4px 0;" id="pred-kpi-inconclusive">0</div>
+                <div style="font-size: 0.74rem; color: #fde68a;" id="pred-kpi-inconclusive-rate">Datos insuficientes</div>
+              </div>
+
+              <div class="atenea-kpi-card" style="border-left: 3px solid #38bdf8;">
+                <div style="font-size: 0.72rem; font-weight: 700; color: #38bdf8; text-transform: uppercase;">Modo Operativo</div>
+                <div style="font-size: 1.15rem; font-weight: 800; color: #fff; margin: 4px 0;" id="pred-kpi-mode">EXPLORATION</div>
+                <div style="font-size: 0.74rem; color: #7dd3fc;" id="pred-kpi-knowledge-state">NEGATIVE_ONLY (0 fórmulas)</div>
+              </div>
+            </div>
+
+            <!-- Predictions Table & Failed Predictions Grid -->
+            <div style="display: flex; flex-direction: column; gap: 24px;">
+              <!-- 1. Active & Evaluated Predictions Table -->
+              <div style="background: rgba(15,23,42,0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+                  <div style="font-size: 0.95rem; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px;">
+                    <span>📋</span> Experimentos & Predicciones Registradas
+                  </div>
+                  <div style="display: flex; gap: 6px;">
+                    <button type="button" class="btn-secondary-action" style="font-size: 0.74rem; padding: 4px 10px;" onclick="AteneaLearningController.filterPredictions('all')">Todas</button>
+                    <button type="button" class="btn-secondary-action" style="font-size: 0.74rem; padding: 4px 10px; color: #34d399;" onclick="AteneaLearningController.filterPredictions('CONFIRMED')">Confirmadas</button>
+                    <button type="button" class="btn-secondary-action" style="font-size: 0.74rem; padding: 4px 10px; color: #f87171;" onclick="AteneaLearningController.filterPredictions('CONTRADICTED')">Contradichas</button>
+                    <button type="button" class="btn-secondary-action" style="font-size: 0.74rem; padding: 4px 10px; color: #fbbf24;" onclick="AteneaLearningController.filterPredictions('INCONCLUSIVE')">Inconclusas</button>
+                  </div>
+                </div>
+
+                <div id="atenea-predictions-table-container">
+                  <!-- Injected via JavaScript -->
+                  <div style="color: var(--text-dim); text-align: center; padding: 24px;">Cargando predicciones...</div>
+                </div>
+              </div>
+
+              <!-- 2. Failed Predictions (Transparencia Epistemológica) -->
+              <div style="background: rgba(239, 68, 68, 0.04); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 12px; padding: 20px;">
+                <div style="font-size: 0.95rem; font-weight: 800; color: #f87171; display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                  <span>⚠️</span> Predicciones Contradichas (Failed Predictions — Honestidad Científica)
+                </div>
+                <p style="font-size: 0.8rem; color: #cbd5e1; margin: 0 0 14px 0;">
+                  Estas son las publicaciones donde la hipótesis esperaba alto rendimiento pero el resultado real quedó en bajo rendimiento o promedio. El fallo evita la sobreconfianza y genera aprendizaje inmutable en el ledger.
+                </p>
+                <div id="atenea-failed-predictions-container">
+                  <!-- Injected via JavaScript -->
+                </div>
+              </div>
+
+              <!-- 3. Learning Ledger (Libro Mayor Inmutable) -->
+              <div style="background: rgba(15,23,42,0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                  <div style="font-size: 0.95rem; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px;">
+                    <span>📜</span> Learning Ledger (Libro Mayor Inmutable de Evolución del Conocimiento)
+                  </div>
+                  <span style="font-size: 0.74rem; color: var(--text-dim);">Registros históricos inalterables</span>
+                </div>
+                <div id="atenea-learning-ledger-container">
+                  <!-- Injected via JavaScript -->
+                  <div style="color: var(--text-dim); text-align: center; padding: 24px;">Cargando libro mayor...</div>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <!-- Top Performing Posts vs Low Performing Posts -->
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-            <!-- Top Posts -->
-            <div>
-              <div style="font-size: 0.92rem; font-weight: 800; color: #34d399; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
-                <span>🏆</span> Publicaciones Históricas de Mayor Impacto
+          <!-- 2. SUBVIEW: EXPERIMENTOS NATURALES (A/B TWINS) -->
+          <div id="subtab-view-comparisons" style="display: none;">
+            <div style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 12px; padding: 18px; margin-bottom: 20px;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                <span style="font-size: 1.3rem;">🔬</span>
+                <h4 style="font-size: 1.05rem; font-weight: 800; color: #34d399; margin: 0;">Laboratorio de Experimentos Naturales (Pares Gemelos)</h4>
               </div>
-              <div id="atenea-top-posts-grid" style="display: flex; flex-direction: column; gap: 10px;">
-                <!-- Injected dynamically -->
-              </div>
+              <p style="font-size: 0.84rem; color: #cbd5e1; margin: 0; line-height: 1.5;">
+                Atenea detecta automáticamente publicaciones reales que comparten el <strong>mismo concepto nuclear o frase de caption</strong> pero difieren en su <strong>framing visual (placa)</strong>. Esto permite comparar las diferencias observadas entre variaciones de framing en condiciones reales de audiencia (diseño observacional).
+              </p>
             </div>
 
-            <!-- Low Posts -->
-            <div>
-              <div style="font-size: 0.92rem; font-weight: 800; color: #f87171; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
-                <span>📉</span> Publicaciones Históricas de Menor Impacto (Auditoría de Errores)
-              </div>
-              <div id="atenea-low-posts-grid" style="display: flex; flex-direction: column; gap: 10px;">
-                <!-- Injected dynamically -->
-              </div>
+            <div id="atenea-natural-comparisons-grid" style="display: flex; flex-direction: column; gap: 16px;">
+              <!-- Rendered dynamically by AteneaLearningController -->
             </div>
           </div>
 
+          <!-- 3. SUBVIEW: MATRIZ DE HIPÓTESIS & LIFECYCLE -->
+          <div id="subtab-view-hypotheses" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+              <div>
+                <h4 style="font-size: 1.1rem; font-weight: 800; color: #fff; margin: 0;">Matriz de Hipótesis y Ciclo de Vida Estadístico</h4>
+                <p style="font-size: 0.82rem; color: var(--text-muted); margin: 4px 0 0 0;">
+                  Las hipótesis transitan por estados según su tamaño de muestra ($n$), Intervalo de Wilson al 95% y recencia temporal.
+                </p>
+              </div>
+              <div style="display: flex; gap: 8px; font-size: 0.74rem;">
+                <span style="padding: 4px 10px; border-radius: 6px; background: rgba(16,185,129,0.15); color: #34d399; font-weight: 700;">🟢 STRONG</span>
+                <span style="padding: 4px 10px; border-radius: 6px; background: rgba(56,189,248,0.15); color: #38bdf8; font-weight: 700;">🔵 VALIDATED</span>
+                <span style="padding: 4px 10px; border-radius: 6px; background: rgba(168,85,247,0.15); color: #c084fc; font-weight: 700;">🟣 OBSERVATION</span>
+                <span style="padding: 4px 10px; border-radius: 6px; background: rgba(245,158,11,0.15); color: #fbbf24; font-weight: 700;">🟡 EMERGING</span>
+                <span style="padding: 4px 10px; border-radius: 6px; background: rgba(239,68,68,0.15); color: #f87171; font-weight: 700;">🔴 WEAKENING</span>
+              </div>
+            </div>
+
+            <div id="atenea-hypotheses-matrix-container" style="display: flex; flex-direction: column; gap: 14px;">
+              <!-- Rendered dynamically by AteneaLearningController -->
+            </div>
+          </div>
+
+          <!-- 4. SUBVIEW: DIRECTIVAS EN VIVO -->
+          <div id="subtab-view-directives" style="display: none;">
+            <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(139, 92, 246, 0.25); border-radius: var(--radius-md); padding: 20px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 1.2rem;">🧠</span>
+                  <h4 style="font-size: 0.95rem; font-weight: 800; color: #c084fc; margin: 0;">Directivas Empíricas Inyectadas en el Prompt de Atenea</h4>
+                </div>
+                <span style="font-size: 0.72rem; color: #a5b4fc; background: rgba(139, 92, 246, 0.15); padding: 3px 8px; border-radius: 4px;">Inyección Automática en Producción</span>
+              </div>
+              <pre id="atenea-live-directives-code" class="atenea-directives-terminal">Cargando directivas empíricas...</pre>
+            </div>
+          </div>
+
+          <!-- 5. SUBVIEW: DOBLE CEREBRO (RADAR EXTERNO VS RADAR INTERNO) -->
+          <div id="subtab-view-double-brain" style="display: none;">
+            <div style="background: rgba(10, 15, 26, 0.7); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 14px; padding: 22px;">
+              <div style="text-align: center; max-width: 780px; margin: 0 auto 24px auto;">
+                <h4 style="font-size: 1.25rem; font-weight: 800; color: #fff; margin-bottom: 8px;">
+                  🏛️ Arquitectura de Dos Cerebros de Referencia
+                </h4>
+                <p style="font-size: 0.86rem; color: var(--text-muted); line-height: 1.5;">
+                  Atenea combina la inteligencia del nicho exterior con el aprendizaje empírico interno de tu propia audiencia para alimentar Atenea Studio.
+                </p>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px;">
+                <!-- Cerebro 1 -->
+                <div style="background: rgba(139, 92, 246, 0.06); border: 1px solid rgba(139, 92, 246, 0.25); border-radius: 12px; padding: 18px;">
+                  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                    <span style="font-size: 1.3rem;">📡</span>
+                    <h5 style="font-size: 0.95rem; font-weight: 800; color: #c084fc; margin: 0;">RADAR EXTERNO (Mercado y Nicho)</h5>
+                  </div>
+                  <ul style="font-size: 0.82rem; color: #cbd5e1; list-style: none; padding: 0; margin: 0; line-height: 1.8;">
+                    <li>• Creadores y referentes monitoreados en Instagram/Facebook.</li>
+                    <li>• Qué temas y ganchos están en tendencia actual en el sector estoico.</li>
+                    <li>• Inspiración y detección de ángulos vírgenes.</li>
+                  </ul>
+                  <button type="button" class="btn-secondary-action" style="margin-top: 14px; width: 100%; justify-content: center; font-size: 0.8rem;" onclick="App.switchTab('radar')">
+                    Ir al Radar de Creadores
+                  </button>
+                </div>
+
+                <!-- Cerebro 2 -->
+                <div style="background: rgba(16, 185, 129, 0.06); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 12px; padding: 18px;">
+                  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                    <span style="font-size: 1.3rem;">🎯</span>
+                    <h5 style="font-size: 0.95rem; font-weight: 800; color: #34d399; margin: 0;">RADAR INTERNO (@fortaleza_imparable)</h5>
+                  </div>
+                  <ul style="font-size: 0.82rem; color: #cbd5e1; list-style: none; padding: 0; margin: 0; line-height: 1.8;">
+                    <li>• Corpus histórico de 215 publicaciones analizadas.</li>
+                    <li>• Micro-DNA y qué estructuras generan shares masivos reales.</li>
+                    <li>• Anti-patrones que tu audiencia rechaza empíricamente.</li>
+                  </ul>
+                  <button type="button" class="btn-secondary-action" style="margin-top: 14px; width: 100%; justify-content: center; font-size: 0.8rem;" onclick="AteneaLearningController.switchSubTab('hypotheses')">
+                    Ver Hipótesis Validadas
+                  </button>
+                </div>
+              </div>
+
+              <!-- Síntesis en Atenea Studio -->
+              <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(168, 85, 247, 0.12)); border: 1px solid rgba(168, 85, 247, 0.35); border-radius: 12px; padding: 20px; text-align: center;">
+                <div style="font-size: 1.2rem; margin-bottom: 6px;">✨</div>
+                <h5 style="font-size: 1.05rem; font-weight: 800; color: #fff; margin-bottom: 6px;">
+                  Atenea Studio: 70% Explotación + 30% Exploración
+                </h5>
+                <p style="font-size: 0.84rem; color: #e2e8f0; max-width: 680px; margin: 0 auto 16px auto; line-height: 1.5;">
+                  Generación de contenido original guiada por las hipótesis validadas de tu audiencia, con un 30% de espacio controlado para experimentar con nuevos framings visuales y ángulos.
+                </p>
+                <button type="button" class="btn-primary-action" style="background: linear-gradient(135deg, #7c3aed, #4f46e5); font-weight: 700; padding: 9px 22px; font-size: 0.86rem;" onclick="RadarController.openRecreateModal(null, false, 'custom')">
+                  🏛️ Abrir Atenea Studio
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
       </div>
@@ -976,10 +1199,10 @@ $isMetaConnected = ($activeAccountsCount > 0);
                   <div class="form-group">
                     <label>Idioma Principal de Respuestas:</label>
                     <select id="setting-brand-language">
-                      <option value="es" selected>🇪🇸 Español (Predeterminado)</option>
-                      <option value="en">🇺🇸 English</option>
-                      <option value="pt">🇧🇷 Português</option>
-                      <option value="any">🌐 Auto-detectar idioma del usuario</option>
+                      <option value="es" selected>🇪🇸 Español</option>
+                      <option value="pt">🇵🇹 Português</option>
+                      <option value="en">🇬🇧 English</option>
+                      <option value="any">🌐 Detectar y responder en español, portugués o inglés</option>
                     </select>
                   </div>
                 </div>
@@ -1765,7 +1988,7 @@ $isMetaConnected = ($activeAccountsCount > 0);
 </div>
 
 <!-- Modal: Asistente de Respuestas & Conexión (Popup de Sugerencias Reflexivas, Motivacionales, Comunitarias y Auto-Responder en Vivo) -->
-<div class="modal-overlay modal-assistant-overlay" id="modal-assistant-replies" onclick="if(event.target===this) App.closeModal('modal-assistant-replies')">
+<div class="modal-overlay modal-assistant-overlay" id="modal-assistant-replies">
   <div class="modal-box modal-assistant-box">
     
     <!-- Modal Header -->
@@ -1777,7 +2000,10 @@ $isMetaConnected = ($activeAccountsCount > 0);
           <p class="modal-assistant-subtitle">Sugerencias reflexivas, motivacionales y piloto automático para tu comunidad</p>
         </div>
       </div>
-      <div class="modal-header-actions">
+      <div class="modal-header-actions" style="display: flex; align-items: center; gap: 8px;">
+        <button type="button" class="btn-modal-sugg-action" style="background: rgba(99,102,241,0.2); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.35); font-size: 0.75rem; padding: 6px 12px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" onclick="AgentController.copyFullModalSummary()" title="Copiar todo el resumen y opciones del asistente al portapapeles">
+          <span>📋 Copiar Resumen</span>
+        </button>
         <span class="score-badge high" id="modal-score-badge" onclick="App.openScoreGuideModal()" style="cursor: pointer;" title="Haz clic para ver la Guía de Score">⭐ Score 95/100 ℹ️</span>
         <button type="button" class="btn-close-modal" onclick="App.closeModal('modal-assistant-replies')" title="Cerrar">&times;</button>
       </div>
@@ -1902,9 +2128,12 @@ $isMetaConnected = ($activeAccountsCount > 0);
               <span style="color: #34d399; font-weight: 700;">🧠 Gemini Learning:</span>
               <span>Tus aprobaciones y correcciones entrenan su estilo en tiempo real</span>
             </div>
-            <div style="display: flex; gap: 10px;">
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
               <button type="button" class="btn-modal-cancel" onclick="App.closeModal('modal-assistant-replies')">
                 Cerrar
+              </button>
+              <button type="button" class="btn-modal-sugg-action" id="btn-modal-save-gold-custom" style="background: rgba(245,158,11,0.2); color: #fbbf24; border: 1px solid rgba(245,158,11,0.4); font-weight: 700; padding: 9px 15px; border-radius: 8px; font-size: 0.8rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;" onclick="AgentController.saveAsGoldExample(null, true)" title="⭐ Guardar tus palabras editadas en la memoria de Hermes sin publicar en Meta">
+                <span>⭐ Guardar como Oro (Sin Publicar)</span>
               </button>
               <button type="button" class="btn-send-reply modal-btn-send" id="btn-modal-submit-reply" onclick="AgentController.submitModalReply()">
                 <span>Publicar Respuesta</span> 🏛️
@@ -2235,9 +2464,9 @@ $isMetaConnected = ($activeAccountsCount > 0);
             <label>Idioma Principal:</label>
             <select id="new-brand-language">
               <option value="es" selected>🇪🇸 Español</option>
-              <option value="en">🇺🇸 English</option>
-              <option value="pt">🇧🇷 Português</option>
-              <option value="any">🌐 Auto-detectar</option>
+              <option value="pt">🇵🇹 Português</option>
+              <option value="en">🇬🇧 English</option>
+              <option value="any">🌐 Detectar y responder en español, portugués o inglés</option>
             </select>
           </div>
         </div>
@@ -2550,9 +2779,12 @@ $isMetaConnected = ($activeAccountsCount > 0);
       <div>
         <label style="font-size: 0.8rem; font-weight: 700; color: #cbd5e1; display: block; margin-bottom: 5px;">Plataforma</label>
         <select id="new-creator-platform" class="modal-control-select" style="width: 100%;">
-          <option value="instagram">📸 Instagram (Sincronización Automática con Meta API)</option>
-          <option value="facebook">📘 Facebook (Monitoreo con Enlaces de Post)</option>
+          <option value="instagram" selected>📸 Instagram (Recomendado: Extracción de métricas y auto-sync con Meta API)</option>
+          <option value="facebook">📘 Facebook (Solo importación manual - sin API de métricas)</option>
         </select>
+        <span style="display: block; font-size: 0.73rem; color: #94a3b8; margin-top: 5px; line-height: 1.4;">
+          💡 <strong>Recomendación:</strong> Usa Instagram para obtener automáticamente posts, likes, comentarios y frases para inspiración. Meta no permite extraer métricas de perfiles de terceros en Facebook.
+        </span>
       </div>
 
       <div>
@@ -2568,6 +2800,136 @@ $isMetaConnected = ($activeAccountsCount > 0);
       <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px;">
         <button type="button" class="btn-secondary-action" onclick="App.closeModal('modal-add-creator')">Cancelar</button>
         <button type="submit" class="btn-primary-action" style="background: linear-gradient(135deg, #7c3aed, #4f46e5);">Agregar Creador</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Formular Nueva Predicción Falsable (Fase 5) -->
+<div class="modal-overlay" id="modal-new-prediction" style="display: none;">
+  <div class="modal-box" style="max-width: 600px; background: #0f172a; border: 1px solid rgba(139, 92, 246, 0.35); border-radius: 16px; padding: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.6);">
+    <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 12px; margin-bottom: 16px;">
+      <h4 style="font-size: 1.1rem; font-weight: 800; color: #fff; margin: 0; display: flex; align-items: center; gap: 8px;">
+        <span>🔬</span> Formular Predicción Falsable (Previa a Publicación)
+      </h4>
+      <button type="button" class="btn-close-modal" onclick="App.closeModal('modal-new-prediction')">&times;</button>
+    </div>
+
+    <form onsubmit="AteneaLearningController.submitNewPrediction(event)" style="display: flex; flex-direction: column; gap: 14px;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div>
+          <label style="font-size: 0.78rem; font-weight: 700; color: #cbd5e1; display: block; margin-bottom: 4px;">Plataforma de Publicación</label>
+          <select id="pred-input-platform" class="modal-control-select" style="width: 100%;">
+            <option value="instagram">📸 Instagram (@fortaleza_imparable)</option>
+            <option value="facebook">📘 Facebook (Página Conectada)</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size: 0.78rem; font-weight: 700; color: #cbd5e1; display: block; margin-bottom: 4px;">Candidato a Experimentación / Familia</label>
+          <select id="pred-input-family" class="modal-control-select" style="width: 100%;">
+            <option value="FAMILY_WARRIOR_ETHOS">Vencedor Solitario / Bushido (RECENT_EMERGING)</option>
+            <option value="FAMILY_LONG_FORM">Reflexión Extensa / Párrafo > 35 pal. (OBSERVATION)</option>
+            <option value="FAMILY_PROVOCATION">Provocación a la Complacencia (RECENT_EMERGING)</option>
+            <option value="FAMILY_RHETORICAL_QUESTION">Interrogación con Revelación (OBSERVATION)</option>
+            <option value="FAMILY_CONTROL_SOVEREIGNTY">Dicotomía del Control (OBSERVATION)</option>
+            <option value="FAMILY_SHORT_FORM">Frase Ultracorta (ANTI-PATRÓN para prueba negativa)</option>
+            <option value="FAMILY_NOVEL">Exploración Novedosa (NOVEL_EXPLORATION)</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label style="font-size: 0.78rem; font-weight: 700; color: #cbd5e1; display: block; margin-bottom: 4px;">Promesa Falsable (Enunciado de la Predicción)</label>
+        <textarea id="pred-input-statement" class="modal-control-input" rows="2" style="width: 100%; resize: vertical;" placeholder="ej. Si publicamos esta narrativa con estructura condicional, esperamos observar concentración en el quintil superior TOP 20." required></textarea>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div>
+          <label style="font-size: 0.78rem; font-weight: 700; color: #cbd5e1; display: block; margin-bottom: 4px;">Expectativa Ordinal (Tier)</label>
+          <select id="pred-input-tier" class="modal-control-select" style="width: 100%;">
+            <option value="TOP20">TOP 20 (Quintil Superior)</option>
+            <option value="MIDDLE">MIDDLE (Promedio)</option>
+            <option value="BOTTOM20">BOTTOM 20 (Prueba de Anti-Patrón)</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size: 0.78rem; font-weight: 700; color: #cbd5e1; display: block; margin-bottom: 4px;">Nivel de Evidencia Origen</label>
+          <select id="pred-input-evidence-type" class="modal-control-select" style="width: 100%;">
+            <option value="RECENT_EMERGING">RECENT_EMERGING (Señal Reciente)</option>
+            <option value="OBSERVATIONAL">OBSERVATIONAL (Observación Preliminar)</option>
+            <option value="NOVEL_EXPLORATION">NOVEL_EXPLORATION (Hipótesis Nueva)</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label style="font-size: 0.78rem; font-weight: 700; color: #cbd5e1; display: block; margin-bottom: 4px;">Concepto Nuclear o Frase Diseñada</label>
+        <textarea id="pred-input-concept" class="modal-control-input" rows="2" style="width: 100%; resize: vertical;" placeholder="ej. Quien teme caminar solo termina marchando al paso de quienes nunca llegaron a ningún lado." required></textarea>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px;">
+        <button type="button" class="btn-secondary-action" onclick="App.closeModal('modal-new-prediction')">Cancelar</button>
+        <button type="submit" class="btn-primary-action" style="background: linear-gradient(135deg, #7c3aed, #4f46e5); font-weight: 700;">Registrar Predicción Falsable</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Evaluar Predicción con Resultado Observado (Fase 5) -->
+<div class="modal-overlay" id="modal-evaluate-prediction" style="display: none;">
+  <div class="modal-box" style="max-width: 520px; background: #0f172a; border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 16px; padding: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.6);">
+    <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 12px; margin-bottom: 16px;">
+      <h4 style="font-size: 1.1rem; font-weight: 800; color: #fff; margin: 0; display: flex; align-items: center; gap: 8px;">
+        <span>📊</span> Evaluar Predicción vs Resultado Real
+      </h4>
+      <button type="button" class="btn-close-modal" onclick="App.closeModal('modal-evaluate-prediction')">&times;</button>
+    </div>
+
+    <form onsubmit="AteneaLearningController.submitEvaluatePrediction(event)" style="display: flex; flex-direction: column; gap: 14px;">
+      <input type="hidden" id="eval-pred-id" value="" />
+      
+      <div style="background: rgba(255,255,255,0.04); border-radius: 8px; padding: 10px 12px; font-size: 0.8rem; color: #cbd5e1;">
+        <div style="font-weight: 700; color: #a5b4fc; margin-bottom: 3px;" id="eval-pred-statement-label">Promesa Falsable:</div>
+        <div style="color: #94a3b8; font-size: 0.76rem;" id="eval-pred-expected-label">Tier Esperado: TOP20</div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div>
+          <label style="font-size: 0.78rem; font-weight: 700; color: #cbd5e1; display: block; margin-bottom: 4px;">Tier Observado Real</label>
+          <select id="eval-actual-tier" class="modal-control-select" style="width: 100%;">
+            <option value="TOP20">TOP20 (Quintil Superior)</option>
+            <option value="MIDDLE">MIDDLE (Rango Intermedio)</option>
+            <option value="BOTTOM20">BOTTOM20 (Quintil Inferior)</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size: 0.78rem; font-weight: 700; color: #cbd5e1; display: block; margin-bottom: 4px;">Madurez del Post al Evaluar</label>
+          <select id="eval-maturity-status" class="modal-control-select" style="width: 100%;">
+            <option value="MATURE">MADURO (Tracción estabilizada para contrastar)</option>
+            <option value="IMMATURE">INMADURO (&lt; 24h, clasificar INCONCLUSIVE)</option>
+            <option value="UNAVAILABLE">NO DISPONIBLE (Sin métricas)</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+        <div>
+          <label style="font-size: 0.74rem; font-weight: 600; color: #94a3b8; display: block; margin-bottom: 3px;">Likes</label>
+          <input type="number" id="eval-actual-likes" class="modal-control-input" placeholder="Opcional" />
+        </div>
+        <div>
+          <label style="font-size: 0.74rem; font-weight: 600; color: #94a3b8; display: block; margin-bottom: 3px;">Shares</label>
+          <input type="number" id="eval-actual-shares" class="modal-control-input" placeholder="Opcional" />
+        </div>
+        <div>
+          <label style="font-size: 0.74rem; font-weight: 600; color: #94a3b8; display: block; margin-bottom: 3px;">Alcance / Reach</label>
+          <input type="number" id="eval-actual-reach" class="modal-control-input" placeholder="Opcional" />
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px;">
+        <button type="button" class="btn-secondary-action" onclick="App.closeModal('modal-evaluate-prediction')">Cancelar</button>
+        <button type="submit" class="btn-primary-action" style="background: linear-gradient(135deg, #10b981, #059669); font-weight: 700;">Evaluar y Asentar en Ledger</button>
       </div>
     </form>
   </div>

@@ -115,17 +115,36 @@ class InspirationRadarService {
         }
     }
 
-    public static function removeCreator(int $userId, int $creatorId): array {
+    public static function removeCreator(int $userId, int $creatorId, bool $deletePosts = true): array {
         try {
             $pdo = Database::getConnection();
-            $stmt = $pdo->prepare("UPDATE creator_targets SET is_active = 0 WHERE id = ? AND user_id = ?");
-            $stmt->execute([$creatorId, $userId]);
-            return $stmt->rowCount() 
-                ? ['success' => true, 'message' => 'Creador eliminado del radar']
-                : ['success' => false, 'error' => 'Creador no encontrado'];
+            $chk = $pdo->prepare("SELECT id, username, display_name, platform FROM creator_targets WHERE id = ? AND user_id = ?");
+            $chk->execute([$creatorId, $userId]);
+            $creator = $chk->fetch(PDO::FETCH_ASSOC);
+
+            if (!$creator) {
+                return ['success' => false, 'error' => 'Cuenta de referencia no encontrada o no pertenece a tu usuario'];
+            }
+
+            $deletedPostsCount = 0;
+            if ($deletePosts) {
+                $delPosts = $pdo->prepare("DELETE FROM inspiration_posts WHERE creator_id = ? AND user_id = ?");
+                $delPosts->execute([$creatorId, $userId]);
+                $deletedPostsCount = $delPosts->rowCount();
+            }
+
+            $delCreator = $pdo->prepare("DELETE FROM creator_targets WHERE id = ? AND user_id = ?");
+            $delCreator->execute([$creatorId, $userId]);
+
+            return [
+                'success' => true,
+                'message' => "Cuenta de referencia @{$creator['username']} eliminada correctamente del radar" . ($deletedPostsCount > 0 ? " ({$deletedPostsCount} publicaciones removidas)" : ""),
+                'deleted_id' => $creatorId,
+                'deleted_posts_count' => $deletedPostsCount
+            ];
         } catch (Throwable $e) {
             error_log("InspirationRadar removeCreator: " . $e->getMessage());
-            return ['success' => false, 'error' => 'Error al eliminar creador'];
+            return ['success' => false, 'error' => 'Error al eliminar la cuenta de referencia: ' . $e->getMessage()];
         }
     }
 
@@ -397,8 +416,222 @@ class InspirationRadarService {
     }
 
     // ──────────────────────────────────────────────────────────────────────────
-    // CEREBRO IA: EXTRACTOR Y VERIFICADOR DE CITAS ESTOICAS / BUSHIDO
+    // CEREBRO IA: EXTRACTOR Y VERIFICADOR DE CITAS ESTOICAS / BUSHIDO & OCR VISIÓN
     // ──────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Extracción Óptica de Texto en Placas mediante Visión Multimodal (OpenRouter)
+     * Directiva: Transcripción exclusiva del texto visible sin interpretación semántica.
+     * Retorna:
+     * {"has_text": true, "text": "...", "confidence": 0.94} o {"has_text": false, "text": null, "confidence": 0}
+     * Regla estricta: NUNCA asignar caption_text a visual_text si vision falla o no hay texto.
+     */
+    public static function extractOverlayTextWithVision(int $userId, int $postId, ?string $overrideMediaUrl = null): array {
+        try {
+            $pdo = Database::getConnection();
+            $stmt = $pdo->prepare("SELECT id, media_url, caption, visual_text, visual_text_source, visual_text_status FROM inspiration_posts WHERE id = ? AND user_id = ?");
+            $stmt->execute([$postId, $userId]);
+            $post = $stmt->fetch(PDO::FETCH_ASSOC);
+            $stmt->closeCursor();
+
+            if (!$post) {
+                return ['success' => false, 'error' => 'Publicación no encontrada'];
+            }
+
+            $mediaUrl = trim($overrideMediaUrl ?: ($post['media_url'] ?? ''));
+
+            if (empty($mediaUrl)) {
+                $up = $pdo->prepare("UPDATE inspiration_posts SET visual_text = NULL, visual_text_source = 'NONE', visual_text_status = 'NO_TEXT', visual_text_confidence = 0.0 WHERE id = ? AND user_id = ?");
+                $up->execute([$postId, $userId]);
+                return [
+                    'success' => true,
+                    'has_text' => false,
+                    'text' => null,
+                    'confidence' => 0.0,
+                    'visual_text' => null,
+                    'visual_text_source' => 'NONE',
+                    'visual_text_status' => 'NO_TEXT',
+                    'visual_text_confidence' => 0.0,
+                    'message' => 'La publicación no contiene una URL de imagen válida para inspección visual.'
+                ];
+            }
+
+            $apiKey = Settings::get('openrouter_api_key', '', $userId);
+            if (empty($apiKey)) {
+                $apiKey = Settings::get('openrouter_api_key', '');
+            }
+
+            if (empty($apiKey)) {
+                $up = $pdo->prepare("UPDATE inspiration_posts SET visual_text = NULL, visual_text_source = 'NONE', visual_text_status = 'UNAVAILABLE', visual_text_confidence = 0.0 WHERE id = ? AND user_id = ?");
+                $up->execute([$postId, $userId]);
+                return [
+                    'success' => false,
+                    'error' => 'Clave de OpenRouter no configurada para procesar visión multimodal.',
+                    'visual_text' => null,
+                    'visual_text_status' => 'UNAVAILABLE'
+                ];
+            }
+
+            // Modelo multimodal de alta velocidad y precisión óptica
+            $visionModel = 'google/gemini-2.0-flash-001';
+
+            $promptVision = "Eres un transcriptor óptico (OCR) estricto. Tu ÚNICA misión es transcribir textualmente cualquier texto escrito o estampado visible en la imagen gráfica o portada del post.\n" .
+                "REGLAS OBLIGATORIAS:\n" .
+                "1. Transcribe ÚNICAMENTE el texto que esté visible en la imagen gráfica.\n" .
+                "2. NO interpretes, NO completes, NO corrijas faltas, NO parafrasees y NO inventes texto que no exista en la imagen.\n" .
+                "3. Si la imagen NO contiene texto, o es solo una fotografía/busto sin letras, responde has_text: false y text: null.\n" .
+                "4. Responde SIEMPRE única y exclusivamente en formato JSON estricto con esta estructura:\n" .
+                "{\"has_text\": boolean, \"text\": string|null, \"confidence\": float_entre_0_y_1}";
+
+            $payload = [
+                'model' => $visionModel,
+                'messages' => [
+                    [
+                        'role' => 'user',
+                        'content' => [
+                            ['type' => 'text', 'text' => $promptVision],
+                            ['type' => 'image_url', 'image_url' => ['url' => $mediaUrl]]
+                        ]
+                    ]
+                ],
+                'response_format' => ['type' => 'json_object'],
+                'temperature' => 0.1,
+                'max_tokens' => 300
+            ];
+
+            $ch = curl_init('https://openrouter.ai/api/v1/chat/completions');
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => json_encode($payload),
+                CURLOPT_TIMEOUT => 30,
+                CURLOPT_CONNECTTIMEOUT => 8,
+                CURLOPT_HTTPHEADER => [
+                    'Authorization: Bearer ' . $apiKey,
+                    'Content-Type: application/json',
+                    'HTTP-Referer: https://xindro.app',
+                    'X-Title: XINDRO Vision OCR'
+                ]
+            ]);
+
+            $res = curl_exec($ch);
+            $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlErr = curl_error($ch);
+            curl_close($ch);
+
+            if ($code !== 200 || !$res) {
+                // Falla en API: visual_text = NULL, status = UNAVAILABLE
+                $up = $pdo->prepare("UPDATE inspiration_posts SET visual_text = NULL, visual_text_source = 'NONE', visual_text_status = 'UNAVAILABLE', visual_text_confidence = 0.0 WHERE id = ? AND user_id = ?");
+                $up->execute([$postId, $userId]);
+
+                return [
+                    'success' => false,
+                    'error' => "Error en visión multimodal (HTTP $code): " . ($curlErr ?: 'Respuesta vacía o error de API'),
+                    'visual_text' => null,
+                    'visual_text_status' => 'UNAVAILABLE'
+                ];
+            }
+
+            $data = json_decode($res, true);
+            $rawContent = trim($data['choices'][0]['message']['content'] ?? '');
+            $rawContent = preg_replace('/^```(?:json)?\s*/i', '', $rawContent);
+            $rawContent = preg_replace('/\s*```$/', '', $rawContent);
+
+            $parsedVision = json_decode($rawContent, true);
+            if (!is_array($parsedVision)) {
+                if (preg_match('/\{.*\}/s', $rawContent, $m)) {
+                    $parsedVision = json_decode($m[0], true);
+                }
+            }
+
+            $hasText = !empty($parsedVision['has_text']) && !empty(trim($parsedVision['text'] ?? ''));
+            $detectedText = $hasText ? trim(strip_tags($parsedVision['text'])) : null;
+            $confidence = $hasText ? max(0.4, min(1.0, (float)($parsedVision['confidence'] ?? 0.90))) : 0.0;
+            $status = $hasText ? ($confidence >= 0.85 ? 'CONFIRMED' : 'NEEDS_REVIEW') : 'NO_TEXT';
+            $source = $hasText ? 'VISION' : 'NONE';
+
+            // Actualizar en DB
+            $upStmt = $pdo->prepare("
+                UPDATE inspiration_posts SET
+                    visual_text = :vtext,
+                    visual_text_source = :vsource,
+                    visual_text_status = :vstatus,
+                    visual_text_confidence = :vconf,
+                    quote_extracted = COALESCE(:vtext_compat, quote_extracted)
+                WHERE id = :id AND user_id = :uid
+            ");
+            $upStmt->execute([
+                ':vtext' => $detectedText,
+                ':vsource' => $source,
+                ':vstatus' => $status,
+                ':vconf' => $confidence,
+                ':vtext_compat' => $detectedText,
+                ':id' => $postId,
+                ':uid' => $userId
+            ]);
+
+            return [
+                'success' => true,
+                'has_text' => $hasText,
+                'text' => $detectedText,
+                'confidence' => $confidence,
+                'visual_text' => $detectedText,
+                'visual_text_source' => $source,
+                'visual_text_status' => $status,
+                'visual_text_confidence' => round($confidence * 100, 1),
+                'message' => $hasText 
+                    ? 'Texto visual extraído exitosamente de la placa.' 
+                    : 'La imagen fue inspeccionada y no se detectó texto superpuesto.'
+            ];
+        } catch (Throwable $e) {
+            error_log("InspirationRadar extractOverlayTextWithVision: " . $e->getMessage());
+            return ['success' => false, 'error' => $e->getMessage(), 'visual_text' => null, 'visual_text_status' => 'UNAVAILABLE'];
+        }
+    }
+
+    /**
+     * Guarda y confirma manualmente el texto de la placa editado por el usuario
+     */
+    public static function saveVisualText(int $userId, int $postId, string $text): array {
+        try {
+            $pdo = Database::getConnection();
+            $clean = trim($text);
+            $source = !empty($clean) ? 'USER' : 'NONE';
+            $status = !empty($clean) ? 'USER_CONFIRMED' : 'NO_TEXT';
+            $conf = !empty($clean) ? 1.0 : 0.0;
+
+            $stmt = $pdo->prepare("
+                UPDATE inspiration_posts SET
+                    visual_text = :vtext,
+                    visual_text_source = :vsource,
+                    visual_text_status = :vstatus,
+                    visual_text_confidence = :vconf,
+                    quote_extracted = :compat
+                WHERE id = :id AND user_id = :uid
+            ");
+            $stmt->execute([
+                ':vtext' => !empty($clean) ? $clean : null,
+                ':vsource' => $source,
+                ':vstatus' => $status,
+                ':vconf' => $conf,
+                ':compat' => !empty($clean) ? $clean : null,
+                ':id' => $postId,
+                ':uid' => $userId
+            ]);
+
+            return [
+                'success' => true,
+                'visual_text' => !empty($clean) ? $clean : null,
+                'visual_text_source' => $source,
+                'visual_text_status' => $status,
+                'visual_text_confidence' => 100.0,
+                'message' => 'Texto visual confirmado por el usuario.'
+            ];
+        } catch (Throwable $e) {
+            error_log("InspirationRadar saveVisualText: " . $e->getMessage());
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
 
     public static function analyzeAndVerifyQuote(int $userId, int $postId): array {
         try {
@@ -881,15 +1114,169 @@ PROMPT;
      * y forja exactamente 4 FRASES ORIGINALES DE ALTO IMPACTO (8 a 22 palabras cada una)
      * para estampar en placas visuales / portadas de Reels/Vídeos de @fortaleza_imparable.
      */
-    public static function generateFortalezaRecreations(int $userId, int $postId, int $brandVoiceId = 1, bool $forceRegenerate = false): array {
+    /**
+     * Generador Principal de Atenea:
+     * Deconstruye el ADN psicológico a partir de la frase de la imagen (VISUAL_TEXT) y el copy original (CAPTION_TEXT),
+     * preservando estrictamente el núcleo semántico de la frase visual sin semantic drift ni coincidencias léxicas falsas,
+     * y forja exactamente 4 FRASES ORIGINALES DE ALTO IMPACTO (8 a 22 palabras cada una)
+     * para estampar en placas visuales / portadas de Reels/Vídeos de @fortaleza_imparable.
+     */
+    public static function generateFortalezaRecreations(
+        int $userId,
+        int $postId,
+        int $brandVoiceId = 1,
+        bool $forceRegenerate = false,
+        string $sourceType = 'inspiration',
+        ?string $customVisualText = null,
+        ?string $customCaption = null
+    ): array {
         try {
             $pdo = Database::getConnection();
-            $stmt = $pdo->prepare("SELECT * FROM inspiration_posts WHERE id = ? AND user_id = ?");
-            $stmt->execute([$postId, $userId]);
-            $post = $stmt->fetch(PDO::FETCH_ASSOC);
-            $stmt->closeCursor();
+            $post = null;
 
-            if (!$post) return ['success' => false, 'error' => 'Publicación de inspiración no encontrada'];
+            // 1. Si el origen es histórico de Atenea Learning o el postId no está en inspiration_posts, buscar en atenea_post_dna
+            if ($sourceType === 'historical' || $sourceType === 'dna') {
+                $stmtDna = $pdo->prepare("
+                    SELECT d.*, p.raw_likes, p.raw_comments, p.raw_shares, p.raw_saves,
+                           p.overall_performance_score, p.performance_tier
+                    FROM atenea_post_dna d
+                    LEFT JOIN atenea_performance_dna p ON p.post_dna_id = d.id
+                    WHERE d.id = ? AND d.user_id = ?
+                ");
+                $stmtDna->execute([$postId, $userId]);
+                $dnaRow = $stmtDna->fetch(PDO::FETCH_ASSOC);
+                $stmtDna->closeCursor();
+
+                if ($dnaRow) {
+                    $extKey = 'top_dna_' . $dnaRow['id'];
+                    $stmtFind = $pdo->prepare("SELECT * FROM inspiration_posts WHERE user_id = ? AND external_post_id = ?");
+                    $stmtFind->execute([$userId, $extKey]);
+                    $post = $stmtFind->fetch(PDO::FETCH_ASSOC);
+                    $stmtFind->closeCursor();
+
+                    if (!$post) {
+                        $oppScore = 9.8;
+                        $fitScore = 10.0;
+                        $insQuote = $dnaRow['overlay_quote'] ?: ($dnaRow['core_concept'] ?: mb_substr($dnaRow['caption'] ?? '', 0, 140));
+                        $insStmt = $pdo->prepare("
+                            INSERT INTO inspiration_posts (
+                                user_id, creator_id, platform, permalink, caption, quote_extracted, quote_author,
+                                quote_verified_status, quote_source_note, theme, likes_count, comments_count,
+                                engagement_score, opportunity_score, creative_fit_score, external_post_id, content_dna,
+                                visual_text, visual_text_source, visual_text_status, visual_text_confidence, caption_text
+                            ) VALUES (
+                                :uid, NULL, :plat, '', :cap, :quote, :author,
+                                'verified_authentic', :note, :theme, :likes, :comments,
+                                :eng, :opp, :fit, :ext, :dna,
+                                :vtext, 'DNA_HISTORIC', 'CONFIRMED', 0.95, :captext
+                            )
+                        ");
+                        $insStmt->execute([
+                            ':uid' => $userId,
+                            ':plat' => $dnaRow['platform'] ?? 'instagram',
+                            ':cap' => $dnaRow['caption'] ?? '',
+                            ':quote' => $insQuote,
+                            ':author' => 'Fortaleza Imparable (@fortaleza_imparable)',
+                            ':note' => 'Publicación histórica Top Viral (' . ($dnaRow['performance_tier'] ?? 'TOP_10') . ') con ' . number_format((float)($dnaRow['raw_likes'] ?? 0)) . ' interacciones.',
+                            ':theme' => $dnaRow['theme'] ?: 'Vencedor Solitario y Forja Interior',
+                            ':likes' => (int)($dnaRow['raw_likes'] ?? 0),
+                            ':comments' => (int)($dnaRow['raw_comments'] ?? 0),
+                            ':eng' => (float)($dnaRow['overall_performance_score'] ?? 0),
+                            ':opp' => $oppScore,
+                            ':fit' => $fitScore,
+                            ':ext' => $extKey,
+                            ':dna' => json_encode([
+                                'core_concept' => $dnaRow['core_concept'] ?? $insQuote,
+                                'conflict' => $dnaRow['conflict'] ?? 'El impulso de rendirse vs el deber de forjar carácter',
+                                'transformation' => $dnaRow['transformation'] ?? 'Dejar de esperar validación ajena para actuar con soberanía propia',
+                                'hook_type' => $dnaRow['hook_type'] ?? 'Paradoja Contraintuitiva',
+                                'sentence_structure' => $dnaRow['sentence_structure'] ?? 'Axioma Corto Aforístico',
+                                'audience_pain' => $dnaRow['audience_pain'] ?? 'Miedo a no encajar y necesidad de aprobación grupal',
+                                'belief_challenged' => $dnaRow['belief_challenged'] ?? 'Creer que estar solo es señal de fracaso o debilidad',
+                                'emotional_trigger' => $dnaRow['emotional_trigger'] ?? 'Identidad Guerrera y Soledad Constructiva',
+                                'shareability_mechanism' => $dnaRow['shareability_mechanism'] ?? 'Orgullo de caminar solo por elección propia',
+                                'why_explanation' => 'Frase histórica récord de @fortaleza_imparable con alto enganche y retención comprobada en tu audiencia.'
+                            ], JSON_UNESCAPED_UNICODE),
+                            ':vtext' => $dnaRow['overlay_quote'] ?: null,
+                            ':captext' => $dnaRow['caption'] ?? ''
+                        ]);
+                        $newId = (int)$pdo->lastInsertId();
+                        $insStmt->closeCursor();
+
+                        $stmtGet = $pdo->prepare("SELECT * FROM inspiration_posts WHERE id = ?");
+                        $stmtGet->execute([$newId]);
+                        $post = $stmtGet->fetch(PDO::FETCH_ASSOC);
+                        $stmtGet->closeCursor();
+                        $postId = $newId;
+                    } else {
+                        $postId = (int)$post['id'];
+                    }
+                }
+            }
+
+            if (!$post) {
+                $stmt = $pdo->prepare("SELECT * FROM inspiration_posts WHERE id = ? AND user_id = ?");
+                $stmt->execute([$postId, $userId]);
+                $post = $stmt->fetch(PDO::FETCH_ASSOC);
+                $stmt->closeCursor();
+            }
+
+            // Fallback secundario a atenea_post_dna si no se encontró en inspiration_posts
+            if (!$post) {
+                $stmtDnaAlt = $pdo->prepare("
+                    SELECT d.*, p.raw_likes, p.raw_comments, p.raw_shares, p.raw_saves,
+                           p.overall_performance_score, p.performance_tier
+                    FROM atenea_post_dna d
+                    LEFT JOIN atenea_performance_dna p ON p.post_dna_id = d.id
+                    WHERE d.id = ? AND d.user_id = ?
+                ");
+                $stmtDnaAlt->execute([$postId, $userId]);
+                $dnaRowAlt = $stmtDnaAlt->fetch(PDO::FETCH_ASSOC);
+                $stmtDnaAlt->closeCursor();
+
+                if ($dnaRowAlt) {
+                    return self::generateFortalezaRecreations($userId, $postId, $brandVoiceId, $forceRegenerate, 'historical', $customVisualText, $customCaption);
+                }
+
+                return ['success' => false, 'error' => 'Publicación de inspiración no encontrada'];
+            }
+
+            // Supervisión Humana: Si el usuario envía texto visual o caption editado manualmente
+            $hasCustomInputs = ($customVisualText !== null || $customCaption !== null);
+            if ($hasCustomInputs) {
+                $forceRegenerate = true;
+                if ($customVisualText !== null) {
+                    $trimmedVis = trim($customVisualText);
+                    $post['visual_text'] = $trimmedVis !== '' ? $trimmedVis : null;
+                    $post['visual_text_source'] = $trimmedVis !== '' ? 'USER' : 'NONE';
+                    $post['visual_text_status'] = $trimmedVis !== '' ? 'USER_CONFIRMED' : 'NO_TEXT';
+                    $post['visual_text_confidence'] = $trimmedVis !== '' ? 1.0 : 0.0;
+                    try {
+                        $upVis = $pdo->prepare("
+                            UPDATE inspiration_posts 
+                            SET visual_text = ?, visual_text_source = ?, visual_text_status = ?, visual_text_confidence = ? 
+                            WHERE id = ? AND user_id = ?
+                        ");
+                        $upVis->execute([$post['visual_text'], $post['visual_text_source'], $post['visual_text_status'], $post['visual_text_confidence'], $postId, $userId]);
+                        $upVis->closeCursor();
+                    } catch (Throwable) {}
+                }
+
+                if ($customCaption !== null) {
+                    $trimmedCap = trim($customCaption);
+                    $post['caption'] = $trimmedCap;
+                    $post['caption_text'] = $trimmedCap;
+                    try {
+                        $upCap = $pdo->prepare("
+                            UPDATE inspiration_posts 
+                            SET caption = ?, caption_text = ? 
+                            WHERE id = ? AND user_id = ?
+                        ");
+                        $upCap->execute([$trimmedCap, $trimmedCap, $postId, $userId]);
+                        $upCap->closeCursor();
+                    } catch (Throwable) {}
+                }
+            }
 
             // Calcular y persistir scores duales si están ausentes
             $opportunityScore = (float)($post['opportunity_score'] ?? 0);
@@ -910,14 +1297,20 @@ PROMPT;
                 $post['creative_fit_score'] = $creativeFitScore;
             } catch (Throwable) {}
 
-            // Si ya tiene recreaciones cacheadas y no se fuerza regeneración, devolverlas estructuradas
-            if (!$forceRegenerate && !empty($post['recreated_copies'])) {
+            $visualText = !empty($post['visual_text']) ? trim($post['visual_text']) : null;
+            $visualTextStatus = $post['visual_text_status'] ?? 'UNAVAILABLE';
+            $visualTextSource = $post['visual_text_source'] ?? 'NONE';
+            $visualTextConfidence = (float)($post['visual_text_confidence'] ?? 0.0);
+            $caption = trim($post['caption_text'] ?? ($post['caption'] ?? ''));
+
+            // Si ya tiene recreaciones cacheadas y no se fuerza regeneración ni hubo edición manual, devolverlas
+            if (!$forceRegenerate && !$hasCustomInputs && !empty($post['recreated_copies'])) {
                 $cached = json_decode($post['recreated_copies'], true);
                 if (is_array($cached) && (!empty($cached['phrase_hook']) || !empty($cached['option_short']))) {
-                    $quoteText = $post['quote_extracted'] ?: $post['caption'];
+                    $quoteText = $visualText ?: $caption;
                     $dna = !empty($post['content_dna']) 
-                        ? json_decode($post['content_dna'], true) 
-                        : ($cached['content_dna'] ?? self::extractContentDna($post['caption'] ?? '', $post['theme'] ?? '', $quoteText));
+                        ? (is_array($post['content_dna']) ? $post['content_dna'] : json_decode($post['content_dna'], true))
+                        : ($cached['content_dna'] ?? self::extractContentDna($caption, $post['theme'] ?? '', $quoteText));
                     $visualDirector = $cached['visual_director'] ?? self::generateVisualDirectorPrompt($dna, $post['theme'] ?? '');
 
                     $phraseHook = $cached['phrase_hook'] ?? ($cached['option_short'] ?? '');
@@ -934,11 +1327,16 @@ PROMPT;
                         'creative_fit_score' => $creativeFitScore,
                         'why_it_works' => $whyExplanation,
                         'reference_post' => [
-                            'quote' => $post['quote_extracted'] ?: $post['caption'],
-                            'caption' => $post['caption'],
-                            'author' => $post['quote_author'] ?: 'Estoico',
+                            'visual_text' => $visualText,
+                            'visual_text_source' => $visualTextSource,
+                            'visual_text_status' => $visualTextStatus,
+                            'visual_text_confidence' => $visualTextConfidence,
+                            'caption_text' => $caption,
+                            'caption' => $caption,
+                            'quote' => $visualText ?: $caption,
+                            'author' => $post['quote_author'] ?: 'Fortaleza Imparable',
                             'theme' => $post['theme'] ?: 'Disciplina y Carácter Estoico',
-                            'status' => $post['quote_verified_status'] ?: 'modern_idea'
+                            'status' => $post['quote_verified_status'] ?: 'verified_authentic'
                         ],
                         'dna' => $dna,
                         'phrases' => [
@@ -964,85 +1362,99 @@ PROMPT;
                 }
             }
 
-            // Asegurarse de tener el análisis de la cita
-            if (empty($post['quote_extracted'])) {
-                self::analyzeAndVerifyQuote($userId, $postId);
-                $stmt = $pdo->prepare("SELECT * FROM inspiration_posts WHERE id = ? AND user_id = ?");
-                $stmt->execute([$postId, $userId]);
-                $post = $stmt->fetch(PDO::FETCH_ASSOC);
-                $stmt->closeCursor();
+            if (empty($post['theme'])) {
+                $heuristicRef = self::heuristicQuoteAnalysis($caption);
+                $post['theme'] = $heuristicRef['theme'] ?? 'Disciplina y Carácter Estoico';
             }
+            if (empty($post['quote_author'])) {
+                $post['quote_author'] = 'Fortaleza Imparable';
+            }
+
+            $theme = $post['theme'];
+            $author = $post['quote_author'];
 
             $apiKey = Settings::get('openrouter_api_key', '', $userId);
             $aiModel = Settings::get('openrouter_model', 'nousresearch/hermes-3-llama-3.1-70b', $userId);
-
-            $theme = $post['theme'] ?: 'Disciplina y Carácter Estoico';
-            $quote = $post['quote_extracted'] ?: $post['caption'];
-            $caption = $post['caption'] ?: $quote;
-            $author = $post['quote_author'] ?: 'Estoico';
 
             // Obtener directivas y patrones empíricos aprendidos de la propia audiencia de @fortaleza_imparable
             $learnedDirectives = AteneaLearningEngine::getActivePatternsForPrompt($userId);
 
             $systemPrompt = "Eres ATENEA, la Directora de Estrategia de Contenido y Filosofía de 'Fortaleza Imparable' (@fortaleza_imparable). Eres una estratega maestra en psicología estoica grecorromana y ética marcial samurái (Bushido / Dokkōdō).
 
-DIRECTIVA CARDINAL: Tu misión NO es escribir copys largos, ni párrafos de lectura, ni artículos. Tu tarea es deconstruir el ADN psicológico de la publicación original (frase de la imagen + pie de foto) y sintetizarla en exactamente 4 FRASES ORIGINALES DE ALTO IMPACTO (8 a 22 palabras cada una), listas para ser estampadas como texto principal en placas de imagen y portadas de Reels/Vídeos de @fortaleza_imparable.
+DIRECTIVA CARDINAL: Tu misión es deconstruir el ADN psicológico de la publicación original y sintetizar exactamente 4 FRASES ORIGINALES DE ALTO IMPACTO (8 a 22 palabras cada una), listas para ser estampadas como texto principal en placas visuales y portadas de @fortaleza_imparable.
 
-REGLAS DE RIGOR Y ESTILO:
-1. ANTI-CLICHÉ ESTRICTO: Queda terminantemente prohibido usar frases trilladas de gimnasio o de autoayuda barata (ej. 'conviértete en bestia', 'sé imparable', 'sal de tu zona de confort', repetición de 'fuego y acero'). Emplea sobriedad aforística, filo intelectual y peso moral.
-2. RIGOR HISTÓRICO: Diferencia nítidamente la tradición estoica grecorromana (Marco Aurelio, Séneca, Epicteto) de la tradición marcial japonesa (Miyamoto Musashi, Dokkōdō, Hagakure). Jamás clasifiques a Musashi como 'estoico'.
-3. EXTENSIÓN ESTRICTA: Cada una de las 4 frases debe tener entre 8 y 22 palabras exactas. Ni una sola frase debe ser un párrafo largo.
-4. ¿POR QUÉ FUNCIONA?: Redacta 2 líneas sintetizando el mecanismo psicológico que hace memorable este ángulo.";
+REGLAS DE RIGOR FILOSÓFICO Y PREVENCIÓN DE DRIFT SEMÁNTICO:
+1. SEPARACIÓN ESTRICTA DE FUENTES:
+   - 'VISUAL_TEXT': Es la frase nuclear grabada en la imagen/placa original. Representa el núcleo temático INDISCUTIBLE.
+   - 'CAPTION_TEXT': Es el pie de foto de la publicación. Sirve exclusivamente como contexto complementario o secundario.
+2. PRESERVACIÓN DEL NÚCLEO SEMÁNTICO (ANTI-DRIFT):
+   - Las 4 propuestas DEBEN preservar el núcleo semántico de VISUAL_TEXT y NO introducir un tema dominante diferente.
+   - Ejemplo de rigor: Si VISUAL_TEXT aborda gratitud, lealtad, memoria moral o reciprocidad (ej. 'Nunca olvides a quien te invitó a sentarte a la mesa...'), las 4 frases DEBEN ser sobre gratitud, honor, lealtad y reciprocidad.
+   - PROHIBICIÓN ESTRICTA DE DRIFT POR COINCIDENCIA LÉXICA: Está terminantemente prohibido desviar la generación hacia 'Memento Mori', 'brevedad de la vida' o 'la muerte' simplemente porque en el caption aparezca la palabra 'vida', 'olvido' o un verbo similar. No confundas una coincidencia léxica con comprensión semántica.
+3. ANTI-CLICHÉ ESTRICTO: Queda terminantemente prohibido usar frases trilladas ('sé imparable', 'conviértete en bestia', 'sal de tu zona de confort'). Emplea sobriedad aforística, filo intelectual y peso moral.
+4. RIGOR HISTÓRICO: Diferencia nítidamente la tradición estoica grecorromana (Marco Aurelio, Séneca, Epicteto) de la tradición marcial japonesa (Miyamoto Musashi, Dokkōdō, Hagakure). Jamás clasifiques a Musashi como 'estoico'.
+5. EXTENSIÓN ESTRICTA: Cada una de las 4 frases debe tener entre 8 y 22 palabras exactas.
+6. Responde SIEMPRE única y exclusivamente en formato JSON estricto sin markdown ni preámbulos.";
 
             if (!empty($learnedDirectives)) {
                 $systemPrompt .= "\n\n" . $learnedDirectives;
             }
 
-            $systemPrompt .= "\n\nResponde SIEMPRE única y exclusivamente en formato JSON estricto sin markdown ni preámbulos.";
+            $visualTextDisplay = !empty($visualText) 
+                ? "\"{$visualText}\"" 
+                : "[NO DISPONIBLE / SIN TEXTO IDENTIFICADO EN LA IMAGEN]";
 
             $userPrompt = <<<PROMPT
-Analiza la siguiente publicación de referencia:
-- Frase en la imagen / vídeo: "{$quote}"
-- Copy / Pie de foto original: "{$caption}"
-- Autor atribuido: {$author}
-- Tema central: {$theme}
+Analiza la siguiente publicación de referencia respetando la estricta jerarquía de fuentes:
 
-Deconstruye su psicología y genera las 4 FRASES AFORÍSTICAS ORIGINALES para placas visuales de @fortaleza_imparable (8 a 22 palabras cada una):
+[FUENTE 1 - NÚCLEO PRINCIPAL]
+- VISUAL_TEXT (Texto en la imagen / placa): {$visualTextDisplay}
+  * Estado: {$visualTextStatus} | Fuente: {$visualTextSource}
+
+[FUENTE 2 - CONTEXTO SECUNDARIO]
+- CAPTION_TEXT (Pie de foto original): "{$caption}"
+- Autor atribuido: {$author}
+- Tema de partida: {$theme}
+
+DIRECTIVA DE GENERACIÓN:
+Conserva rigurosamente el núcleo semántico de VISUAL_TEXT (o de CAPTION_TEXT si VISUAL_TEXT no estuviera disponible). No sustituyas el tema central por temas ajenos como Memento Mori o la muerte salvo que VISUAL_TEXT verse explícitamente sobre ello.
+
+Genera las 4 FRASES AFORÍSTICAS ORIGINALES para placas visuales de @fortaleza_imparable (8 a 22 palabras cada una):
 
 1. "phrase_hook" (Gancho Brutal / Golpe Psicológico):
-   - Frase afilada y cortante que frena el scroll desarmando la complacencia del lector. (8 a 22 palabras).
+   - Frase afilada y cortante que frena el scroll desarmando la complacencia del lector sobre este núcleo semántico. (8 a 22 palabras).
 
 2. "phrase_contrarian" (Antítesis / Rompe-Creencias):
-   - Frase contraintuitiva que desafía el sentido común moderno o la debilidad aceptada. (8 a 22 palabras).
+   - Frase contraintuitiva que desafía el sentido común convencional sobre este núcleo semántico. (8 a 22 palabras).
 
 3. "phrase_warrior" (Disciplina & Forja / Dokkōdō / Bushido):
-   - Inspirada en la ética de Miyamoto Musashi: rigor, soledad constructiva, templanza y desapego del aplauso ajeno. (8 a 22 palabras).
+   - Inspirada en la ética de Miyamoto Musashi: rigor, soledad constructiva, templanza y fidelidad al deber sobre este núcleo. (8 a 22 palabras).
 
-4. "phrase_stoic" (Soberanía Mental / Virtud & Dicotomía del Control):
-   - Inspirada en Séneca, Epicteto o Marco Aurelio: dominio del propio juicio, serenidad inamovible y foco en lo controlable. (8 a 22 palabras).
+4. "phrase_stoic" (Soberanía Mental / Virtud Moral):
+   - Inspirada en Séneca, Epicteto o Marco Aurelio: dominio del juicio interior y virtud moral sobre este núcleo. (8 a 22 palabras).
 
 5. "why_it_works":
-   - Explicación de 2 líneas del mecanismo psicológico de esta deconstrucción.
+   - Explicación de 2 líneas sintetizando el mecanismo psicológico que hace memorable este ángulo.
 
 6. "creative_fit_score":
    - Calificación de 1.0 a 10.0 de afinidad con la identidad de Fortaleza Imparable.
 
-7. Dirección Visual Cinematográfica para Midjourney v6 (sujeto, entorno, atmósfera, cámara y prompt en inglés --ar 4:5 --v 6.0 --no text, typography, watermark, logo, cartoon, anime).
+7. Dirección Visual Cinematográfica para Midjourney v6 en inglés (--ar 4:5 --v 6.0 --no text, typography, watermark, logo, cartoon, anime).
 
-Estructura requerida en JSON:
+Estructura requerida en JSON estricto:
 {
   "content_dna": {
-    "core_concept": "Principio filosófico nuclear en 1 oración",
+    "core_concept": "Principio filosófico nuclear en 1 oración (fiel al núcleo de VISUAL_TEXT)",
     "conflict": "La tensión interna entre comodidad y carácter",
     "transformation": "El cambio de mentalidad exigido al lector",
-    "hook_type": "Clasificación (ej. Paradoja Contraintuitiva, Golpe de Realidad, Axioma Marcial)",
+    "hook_type": "Clasificación (ej. Paradoja Contraintuitiva, Golpe de Realidad, Axioma Moral)",
     "sentence_structure": "Patrón sintáctico utilizado",
     "audience_pain": "Herida o debilidad oculta que sufre la audiencia",
     "belief_challenged": "Creencia complaciente que se desmonta",
     "emotional_trigger": "Gatillo emocional de impacto",
     "shareability_mechanism": "Razón psicológica por la que se comparte o guarda"
   },
-  "why_it_works": "2 líneas explicando por qué este ángulo psicológico desarma la resistencia y causa impacto...",
+  "why_it_works": "2 líneas explicando por qué este ángulo psicológico conecta con el rigor y carácter...",
   "creative_fit_score": 9.3,
   "phrase_hook": "Frase aforística gancho (8 a 22 palabras)...",
   "phrase_contrarian": "Frase aforística antítesis (8 a 22 palabras)...",
@@ -1053,10 +1465,28 @@ Estructura requerida en JSON:
     "environment": "Descripción del entorno...",
     "atmosphere": "Descripción de iluminación y sombras...",
     "camera": "Lente y especificación técnica...",
-    "midjourney_prompt": "Cinematic chiaroscuro... --ar 4:5 --v 6.0 --no text, typography, watermark, logo, cartoon, anime"
+    "midjourney_prompt": "Cinematic dark fine art... --ar 4:5 --v 6.0 --no text, typography, watermark, logo, cartoon, anime"
   }
 }
 PROMPT;
+
+            $parsed = null;
+            $lastError = '';
+
+            // Validación fail-closed de credenciales OpenRouter
+            if (empty($apiKey)) {
+                return [
+                    'success' => false,
+                    'generation_eligible' => false,
+                    'error' => 'No hay una API Key de OpenRouter configurada en el sistema. Configúrala en Ajustes para generar recreaciones con IA.',
+                    'post' => $post
+                ];
+            }
+
+            // Llamada robusta a OpenRouter con clasificación HTTP, timeouts calibrados y reintentos limitados
+            $maxRetries = 2;
+            $startTime = microtime(true);
+            $maxTotalSeconds = 55.0;
 
             $payload = [
                 'model' => $aiModel,
@@ -1065,133 +1495,149 @@ PROMPT;
                     ['role' => 'user', 'content' => $userPrompt]
                 ],
                 'response_format' => ['type' => 'json_object'],
-                'temperature' => 0.78,
+                'temperature' => 0.75,
                 'max_tokens' => 1200
             ];
 
-            $ch = curl_init('https://openrouter.ai/api/v1/chat/completions');
-            curl_setopt_array($ch, [
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_POST => true,
-                CURLOPT_POSTFIELDS => json_encode($payload),
-                CURLOPT_TIMEOUT => 25,
-                CURLOPT_HTTPHEADER => [
-                    'Authorization: Bearer ' . $apiKey,
-                    'Content-Type: application/json',
-                    'HTTP-Referer: https://xindro.app',
-                    'X-Title: XINDRO Social AI'
-                ]
-            ]);
-            $res = curl_exec($ch);
-            $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
+            for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+                if ((microtime(true) - $startTime) > $maxTotalSeconds) {
+                    $lastError = "Límite total de tiempo de operación superado ({$maxTotalSeconds}s).";
+                    break;
+                }
 
-            if ($code === 200 && $res) {
-                $data = json_decode($res, true);
-                $content = trim($data['choices'][0]['message']['content'] ?? '');
-                $content = preg_replace('/^```(?:json)?\s*/i', '', $content);
-                $content = preg_replace('/\s*```$/', '', $content);
+                $ch = curl_init('https://openrouter.ai/api/v1/chat/completions');
+                curl_setopt_array($ch, [
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_POST => true,
+                    CURLOPT_POSTFIELDS => json_encode($payload),
+                    CURLOPT_TIMEOUT => 45,
+                    CURLOPT_CONNECTTIMEOUT => 8,
+                    CURLOPT_HTTPHEADER => [
+                        'Authorization: Bearer ' . $apiKey,
+                        'Content-Type: application/json',
+                        'HTTP-Referer: https://xindro.app',
+                        'X-Title: XINDRO Social AI'
+                    ]
+                ]);
 
-                if (preg_match('/\{.*\}/s', $content, $m)) {
-                    $parsed = json_decode($m[0], true);
-                    $pHook = $parsed['phrase_hook'] ?? ($parsed['option_short'] ?? '');
-                    if (!empty($pHook)) {
-                        $pContrarian = $parsed['phrase_contrarian'] ?? ($parsed['option_reflective'] ?? '');
-                        $pWarrior = $parsed['phrase_warrior'] ?? ($parsed['option_warrior'] ?? '');
-                        $pStoic = $parsed['phrase_stoic'] ?? ($parsed['option_stoic'] ?? '');
+                $res = curl_exec($ch);
+                $curlErr = curl_error($ch);
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
 
-                        // Garantizar que las 4 frases existan
-                        if (empty($pContrarian)) {
-                            $pContrarian = "No buscas felicidad; buscas anestesia. La verdadera paz mental sólo nace cuando abrazas la fricción voluntaria. 🏛️";
+                if ($httpCode === 200 && $res) {
+                    $data = json_decode($res, true);
+                    $content = trim($data['choices'][0]['message']['content'] ?? '');
+                    $content = preg_replace('/^```(?:json)?\s*/i', '', $content);
+                    $content = preg_replace('/\s*```$/', '', $content);
+
+                    if (preg_match('/\{.*\}/s', $content, $m)) {
+                        $jsonCandidate = json_decode($m[0], true);
+                        if (!empty($jsonCandidate['phrase_hook']) || !empty($jsonCandidate['option_short'])) {
+                            $parsed = $jsonCandidate;
+                            break; // Generación completada exitosamente
                         }
-                        if (empty($pWarrior)) {
-                            $pWarrior = "El samurái no debate con la tormenta; afila su espada en silencio mientras los débiles buscan culpables. ⚔️";
-                        }
-                        if (empty($pStoic)) {
-                            $pStoic = "Lo que escapa a tu control no merece un solo segundo de tu angustia. Tu única soberanía es tu propio juicio. 🏛️";
-                        }
-
-                        $dna = $parsed['content_dna'] ?? self::extractContentDna($caption, $theme, $quote);
-                        $visualDirector = $parsed['visual_director'] ?? self::generateVisualDirectorPrompt($dna, $theme);
-                        $visualPrompt = $visualDirector['midjourney_prompt'] ?? ($parsed['image_prompt'] ?? '');
-                        $whyWorks = $parsed['why_it_works'] ?? ($dna['why_explanation'] ?? 'Alineación psicológica que conecta con la necesidad de rigor y soberanía interior.');
-                        $cFitScore = !empty($parsed['creative_fit_score']) ? (float)$parsed['creative_fit_score'] : $creativeFitScore;
-
-                        $parsed['phrase_hook'] = $pHook;
-                        $parsed['phrase_contrarian'] = $pContrarian;
-                        $parsed['phrase_warrior'] = $pWarrior;
-                        $parsed['phrase_stoic'] = $pStoic;
-                        $parsed['why_it_works'] = $whyWorks;
-                        $parsed['creative_fit_score'] = $cFitScore;
-                        $parsed['visual_prompt'] = $visualPrompt;
-                        $parsed['visual_director'] = $visualDirector;
-                        $parsed['content_dna'] = $dna;
-
-                        // Persistir en SQLite (inspiration_posts, atenea_content_dna, atenea_creations_memory)
-                        self::persistAteneaCreations($pdo, $userId, $postId, $dna, $parsed, $opportunityScore, $cFitScore);
-
-                        return [
-                            'success' => true,
-                            'from_cache' => false,
-                            'post' => $post,
-                            'opportunity_score' => $opportunityScore,
-                            'creative_fit_score' => $cFitScore,
-                            'why_it_works' => $whyWorks,
-                            'reference_post' => [
-                                'quote' => $quote,
-                                'caption' => $caption,
-                                'author' => $author,
-                                'theme' => $theme,
-                                'status' => $post['quote_verified_status']
-                            ],
-                            'dna' => $dna,
-                            'phrases' => [
-                                'hook' => $pHook,
-                                'contrarian' => $pContrarian,
-                                'warrior' => $pWarrior,
-                                'stoic' => $pStoic
-                            ],
-                            'recreations' => [
-                                'phrase_hook' => $pHook,
-                                'phrase_contrarian' => $pContrarian,
-                                'phrase_warrior' => $pWarrior,
-                                'phrase_stoic' => $pStoic,
-                                'option_short' => $pHook,
-                                'option_reflective' => $pContrarian,
-                                'option_warrior' => $pWarrior,
-                                'option_stoic' => $pStoic,
-                                'visual_prompt' => $visualPrompt,
-                                'image_prompt' => $visualPrompt
-                            ],
-                            'visual_director' => $visualDirector,
-                            'learned_patterns_applied' => !empty($learnedDirectives)
-                        ];
+                    }
+                    $lastError = "La respuesta de OpenRouter no contenía las 4 frases aforísticas esperadas.";
+                } elseif ($httpCode === 401 || $httpCode === 403 || $httpCode === 400) {
+                    // Errores de cliente o autenticación: fail-fast inmediato sin reintento inútil
+                    $lastError = "Error de cliente HTTP {$httpCode} en OpenRouter: " . ($res ?: $curlErr);
+                    break;
+                } elseif ($httpCode === 429) {
+                    // Rate limit: backoff breve
+                    $lastError = "Rate limit (HTTP 429) en OpenRouter. Reintento {$attempt}/{$maxRetries}...";
+                    if ($attempt < $maxRetries) {
+                        usleep(2000000); // 2 segundos
+                    }
+                } elseif ($httpCode >= 500) {
+                    // Error de servidor: reintento con backoff
+                    $lastError = "Error de servidor OpenRouter (HTTP {$httpCode}). Reintento {$attempt}/{$maxRetries}...";
+                    if ($attempt < $maxRetries) {
+                        usleep(1500000); // 1.5 segundos
+                    }
+                } else {
+                    // Timeout o error de red
+                    $lastError = "Error de conexión o timeout cURL: " . ($curlErr ?: "HTTP {$httpCode}");
+                    if ($attempt < $maxRetries) {
+                        usleep(1000000); // 1 segundo
                     }
                 }
             }
 
-            // Fallback heurístico inteligente de Atenea (4 frases breves aforísticas + ADN psicológico)
-            $heuristic = self::generateDynamicHeuristicAtenea($quote, $caption, $author, $theme, $post, $opportunityScore, $creativeFitScore);
-            self::persistAteneaCreations($pdo, $userId, $postId, $heuristic['dna'], $heuristic['parsed'], $opportunityScore, $creativeFitScore);
+            // FAIL-CLOSED: Si el LLM no generó la respuesta, reportar error explícito. NUNCA emitir frases heurísticas inventadas.
+            if ($parsed === null) {
+                return [
+                    'success' => false,
+                    'generation_eligible' => false,
+                    'error' => "Atenea no pudo generar las recreaciones a través del modelo de IA: {$lastError}. Por favor, verifica tu clave de OpenRouter o reintenta en unos instantes.",
+                    'post' => $post
+                ];
+            }
+
+            $pHook = $parsed['phrase_hook'] ?? ($parsed['option_short'] ?? '');
+            $pContrarian = $parsed['phrase_contrarian'] ?? ($parsed['option_reflective'] ?? '');
+            $pWarrior = $parsed['phrase_warrior'] ?? ($parsed['option_warrior'] ?? '');
+            $pStoic = $parsed['phrase_stoic'] ?? ($parsed['option_stoic'] ?? '');
+
+            $dna = $parsed['content_dna'] ?? self::extractContentDna($caption, $theme, $visualText ?: $caption);
+            $visualDirector = $parsed['visual_director'] ?? self::generateVisualDirectorPrompt($dna, $theme);
+            $visualPrompt = $visualDirector['midjourney_prompt'] ?? ($parsed['image_prompt'] ?? '');
+            $whyWorks = $parsed['why_it_works'] ?? ($dna['why_explanation'] ?? 'Alineación psicológica que conecta con la necesidad de rigor y soberanía interior.');
+            $cFitScore = !empty($parsed['creative_fit_score']) ? (float)$parsed['creative_fit_score'] : $creativeFitScore;
+
+            $parsed['phrase_hook'] = $pHook;
+            $parsed['phrase_contrarian'] = $pContrarian;
+            $parsed['phrase_warrior'] = $pWarrior;
+            $parsed['phrase_stoic'] = $pStoic;
+            $parsed['why_it_works'] = $whyWorks;
+            $parsed['creative_fit_score'] = $cFitScore;
+            $parsed['visual_prompt'] = $visualPrompt;
+            $parsed['visual_director'] = $visualDirector;
+            $parsed['content_dna'] = $dna;
+
+            try {
+                self::persistAteneaCreations($pdo, $userId, $postId, $dna, $parsed, $opportunityScore, $cFitScore);
+            } catch (Throwable) {}
 
             return [
                 'success' => true,
                 'from_cache' => false,
                 'post' => $post,
                 'opportunity_score' => $opportunityScore,
-                'creative_fit_score' => $creativeFitScore,
-                'why_it_works' => $heuristic['why_it_works'],
+                'creative_fit_score' => $cFitScore,
+                'why_it_works' => $whyWorks,
                 'reference_post' => [
-                    'quote' => $quote,
+                    'visual_text' => $visualText,
+                    'visual_text_source' => $visualTextSource,
+                    'visual_text_status' => $visualTextStatus,
+                    'visual_text_confidence' => $visualTextConfidence,
+                    'caption_text' => $caption,
                     'caption' => $caption,
+                    'quote' => $visualText ?: $caption,
                     'author' => $author,
                     'theme' => $theme,
-                    'status' => $post['quote_verified_status']
+                    'status' => $post['quote_verified_status'] ?? 'verified_authentic'
                 ],
-                'dna' => $heuristic['dna'],
-                'phrases' => $heuristic['phrases'],
-                'recreations' => $heuristic['recreations'],
-                'visual_director' => $heuristic['visual_director'],
+                'dna' => $dna,
+                'phrases' => [
+                    'hook' => $pHook,
+                    'contrarian' => $pContrarian,
+                    'warrior' => $pWarrior,
+                    'stoic' => $pStoic
+                ],
+                'recreations' => [
+                    'phrase_hook' => $pHook,
+                    'phrase_contrarian' => $pContrarian,
+                    'phrase_warrior' => $pWarrior,
+                    'phrase_stoic' => $pStoic,
+                    'option_short' => $pHook,
+                    'option_reflective' => $pContrarian,
+                    'option_warrior' => $pWarrior,
+                    'option_stoic' => $pStoic,
+                    'visual_prompt' => $visualPrompt,
+                    'image_prompt' => $visualPrompt
+                ],
+                'visual_director' => $visualDirector,
                 'learned_patterns_applied' => !empty($learnedDirectives)
             ];
         } catch (Throwable $e) {

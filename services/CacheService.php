@@ -193,6 +193,10 @@ class CacheService {
             apcu_clear_cache();
         }
 
+        if (function_exists('opcache_reset')) {
+            @opcache_reset();
+        }
+
         if (is_dir(self::$cacheDir)) {
             $files = glob(self::$cacheDir . '/*.cache*');
             if ($files) {
@@ -277,14 +281,18 @@ class CacheService {
 
         return self::remember($cacheKey, 600, function() use ($userId, $pdo) {
             $db = $pdo ?: Database::getConnection();
-            $stmt = $db->prepare("SELECT key, value FROM settings WHERE user_id = :uid");
-            $stmt->execute([':uid' => $userId]);
-            $map = [];
-            while ($row = $stmt->fetch()) {
-                $map[$row['key']] = $row['value'];
+            try {
+                $stmt = $db->prepare("SELECT key, value FROM settings WHERE user_id = :uid");
+                $stmt->execute([':uid' => $userId]);
+                $map = [];
+                while ($row = $stmt->fetch()) {
+                    $map[$row['key']] = $row['value'];
+                }
+                $map['_cache_key'] = "settings_u{$userId}";
+                return $map;
+            } catch (Throwable) {
+                return ['_cache_key' => "settings_u{$userId}"];
             }
-            $map['_cache_key'] = "settings_u{$userId}";
-            return $map;
         });
     }
 

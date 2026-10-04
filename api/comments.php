@@ -20,7 +20,11 @@ $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
 try {
     if ($method === 'GET') {
         $allowedPlatforms = ['all', 'instagram', 'facebook'];
-        $allowedFilters = ['all', 'inbox', 'new', 'archived', 'highlighted', 'leads', 'highlighted_leads', 'urgent', 'pending', 'replied', 'spam', 'failed'];
+        $allowedFilters = [
+            'all', 'inbox', 'new', 'archived', 'highlighted', 'leads', 'highlighted_leads',
+            'urgent', 'support', 'pending', 'replied', 'spam', 'failed',
+            'pending_all', 'pending_new', 'ai_review', 'leads_urgent', 'ignored', 'spam_ignored'
+        ];
 
         $platform = Security::validateEnum($_GET['platform'] ?? 'all', $allowedPlatforms, 'all');
         $filter = Security::validateEnum($_GET['filter'] ?? 'all', $allowedFilters, 'all');
@@ -29,7 +33,93 @@ try {
         $accountId = isset($_GET['account_id']) && is_numeric($_GET['account_id']) && (int)$_GET['account_id'] > 0 ? (int)$_GET['account_id'] : null;
         $includeArchived = !empty($_GET['include_archived']) && $_GET['include_archived'] == '1';
 
-        $sql = "
+        $page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] : 1;
+        if ($page < 1) $page = 1;
+        $limit = isset($_GET['limit']) && is_numeric($_GET['limit']) ? (int)$_GET['limit'] : 20;
+        if ($limit < 1) $limit = 1;
+        if ($limit > 100) $limit = 100;
+        $offset = ($page - 1) * $limit;
+
+        $fromClause = "
+            FROM comments c
+            JOIN posts p ON c.post_id = p.id
+            LEFT JOIN accounts a ON p.account_id = a.id
+            LEFT JOIN brand_voices bv ON COALESCE(p.brand_voice_id, a.brand_voice_id) = bv.id
+            LEFT JOIN (
+                SELECT comment_id, id, reply_text, variant_type, is_posted_to_platform, created_at
+                FROM replies
+                WHERE id IN (SELECT MAX(id) FROM replies GROUP BY comment_id)
+            ) r ON r.comment_id = c.id
+        ";
+        $whereSql = " WHERE c.user_id = :user_id";
+        $params = [':user_id' => $userId];
+
+        if ($platform !== 'all') {
+            $whereSql .= " AND c.platform = :platform";
+            $params[':platform'] = $platform;
+        }
+
+        if ($accountId !== null) {
+            $whereSql .= " AND p.account_id = :account_id";
+            $params[':account_id'] = $accountId;
+        }
+
+        if ($postId !== null && $postId > 0) {
+            $whereSql .= " AND c.post_id = :post_id";
+            $params[':post_id'] = $postId;
+        }
+
+        if ($filter === 'archived') {
+            $whereSql .= " AND c.is_archived = 1";
+        } else {
+            // All active views exclude archived comments unless explicitly requested
+            if (!$includeArchived) {
+                $whereSql .= " AND (c.is_archived = 0 OR c.is_archived IS NULL)";
+            }
+
+            if ($filter === 'pending_all') {
+                $whereSql .= " AND (c.status IN ('pending', 'pending_review', 'ai_unavailable', 'invalid_ai_output', 'failed') OR (r.is_posted_to_platform = 0 AND r.reply_text IS NOT NULL))";
+            } elseif ($filter === 'pending_new') {
+                $whereSql .= " AND c.status = 'pending'";
+            } elseif ($filter === 'ai_review') {
+                $whereSql .= " AND c.status IN ('pending_review', 'ai_unavailable', 'invalid_ai_output')";
+            } elseif ($filter === 'leads_urgent') {
+                $whereSql .= " AND (c.sentiment IN ('lead', 'urgent') OR c.intent LIKE 'lead_%' OR c.intent = 'support') AND (c.status IN ('pending', 'pending_review', 'ai_unavailable', 'invalid_ai_output', 'failed') OR (r.is_posted_to_platform = 0 AND r.reply_text IS NOT NULL))";
+            } elseif ($filter === 'ignored') {
+                $whereSql .= " AND c.status = 'ignored'";
+            } elseif ($filter === 'spam_ignored') {
+                $whereSql .= " AND (c.status IN ('spam', 'ignored') OR c.sentiment = 'spam')";
+            } elseif ($filter === 'new' || $filter === 'pending') {
+                $whereSql .= " AND c.status = 'pending'";
+            } elseif ($filter === 'highlighted') {
+                $whereSql .= " AND (c.is_highlighted = 1 OR c.highlight_score >= 80)";
+            } elseif ($filter === 'leads' || $filter === 'highlighted_leads') {
+                $whereSql .= " AND (c.sentiment = 'lead' OR c.intent LIKE 'lead_%' OR c.is_highlighted = 1 OR c.highlight_score >= 80)";
+            } elseif ($filter === 'urgent' || $filter === 'support') {
+                $whereSql .= " AND (c.sentiment = 'urgent' OR c.intent = 'support' OR c.status = 'failed')";
+            } elseif ($filter === 'replied') {
+                $whereSql .= " AND c.status = 'replied'";
+            } elseif ($filter === 'failed') {
+                $whereSql .= " AND (c.status = 'failed' OR (r.is_posted_to_platform = 0 AND r.reply_text IS NOT NULL))";
+            } elseif ($filter === 'spam') {
+                $whereSql .= " AND (c.status = 'spam' OR c.sentiment = 'spam')";
+            }
+            // 'all' and 'inbox' show all active unarchived comments
+        }
+
+        if (!empty($search)) {
+            $whereSql .= " AND (c.comment_text LIKE :search OR c.author_name LIKE :search OR c.author_handle LIKE :search)";
+            $params[':search'] = '%' . $search . '%';
+        }
+
+        // Count total matching items for pagination
+        $countQuery = "SELECT COUNT(*) " . $fromClause . $whereSql;
+        $countStmt = $pdo->prepare($countQuery);
+        $countStmt->execute($params);
+        $totalItems = (int)($countStmt->fetchColumn() ?: 0);
+        $totalPages = $totalItems > 0 ? (int)ceil($totalItems / $limit) : 1;
+
+        $selectCols = "
             SELECT 
                 c.*, 
                 p.caption as post_caption,
@@ -53,69 +143,17 @@ try {
                 r.is_posted_to_platform,
                 r.created_at as reply_created_at,
                 c.highlight_reason as meta_error
-            FROM comments c
-            JOIN posts p ON c.post_id = p.id
-            LEFT JOIN accounts a ON p.account_id = a.id
-            LEFT JOIN brand_voices bv ON COALESCE(p.brand_voice_id, a.brand_voice_id) = bv.id
-            LEFT JOIN (
-                SELECT comment_id, id, reply_text, variant_type, is_posted_to_platform, created_at
-                FROM replies
-                WHERE id IN (SELECT MAX(id) FROM replies GROUP BY comment_id)
-            ) r ON r.comment_id = c.id
-            WHERE c.user_id = :user_id
         ";
-        $params = [':user_id' => $userId];
 
-        if ($platform !== 'all') {
-            $sql .= " AND c.platform = :platform";
-            $params[':platform'] = $platform;
-        }
-
-        if ($accountId !== null) {
-            $sql .= " AND p.account_id = :account_id";
-            $params[':account_id'] = $accountId;
-        }
-
-        if ($postId !== null && $postId > 0) {
-            $sql .= " AND c.post_id = :post_id";
-            $params[':post_id'] = $postId;
-        }
-
-        if ($filter === 'archived') {
-            $sql .= " AND c.is_archived = 1";
-        } else {
-            // All active views exclude archived comments unless explicitly requested
-            if (!$includeArchived) {
-                $sql .= " AND (c.is_archived = 0 OR c.is_archived IS NULL)";
-            }
-
-            if ($filter === 'new' || $filter === 'pending') {
-                $sql .= " AND c.status = 'pending'";
-            } elseif ($filter === 'highlighted') {
-                $sql .= " AND (c.is_highlighted = 1 OR c.highlight_score >= 80)";
-            } elseif ($filter === 'leads' || $filter === 'highlighted' || $filter === 'highlighted_leads') {
-                $sql .= " AND (c.sentiment = 'lead' OR c.intent LIKE 'lead_%' OR c.is_highlighted = 1 OR c.highlight_score >= 80)";
-            } elseif ($filter === 'urgent' || $filter === 'support') {
-                $sql .= " AND (c.sentiment = 'urgent' OR c.intent = 'support' OR c.status = 'failed')";
-            } elseif ($filter === 'replied') {
-                $sql .= " AND c.status = 'replied'";
-            } elseif ($filter === 'failed') {
-                $sql .= " AND (c.status = 'failed' OR (r.is_posted_to_platform = 0 AND r.reply_text IS NOT NULL))";
-            } elseif ($filter === 'spam') {
-                $sql .= " AND (c.status = 'spam' OR c.sentiment = 'spam')";
-            }
-            // 'all' and 'inbox' show all active unarchived comments
-        }
-
-        if (!empty($search)) {
-            $sql .= " AND (c.comment_text LIKE :search OR c.author_name LIKE :search OR c.author_handle LIKE :search)";
-            $params[':search'] = '%' . $search . '%';
-        }
-
-        $sql .= " ORDER BY c.is_highlighted DESC, c.highlight_score DESC, c.id DESC";
+        $sql = $selectCols . $fromClause . $whereSql . " ORDER BY c.is_highlighted DESC, c.highlight_score DESC, c.id DESC LIMIT :limit OFFSET :offset";
 
         $stmt = $pdo->prepare($sql);
-        $stmt->execute($params);
+        foreach ($params as $k => $v) {
+            $stmt->bindValue($k, $v);
+        }
+        $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
+        $stmt->execute();
         $comments = $stmt->fetchAll();
 
         // Ensure real profile pictures are resolved
@@ -129,37 +167,49 @@ try {
         unset($c);
 
         // Calculate summary counts for this specific user (both active and total)
+        // Explicitly joining latest reply to align pending_all_count and failed_count exactly with list filters
         $countStmt = $pdo->prepare("
             SELECT 
                 COUNT(*) as total_all,
-                SUM(CASE WHEN (is_archived = 0 OR is_archived IS NULL) THEN 1 ELSE 0 END) as total,
-                SUM(CASE WHEN is_archived = 1 THEN 1 ELSE 0 END) as archived_count,
-                SUM(CASE WHEN (status = 'replied' OR status = 'failed') AND (is_archived = 0 OR is_archived IS NULL) THEN 1 ELSE 0 END) as can_archive_count,
-                SUM(CASE WHEN (is_highlighted = 1 OR highlight_score >= 80) AND (is_archived = 0 OR is_archived IS NULL) THEN 1 ELSE 0 END) as highlighted_count,
-                SUM(CASE WHEN (sentiment = 'lead' OR intent LIKE 'lead_%') AND (is_archived = 0 OR is_archived IS NULL) THEN 1 ELSE 0 END) as leads_count,
-                SUM(CASE WHEN sentiment = 'urgent' AND (is_archived = 0 OR is_archived IS NULL) THEN 1 ELSE 0 END) as urgent_count,
-                SUM(CASE WHEN status = 'pending' AND (is_archived = 0 OR is_archived IS NULL) THEN 1 ELSE 0 END) as pending_count,
-                SUM(CASE WHEN status = 'replied' AND (is_archived = 0 OR is_archived IS NULL) THEN 1 ELSE 0 END) as replied_count,
-                SUM(CASE WHEN (status = 'spam' OR sentiment = 'spam') AND (is_archived = 0 OR is_archived IS NULL) THEN 1 ELSE 0 END) as spam_count
-            FROM comments
-            WHERE user_id = :user_id
+                SUM(CASE WHEN (c.is_archived = 0 OR c.is_archived IS NULL) THEN 1 ELSE 0 END) as total,
+                SUM(CASE WHEN c.is_archived = 1 THEN 1 ELSE 0 END) as archived_count,
+                SUM(CASE WHEN c.status = 'replied' AND (c.is_archived = 0 OR c.is_archived IS NULL) AND (r.is_posted_to_platform = 1 OR r.is_posted_to_platform IS NULL) THEN 1 ELSE 0 END) as can_archive_count,
+                SUM(CASE WHEN (c.is_highlighted = 1 OR c.highlight_score >= 80) AND (c.is_archived = 0 OR c.is_archived IS NULL) THEN 1 ELSE 0 END) as highlighted_count,
+                SUM(CASE WHEN (c.sentiment = 'lead' OR c.intent LIKE 'lead_%') AND (c.is_archived = 0 OR c.is_archived IS NULL) THEN 1 ELSE 0 END) as leads_count,
+                SUM(CASE WHEN c.sentiment = 'urgent' AND (c.is_archived = 0 OR c.is_archived IS NULL) THEN 1 ELSE 0 END) as urgent_count,
+                SUM(CASE WHEN c.status = 'pending' AND (c.is_archived = 0 OR c.is_archived IS NULL) THEN 1 ELSE 0 END) as pending_count,
+                SUM(CASE WHEN c.status = 'pending' AND (c.is_archived = 0 OR c.is_archived IS NULL) THEN 1 ELSE 0 END) as pending_new_count,
+                SUM(CASE WHEN c.status IN ('pending_review', 'ai_unavailable', 'invalid_ai_output') AND (c.is_archived = 0 OR c.is_archived IS NULL) THEN 1 ELSE 0 END) as ai_review_count,
+                SUM(CASE WHEN (c.status = 'failed' OR (r.is_posted_to_platform = 0 AND r.reply_text IS NOT NULL)) AND (c.is_archived = 0 OR c.is_archived IS NULL) THEN 1 ELSE 0 END) as failed_count,
+                SUM(CASE WHEN (c.sentiment IN ('lead', 'urgent') OR c.intent LIKE 'lead_%' OR c.intent = 'support') AND (c.status IN ('pending', 'pending_review', 'ai_unavailable', 'invalid_ai_output', 'failed') OR (r.is_posted_to_platform = 0 AND r.reply_text IS NOT NULL)) AND (c.is_archived = 0 OR c.is_archived IS NULL) THEN 1 ELSE 0 END) as leads_urgent_count,
+                SUM(CASE WHEN (c.status IN ('pending', 'pending_review', 'ai_unavailable', 'invalid_ai_output', 'failed') OR (r.is_posted_to_platform = 0 AND r.reply_text IS NOT NULL)) AND (c.is_archived = 0 OR c.is_archived IS NULL) THEN 1 ELSE 0 END) as pending_all_count,
+                SUM(CASE WHEN c.status = 'replied' AND (c.is_archived = 0 OR c.is_archived IS NULL) THEN 1 ELSE 0 END) as replied_count,
+                SUM(CASE WHEN (c.status = 'spam' OR c.sentiment = 'spam') AND (c.is_archived = 0 OR c.is_archived IS NULL) THEN 1 ELSE 0 END) as spam_count,
+                SUM(CASE WHEN c.status = 'ignored' AND (c.is_archived = 0 OR c.is_archived IS NULL) THEN 1 ELSE 0 END) as ignored_count,
+                SUM(CASE WHEN (c.status IN ('spam', 'ignored') OR c.sentiment = 'spam') AND (c.is_archived = 0 OR c.is_archived IS NULL) THEN 1 ELSE 0 END) as spam_ignored_count
+            FROM comments c
+            LEFT JOIN (
+                SELECT comment_id, is_posted_to_platform, reply_text
+                FROM replies
+                WHERE id IN (SELECT MAX(id) FROM replies GROUP BY comment_id)
+            ) r ON r.comment_id = c.id
+            WHERE c.user_id = :user_id
         ");
         $countStmt->execute([':user_id' => $userId]);
         $counts = $countStmt->fetch() ?: [];
-        $counts['total_all'] = (int)($counts['total_all'] ?? 0);
-        $counts['total'] = (int)($counts['total'] ?? 0);
-        $counts['archived_count'] = (int)($counts['archived_count'] ?? 0);
-        $counts['can_archive_count'] = (int)($counts['can_archive_count'] ?? 0);
-        $counts['highlighted_count'] = (int)($counts['highlighted_count'] ?? 0);
-        $counts['leads_count'] = (int)($counts['leads_count'] ?? 0);
-        $counts['urgent_count'] = (int)($counts['urgent_count'] ?? 0);
-        $counts['pending_count'] = (int)($counts['pending_count'] ?? 0);
-        $counts['replied_count'] = (int)($counts['replied_count'] ?? 0);
-        $counts['spam_count'] = (int)($counts['spam_count'] ?? 0);
+        foreach ($counts as $k => $v) {
+            $counts[$k] = (int)($v ?? 0);
+        }
 
         echo json_encode([
             'success' => true,
             'counts' => $counts,
+            'pagination' => [
+                'current_page' => $page,
+                'per_page' => $limit,
+                'total_items' => $totalItems,
+                'total_pages' => $totalPages
+            ],
             'data' => $comments
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
         exit;
@@ -173,7 +223,7 @@ try {
         $rawInput = file_get_contents('php://input');
         $input = json_decode($rawInput, true) ?? $_POST;
         
-        $allowedActions = ['reply', 'retry_reply', 'toggle_highlight', 'change_status', 'create_simulated', 'delete', 'run_weekly_cleanup', 'archive_comment', 'restore_comment'];
+        $allowedActions = ['reply', 'retry_reply', 'toggle_highlight', 'change_status', 'create_simulated', 'delete', 'run_weekly_cleanup', 'archive_comment', 'restore_comment', 'save_gold_example', 'save_draft'];
         $action = Security::validateEnum($input['action'] ?? '', $allowedActions, '');
 
         if (empty($action)) {
@@ -402,9 +452,14 @@ try {
                 exit;
             }
 
-            // Get post caption or fallback
-            $stmtPost = $pdo->prepare("SELECT id, caption FROM posts WHERE (id = :id OR user_id = :uid) ORDER BY id DESC LIMIT 1");
-            $stmtPost->execute([':id' => $postId, ':uid' => $userId]);
+            // Get post caption or fallback with strict multi-tenant isolation
+            if ($postId > 0) {
+                $stmtPost = $pdo->prepare("SELECT id, caption FROM posts WHERE id = :id AND user_id = :uid LIMIT 1");
+                $stmtPost->execute([':id' => $postId, ':uid' => $userId]);
+            } else {
+                $stmtPost = $pdo->prepare("SELECT id, caption FROM posts WHERE user_id = :uid ORDER BY id DESC LIMIT 1");
+                $stmtPost->execute([':uid' => $userId]);
+            }
             $post = $stmtPost->fetch();
             
             if (!$post) {
@@ -522,6 +577,31 @@ try {
             $replyText = Security::sanitizeString($input['reply_text'] ?? '', 1500);
             $brandVoiceId = Security::sanitizeInt($input['brand_voice_id'] ?? 1, 1, 1000000, 1);
             $commentId = Security::sanitizeInt($input['comment_id'] ?? 0, 0, 10000000, 0);
+            $originalSuggestion = Security::sanitizeString($input['original_suggestion'] ?? '', 1500);
+            $wasEdited = !empty($input['was_edited']);
+
+            // Defensive fallback: if comment_id is given, retrieve comment text and brand voice from DB if needed
+            if ($commentId > 0) {
+                try {
+                    $cStmt = $pdo->prepare("
+                        SELECT c.comment_text, COALESCE(p.brand_voice_id, a.brand_voice_id, 1) as bvid
+                        FROM comments c
+                        LEFT JOIN posts p ON c.post_id = p.id
+                        LEFT JOIN accounts a ON p.account_id = a.id
+                        WHERE c.id = :id AND c.user_id = :uid LIMIT 1
+                    ");
+                    $cStmt->execute([':id' => $commentId, ':uid' => $userId]);
+                    $cRow = $cStmt->fetch();
+                    if ($cRow) {
+                        if (empty($commentText)) {
+                            $commentText = $cRow['comment_text'] ?? '';
+                        }
+                        if ($brandVoiceId <= 1 && !empty($cRow['bvid'])) {
+                            $brandVoiceId = (int)$cRow['bvid'];
+                        }
+                    }
+                } catch (Throwable) {}
+            }
 
             if (empty($commentText) || empty($replyText)) {
                 http_response_code(400);
@@ -534,15 +614,59 @@ try {
                 $brandVoiceId,
                 $commentText,
                 $replyText,
-                '',
-                false,
+                $originalSuggestion,
+                $wasEdited,
                 true,
                 $commentId > 0 ? $commentId : null
             );
 
+            // Also persist as draft reply in replies table if commentId > 0 so it's recorded
+            if ($commentId > 0) {
+                try {
+                    $stmtReply = $pdo->prepare("
+                        INSERT INTO replies (user_id, comment_id, reply_text, reply_type, tone_used, variant_type, is_posted_to_platform)
+                        VALUES (:user_id, :comment_id, :reply_text, 'gold_draft', 'stoic_mentor', 'gold', 0)
+                    ");
+                    $stmtReply->execute([
+                        ':user_id' => $userId,
+                        ':comment_id' => $commentId,
+                        ':reply_text' => $replyText
+                    ]);
+                } catch (Throwable) {}
+            }
+
             echo json_encode([
-                'success' => $saved,
-                'message' => '⭐ ¡Ejemplo de Oro guardado con éxito! Gemini lo usará como referencia de estilo en futuros comentarios.'
+                'success' => (bool)$saved,
+                'message' => '⭐ ¡Frase guardada como Ejemplo de Oro con éxito! Hermes la usará como estándar de estilo sin publicarla en Meta.'
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        if ($action === 'save_draft') {
+            $commentId = Security::sanitizeInt($input['comment_id'] ?? 0, 1, 10000000, 0);
+            $replyText = Security::sanitizeString($input['reply_text'] ?? '', 2000);
+            $variantType = Security::validateEnum($input['variant_type'] ?? 'engagement', ['engagement', 'conversion', 'support', 'gold', 'auto'], 'engagement');
+
+            if ($commentId <= 0 || empty($replyText)) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'comment_id y reply_text son obligatorios.']);
+                exit;
+            }
+
+            $stmtReply = $pdo->prepare("
+                INSERT INTO replies (user_id, comment_id, reply_text, reply_type, tone_used, variant_type, is_posted_to_platform)
+                VALUES (:user_id, :comment_id, :reply_text, 'draft', 'stoic_mentor', :variant_type, 0)
+            ");
+            $stmtReply->execute([
+                ':user_id' => $userId,
+                ':comment_id' => $commentId,
+                ':reply_text' => $replyText,
+                ':variant_type' => $variantType
+            ]);
+
+            echo json_encode([
+                'success' => true,
+                'message' => '💾 Borrador guardado localmente en la base de datos (sin publicar en Meta).'
             ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
             exit;
         }

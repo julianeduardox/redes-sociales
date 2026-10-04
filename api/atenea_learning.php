@@ -74,6 +74,22 @@ switch ($action) {
         jsonResponse(true, ['directives' => $directives]);
     }
 
+    case 'natural_comparisons': {
+        $overview = AteneaLearningEngine::getLearningOverview($userId);
+        jsonResponse(true, [
+            'comparisons' => $overview['natural_comparisons'] ?? [],
+            'count' => count($overview['natural_comparisons'] ?? [])
+        ]);
+    }
+
+    case 'hypotheses_matrix': {
+        $overview = AteneaLearningEngine::getLearningOverview($userId);
+        jsonResponse(true, [
+            'matrix' => $overview['hypotheses_matrix'] ?? [],
+            'continuous_percentiles' => $overview['continuous_percentiles'] ?? []
+        ]);
+    }
+
     case 'rebuild': {
         $res = AteneaLearningEngine::rebuildAll($userId);
         if (!$res['success']) {

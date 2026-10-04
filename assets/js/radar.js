@@ -138,6 +138,14 @@ const RadarController = {
               <div class="creator-name" title="${App.escapeHtml(c.display_name || c.username)}">${App.escapeHtml(c.display_name || c.username)}</div>
               <div class="creator-handle">@${App.escapeHtml(c.username)}</div>
             </div>
+            <button type="button" class="btn-creator-delete" onclick="RadarController.deleteCreator(${c.id}, '${App.escapeHtml(c.username).replace(/'/g, "\\'")}', event)" title="Eliminar cuenta de referencia del radar">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                <line x1="10" y1="11" x2="10" y2="17"></line>
+                <line x1="14" y1="11" x2="14" y2="17"></line>
+              </svg>
+            </button>
           </div>
 
           <div class="creator-metrics-row">
@@ -464,7 +472,13 @@ const RadarController = {
   // MODAL DE DESMONTE Y RE-CREACIÓN PARA FORTALEZA IMPARABLE
   // ──────────────────────────────────────────────────────────────────────────
 
-  async openRecreateModal(postId, forceRegenerate = false) {
+  currentSourceType: 'inspiration',
+
+  async openRecreateModal(postId, forceRegenerate = false, sourceType = null, customVisualText = null, customCaption = null) {
+    if (sourceType) {
+      this.currentSourceType = sourceType;
+    }
+    const activeSourceType = this.currentSourceType || 'inspiration';
     const modal = document.getElementById('modal-recreate-fortaleza');
     if (!modal) return;
 
@@ -480,9 +494,11 @@ const RadarController = {
             ${forceRegenerate ? 'Regenerando Nuevas Variaciones con IA...' : 'Auditoría Filosófica & Generación de Contenido Original'}
           </strong>
           <p style="margin: 0; font-size: 0.85rem; max-width: 480px; margin: 0 auto; color: var(--text-muted);">
-            ${forceRegenerate 
-              ? 'Explorando nuevos ángulos conceptuales, hooks y prompt visual para @fortaleza_imparable...'
-              : 'Consultando la biblioteca de textos clásicos (Meditaciones, Epicteto, Séneca, Dokkodo) y calibrando el tono de @fortaleza_imparable...'}
+            ${activeSourceType === 'historical'
+              ? 'Deconstruyendo tu publicación histórica de mayor impacto y aplicando las directrices empíricas aprendidas de tu audiencia...'
+              : (forceRegenerate 
+                ? 'Explorando nuevos ángulos conceptuales, hooks y prompt visual para @fortaleza_imparable...'
+                : 'Consultando la biblioteca de textos clásicos (Meditaciones, Epicteto, Séneca, Dokkodo) y calibrando el tono de @fortaleza_imparable...')}
           </p>
         </div>
       `;
@@ -496,12 +512,21 @@ const RadarController = {
           action: 'recreate',
           post_id: postId,
           brand_voice_id: activeBrandId,
-          force_regenerate: forceRegenerate ? 1 : 0
+          force_regenerate: forceRegenerate ? 1 : 0,
+          source_type: activeSourceType,
+          custom_visual_text: customVisualText,
+          custom_caption: customCaption
         })
       });
-      const recData = await recRes.json();
 
-      if (recData.success && recData.data) {
+      let recData;
+      try {
+        recData = await recRes.json();
+      } catch (jsonErr) {
+        throw new Error('Respuesta inválida del servidor o tiempo de espera agotado');
+      }
+
+      if (recData && recData.success && recData.data) {
         const postObj = recData.data.post || recData.data.reference_post || {};
         const recreationsObj = recData.data.recreations || {};
         const phrasesObj = recData.data.phrases || {};
@@ -516,17 +541,31 @@ const RadarController = {
           App.showToast('¡Nuevas 4 frases aforísticas generadas por Atenea para @fortaleza_imparable!', 'success');
         }
       } else {
+        const errMsg = recData?.error || 'No se pudieron generar las recreaciones';
         container.innerHTML = `
           <div style="padding: 40px; text-align: center; color: var(--accent-rose);">
-            ⚠️ Error: ${App.escapeHtml(recData.error || 'No se pudieron generar las recreaciones')}
+            <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: 8px;">⚠️ ${App.escapeHtml(errMsg)}</div>
+            <div style="margin-top: 14px;">
+              <button type="button" class="btn-primary-action" onclick="RadarController.openRecreateModal(${postId}, true, '${activeSourceType}')">
+                🔄 Reintentar
+              </button>
+            </div>
           </div>
         `;
       }
     } catch (err) {
       console.error('Error generating recreations:', err);
       container.innerHTML = `
-        <div style="padding: 40px; text-align: center; color: var(--accent-rose);">
-          ⚠️ Error de conexión con el motor de IA. Inténtalo nuevamente.
+        <div style="padding: 40px 20px; text-align: center;">
+          <div style="font-size: 1.1rem; font-weight: 700; color: #f87171; margin-bottom: 8px;">
+            ⚠️ Error de conexión con el motor de IA
+          </div>
+          <p style="font-size: 0.85rem; color: var(--text-dim); max-width: 440px; margin: 0 auto 16px auto;">
+            El servidor tardó en responder o la conexión fue interrumpida. Puedes reintentar ahora mismo.
+          </p>
+          <button type="button" class="btn-primary-action" style="padding: 8px 18px; font-weight: 700;" onclick="RadarController.openRecreateModal(${postId}, true, '${activeSourceType}')">
+            🔄 Reintentar con Atenea
+          </button>
         </div>
       `;
     }
@@ -572,9 +611,35 @@ const RadarController = {
 
     const countWords = (t) => t ? t.trim().split(/\s+/).filter(Boolean).length : 0;
 
-    // Frase en imagen original vs Copy/pie de foto original
-    const originalQuote = post.quote_extracted || post.quote || post.caption || '';
-    const originalCaption = post.caption || '';
+    // Separación Estricta de Fuentes: VISUAL_TEXT (Placa/Imagen) vs CAPTION_TEXT (Pie de foto)
+    const visualText = post.visual_text || '';
+    const visualSource = post.visual_text_source || 'NONE';
+    const visualStatus = post.visual_text_status || (visualText ? 'CONFIRMED' : 'UNAVAILABLE');
+    const visualConfidence = (post.visual_text_confidence !== undefined && post.visual_text_confidence !== null) ? Math.round(Number(post.visual_text_confidence) * 100) : 0;
+    const captionText = post.caption_text || post.caption || '';
+    const mediaUrl = post.media_url || '';
+
+    let visualBadgeClass = 'badge-unavailable';
+    let visualBadgeText = '⚠️ No se pudo determinar el texto de la imagen. Confirma o introduce manualmente la frase de la placa.';
+    let visualSourceLabel = 'Fuente: ' + visualSource;
+
+    if (visualStatus === 'CONFIRMED') {
+      visualBadgeClass = 'badge-confirmed';
+      visualBadgeText = `✅ Texto Detectado por Visión (${visualConfidence}% confianza)`;
+    } else if (visualStatus === 'USER_CONFIRMED') {
+      visualBadgeClass = 'badge-user';
+      visualBadgeText = '👤 Frase Confirmada / Editada por el Usuario';
+    } else if (visualStatus === 'NO_TEXT') {
+      visualBadgeClass = 'badge-no-text';
+      visualBadgeText = 'ℹ️ Sin texto visible identificado en la imagen';
+    } else if (visualStatus === 'NEEDS_REVIEW') {
+      visualBadgeClass = 'badge-review';
+      visualBadgeText = `⚠️ Requiere Revisión (${visualConfidence}% confianza)`;
+    }
+
+    const isHistorical = (this.currentSourceType === 'historical' || (post.quote_author && post.quote_author.includes('Fortaleza Imparable')) || (post.quote_source_note && post.quote_source_note.includes('Top Viral')));
+    const displayCreator = isHistorical ? 'fortaleza_imparable (Top Viral Propio)' : (post.creator_username ? `@${post.creator_username}` : '@nicho');
+    const sourceSectionTitle = isHistorical ? '🏆 PUBLICACIÓN HISTÓRICA TOP VIRAL (FORTALEZA IMPARABLE)' : 'ORIGEN DE LA INSPIRACIÓN (SEPARACIÓN DE FUENTES)';
 
     container.innerHTML = `
       <div class="recreation-studio-layout">
@@ -582,9 +647,9 @@ const RadarController = {
         <!-- Columna Izquierda: Origen Dual, Scores, Insight y ADN -->
         <div class="recreation-left-col">
           <div class="recreation-source-card">
-            <div class="studio-section-label">ORIGEN DE LA INSPIRACIÓN (ENTRADA DUAL)</div>
-            <div class="source-header-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-              <span class="source-creator">@${App.escapeHtml(post.creator_username || 'nicho')}</span>
+            <div class="studio-section-label" style="${isHistorical ? 'color: #34d399;' : ''}">${sourceSectionTitle}</div>
+            <div class="source-header-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <span class="source-creator" style="${isHistorical ? 'color: #34d399; font-weight: 800;' : ''}">${App.escapeHtml(displayCreator)}</span>
               <div style="display: flex; gap: 6px; align-items: center;">
                 <span class="source-likes">❤️ ${this.formatNumber(post.likes_count || 0)}</span>
                 ${scoreVal > 0 ? `<span class="radar-stat-pill opportunity" style="font-size: 0.72rem; padding: 2px 7px;" title="Score de Oportunidad Viral">🎯 ${Number(scoreVal).toFixed(1)}/10</span>` : ''}
@@ -592,19 +657,39 @@ const RadarController = {
               </div>
             </div>
 
-            <!-- Frase en la imagen original -->
-            <span class="source-dual-label">📸 Frase en Imagen / Portada:</span>
-            <div class="source-caption-box" style="font-weight: 700; color: #fff; margin-bottom: 8px;">
-              "${App.escapeHtml(originalQuote)}"
+            <!-- SECCIÓN 1: TEXTO DE LA IMAGEN / PLACA VISUAL (NÚCLEO PRINCIPAL) -->
+            <div class="source-input-group" style="margin-bottom: 12px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                <label class="source-dual-label" style="margin: 0; font-weight: 700; color: #f1f5f9; display: flex; align-items: center; gap: 5px;">
+                  📸 TEXTO DE LA PLACA / IMAGEN:
+                </label>
+                <div style="display: flex; gap: 6px;">
+                  ${mediaUrl ? `
+                  <button type="button" class="btn-vision-extract" onclick="RadarController.extractVisionText(${currentId}, this)" title="Escanear imagen con Visión IA">
+                    🔍 Leer con Visión IA
+                  </button>
+                  ` : ''}
+                  <button type="button" class="btn-save-visual" onclick="RadarController.saveManualVisualText(${currentId}, this)" title="Guardar texto editado">
+                    💾 Guardar
+                  </button>
+                </div>
+              </div>
+
+              <textarea id="studio-visual-text" class="studio-text-input" rows="2" placeholder="Escribe o confirma aquí la frase que aparece en la placa de la imagen...">${App.escapeHtml(visualText)}</textarea>
+
+              <div id="studio-visual-meta" class="visual-meta-row" style="margin-top: 5px; display: flex; justify-content: space-between; align-items: center; font-size: 0.73rem; flex-wrap: wrap; gap: 4px;">
+                <span class="visual-status-pill ${visualBadgeClass}" id="studio-visual-status-pill">${visualBadgeText}</span>
+                <span class="visual-source-tag" id="studio-visual-source-tag">${App.escapeHtml(visualSourceLabel)}</span>
+              </div>
             </div>
 
-            <!-- Pie de foto / Copy original -->
-            ${originalCaption && originalCaption !== originalQuote ? `
-              <span class="source-dual-label">📝 Copy / Pie de Foto:</span>
-              <div class="source-caption-box" style="font-size: 0.78rem; max-height: 80px;">
-                "${App.escapeHtml(originalCaption)}"
-              </div>
-            ` : ''}
+            <!-- SECCIÓN 2: COPY / PIE DE FOTO (CONTEXTO SECUNDARIO) -->
+            <div class="source-input-group" style="margin-bottom: 8px;">
+              <label class="source-dual-label" style="display: block; margin-bottom: 4px; font-weight: 600; color: #94a3b8;">
+                📝 COPY / PIE DE FOTO (CONTEXTO SECUNDARIO):
+              </label>
+              <textarea id="studio-caption-text" class="studio-text-input secondary" rows="3" placeholder="Pie de foto original de la publicación...">${App.escapeHtml(captionText)}</textarea>
+            </div>
           </div>
 
           <!-- ¿Por qué funciona? (Mecanismo Psicológico de Atenea) -->
@@ -888,12 +973,114 @@ const RadarController = {
 
   async regenerateVariations(postId, btnEl) {
     if (!postId) return;
+    const visualInput = document.getElementById('studio-visual-text');
+    const captionInput = document.getElementById('studio-caption-text');
+    const customVisualText = visualInput ? visualInput.value.trim() : null;
+    const customCaption = captionInput ? captionInput.value.trim() : null;
+
     if (btnEl) {
       btnEl.disabled = true;
       btnEl.style.opacity = '0.6';
-      btnEl.innerHTML = '<span class="loading-spinner" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle;"></span> Generando...';
+      btnEl.innerHTML = '<span class="loading-spinner" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle;"></span> Generando con Atenea...';
     }
-    await this.openRecreateModal(postId, true);
+    await this.openRecreateModal(postId, true, this.currentSourceType || 'inspiration', customVisualText, customCaption);
+  },
+
+  async extractVisionText(postId, btnEl) {
+    if (!postId) return;
+    const originalText = btnEl ? btnEl.innerHTML : '';
+    if (btnEl) {
+      btnEl.disabled = true;
+      btnEl.innerHTML = '<span class="loading-spinner mini"></span> Leyendo...';
+    }
+
+    try {
+      const res = await App.fetchWithCsrf('api/inspiration.php', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'extract_vision_text',
+          post_id: postId
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        const d = data.data;
+        const textarea = document.getElementById('studio-visual-text');
+        const pill = document.getElementById('studio-visual-status-pill');
+        const sourceTag = document.getElementById('studio-visual-source-tag');
+
+        if (d.has_text && d.text) {
+          if (textarea) textarea.value = d.text;
+          if (pill) {
+            pill.className = 'visual-status-pill badge-confirmed';
+            pill.textContent = `✅ Texto Detectado (${Math.round((d.confidence || 0.94) * 100)}% confianza)`;
+          }
+          if (sourceTag) sourceTag.textContent = 'Fuente: VISION';
+          App.showToast('¡Texto de placa extraído exitosamente con Visión IA!', 'success');
+        } else {
+          if (pill) {
+            pill.className = 'visual-status-pill badge-no-text';
+            pill.textContent = 'ℹ️ Sin texto visible identificado en la imagen';
+          }
+          if (sourceTag) sourceTag.textContent = 'Fuente: VISION';
+          App.showToast('No se detectó texto en la imagen. Puedes introducirlo manualmente.', 'info');
+        }
+      } else {
+        App.showToast(`Error de visión: ${data.error || 'No disponible'}`, 'error');
+      }
+    } catch (err) {
+      console.error('Vision extraction error:', err);
+      App.showToast('Error de conexión al procesar la imagen.', 'error');
+    } finally {
+      if (btnEl) {
+        btnEl.disabled = false;
+        btnEl.innerHTML = originalText;
+      }
+    }
+  },
+
+  async saveManualVisualText(postId, btnEl) {
+    if (!postId) return;
+    const textarea = document.getElementById('studio-visual-text');
+    const val = textarea ? textarea.value.trim() : '';
+    const originalText = btnEl ? btnEl.innerHTML : '';
+
+    if (btnEl) {
+      btnEl.disabled = true;
+      btnEl.innerHTML = 'Guardando...';
+    }
+
+    try {
+      const res = await App.fetchWithCsrf('api/inspiration.php', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'save_visual_text',
+          post_id: postId,
+          visual_text: val
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        const pill = document.getElementById('studio-visual-status-pill');
+        const sourceTag = document.getElementById('studio-visual-source-tag');
+        if (pill) {
+          pill.className = 'visual-status-pill badge-user';
+          pill.textContent = '👤 Confirmado por el Usuario';
+        }
+        if (sourceTag) sourceTag.textContent = 'Fuente: USER';
+        App.showToast('Texto de placa guardado correctamente.', 'success');
+      } else {
+        App.showToast(`Error al guardar: ${data.error || ''}`, 'error');
+      }
+    } catch (err) {
+      console.error('Save visual text error:', err);
+      App.showToast('Error de red al guardar el texto.', 'error');
+    } finally {
+      if (btnEl) {
+        btnEl.disabled = false;
+        btnEl.innerHTML = originalText;
+      }
+    }
   },
 
   openAddCreatorModal() {
@@ -934,6 +1121,46 @@ const RadarController = {
     } catch (err) {
       console.error('Error adding creator:', err);
       App.showToast('Error de conexión al agregar creador.', 'error');
+    }
+  },
+
+  async deleteCreator(creatorId, username, event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    if (!creatorId) return;
+
+    const confirmed = confirm(
+      `¿Deseas eliminar la cuenta de referencia @${username} del Radar?\n\n` +
+      `• Se quitará del monitoreo de creadores.\n` +
+      `• Se removerán sus publicaciones asociadas del catálogo de inspiración.`
+    );
+    if (!confirmed) return;
+
+    try {
+      App.showToast(`Eliminando cuenta @${username}...`, 'info');
+      const res = await App.fetchWithCsrf('api/inspiration.php', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'remove_creator',
+          creator_id: creatorId,
+          delete_posts: true
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        App.showToast(data.message || `Cuenta @${username} eliminada con éxito.`, 'success');
+        if (this.selectedCreatorId == creatorId) {
+          this.selectedCreatorId = 'all';
+        }
+        await this.loadRadar();
+      } else {
+        App.showToast(`Error: ${data.error || 'No se pudo eliminar la cuenta'}`, 'error');
+      }
+    } catch (err) {
+      console.error('Error deleting creator:', err);
+      App.showToast('Error de conexión al eliminar la cuenta de referencia.', 'error');
     }
   },
 

@@ -182,7 +182,7 @@ class Database {
             }
 
             // Concurrency Optimization: Cache schema state with PRAGMA user_version to skip redundant DDL checks on every request
-            $targetSchemaVersion = 20261004;
+            $targetSchemaVersion = 20261015;
             $currentSchemaVersion = 0;
             if ($driver === 'sqlite') {
                 try {
@@ -208,6 +208,13 @@ class Database {
             }
         }
         return self::$pdo;
+    }
+
+    /**
+     * Override or reset connection (used for test isolation / mock databases)
+     */
+    public static function setConnection(?PDO $pdo): void {
+        self::$pdo = $pdo;
     }
 
     /**
@@ -1016,8 +1023,22 @@ class Database {
                     $tType = ($driver === 'sqlite' ? 'DATETIME' : ($driver === 'pgsql' ? 'TIMESTAMP' : 'DATETIME'));
                     $pdo->exec("ALTER TABLE comments ADD COLUMN archived_at {$tType}");
                 }
+                if (!in_array('detected_language', $commCols, true)) {
+                    $pdo->exec("ALTER TABLE comments ADD COLUMN detected_language VARCHAR(20) DEFAULT NULL");
+                }
+                if (!in_array('language_confidence', $commCols, true)) {
+                    $pdo->exec("ALTER TABLE comments ADD COLUMN language_confidence REAL DEFAULT NULL");
+                }
+                if (!in_array('language_source', $commCols, true)) {
+                    $pdo->exec("ALTER TABLE comments ADD COLUMN language_source VARCHAR(50) DEFAULT NULL");
+                }
+                if (!in_array('response_language', $commCols, true)) {
+                    $pdo->exec("ALTER TABLE comments ADD COLUMN response_language VARCHAR(20) DEFAULT NULL");
+                }
                 try {
                     $pdo->exec("CREATE INDEX IF NOT EXISTS idx_comments_archive ON comments(user_id, is_archived, status)");
+                    $pdo->exec("CREATE INDEX IF NOT EXISTS idx_comments_user_archived_status_score ON comments(user_id, is_archived, status, highlight_score DESC)");
+                    $pdo->exec("CREATE INDEX IF NOT EXISTS idx_comments_lang ON comments(user_id, detected_language)");
                 } catch (Throwable) {}
             }
 
@@ -1590,6 +1611,21 @@ class Database {
                     if (!in_array('content_dna', $inspColNames)) {
                         $pdo->exec("ALTER TABLE inspiration_posts ADD COLUMN content_dna TEXT");
                     }
+                    if (!in_array('visual_text', $inspColNames)) {
+                        $pdo->exec("ALTER TABLE inspiration_posts ADD COLUMN visual_text TEXT NULL");
+                    }
+                    if (!in_array('visual_text_source', $inspColNames)) {
+                        $pdo->exec("ALTER TABLE inspiration_posts ADD COLUMN visual_text_source VARCHAR(50) DEFAULT 'NONE'");
+                    }
+                    if (!in_array('visual_text_status', $inspColNames)) {
+                        $pdo->exec("ALTER TABLE inspiration_posts ADD COLUMN visual_text_status VARCHAR(50) DEFAULT 'UNAVAILABLE'");
+                    }
+                    if (!in_array('visual_text_confidence', $inspColNames)) {
+                        $pdo->exec("ALTER TABLE inspiration_posts ADD COLUMN visual_text_confidence REAL DEFAULT 0.0");
+                    }
+                    if (!in_array('caption_text', $inspColNames)) {
+                        $pdo->exec("ALTER TABLE inspiration_posts ADD COLUMN caption_text TEXT NULL");
+                    }
 
                     // Atenea Tables for Creative Strategy & Memory
                     $pdo->exec("
@@ -1848,6 +1884,302 @@ class Database {
                         );
                         CREATE INDEX IF NOT EXISTS idx_atenea_fback_creation ON atenea_feedback_loop(user_id, creation_memory_id);
                         CREATE INDEX IF NOT EXISTS idx_atenea_fback_post ON atenea_feedback_loop(published_post_id);
+
+                        CREATE TABLE IF NOT EXISTS atenea_micro_dna (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            user_id INTEGER NOT NULL DEFAULT 1,
+                            post_dna_id INTEGER NOT NULL,
+                            quote_text TEXT NOT NULL,
+                            sentence_family TEXT NOT NULL DEFAULT 'OTHER',
+                            placa_text TEXT,
+                            placa_family TEXT DEFAULT 'SHORT_APHORISM',
+                            caption_hook TEXT,
+                            caption_main_statement TEXT,
+                            caption_family TEXT DEFAULT 'OTHER',
+                            cta_text TEXT,
+                            opening_segment TEXT,
+                            tension_segment TEXT,
+                            reversal_segment TEXT,
+                            payoff_segment TEXT,
+                            word_count INTEGER DEFAULT 0,
+                            character_count INTEGER DEFAULT 0,
+                            punctuation_cadence TEXT,
+                            has_condition INTEGER DEFAULT 0,
+                            has_reversal INTEGER DEFAULT 0,
+                            has_question INTEGER DEFAULT 0,
+                            has_identity_marker INTEGER DEFAULT 0,
+                            abstraction_level TEXT DEFAULT 'BALANCED',
+                            semantic_density TEXT DEFAULT 'MEDIUM',
+                            conflict_statement TEXT,
+                            reversal_statement TEXT,
+                            payoff_statement TEXT,
+                            syntax_archetype TEXT,
+                            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                            FOREIGN KEY (post_dna_id) REFERENCES atenea_post_dna(id) ON DELETE CASCADE
+                        );
+                        CREATE UNIQUE INDEX IF NOT EXISTS uq_atenea_micro_post ON atenea_micro_dna(post_dna_id);
+                        CREATE INDEX IF NOT EXISTS idx_atenea_micro_family ON atenea_micro_dna(user_id, sentence_family);
+                        CREATE INDEX IF NOT EXISTS idx_atenea_micro_syntax ON atenea_micro_dna(user_id, syntax_archetype);
+
+                        CREATE TABLE IF NOT EXISTS atenea_natural_comparisons (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            user_id INTEGER NOT NULL DEFAULT 1,
+                            concept_theme TEXT NOT NULL,
+                            post_a_id INTEGER NOT NULL,
+                            post_b_id INTEGER NOT NULL,
+                            shared_element TEXT NOT NULL,
+                            differing_variable TEXT NOT NULL,
+                            post_a_placa TEXT,
+                            post_b_placa TEXT,
+                            post_a_caption TEXT,
+                            post_b_caption TEXT,
+                            post_a_platform TEXT,
+                            post_b_platform TEXT,
+                            post_a_score REAL DEFAULT 0.0,
+                            post_b_score REAL DEFAULT 0.0,
+                            post_a_likes INTEGER DEFAULT 0,
+                            post_b_likes INTEGER DEFAULT 0,
+                            post_a_shares INTEGER DEFAULT 0,
+                            post_b_shares INTEGER DEFAULT 0,
+                            delta_percentage REAL DEFAULT 0.0,
+                            observation_summary TEXT NOT NULL,
+                            evidence_type TEXT DEFAULT 'NATURAL_EXPERIMENT',
+                            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                            FOREIGN KEY (post_a_id) REFERENCES atenea_post_dna(id) ON DELETE CASCADE,
+                            FOREIGN KEY (post_b_id) REFERENCES atenea_post_dna(id) ON DELETE CASCADE
+                        );
+                        CREATE INDEX IF NOT EXISTS idx_atenea_comparisons_uid ON atenea_natural_comparisons(user_id, concept_theme);
+                        CREATE UNIQUE INDEX IF NOT EXISTS uq_atenea_comparison_pair ON atenea_natural_comparisons(post_a_id, post_b_id);
+                    ");
+
+                    // Migraciones dinámicas seguras para columnas de Fase 3
+                    $perfCols = $pdo->query("PRAGMA table_info(atenea_performance_dna)")->fetchAll(PDO::FETCH_ASSOC);
+                    $perfNames = array_column($perfCols, 'name');
+                    if (!in_array('percentile_rank', $perfNames, true)) {
+                        $pdo->exec("ALTER TABLE atenea_performance_dna ADD COLUMN percentile_rank REAL DEFAULT 0.0");
+                    }
+
+                    $patCols = $pdo->query("PRAGMA table_info(atenea_learned_patterns)")->fetchAll(PDO::FETCH_ASSOC);
+                    $patNames = array_column($patCols, 'name');
+                    if (!in_array('pattern_category', $patNames, true)) {
+                        $pdo->exec("ALTER TABLE atenea_learned_patterns ADD COLUMN pattern_category TEXT DEFAULT 'HYPOTHESIS'");
+                    }
+                    if (!in_array('decay_status', $patNames, true)) {
+                        $pdo->exec("ALTER TABLE atenea_learned_patterns ADD COLUMN decay_status TEXT DEFAULT 'ACTIVE'");
+                    }
+                    if (!in_array('wilson_lower', $patNames, true)) {
+                        $pdo->exec("ALTER TABLE atenea_learned_patterns ADD COLUMN wilson_lower REAL DEFAULT 0.0");
+                    }
+                    if (!in_array('wilson_upper', $patNames, true)) {
+                        $pdo->exec("ALTER TABLE atenea_learned_patterns ADD COLUMN wilson_upper REAL DEFAULT 0.0");
+                    }
+                    if (!in_array('baseline_rate', $patNames, true)) {
+                        $pdo->exec("ALTER TABLE atenea_learned_patterns ADD COLUMN baseline_rate REAL DEFAULT 0.0");
+                    }
+                    if (!in_array('pattern_rate', $patNames, true)) {
+                        $pdo->exec("ALTER TABLE atenea_learned_patterns ADD COLUMN pattern_rate REAL DEFAULT 0.0");
+                    }
+                    if (!in_array('relative_lift', $patNames, true)) {
+                        $pdo->exec("ALTER TABLE atenea_learned_patterns ADD COLUMN relative_lift REAL DEFAULT 0.0");
+                    }
+                    if (!in_array('recency_score', $patNames, true)) {
+                        $pdo->exec("ALTER TABLE atenea_learned_patterns ADD COLUMN recency_score REAL DEFAULT 1.0");
+                    }
+
+                    // Migraciones dinámicas seguras para Gate 3.6 (Coherencia Semántica, Baselines y Familias)
+                    if (!in_array('target_event', $patNames, true)) {
+                        $pdo->exec("ALTER TABLE atenea_learned_patterns ADD COLUMN target_event TEXT DEFAULT 'TOP20'");
+                    }
+                    if (!in_array('statistical_direction', $patNames, true)) {
+                        $pdo->exec("ALTER TABLE atenea_learned_patterns ADD COLUMN statistical_direction TEXT DEFAULT 'POSITIVE_ASSOCIATION'");
+                    }
+                    if (!in_array('hypothesis_family', $patNames, true)) {
+                        $pdo->exec("ALTER TABLE atenea_learned_patterns ADD COLUMN hypothesis_family TEXT DEFAULT 'OTHER'");
+                    }
+                    if (!in_array('signal_level', $patNames, true)) {
+                        $pdo->exec("ALTER TABLE atenea_learned_patterns ADD COLUMN signal_level TEXT DEFAULT 'RAW_SIGNAL'");
+                    }
+                    if (!in_array('baseline_type', $patNames, true)) {
+                        $pdo->exec("ALTER TABLE atenea_learned_patterns ADD COLUMN baseline_type TEXT DEFAULT 'GLOBAL'");
+                    }
+                    if (!in_array('baseline_global', $patNames, true)) {
+                        $pdo->exec("ALTER TABLE atenea_learned_patterns ADD COLUMN baseline_global REAL DEFAULT 20.0");
+                    }
+                    if (!in_array('baseline_period', $patNames, true)) {
+                        $pdo->exec("ALTER TABLE atenea_learned_patterns ADD COLUMN baseline_period REAL DEFAULT 20.0");
+                    }
+                    if (!in_array('baseline_window_start', $patNames, true)) {
+                        $pdo->exec("ALTER TABLE atenea_learned_patterns ADD COLUMN baseline_window_start TEXT");
+                    }
+                    if (!in_array('baseline_window_end', $patNames, true)) {
+                        $pdo->exec("ALTER TABLE atenea_learned_patterns ADD COLUMN baseline_window_end TEXT");
+                    }
+                    if (!in_array('historical_n', $patNames, true)) {
+                        $pdo->exec("ALTER TABLE atenea_learned_patterns ADD COLUMN historical_n INTEGER DEFAULT 0");
+                    }
+                    if (!in_array('recent_n', $patNames, true)) {
+                        $pdo->exec("ALTER TABLE atenea_learned_patterns ADD COLUMN recent_n INTEGER DEFAULT 0");
+                    }
+                    if (!in_array('historical_rate', $patNames, true)) {
+                        $pdo->exec("ALTER TABLE atenea_learned_patterns ADD COLUMN historical_rate REAL DEFAULT 0.0");
+                    }
+                    if (!in_array('recent_rate', $patNames, true)) {
+                        $pdo->exec("ALTER TABLE atenea_learned_patterns ADD COLUMN recent_rate REAL DEFAULT 0.0");
+                    }
+                    if (!in_array('historical_baseline', $patNames, true)) {
+                        $pdo->exec("ALTER TABLE atenea_learned_patterns ADD COLUMN historical_baseline REAL DEFAULT 0.0");
+                    }
+                    if (!in_array('recent_baseline', $patNames, true)) {
+                        $pdo->exec("ALTER TABLE atenea_learned_patterns ADD COLUMN recent_baseline REAL DEFAULT 0.0");
+                    }
+                    if (!in_array('historical_lift', $patNames, true)) {
+                        $pdo->exec("ALTER TABLE atenea_learned_patterns ADD COLUMN historical_lift REAL DEFAULT 0.0");
+                    }
+                    if (!in_array('recent_lift', $patNames, true)) {
+                        $pdo->exec("ALTER TABLE atenea_learned_patterns ADD COLUMN recent_lift REAL DEFAULT 0.0");
+                    }
+                    if (!in_array('is_redundant', $patNames, true)) {
+                        $pdo->exec("ALTER TABLE atenea_learned_patterns ADD COLUMN is_redundant INTEGER DEFAULT 0");
+                    }
+                    if (!in_array('redundant_of', $patNames, true)) {
+                        $pdo->exec("ALTER TABLE atenea_learned_patterns ADD COLUMN redundant_of TEXT DEFAULT NULL");
+                    }
+                    if (!in_array('recency_ratio', $patNames, true)) {
+                        $pdo->exec("ALTER TABLE atenea_learned_patterns ADD COLUMN recency_ratio REAL DEFAULT 1.0");
+                    }
+
+                    // Migraciones dinámicas seguras para Gate 3.5 (Natural Comparisons & Feedback Loop)
+                    $compCols = $pdo->query("PRAGMA table_info(atenea_natural_comparisons)")->fetchAll(PDO::FETCH_ASSOC);
+                    $compNames = array_column($compCols, 'name');
+                    if (!in_array('comparison_confidence', $compNames, true)) {
+                        $pdo->exec("ALTER TABLE atenea_natural_comparisons ADD COLUMN comparison_confidence TEXT DEFAULT 'LOW'");
+                    }
+                    if (!in_array('same_variables', $compNames, true)) {
+                        $pdo->exec("ALTER TABLE atenea_natural_comparisons ADD COLUMN same_variables TEXT DEFAULT '[]'");
+                    }
+                    if (!in_array('differing_variables', $compNames, true)) {
+                        $pdo->exec("ALTER TABLE atenea_natural_comparisons ADD COLUMN differing_variables TEXT DEFAULT '[]'");
+                    }
+                    if (!in_array('time_gap_hours', $compNames, true)) {
+                        $pdo->exec("ALTER TABLE atenea_natural_comparisons ADD COLUMN time_gap_hours REAL DEFAULT 0.0");
+                    }
+
+                    // Fase 5: Tabla de Predicciones Falsables (Prediction vs Result Loop)
+                    $pdo->exec("
+                        CREATE TABLE IF NOT EXISTS atenea_predictions (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            user_id INTEGER NOT NULL DEFAULT 1,
+                            hypothesis_id INTEGER NULL,
+                            hypothesis_family TEXT NOT NULL DEFAULT 'FAMILY_OTHER',
+                            target_event TEXT NOT NULL DEFAULT 'TOP20',
+                            statistical_direction TEXT NOT NULL DEFAULT 'POSITIVE_ASSOCIATION',
+                            prediction_type TEXT NOT NULL DEFAULT 'TIER_EXPECTATION',
+                            prediction_statement TEXT NOT NULL,
+                            expected_tier TEXT NOT NULL DEFAULT 'TOP20',
+                            expected_percentile_min REAL DEFAULT NULL,
+                            expected_percentile_max REAL DEFAULT NULL,
+                            source_evidence_type TEXT NOT NULL DEFAULT 'OBSERVATIONAL',
+                            source_signal_level TEXT NOT NULL DEFAULT 'RAW_SIGNAL',
+                            input_post_concept TEXT NOT NULL DEFAULT '',
+                            generated_content_id INTEGER DEFAULT NULL,
+                            published_post_id INTEGER DEFAULT NULL,
+                            prediction_status TEXT NOT NULL DEFAULT 'DRAFT',
+                            actual_tier TEXT DEFAULT NULL,
+                            actual_percentile REAL DEFAULT NULL,
+                            actual_likes INTEGER DEFAULT NULL,
+                            actual_shares INTEGER DEFAULT NULL,
+                            actual_comments INTEGER DEFAULT NULL,
+                            actual_saves INTEGER DEFAULT NULL,
+                            actual_reach INTEGER DEFAULT NULL,
+                            actual_followers_gained INTEGER DEFAULT NULL,
+                            result_outcome TEXT DEFAULT 'PENDING',
+                            result_quality TEXT NOT NULL DEFAULT 'OBSERVATIONAL',
+                            prediction_validity TEXT NOT NULL DEFAULT 'VALID_PRE_PUBLICATION',
+                            result_notes TEXT DEFAULT NULL,
+                            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                            published_at DATETIME DEFAULT NULL,
+                            evaluated_at DATETIME DEFAULT NULL,
+                            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                            FOREIGN KEY (hypothesis_id) REFERENCES atenea_learned_patterns(id) ON DELETE SET NULL,
+                            FOREIGN KEY (published_post_id) REFERENCES posts(id) ON DELETE SET NULL
+                        );
+                    ");
+
+                    // Migraciones dinámicas seguras para atenea_predictions si ya existía previamente
+                    $predCols = $pdo->query("PRAGMA table_info(atenea_predictions)")->fetchAll(PDO::FETCH_ASSOC);
+                    $predNames = array_column($predCols, 'name');
+                    $predAdditions = [
+                        'hypothesis_id' => 'INTEGER NULL',
+                        'hypothesis_family' => "TEXT NOT NULL DEFAULT 'FAMILY_OTHER'",
+                        'target_event' => "TEXT NOT NULL DEFAULT 'TOP20'",
+                        'statistical_direction' => "TEXT NOT NULL DEFAULT 'POSITIVE_ASSOCIATION'",
+                        'prediction_type' => "TEXT NOT NULL DEFAULT 'TIER_EXPECTATION'",
+                        'prediction_statement' => "TEXT NOT NULL DEFAULT ''",
+                        'expected_tier' => "TEXT NOT NULL DEFAULT 'TOP20'",
+                        'expected_percentile_min' => "REAL DEFAULT NULL",
+                        'expected_percentile_max' => "REAL DEFAULT NULL",
+                        'source_evidence_type' => "TEXT NOT NULL DEFAULT 'OBSERVATIONAL'",
+                        'source_signal_level' => "TEXT NOT NULL DEFAULT 'RAW_SIGNAL'",
+                        'input_post_concept' => "TEXT NOT NULL DEFAULT ''",
+                        'generated_content_id' => "INTEGER DEFAULT NULL",
+                        'published_post_id' => "INTEGER DEFAULT NULL",
+                        'prediction_status' => "TEXT NOT NULL DEFAULT 'DRAFT'",
+                        'actual_percentile' => "REAL DEFAULT NULL",
+                        'actual_likes' => "INTEGER DEFAULT NULL",
+                        'actual_shares' => "INTEGER DEFAULT NULL",
+                        'actual_comments' => "INTEGER DEFAULT NULL",
+                        'actual_saves' => "INTEGER DEFAULT NULL",
+                        'actual_reach' => "INTEGER DEFAULT NULL",
+                        'actual_followers_gained' => "INTEGER DEFAULT NULL",
+                        'result_outcome' => "TEXT DEFAULT 'PENDING'",
+                        'result_quality' => "TEXT NOT NULL DEFAULT 'OBSERVATIONAL'",
+                        'prediction_validity' => "TEXT NOT NULL DEFAULT 'VALID_PRE_PUBLICATION'",
+                        'result_notes' => "TEXT DEFAULT NULL",
+                        'published_at' => "DATETIME DEFAULT NULL",
+                        'platform' => "TEXT NOT NULL DEFAULT 'instagram'",
+                        'evaluation_age_hours' => "REAL DEFAULT NULL",
+                        'maturity_status' => "TEXT NOT NULL DEFAULT 'MATURE'",
+                        'baseline_type' => "TEXT NOT NULL DEFAULT 'HISTORICAL_TOP20_QUINTILE'",
+                        'baseline_value' => "REAL NOT NULL DEFAULT 20.0",
+                        'baseline_period' => "TEXT NOT NULL DEFAULT 'ALL_HISTORICAL'",
+                        'baseline_snapshot_at_prediction' => "TEXT DEFAULT NULL"
+                    ];
+                    foreach ($predAdditions as $col => $ddl) {
+                        if (!in_array($col, $predNames, true)) {
+                            $pdo->exec("ALTER TABLE atenea_predictions ADD COLUMN {$col} {$ddl}");
+                        }
+                    }
+
+                    // Crear índices para atenea_predictions una vez garantizadas las columnas
+                    $pdo->exec("
+                        CREATE INDEX IF NOT EXISTS idx_atenea_pred_status ON atenea_predictions(user_id, prediction_status, result_outcome);
+                        CREATE INDEX IF NOT EXISTS idx_atenea_pred_hyp ON atenea_predictions(user_id, hypothesis_family, target_event);
+                    ");
+
+                    // Fase 5: Libro Mayor de Aprendizaje Inmutable (Learning Ledger)
+                    $pdo->exec("
+                        CREATE TABLE IF NOT EXISTS atenea_learning_ledger (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            user_id INTEGER NOT NULL DEFAULT 1,
+                            prediction_id INTEGER NOT NULL,
+                            hypothesis_id INTEGER NULL,
+                            hypothesis_family TEXT NOT NULL,
+                            previous_status TEXT NOT NULL,
+                            previous_evidence_strength TEXT NOT NULL,
+                            observed_result TEXT NOT NULL,
+                            learning_action TEXT NOT NULL,
+                            new_status TEXT NOT NULL,
+                            new_evidence_strength TEXT NOT NULL,
+                            reason TEXT NOT NULL,
+                            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                            FOREIGN KEY (prediction_id) REFERENCES atenea_predictions(id) ON DELETE CASCADE,
+                            FOREIGN KEY (hypothesis_id) REFERENCES atenea_learned_patterns(id) ON DELETE SET NULL
+                        );
+                        CREATE INDEX IF NOT EXISTS idx_atenea_ledger_pred ON atenea_learning_ledger(user_id, prediction_id);
+                        CREATE INDEX IF NOT EXISTS idx_atenea_ledger_hyp ON atenea_learning_ledger(user_id, hypothesis_family);
                     ");
                 } elseif ($driver === 'mysql') {
                     $pdo->exec("

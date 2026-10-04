@@ -252,6 +252,16 @@ try {
             }
         }
 
+        // 0.05 Action: Clear OPcache, L1/L2/L3 Application Cache
+        if ($action === 'clear_cache') {
+            CacheService::flush();
+            echo json_encode([
+                'success' => true,
+                'message' => 'Caché en memoria, L3 y OPcache limpiados correctamente.'
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
         // 0.1 Action: Save AI Engine & OpenRouter Settings directly
         if ($action === 'save_ai_engine') {
             $aiProvider = Security::validateEnum($input['ai_provider'] ?? 'openrouter', ['openrouter', 'heuristic'], 'openrouter');

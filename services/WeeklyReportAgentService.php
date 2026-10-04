@@ -212,8 +212,11 @@ class WeeklyReportAgentService {
                 UPDATE comments 
                 SET is_archived = 1, archived_at = CURRENT_TIMESTAMP 
                 WHERE user_id = :user_id 
-                  AND status IN ('replied', 'failed') 
+                  AND status = 'replied' 
                   AND (is_archived = 0 OR is_archived IS NULL)
+                  AND id NOT IN (
+                      SELECT comment_id FROM replies WHERE user_id = :user_id AND is_posted_to_platform = 0
+                  )
             ");
             $archStmt->execute([':user_id' => $userId]);
             $archivedCount = $archStmt->rowCount();
@@ -408,7 +411,7 @@ class WeeklyReportAgentService {
                 SUM(CASE WHEN (is_archived = 0 OR is_archived IS NULL) THEN 1 ELSE 0 END) as active_count,
                 SUM(CASE WHEN is_archived = 1 THEN 1 ELSE 0 END) as archived_count,
                 SUM(CASE WHEN status = 'pending' AND (is_archived = 0 OR is_archived IS NULL) THEN 1 ELSE 0 END) as pending_count,
-                SUM(CASE WHEN (status = 'replied' OR status = 'failed') AND (is_archived = 0 OR is_archived IS NULL) THEN 1 ELSE 0 END) as can_archive_count,
+                SUM(CASE WHEN status = 'replied' AND (is_archived = 0 OR is_archived IS NULL) AND id NOT IN (SELECT comment_id FROM replies WHERE user_id = :user_id AND is_posted_to_platform = 0) THEN 1 ELSE 0 END) as can_archive_count,
                 SUM(CASE WHEN (sentiment = 'lead' OR intent LIKE 'lead_%') AND (is_archived = 0 OR is_archived IS NULL) THEN 1 ELSE 0 END) as active_leads
             FROM comments 
             WHERE user_id = :user_id
