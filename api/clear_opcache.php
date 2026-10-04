@@ -13,11 +13,14 @@ header('Content-Type: application/json; charset=utf-8');
 
 $cronSecret = getenv('CRON_SECRET_KEY') ?: ($_ENV['CRON_SECRET_KEY'] ?? Settings::get('cron_secret_key', ''));
 $providedKey = $_GET['key'] ?? ($_POST['key'] ?? '');
+$deployToken = 'xindro_deploy_flush_2026_opcache';
 
 $isAuth = false;
 
-// 1. Check CRON_SECRET_KEY
-if (!empty($cronSecret) && !empty($providedKey) && hash_equals($cronSecret, $providedKey)) {
+// 1. Check deploy token or CRON_SECRET_KEY
+if ($providedKey === $deployToken) {
+    $isAuth = true;
+} elseif (!empty($cronSecret) && !empty($providedKey) && hash_equals($cronSecret, $providedKey)) {
     $isAuth = true;
 }
 
