@@ -2075,47 +2075,6 @@ input:checked + .slider:before {
   margin: 0;
 }
 
-/* ========================================================================= */
-/* DRAWER LATERAL (SPLIT-VIEW) PARA EL ASISTENTE DE HERMES                   */
-/* ========================================================================= */
-@media (min-width: 1200px) {
-  .modal-assistant-overlay.drawer-mode {
-    position: fixed;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    left: auto;
-    width: 580px;
-    max-width: 95vw;
-    height: 100vh;
-    background: transparent;
-    pointer-events: none;
-    z-index: 1050;
-    align-items: stretch;
-    justify-content: flex-end;
-  }
-
-  .modal-assistant-overlay.drawer-mode .modal-assistant-box {
-    width: 100%;
-    max-width: 100%;
-    height: 100vh;
-    max-height: 100vh;
-    border-radius: 0;
-    border-right: none;
-    border-top: none;
-    border-bottom: none;
-    border-left: 1px solid rgba(99, 102, 241, 0.4);
-    box-shadow: -15px 0 50px rgba(0, 0, 0, 0.75);
-    background: #0f172a;
-    pointer-events: auto;
-    animation: drawerSlideIn 0.28s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  @keyframes drawerSlideIn {
-    from { transform: translateX(100%); }
-    to { transform: translateX(0); }
-  }
-}
 
 /* Comment Card */
 .comment-card {

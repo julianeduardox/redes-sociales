@@ -314,6 +314,256 @@ const AgentController = {
     }
   },
 
+  // 1-Click High-Resolution Visual Card Screenshot Generator
+  captureModalAsImage() {
+    if (!this.modalActiveComment) {
+      App.showToast('No hay ningún comentario cargado en el asistente.', 'info');
+      return;
+    }
+
+    const c = this.modalActiveComment;
+    const author = c.author_name || c.author_handle || 'Usuario';
+    const handle = c.author_handle ? (c.author_handle.startsWith('@') ? c.author_handle : '@' + c.author_handle) : '@comunidad';
+    const text = c.comment_text || '';
+    const platform = (c.platform || 'Social').toUpperCase();
+    const score = c.highlight_score || 0;
+    const sentiment = (c.sentiment || 'neutral').toUpperCase();
+    const replies = this.modalActiveReplies || {};
+    const customText = (document.getElementById('modal-reply-text-input')?.value || '').trim();
+
+    App.showToast('📸 Generando captura visual en alta resolución...', 'info');
+
+    try {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const width = 1100;
+      canvas.width = width;
+
+      // Helper to wrap text
+      const getLines = (textToWrap, maxW, font) => {
+        ctx.font = font;
+        const words = String(textToWrap || '').split(/\s+/);
+        const lines = [];
+        let curLine = '';
+        for (const w of words) {
+          const test = curLine ? curLine + ' ' + w : w;
+          if (ctx.measureText(test).width > maxW && curLine) {
+            lines.push(curLine);
+            curLine = w;
+          } else {
+            curLine = test;
+          }
+        }
+        if (curLine) lines.push(curLine);
+        return lines.length ? lines : [''];
+      };
+
+      // Measure dynamic heights
+      const commentLines = getLines(`"${text}"`, width - 120, 'italic 20px system-ui, -apple-system, Segoe UI, Roboto');
+      const commentCardH = Math.max(90, 40 + commentLines.length * 28);
+
+      const var1Lines = getLines(replies.engagement || 'Sin sugerencia disponible', width - 140, '16px system-ui, -apple-system, Segoe UI, Roboto');
+      const var1H = 55 + var1Lines.length * 24;
+
+      const var2Lines = getLines(replies.conversion || 'Sin sugerencia disponible', width - 140, '16px system-ui, -apple-system, Segoe UI, Roboto');
+      const var2H = 55 + var2Lines.length * 24;
+
+      const var3Lines = getLines(replies.support || 'Sin sugerencia disponible', width - 140, '16px system-ui, -apple-system, Segoe UI, Roboto');
+      const var3H = 55 + var3Lines.length * 24;
+
+      let customH = 0;
+      let customLines = [];
+      if (customText) {
+        customLines = getLines(customText, width - 140, '16px system-ui, -apple-system, Segoe UI, Roboto');
+        customH = 65 + customLines.length * 24;
+      }
+
+      const totalH = 140 + commentCardH + 30 + var1H + 18 + var2H + 18 + var3H + (customH ? 20 + customH : 0) + 70;
+      canvas.height = totalH;
+
+      // Background gradient
+      const bgGrad = ctx.createLinearGradient(0, 0, width, totalH);
+      bgGrad.addColorStop(0, '#090d16');
+      bgGrad.addColorStop(0.5, '#0f172a');
+      bgGrad.addColorStop(1, '#0b1120');
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, width, totalH);
+
+      // Outer accent border
+      ctx.strokeStyle = 'rgba(99, 102, 241, 0.4)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(1, 1, width - 2, totalH - 2);
+
+      // Header Bar
+      ctx.fillStyle = '#6366f1';
+      ctx.font = 'bold 22px system-ui, -apple-system, Segoe UI, Roboto';
+      ctx.fillText('🪄 XINDRO AI COPILOT · HERMES v2.1', 45, 55);
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '14px system-ui, -apple-system, Segoe UI, Roboto';
+      ctx.fillText('Asistente de Respuestas & Inteligencia de Comunidad', 45, 82);
+
+      // Platform & Score Pill
+      ctx.fillStyle = 'rgba(99, 102, 241, 0.2)';
+      ctx.fillRect(width - 240, 36, 195, 42);
+      ctx.strokeStyle = 'rgba(99, 102, 241, 0.5)';
+      ctx.strokeRect(width - 240, 36, 195, 42);
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 15px system-ui, -apple-system, Segoe UI, Roboto';
+      ctx.fillText(`${platform} · ⭐ SCORE ${score}/100`, width - 225, 62);
+
+      let curY = 120;
+
+      // Comment Box
+      ctx.fillStyle = 'rgba(30, 41, 59, 0.85)';
+      ctx.fillRect(45, curY, width - 90, commentCardH);
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.25)';
+      ctx.strokeRect(45, curY, width - 90, commentCardH);
+
+      // Author & Handle
+      ctx.fillStyle = '#38bdf8';
+      ctx.font = 'bold 16px system-ui, -apple-system, Segoe UI, Roboto';
+      ctx.fillText(`${author} (${handle})`, 65, curY + 28);
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto';
+      ctx.fillText(`SENTIMIENTO: ${sentiment}`, width - 260, curY + 28);
+
+      // Comment text
+      ctx.fillStyle = '#f1f5f9';
+      ctx.font = 'italic 18px system-ui, -apple-system, Segoe UI, Roboto';
+      let textY = curY + 58;
+      for (const line of commentLines) {
+        ctx.fillText(line, 65, textY);
+        textY += 26;
+      }
+
+      curY += commentCardH + 30;
+
+      // Section Title
+      ctx.fillStyle = '#cbd5e1';
+      ctx.font = 'bold 16px system-ui, -apple-system, Segoe UI, Roboto';
+      ctx.fillText('💡 SUGERENCIAS FORJADAS POR LA IA:', 45, curY);
+      curY += 20;
+
+      // Helper to render suggestion card
+      const drawVariantCard = (title, subtitle, lines, boxH, borderColor, tagColor) => {
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+        ctx.fillRect(45, curY, width - 90, boxH);
+        ctx.strokeStyle = borderColor;
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(45, curY, width - 90, boxH);
+
+        // Left accent bar
+        ctx.fillStyle = tagColor;
+        ctx.fillRect(45, curY, 6, boxH);
+
+        // Header
+        ctx.fillStyle = tagColor;
+        ctx.font = 'bold 15px system-ui, -apple-system, Segoe UI, Roboto';
+        ctx.fillText(title, 65, curY + 26);
+
+        ctx.fillStyle = '#64748b';
+        ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto';
+        ctx.fillText(subtitle, 65 + ctx.measureText(title).width + 15, curY + 26);
+
+        // Text
+        ctx.fillStyle = '#e2e8f0';
+        ctx.font = '16px system-ui, -apple-system, Segoe UI, Roboto';
+        let lineY = curY + 52;
+        for (const l of lines) {
+          ctx.fillText(l, 65, lineY);
+          lineY += 24;
+        }
+
+        curY += boxH + 18;
+      };
+
+      // 1. Connection
+      drawVariantCard(
+        '🤝 Opción 1: Conexión & Empatía',
+        'Cercanía, Agradecimiento & Pregunta',
+        var1Lines,
+        var1H,
+        'rgba(6, 182, 212, 0.4)',
+        '#06b6d4'
+      );
+
+      // 2. Stoic Wisdom
+      drawVariantCard(
+        '🏛️ Opción 2: Sabiduría & Fortaleza Estoica',
+        'Profundidad Filosófica & Autodominio',
+        var2Lines,
+        var2H,
+        'rgba(16, 185, 129, 0.4)',
+        '#10b981'
+      );
+
+      // 3. Drive & Determination
+      drawVariantCard(
+        '⚡ Opción 3: Impulso & Determinación',
+        'Energía, Resiliencia & Disciplina',
+        var3Lines,
+        var3H,
+        'rgba(168, 85, 247, 0.4)',
+        '#a855f7'
+      );
+
+      // Custom Text (if present)
+      if (customText) {
+        drawVariantCard(
+          '✍️ Respuesta Personalizada Redactada',
+          'Lista para publicación o guardado',
+          customLines,
+          customH,
+          'rgba(245, 158, 11, 0.5)',
+          '#fbbf24'
+        );
+      }
+
+      // Footer
+      ctx.fillStyle = '#475569';
+      ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto';
+      const timestamp = new Date().toLocaleString();
+      ctx.fillText(`Generado con XINDRO Copilot · ${timestamp} · Fortaleza Imparable`, 45, totalH - 22);
+
+      // Convert to blob and export
+      canvas.toBlob(blob => {
+        if (!blob) {
+          App.showToast('No se pudo generar la imagen.', 'error');
+          return;
+        }
+
+        // Trigger automatic download
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `asistente-comentario-${c.id || 'xindro'}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
+
+        // Try writing to clipboard as PNG
+        if (navigator.clipboard && window.ClipboardItem) {
+          navigator.clipboard.write([
+            new ClipboardItem({ 'image/png': blob })
+          ]).then(() => {
+            App.showToast('📸 ¡Captura copiada al portapapeles y guardada en Descargas! Puedes pegarla con Ctrl+V.', 'success', 6000);
+          }).catch(() => {
+            App.showToast('📸 ¡Captura descargada en tu carpeta de Descargas!', 'success', 5000);
+          });
+        } else {
+          App.showToast('📸 ¡Captura descargada en tu carpeta de Descargas!', 'success', 5000);
+        }
+      }, 'image/png');
+
+    } catch (err) {
+      console.error(err);
+      App.showToast('Error al capturar la imagen del asistente.', 'error');
+    }
+  },
+
   // Select a variant in sidebar copilot
   selectVariant(variantType) {
     this.selectedVariant = variantType;

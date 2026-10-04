@@ -625,15 +625,8 @@ const App = {
       }
     });
 
-    // Explicit Keyboard Accessibility: Escape key closes assistant drawer/modal
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        const assistantModal = document.getElementById('modal-assistant-replies');
-        if (assistantModal && assistantModal.classList.contains('active')) {
-          App.closeModal('modal-assistant-replies');
-        }
-      }
-    });
+    // Assistant modal/drawer intentionally requires explicit close button action
+    // to protect active drafting and screenshots (e.g. Win + Shift + S).
 
     // Filter tags in feed
     document.querySelectorAll('.filter-tag').forEach(tag => {
@@ -716,11 +709,13 @@ const App = {
       });
     });
 
-    // Escape key listener for closing modals
+    // Escape key listener for closing secondary modals (assistant drawer excluded to protect drafting & screen captures)
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         document.querySelectorAll('.modal-overlay.active').forEach(modal => {
-          modal.classList.remove('active');
+          if (modal.id !== 'modal-assistant-replies') {
+            App.closeModal(modal.id);
+          }
         });
       }
     });

@@ -40,11 +40,34 @@ class AiAgentService {
             ];
         }
 
+        // ══════════════════════════════════════════════════════════════════
+        // Step 1: Detect and separate greeting signatures / multi-language sign-offs
+        // Followers frequently post quotes/thoughts followed by routine courtesy greetings
+        // in 2-4 languages: e.g. "Buenos tardes\nBoa tarde\nKonnichiwa\nGood night"
+        // ══════════════════════════════════════════════════════════════════
+        $lines = preg_split('/[\r\n]+/u', $clean, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $substantiveLines = [];
+        $greetingLines = [];
+        $greetingRegex = '/^(?:buenos?\s+(?:d[ií]as?|tardes?|noches?)|buenas?\s+(?:tardes?|noches?)|bom\s+dia|boa\s+(?:tarde|noite)|konnichiwa|konbanwa|arigato|ohayo|good\s+(?:morning|afternoon|evening|night)|namaste|salut|hola|oi|ol[aá])[\s!.,-]*$/iu';
+
+        foreach ($lines as $line) {
+            $trimmed = trim($line);
+            if (preg_match($greetingRegex, $trimmed)) {
+                $greetingLines[] = $trimmed;
+            } else {
+                $substantiveLines[] = $trimmed;
+            }
+        }
+
+        // If substantive text exists, evaluate linguistic signals primarily on substantive text
+        $evalText = !empty($substantiveLines) ? implode(' ', $substantiveLines) : $clean;
+
         // Clean URLs, handles and punctuation to evaluate linguistic signals
-        $withoutMentions = preg_replace('/@[a-z0-9_\.]+/iu', ' ', $clean);
+        $withoutMentions = preg_replace('/@[a-z0-9_\.]+/iu', ' ', $evalText);
         $withoutUrls = preg_replace('/https?:\/\/\S+/iu', ' ', $withoutMentions);
-        $plainLettersOnly = preg_replace('/[^\p{L}\s]/u', ' ', $withoutUrls);
-        $textLower = mb_strtolower(trim($withoutUrls), 'UTF-8');
+        $normalizedQuotes = str_replace(['“', '”', '‘', '’'], ['"', '"', "'", "'"], $withoutUrls);
+        $plainLettersOnly = preg_replace('/[^\p{L}\s\']/u', ' ', $normalizedQuotes);
+        $textLower = mb_strtolower(trim($normalizedQuotes), 'UTF-8');
 
         $words = preg_split('/\s+/u', mb_strtolower(trim($plainLettersOnly), 'UTF-8'), -1, PREG_SPLIT_NO_EMPTY) ?: [];
         $wordCount = count($words);
@@ -78,7 +101,8 @@ class AiAgentService {
             'camino', 'hermano', 'hermana', 'guerrero', 'disciplina', 'estoico', 'estoicismo', 'pensar',
             'está', 'están', 'estoy', 'tiempo', 'siempre', 'nuestro', 'nuestra', 'nuestros', 'nuestras',
             'verdad', 'momento', 'hoy', 'mañana', 'ayer', 'buen día', 'saludos', 'abrazo', 'foco', 'totalmente',
-            'acuerdo', 'increíble', 'maravilloso', 'fuerza', 'adelante', 'éxito', 'mente', 'consejo', 'pregunta'
+            'acuerdo', 'increíble', 'maravilloso', 'fuerza', 'adelante', 'éxito', 'mente', 'consejo', 'pregunta',
+            'sabiduría', 'hombre', 'persona', 'temor', 'miedo', 'derrota', 'propósito', 'vencido', 'vencerte'
         ];
         foreach ($esDistinctive as $token) {
             if (preg_match('/(?:\b|^)' . preg_quote($token, '/') . '(?:\b|$)/iu', $textLower)) {
@@ -86,7 +110,7 @@ class AiAgentService {
             }
         }
 
-        $esCommon = ['el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas', 'de', 'en', 'por', 'con', 'sin', 'pero', 'muy', 'más', 'este', 'esta', 'esto', 'estos', 'estas', 'es', 'al', 'del', 'su', 'sus'];
+        $esCommon = ['el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas', 'de', 'en', 'por', 'con', 'sin', 'pero', 'muy', 'más', 'este', 'esta', 'esto', 'estos', 'estas', 'es', 'al', 'del', 'su', 'sus', 'si', 'no'];
         foreach ($esCommon as $token) {
             if (preg_match('/(?:\b|^)' . preg_quote($token, '/') . '(?:\b|$)/iu', $textLower)) {
                 $scoreEs += 1.0;
@@ -96,7 +120,7 @@ class AiAgentService {
         // ══════════════════════════════════════════════════════════════════
         // 2. Distinctive Portuguese Signals
         // ══════════════════════════════════════════════════════════════════
-        if (preg_match('/[ãõ]/u', $textLower) || preg_match('/(?:ção|ções|ência|ência)\b/iu', $textLower)) {
+        if (preg_match('/[ãõ]/u', $textLower) || preg_match('/(?:ção|ções|ência|ências)\b/iu', $textLower)) {
             $scorePt += 3.2;
         }
 
@@ -107,7 +131,8 @@ class AiAgentService {
             'atual', 'atuais', 'fazer', 'está', 'estão', 'estou', 'bom dia', 'boa tarde', 'boa noite',
             'abraço', 'força', 'caminho', 'guerreiro', 'tudo', 'hoje',
             'amanhã', 'ontem', 'verdade', 'irmão', 'irmã', 'foco', 'com certeza', 'valeu',
-            'parabéns', 'perfeito', 'incrível', 'sucesso', 'pergunta', 'conselho', 'postagem'
+            'parabéns', 'perfeito', 'incrível', 'sucesso', 'pergunta', 'conselho', 'postagem',
+            'sabedoria', 'derrotado', 'propósito'
         ];
         foreach ($ptDistinctive as $token) {
             if (preg_match('/(?:\b|^)' . preg_quote($token, '/') . '(?:\b|$)/iu', $textLower)) {
@@ -115,7 +140,7 @@ class AiAgentService {
             }
         }
 
-        $ptCommon = ['o', 'a', 'os', 'as', 'do', 'da', 'dos', 'das', 'no', 'na', 'nos', 'nas', 'pelo', 'pela', 'pelos', 'pelas', 'com', 'sem', 'mas', 'muito', 'mais', 'é', 'um', 'uma', 'uns', 'umas', 'seu', 'sua', 'seus', 'suas'];
+        $ptCommon = ['o', 'a', 'os', 'as', 'do', 'da', 'dos', 'das', 'no', 'na', 'nos', 'nas', 'pelo', 'pela', 'pelos', 'pelas', 'com', 'sem', 'mas', 'muito', 'mais', 'é', 'um', 'uma', 'uns', 'umas', 'seu', 'sua', 'seus', 'suas', 'se'];
         foreach ($ptCommon as $token) {
             if (preg_match('/(?:\b|^)' . preg_quote($token, '/') . '(?:\b|$)/iu', $textLower)) {
                 $scorePt += 1.2;
@@ -128,11 +153,15 @@ class AiAgentService {
         $enDistinctive = [
             'what', 'where', 'when', 'which', 'who', 'why', 'how', 'thank you', 'thanks', 'because',
             'your', 'yours', 'with', 'without', 'please', 'awesome', 'great', 'about', 'would', 'could',
-            'should', 'there', 'their', 'they', 'people', 'really', 'today', 'looking', 'always', 'good',
+            'should', 'there', 'their', 'they', 'people', 'really', 'today', 'looking', 'always', 'never', 'good',
             'nice', 'love', 'post', 'view', 'picture', 'beautiful', 'brother', 'strength', 'discipline',
             'journey', 'path', 'focus', 'morning', 'afternoon', 'night', 'mindset', 'stoic', 'stoicism',
             'mind', 'life', 'work', 'well said', 'keep it up', 'proud', 'amazing', 'question', 'advice',
-            'success', 'victory', 'defeat', 'system', 'current'
+            'success', 'victory', 'defeat', 'system', 'current', 'strong', 'stay', 'give', 'never give up',
+            'wise', 'wisdom', 'person', 'fear', 'final', 'setback', 'purpose', 'invincible', 'beat', 'yourself',
+            'tired', 'stop', 'finished', 'eliminate', 'unnecessary', 'thoughts', 'world', 'clarity',
+            'effort', 'efforts', 'repeated', 'day', 'days', 'small', 'sum', 'don\'t', 'doesn\'t', 'didn\'t',
+            'won\'t', 'can\'t', 'cannot', 'truth', 'true', 'power', 'powerful'
         ];
         foreach ($enDistinctive as $token) {
             if (preg_match('/(?:\b|^)' . preg_quote($token, '/') . '(?:\b|$)/iu', $textLower)) {
@@ -140,7 +169,12 @@ class AiAgentService {
             }
         }
 
-        $enCommon = ['the', 'and', 'is', 'are', 'was', 'were', 'have', 'has', 'had', 'this', 'that', 'these', 'those', 'from', 'to', 'for', 'in', 'on', 'at', 'by', 'it', 'its', 'you', 'we', 'they', 'i', 'my', 'me', 'of', 'so', 'but', 'can', 'will', 'do', 'did', 'be', 'been'];
+        $enCommon = [
+            'the', 'and', 'is', 'are', 'was', 'were', 'have', 'has', 'had', 'this', 'that', 'these', 'those',
+            'from', 'to', 'for', 'in', 'on', 'at', 'by', 'it', 'its', 'you', 'we', 'they', 'i', 'my', 'me',
+            'of', 'so', 'but', 'can', 'will', 'do', 'did', 'be', 'been', 'if', 'not', 'no', 'up', 'out', 'all',
+            'just', 'like', 'more', 'only', 'than', 'our', 'see'
+        ];
         foreach ($enCommon as $token) {
             if (preg_match('/(?:\b|^)' . preg_quote($token, '/') . '(?:\b|$)/iu', $textLower)) {
                 $scoreEn += 1.2;
@@ -175,8 +209,8 @@ class AiAgentService {
             ];
         }
 
-        // Mixed Language Check: if second language is strong and represents >= 30% of total score
-        if ($secondScore >= 1.8 && ($secondScore / $totalScore) >= 0.30) {
+        // Mixed Language Check: only if second language is strong and represents >= 35% of total score
+        if ($secondScore >= 2.5 && ($secondScore / $totalScore) >= 0.35) {
             return [
                 'language' => 'mixed',
                 'confidence' => 0.50,
@@ -1762,6 +1796,18 @@ class AiAgentService {
         if ($configuredLanguage === 'any') {
             if ($langDetection['is_supported'] && $langDetection['confidence'] >= 0.65) {
                 $resolvedLanguage = $langDetection['language'];
+            } elseif (!empty($langDetection['scores'])) {
+                // If scores indicate a clear leader among supported languages (e.g. English quotes with multi greetings)
+                $scores = $langDetection['scores'];
+                arsort($scores);
+                $top = array_key_first($scores);
+                if (in_array($top, ['es', 'pt', 'en'], true) && $scores[$top] >= 1.2) {
+                    $resolvedLanguage = $top;
+                    $isAmbiguousLanguage = ($langDetection['confidence'] < 0.65);
+                } else {
+                    $resolvedLanguage = 'es';
+                    $isAmbiguousLanguage = true;
+                }
             } else {
                 $resolvedLanguage = 'es';
                 $isAmbiguousLanguage = true;

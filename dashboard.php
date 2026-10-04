@@ -2081,6 +2081,9 @@ $isMetaConnected = ($activeAccountsCount > 0);
         </div>
       </div>
       <div class="modal-header-actions" style="display: flex; align-items: center; gap: 8px;">
+        <button type="button" class="btn-modal-sugg-action" id="btn-modal-capture-image" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.35); font-size: 0.75rem; padding: 6px 12px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 600;" onclick="AgentController.captureModalAsImage()" title="📸 Capturar y copiar imagen PNG del asistente directamente al portapapeles y descargar">
+          <span>📸 Capturar Imagen</span>
+        </button>
         <button type="button" class="btn-modal-sugg-action" style="background: rgba(99,102,241,0.2); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.35); font-size: 0.75rem; padding: 6px 12px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" onclick="AgentController.copyFullModalSummary()" title="Copiar todo el resumen y opciones del asistente al portapapeles">
           <span>📋 Copiar Resumen</span>
         </button>
