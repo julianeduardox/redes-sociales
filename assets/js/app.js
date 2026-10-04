@@ -8,7 +8,7 @@ const App = {
   activeAccountId: 'all',
   activeFilter: 'pending_all',
   activePostId: null,
-  viewDensity: localStorage.getItem('preferred_view_density') || 'cards',
+  viewDensity: 'operational',
   searchQuery: '',
   selectedCommentId: null,
   commentsList: [],
@@ -26,6 +26,12 @@ const App = {
   keyPhrases: ['Dicotomía del control', 'Amor Fati', 'Memento Mori', 'Autodominio', 'Fortaleza mental', 'Disciplina diaria'],
   forbiddenPhrases: ['Estimado cliente', 'Compra ya', 'Oferta imperdible', 'Somos un bot', 'Haz clic aquí'],
   fewShotExamples: [],
+
+  // Get current authenticated user ID for scoped localStorage keys
+  getUserId() {
+    const meta = document.querySelector('meta[name="user-id"]');
+    return (meta && meta.getAttribute('content')) ? meta.getAttribute('content').trim() : 'default';
+  },
 
   // Read CSRF Token from meta tag
   getCsrfToken() {
@@ -97,18 +103,41 @@ const App = {
 
   dismissOnboarding() {
     const banner = document.getElementById('dashboard-onboarding-banner');
-    if (banner) {
-      banner.style.display = 'none';
-      localStorage.setItem('xindro_onboarding_dismissed', '1');
-    }
+    const strip = document.getElementById('dashboard-onboarding-strip');
+    if (banner) banner.style.display = 'none';
+    if (strip) strip.style.display = 'none';
+    localStorage.setItem(`xindro_onboarding_guide_${this.getUserId()}`, 'dismissed');
   },
 
   checkOnboardingBanner() {
     const banner = document.getElementById('dashboard-onboarding-banner');
-    if (!banner) return;
-    const dismissed = localStorage.getItem('xindro_onboarding_dismissed');
-    if (dismissed === '1') {
-      banner.style.display = 'none';
+    const strip = document.getElementById('dashboard-onboarding-strip');
+    const savedState = localStorage.getItem(`xindro_onboarding_guide_${this.getUserId()}`) || 'collapsed';
+
+    if (savedState === 'dismissed') {
+      if (banner) banner.style.display = 'none';
+      if (strip) strip.style.display = 'none';
+    } else if (savedState === 'expanded') {
+      if (banner) banner.style.display = 'block';
+      if (strip) strip.style.display = 'none';
+    } else {
+      // Default: compact sleek 38px strip
+      if (banner) banner.style.display = 'none';
+      if (strip) strip.style.display = 'flex';
+    }
+  },
+
+  toggleOnboardingGuide(expand) {
+    const banner = document.getElementById('dashboard-onboarding-banner');
+    const strip = document.getElementById('dashboard-onboarding-strip');
+    if (expand) {
+      if (banner) banner.style.display = 'block';
+      if (strip) strip.style.display = 'none';
+      localStorage.setItem(`xindro_onboarding_guide_${this.getUserId()}`, 'expanded');
+    } else {
+      if (banner) banner.style.display = 'none';
+      if (strip) strip.style.display = 'flex';
+      localStorage.setItem(`xindro_onboarding_guide_${this.getUserId()}`, 'collapsed');
     }
   },
 
@@ -493,25 +522,48 @@ const App = {
 
   initViewDensity() {
     const stream = document.getElementById('comments-stream');
-    const btnCards = document.getElementById('btn-density-cards');
-    const btnCompact = document.getElementById('btn-density-compact');
+    const userId = this.getUserId();
+    const saved = localStorage.getItem(`xindro_view_density_${userId}`);
+    this.viewDensity = (saved && ['operational', 'compact', 'cards'].includes(saved)) ? saved : 'operational';
 
-    if (this.viewDensity === 'compact') {
-      if (stream) stream.classList.add('compact-mode');
-      if (btnCards) btnCards.classList.remove('active');
-      if (btnCompact) btnCompact.classList.add('active');
-    } else {
-      if (stream) stream.classList.remove('compact-mode');
-      if (btnCards) btnCards.classList.add('active');
-      if (btnCompact) btnCompact.classList.remove('active');
+    const btnOperational = document.getElementById('btn-density-operational');
+    const btnCompact = document.getElementById('btn-density-compact');
+    const btnCards = document.getElementById('btn-density-cards');
+
+    if (btnOperational) btnOperational.classList.toggle('active', this.viewDensity === 'operational');
+    if (btnCompact) btnCompact.classList.toggle('active', this.viewDensity === 'compact');
+    if (btnCards) btnCards.classList.toggle('active', this.viewDensity === 'cards');
+
+    if (stream) {
+      stream.classList.remove('density-operational', 'density-compact', 'density-cards', 'compact-mode');
+      stream.classList.add(`density-${this.viewDensity}`);
+      if (this.viewDensity === 'compact') {
+        stream.classList.add('compact-mode');
+      }
     }
   },
 
   toggleViewDensity(mode) {
+    const validModes = ['operational', 'compact', 'cards'];
+    if (!validModes.includes(mode)) mode = 'operational';
     this.viewDensity = mode;
-    localStorage.setItem('preferred_view_density', mode);
+    localStorage.setItem(`xindro_view_density_${this.getUserId()}`, mode);
     this.initViewDensity();
-    this.renderComments(this.commentsList);
+    this.renderComments(this.commentsList, this.pagination);
+  },
+
+  toggleMoreFiltersMenu(force) {
+    const menu = document.getElementById('more-filters-menu');
+    if (!menu) return;
+    const shouldOpen = typeof force === 'boolean' ? force : (menu.style.display === 'none' || !menu.style.display);
+    menu.style.display = shouldOpen ? 'block' : 'none';
+  },
+
+  toggleToolbarActionsMenu(force) {
+    const menu = document.getElementById('toolbar-actions-menu');
+    if (!menu) return;
+    const shouldOpen = typeof force === 'boolean' ? force : (menu.style.display === 'none' || !menu.style.display);
+    menu.style.display = shouldOpen ? 'block' : 'none';
   },
 
   // Mobile Drawer Controls
@@ -534,9 +586,9 @@ const App = {
     });
 
     // Platform switcher pills (integrated in feed header & global)
-    document.querySelectorAll('.feed-controls-primary-row [data-platform]').forEach(btn => {
+    document.querySelectorAll('.platform-pill[data-platform], .feed-controls-primary-row [data-platform]').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('.feed-controls-primary-row [data-platform]').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.platform-pill[data-platform], .feed-controls-primary-row [data-platform]').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         this.activePlatform = btn.dataset.platform || 'all';
         this.currentPage = 1;
@@ -559,6 +611,28 @@ const App = {
           }
         }
       });
+    });
+
+    // Dismiss secondary dropdown menus on outside click
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('#btn-more-filters') && !e.target.closest('#more-filters-menu')) {
+        const moreMenu = document.getElementById('more-filters-menu');
+        if (moreMenu) moreMenu.style.display = 'none';
+      }
+      if (!e.target.closest('#btn-toolbar-actions-toggle') && !e.target.closest('#toolbar-actions-menu')) {
+        const toolbarMenu = document.getElementById('toolbar-actions-menu');
+        if (toolbarMenu) toolbarMenu.style.display = 'none';
+      }
+    });
+
+    // Explicit Keyboard Accessibility: Escape key closes assistant drawer/modal
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const assistantModal = document.getElementById('modal-assistant-replies');
+        if (assistantModal && assistantModal.classList.contains('active')) {
+          App.closeModal('modal-assistant-replies');
+        }
+      }
     });
 
     // Filter tags in feed
@@ -893,29 +967,74 @@ const App = {
   updateTopCounts(counts) {
     if (!counts) return;
 
-    // Filter bar badges
+    const pendingAll = parseInt(counts.pending_all_count ?? counts.pending_count ?? 0, 10);
+    const pendingNew = parseInt(counts.pending_new_count ?? counts.pending_count ?? 0, 10);
+    const failedCount = parseInt(counts.failed_count ?? 0, 10);
+    const aiReviewCount = parseInt(counts.ai_review_count ?? 0, 10);
+    const leadsUrgCount = parseInt(counts.leads_urgent_count ?? counts.leads_count ?? 0, 10);
+    const repliedCount = parseInt(counts.replied_count ?? 0, 10);
+    const archivedCount = parseInt(counts.archived_count ?? 0, 10);
+
+    // 1. Level 1 KPI summary chips
+    const elKpiPend = document.getElementById('kpi-count-pending');
+    if (elKpiPend) elKpiPend.textContent = pendingAll;
+
+    const elKpiFail = document.getElementById('kpi-count-failed');
+    const chipFail = document.getElementById('kpi-summary-failed');
+    if (elKpiFail) elKpiFail.textContent = failedCount;
+    if (chipFail) chipFail.style.display = failedCount > 0 ? 'inline-flex' : 'none';
+
+    const elKpiRev = document.getElementById('kpi-count-review');
+    const chipRev = document.getElementById('kpi-summary-review');
+    if (elKpiRev) elKpiRev.textContent = aiReviewCount;
+    if (chipRev) chipRev.style.display = aiReviewCount > 0 ? 'inline-flex' : 'none';
+
+    // 2. Primary Filter Bar Badges & Smart Dynamic Visibility
     const elPendAll = document.getElementById('tag-count-pending-all');
-    if (elPendAll) elPendAll.textContent = counts.pending_all_count ?? counts.pending_count ?? 0;
+    if (elPendAll) elPendAll.textContent = pendingAll;
 
     const elPendNew = document.getElementById('tag-count-pending-new');
-    if (elPendNew) elPendNew.textContent = counts.pending_new_count ?? counts.pending_count ?? 0;
-
-    const elAiReview = document.getElementById('tag-count-ai-review');
-    if (elAiReview) elAiReview.textContent = counts.ai_review_count ?? 0;
-
-    const elFailed = document.getElementById('tag-count-failed');
-    if (elFailed) elFailed.textContent = counts.failed_count ?? 0;
-
-    const elLeadsUrg = document.getElementById('tag-count-leads-urgent');
-    if (elLeadsUrg) elLeadsUrg.textContent = counts.leads_urgent_count ?? counts.leads_count ?? 0;
+    if (elPendNew) elPendNew.textContent = pendingNew;
 
     const elReplied = document.getElementById('tag-count-replied');
-    if (elReplied) elReplied.textContent = counts.replied_count ?? 0;
+    if (elReplied) elReplied.textContent = repliedCount;
 
+    // Smart collapse: Only show secondary status filters in main row if they have items
+    const btnFailed = document.getElementById('btn-filter-failed');
+    const tagFailed = document.getElementById('tag-count-failed');
+    if (tagFailed) tagFailed.textContent = failedCount;
+    if (btnFailed) btnFailed.style.display = failedCount > 0 ? 'inline-flex' : 'none';
+
+    const btnAiRev = document.getElementById('btn-filter-ai-review');
+    const tagAiRev = document.getElementById('tag-count-ai-review');
+    if (tagAiRev) tagAiRev.textContent = aiReviewCount;
+    if (btnAiRev) btnAiRev.style.display = aiReviewCount > 0 ? 'inline-flex' : 'none';
+
+    const btnLeadsUrg = document.getElementById('btn-filter-leads-urgent');
+    const tagLeadsUrg = document.getElementById('tag-count-leads-urgent');
+    if (tagLeadsUrg) tagLeadsUrg.textContent = leadsUrgCount;
+    if (btnLeadsUrg) btnLeadsUrg.style.display = leadsUrgCount > 0 ? 'inline-flex' : 'none';
+
+    // 3. More Filters Menu Items
     const elArchived = document.getElementById('tag-count-archived');
-    if (elArchived) elArchived.textContent = counts.archived_count ?? 0;
+    if (elArchived) elArchived.textContent = archivedCount;
 
-    // Header quick stats pills
+    const menuItemLeads = document.getElementById('menu-item-leads');
+    const menuCountLeads = document.getElementById('menu-count-leads-urgent');
+    if (menuCountLeads) menuCountLeads.textContent = leadsUrgCount;
+    if (menuItemLeads) menuItemLeads.style.display = (leadsUrgCount > 0 && (!btnLeadsUrg || btnLeadsUrg.style.display === 'none')) ? 'flex' : 'none';
+
+    const menuItemRev = document.getElementById('menu-item-ai-review');
+    const menuCountRev = document.getElementById('menu-count-ai-review');
+    if (menuCountRev) menuCountRev.textContent = aiReviewCount;
+    if (menuItemRev) menuItemRev.style.display = (aiReviewCount > 0 && (!btnAiRev || btnAiRev.style.display === 'none')) ? 'flex' : 'none';
+
+    const menuItemFail = document.getElementById('menu-item-failed');
+    const menuCountFail = document.getElementById('menu-count-failed');
+    if (menuCountFail) menuCountFail.textContent = failedCount;
+    if (menuItemFail) menuItemFail.style.display = (failedCount > 0 && (!btnFailed || btnFailed.style.display === 'none')) ? 'flex' : 'none';
+
+    // 4. Header quick stats pills
     const leadsPill = document.getElementById('count-pill-leads');
     const urgentPill = document.getElementById('count-pill-urgent');
     const scorePill = document.getElementById('count-pill-highlighted');
@@ -924,19 +1043,19 @@ const App = {
     if (urgentPill) urgentPill.textContent = `${counts.urgent_count || 0} Soporte`;
     if (scorePill) scorePill.textContent = `${counts.highlighted_count || 0} Destacados`;
 
-    // Sidebar badges
+    // 5. Sidebar badges
     const badgeInbox = document.getElementById('badge-count-inbox');
     const badgeHigh = document.getElementById('badge-count-highlights');
     const badgeLeads = document.getElementById('badge-count-leads');
 
-    if (badgeInbox) badgeInbox.textContent = counts.pending_all_count ?? counts.pending_count ?? '0';
+    if (badgeInbox) badgeInbox.textContent = pendingAll;
     if (badgeHigh) badgeHigh.textContent = ((counts.highlighted_count || 0) + (counts.leads_count || 0)) || '0';
     if (badgeLeads) badgeLeads.textContent = counts.leads_count || '0';
     
     const badgeSpam = document.getElementById('badge-count-spam');
     if (badgeSpam) badgeSpam.textContent = counts.spam_count || '0';
 
-    // Toolbar cleanup count badge
+    // 6. Toolbar cleanup count badge
     const badgeCleanup = document.getElementById('badge-cleanup-count');
     if (badgeCleanup) {
       const canArchive = parseInt(counts.can_archive_count || 0, 10);
@@ -1023,8 +1142,16 @@ const App = {
       return;
     }
 
+    // Sort failed comments first to give urgent operational visibility
+    const sortedComments = [...comments].sort((a, b) => {
+      const aFailed = (a.status === 'failed' || (a.reply_text && a.is_posted_to_platform == 0)) ? 1 : 0;
+      const bFailed = (b.status === 'failed' || (b.reply_text && b.is_posted_to_platform == 0)) ? 1 : 0;
+      return bFailed - aFailed;
+    });
+
     const isCompact = this.viewDensity === 'compact';
-    const pageComments = comments;
+    const isOperational = this.viewDensity === 'operational' || (!isCompact && this.viewDensity !== 'cards');
+    const pageComments = sortedComments;
 
     const cardsHtml = pageComments.map(c => {
       const isSpam = c.status === 'spam' || c.sentiment === 'spam';
@@ -1032,6 +1159,10 @@ const App = {
       const isUrgent = c.sentiment === 'urgent' || c.intent === 'support';
       const isHigh = c.is_highlighted == 1 || c.highlight_score >= 80;
       const isSelected = this.selectedCommentId === c.id;
+
+      const isReplied = c.status === 'replied' && (c.is_posted_to_platform == 1 || c.is_posted_to_platform === null || c.is_posted_to_platform === undefined);
+      const isFailed = c.status === 'failed' || (c.reply_text && c.is_posted_to_platform == 0);
+      const hasDraft = !isReplied && !isFailed && Boolean(c.draft_reply || c.ai_suggestion || c.status === 'needs_review');
 
       let cardClass = 'comment-card';
       if (isSelected) cardClass += ' selected';
@@ -1053,59 +1184,104 @@ const App = {
       const accName = c.account_name || (c.platform === 'facebook' ? 'Página FB' : '@cuenta_ig');
       const voiceName = c.brand_voice_name || 'Voz por Defecto';
 
-      const isReplied = c.status === 'replied' && (c.is_posted_to_platform == 1 || c.is_posted_to_platform === null || c.is_posted_to_platform === undefined);
-      const isFailed = c.status === 'failed' || (c.reply_text && c.is_posted_to_platform == 0);
+      // Semantic status class for lateral colored bar
+      let cardStatusClass = 'status-pending';
+      if (isFailed) cardStatusClass = 'status-failed';
+      else if (isLead) cardStatusClass = 'status-lead';
+      else if (isUrgent) cardStatusClass = 'status-urgent';
+      else if (hasDraft) cardStatusClass = 'status-review';
+      else if (isReplied) cardStatusClass = 'status-replied';
 
-      let statusPillHtml = '';
-      if (c.is_archived == 1) {
-        statusPillHtml = `
-          <span style="background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.3); font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 9999px;" title="Archivado en histórico semanal">🗄️ Archivado</span>
-          <button type="button" onclick="event.stopPropagation(); App.restoreComment(${parseInt(c.id, 10)})" style="background: rgba(99, 102, 241, 0.12); border: 1px solid rgba(99, 102, 241, 0.3); color: #a5b4fc; padding: 2px 7px; font-size: 0.72rem; border-radius: 6px; cursor: pointer;" title="Restaurar comentario a la bandeja activa">↩️ Restaurar</button>
+      // Exactly ONE primary action per card (User Acceptance Condition)
+      let primaryCtaHtml = '';
+      if (isFailed) {
+        primaryCtaHtml = `
+          <button type="button" class="btn-card-primary-action action-retry" onclick="event.stopPropagation(); App.retryReply(${parseInt(c.id, 10)})" title="Reintentar publicación en ${c.platform === 'facebook' ? 'Facebook' : 'Instagram'}">
+            <span>🔄</span> Reintentar
+          </button>
+        `;
+      } else if (hasDraft) {
+        primaryCtaHtml = `
+          <button type="button" class="btn-card-primary-action action-review" onclick="event.stopPropagation(); AgentController.openAssistantModal(${parseInt(c.id, 10)})" title="Revisar borrador y responder">
+            <span>📝</span> Revisar y responder
+          </button>
         `;
       } else if (isReplied) {
-        statusPillHtml = `<div class="status-pill replied" title="Respondido y publicado en ${c.platform === 'facebook' ? 'Facebook' : 'Instagram'}">✅</div>`;
-      } else if (isFailed) {
-        statusPillHtml = `<div class="status-pill failed" style="background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); font-size: 0.72rem; padding: 2px 7px;" title="${this.escapeHtml(c.meta_error || 'Falló publicación en ' + c.platform)}">⚠️ Falló</div>`;
+        primaryCtaHtml = `
+          <button type="button" class="btn-card-primary-action action-replied" onclick="event.stopPropagation(); AgentController.openAssistantModal(${parseInt(c.id, 10)})" title="Ver respuesta publicada">
+            <span>✅</span> Ver respuesta
+          </button>
+        `;
       } else {
-        statusPillHtml = `<div class="status-pill pending" title="Pendiente de respuesta">⏳</div>`;
+        primaryCtaHtml = `
+          <button type="button" class="btn-card-primary-action action-assistant" onclick="event.stopPropagation(); AgentController.openAssistantModal(${parseInt(c.id, 10)})" title="Abrir Asistente">
+            <span>🪄</span> Asistente
+          </button>
+        `;
       }
 
-      if (isCompact) {
-        // Streamlined Compact Row
+      // =========================================================================
+      // DENSITY 1: OPERATIVA (Default - min-height 88px, text is protagonist)
+      // =========================================================================
+      if (isOperational) {
         return `
-          <div class="${cardClass}" onclick="App.selectCommentById(${parseInt(c.id, 10)}, true)">
-            <div class="card-top">
-              <div class="author-info">
-                <img src="${safeAvatar}" class="author-avatar" alt="avatar" loading="lazy" decoding="async" width="36" height="36" />
-                <div class="author-name">
-                  ${this.escapeHtml(c.author_name)}
-                  <span class="platform-badge-mini ${c.platform === 'facebook' ? 'facebook' : 'instagram'}">${c.platform === 'instagram' ? 'IG' : 'FB'}</span>
-                  <span class="card-account-pill" title="Cuenta: ${this.escapeHtml(accName)}">📱 ${this.escapeHtml(accName)}</span>
-                  <span class="card-origin-voice-pill" title="Voz de Marca: ${this.escapeHtml(voiceName)}">🎭 ${this.escapeHtml(voiceName)}</span>
+          <div class="comment-card density-operational ${cardStatusClass}${isSelected ? ' selected' : ''}" data-id="${parseInt(c.id, 10)}" onclick="App.selectCommentById(${parseInt(c.id, 10)}, true)">
+            <div class="card-operational-left">
+              <img src="${safeAvatar}" class="author-avatar" alt="avatar" loading="lazy" decoding="async" width="34" height="34" />
+            </div>
+            <div class="card-operational-main">
+              <div class="card-operational-meta">
+                <span class="author-name">${this.escapeHtml(c.author_name)}</span>
+                <span class="platform-badge-mini ${c.platform === 'facebook' ? 'facebook' : 'instagram'}">${c.platform === 'instagram' ? 'IG' : 'FB'}</span>
+                <span class="meta-dot">•</span>
+                <span class="account-name-pill" title="Cuenta: ${this.escapeHtml(accName)}">📱 ${this.escapeHtml(accName)}</span>
+                ${c.created_time ? `<span class="meta-dot">•</span><span class="comment-time">${this.escapeHtml(c.created_time)}</span>` : ''}
+                <span class="meta-spacer"></span>
+                <span class="score-badge-inline" onclick="event.stopPropagation(); App.openScoreGuideModal()" title="Score de relevancia">⭐ ${safeScore}</span>
+              </div>
+              <div class="comment-body operational-body">
+                ${this.escapeHtml(c.comment_text)}
+              </div>
+              ${isFailed ? `
+                <div class="operational-error-notice">
+                  <span>⚠️ Falló envío en ${c.platform === 'facebook' ? 'Facebook' : 'Instagram'}${c.meta_error ? ': ' + this.escapeHtml(c.meta_error) : ''}</span>
                 </div>
-              </div>
-              <div class="card-badges">
-                <button type="button" class="btn-card-assistant" onclick="event.stopPropagation(); AgentController.openAssistantModal(${parseInt(c.id, 10)})" title="Abrir Asistente para responder">
-                  <span class="assistant-btn-icon">🪄</span> Asistente
-                </button>
-                <div class="${scoreClass}" onclick="event.stopPropagation(); App.openScoreGuideModal()" style="cursor: pointer;" title="Haz clic para ver cómo funciona el Score de IA">⭐ ${safeScore} ℹ️</div>
-                ${statusPillHtml}
-              </div>
+              ` : (hasDraft && (c.draft_reply || c.ai_suggestion) ? `
+                <div class="operational-draft-preview">
+                  <span class="draft-tag">Borrador listo:</span> "${this.escapeHtml((c.draft_reply || c.ai_suggestion || '').substring(0, 90))}${((c.draft_reply || c.ai_suggestion || '').length > 90) ? '...' : ''}"
+                </div>
+              ` : '')}
             </div>
-            <div class="comment-body">
-              ${this.escapeHtml(c.comment_text)}
+            <div class="card-operational-action">
+              ${primaryCtaHtml}
             </div>
-            ${isFailed && c.reply_text ? `
-              <div style="margin-top: 6px; padding: 6px 10px; border-radius: 6px; background: rgba(239, 68, 68, 0.08); border-left: 2px solid #ef4444; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
-                <span style="font-size: 0.76rem; color: #f87171;">⚠️ No se publicó en ${c.platform === 'facebook' ? 'Facebook' : 'Instagram'}</span>
-                <button type="button" onclick="event.stopPropagation(); App.retryReply(${parseInt(c.id, 10)})" style="padding: 2px 7px; font-size: 0.72rem; border-radius: 4px; background: #ef4444; color: #fff; border: none; cursor: pointer;">🔄 Reintentar</button>
-              </div>
-            ` : ''}
           </div>
         `;
       }
 
-      // Detailed Media-Rich Card (6 items, clean and spacious)
+      // =========================================================================
+      // DENSITY 2: COMPACTA (Corrected - min-height 56px, single row with ellipsis)
+      // =========================================================================
+      if (isCompact) {
+        return `
+          <div class="comment-card density-compact ${cardStatusClass}${isSelected ? ' selected' : ''}" data-id="${parseInt(c.id, 10)}" onclick="App.selectCommentById(${parseInt(c.id, 10)}, true)">
+            <div class="compact-row-content">
+              <img src="${safeAvatar}" class="author-avatar-mini" alt="avatar" loading="lazy" decoding="async" width="26" height="26" />
+              <span class="platform-badge-mini ${c.platform === 'facebook' ? 'facebook' : 'instagram'}">${c.platform === 'instagram' ? 'IG' : 'FB'}</span>
+              <strong class="author-name-compact">${this.escapeHtml(c.author_name)}:</strong>
+              <span class="comment-body-compact" title="${this.escapeHtml(c.comment_text)}">${this.escapeHtml(c.comment_text)}</span>
+            </div>
+            <div class="compact-row-actions">
+              <span class="score-badge-mini" onclick="event.stopPropagation(); App.openScoreGuideModal()">⭐ ${safeScore}</span>
+              ${primaryCtaHtml}
+            </div>
+          </div>
+        `;
+      }
+
+      // =========================================================================
+      // DENSITY 3: DETALLADA (Cards with full origin media & stats)
+      // =========================================================================
       const postLikes = parseInt(c.post_likes_count || 0, 10).toLocaleString();
       const postComments = parseInt(c.post_comments_count || 0, 10).toLocaleString();
       const postReach = parseInt(c.post_reach || 0, 10).toLocaleString();
@@ -1124,9 +1300,6 @@ const App = {
           <div class="card-replied-preview card-replied-failed" style="border-left: 3px solid #ef4444; background: rgba(239, 68, 68, 0.08); padding: 10px; border-radius: 8px; margin-top: 8px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; flex-wrap: wrap; gap: 6px;">
               <span class="replied-label" style="color: #f87171; font-weight: 600; font-size: 0.8rem;">⚠️ No se publicó en ${c.platform === 'facebook' ? 'Facebook' : 'Instagram'}:</span>
-              <button type="button" class="btn-retry-reply" onclick="event.stopPropagation(); App.retryReply(${parseInt(c.id, 10)})" style="padding: 3px 9px; font-size: 0.75rem; border-radius: 6px; background: #ef4444; color: #fff; border: none; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
-                🔄 Reintentar envío
-              </button>
             </div>
             <div class="replied-text" style="color: #cbd5e1; font-size: 0.84rem; font-style: italic;">"${this.escapeHtml(c.reply_text)}"</div>
             ${c.meta_error ? `<div style="font-size: 0.75rem; color: #fca5a5; margin-top: 5px; display: flex; align-items: center; gap: 4px;"><span>ℹ️ Motivo:</span> <span>${this.escapeHtml(c.meta_error)}</span></div>` : ''}
@@ -1135,9 +1308,9 @@ const App = {
       }
 
       return `
-        <div class="${cardClass}" onclick="App.selectCommentById(${parseInt(c.id, 10)}, true)">
+        <div class="${cardClass} density-cards" data-id="${parseInt(c.id, 10)}" onclick="App.selectCommentById(${parseInt(c.id, 10)}, true)">
           
-          <!-- Prominent Post Context Header -->
+          <!-- Origin Post Context Header -->
           <div class="card-origin-post">
             <div class="card-origin-post-left">
               <div class="card-origin-post-thumb-wrap">
@@ -1171,13 +1344,10 @@ const App = {
                 </div>
               </div>
               <div class="card-badges">
-                <button type="button" class="btn-card-assistant" onclick="event.stopPropagation(); AgentController.openAssistantModal(${parseInt(c.id, 10)})" title="Abrir Asistente para responder directamente">
-                  <span class="assistant-btn-icon">🪄</span> Asistente
-                </button>
+                ${primaryCtaHtml}
                 <div class="${scoreClass}" onclick="event.stopPropagation(); App.openScoreGuideModal()" style="cursor: pointer;" title="Haz clic para ver cómo funciona el Score de IA">
                   ⭐ ${safeScore} ℹ️
                 </div>
-                ${statusPillHtml}
               </div>
             </div>
 

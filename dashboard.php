@@ -52,6 +52,7 @@ $isMetaConnected = ($activeAccountsCount > 0);
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="csrf-token" content="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
+  <meta name="user-id" content="<?= (int)$userId ?>">
   <!-- Performance Preconnect for External Assets -->
   <link rel="preconnect" href="https://images.unsplash.com" crossorigin>
   <link rel="dns-prefetch" href="https://images.unsplash.com">
@@ -278,14 +279,17 @@ $isMetaConnected = ($activeAccountsCount > 0);
           </button>
         </div>
 
-        <!-- 3-Step Interactive Onboarding Wizard Banner -->
+        <!-- 3-Step Interactive Onboarding Wizard Banner (Full Card) -->
         <div id="dashboard-onboarding-banner" class="dashboard-onboarding-card">
           <div class="onboarding-card-header">
             <div class="onboarding-card-title">
               <span class="onboarding-badge">🚀 Guía Rápida</span>
               <h4>Comienza en 3 pasos simples</h4>
             </div>
-            <button type="button" class="btn-dismiss-onboarding" onclick="App.dismissOnboarding()" title="Ocultar guía">&times;</button>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <button type="button" class="btn-toggle-onboarding" onclick="App.toggleOnboardingGuide(false)" title="Plegar a tira compacta">▲ Plegar</button>
+              <button type="button" class="btn-dismiss-onboarding" onclick="App.dismissOnboarding()" title="Ocultar guía permanentemente">&times;</button>
+            </div>
           </div>
           <div class="onboarding-steps-grid">
             <div class="onboarding-step-item <?= $isMetaConnected ? 'completed' : 'active' ?>" onclick="App.switchTab('meta')">
@@ -315,34 +319,54 @@ $isMetaConnected = ($activeAccountsCount > 0);
           </div>
         </div>
 
+        <!-- Sleek Collapsed Strip (38px) -->
+        <div id="dashboard-onboarding-strip" class="dashboard-onboarding-strip" style="display: none;">
+          <div class="onboarding-strip-content">
+            <span class="onboarding-strip-badge">🚀 Onboarding:</span>
+            <span class="strip-step <?= $isMetaConnected ? 'done' : '' ?>"><?= $isMetaConnected ? '✓ Redes conectadas' : '1. Conectar Redes' ?></span>
+            <span class="strip-sep">·</span>
+            <span class="strip-step <?= (!empty($userBrands) && count($userBrands) > 0) ? 'done' : '' ?>"><?= (!empty($userBrands) && count($userBrands) > 0) ? '✓ Voz configurada' : '2. Estilo de voz' ?></span>
+            <span class="strip-sep">·</span>
+            <button type="button" class="strip-btn-copilot" onclick="AgentController.openAssistantModal()">🪄 Probar Copiloto</button>
+          </div>
+          <div class="onboarding-strip-actions">
+            <button type="button" class="btn-strip-toggle" onclick="App.toggleOnboardingGuide(true)" title="Ver guía completa de 3 pasos">▾ Expandir guía</button>
+            <button type="button" class="btn-strip-close" onclick="App.dismissOnboarding()" title="Ocultar">&times;</button>
+          </div>
+        </div>
+
         <div class="feed-header">
           <!-- Live Meta Token Expired Warning Alert Banner -->
-          <div id="meta-token-expired-banner" class="token-alert-banner" style="display: none; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35); border-radius: 12px; padding: 12px 18px; margin-bottom: 16px; align-items: center; justify-content: space-between; gap: 14px; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.15);">
+          <div id="meta-token-expired-banner" class="token-alert-banner" style="display: none; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35); border-radius: 12px; padding: 12px 18px; margin-bottom: 12px; align-items: center; justify-content: space-between; gap: 14px; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.15);">
             <div style="display: flex; align-items: center; gap: 12px;">
-              <span style="font-size: 1.6rem;">⚠️</span>
+              <span style="font-size: 1.5rem;">⚠️</span>
               <div>
-                <strong style="color: #f87171; font-size: 0.94rem; display: block; font-weight: 700;">Token de Meta Expirado o Desconectado (Error 190)</strong>
-                <span class="token-alert-message" style="color: #cbd5e1; font-size: 0.82rem; line-height: 1.4;">Tus respuestas se guardan en el sistema pero no se envían a Facebook porque el token de sesión caducó. Actualiza el Token de Acceso de Página en Configuración para restablecer el envío automático.</span>
+                <strong style="color: #f87171; font-size: 0.9rem; display: block; font-weight: 700;">Token de Meta Expirado o Desconectado (Error 190)</strong>
+                <span class="token-alert-message" style="color: #cbd5e1; font-size: 0.8rem; line-height: 1.4;">Tus respuestas se guardan localmente pero no se envían a Facebook porque el token de sesión caducó. Actualiza el Token en Configuración para restablecer el envío automático.</span>
               </div>
             </div>
             <div style="display: flex; gap: 8px; flex-shrink: 0;">
-              <button type="button" class="btn-renew-token" onclick="App.openModal('modal-settings')" style="padding: 8px 14px; border-radius: 8px; background: #ef4444; color: #fff; font-weight: 600; border: none; cursor: pointer; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);">
+              <button type="button" class="btn-renew-token" onclick="App.openModal('modal-settings')" style="padding: 7px 13px; border-radius: 8px; background: #ef4444; color: #fff; font-weight: 600; border: none; cursor: pointer; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);">
                 <span>⚙️ Renovar Token</span>
               </button>
             </div>
           </div>
 
-          <!-- Integrated Search & Platform Controls Row -->
-          <div class="feed-controls-primary-row">
-            <div class="search-box">
-              <span class="search-icon">🔍</span>
-              <input type="text" id="feed-search-input" placeholder="Buscar por usuario, pregunta de precio, producto o palabra clave..." />
-            </div>
-
-            <div class="platform-pill-group">
-              <button class="platform-pill active" data-platform="all">🌐 Todos</button>
-              <button class="platform-pill ig-active" data-platform="instagram">📸 IG</button>
-              <button class="platform-pill fb-active" data-platform="facebook">📘 FB</button>
+          <!-- FILA 1: Resumen de Gestión & KPIs Operativos + Selector de Cuenta -->
+          <div class="feed-kpi-summary-row">
+            <div class="feed-kpis-left">
+              <span class="feed-kpi-chip kpi-pending" id="kpi-summary-pending" onclick="App.setFilterTag('pending_all')" title="Comentarios pendientes por gestionar">
+                <span class="kpi-chip-dot"></span>
+                <span><strong id="kpi-count-pending">0</strong> por gestionar</span>
+              </span>
+              <span class="feed-kpi-chip kpi-failed" id="kpi-summary-failed" onclick="App.setFilterTag('failed')" title="Comentarios con fallos de envío en Meta que requieren reintento" style="display: none;">
+                <span class="kpi-chip-icon">⚠️</span>
+                <span><strong id="kpi-count-failed">0</strong> requieren reintento</span>
+              </span>
+              <span class="feed-kpi-chip kpi-review" id="kpi-summary-review" onclick="App.setFilterTag('ai_review')" title="Comentarios retenidos para aprobación humana" style="display: none;">
+                <span class="kpi-chip-icon">🤖</span>
+                <span><strong id="kpi-count-review">0</strong> por aprobar</span>
+              </span>
             </div>
 
             <!-- Account Filter Selector -->
@@ -356,36 +380,92 @@ $isMetaConnected = ($activeAccountsCount > 0);
             </div>
           </div>
 
-          <div class="filter-tags">
-            <button class="filter-tag active" data-filter="pending_all">📥 Pendientes <span class="tag-badge" id="tag-count-pending-all">0</span></button>
-            <button class="filter-tag" data-filter="pending_new" style="color: #60a5fa; border-color: rgba(96, 165, 250, 0.4);">✨ Nuevos <span class="tag-badge" id="tag-count-pending-new">0</span></button>
-            <button class="filter-tag" data-filter="ai_review" style="color: #c084fc; border-color: rgba(192, 132, 252, 0.4);">🤖 Por Aprobar <span class="tag-badge" id="tag-count-ai-review">0</span></button>
-            <button class="filter-tag" data-filter="failed" style="color: #f87171; border-color: rgba(239, 68, 68, 0.4);">⚠️ Fallidos <span class="tag-badge" id="tag-count-failed">0</span></button>
-            <button class="filter-tag" data-filter="leads_urgent" style="color: #facc15; border-color: rgba(250, 204, 21, 0.4);">🎯 Leads & Urgentes <span class="tag-badge" id="tag-count-leads-urgent">0</span></button>
-            <button class="filter-tag" data-filter="replied" style="color: #34d399; border-color: rgba(52, 211, 153, 0.35);">✅ Respondidos <span class="tag-badge" id="tag-count-replied">0</span></button>
-            <button class="filter-tag" data-filter="archived" style="color: #94a3b8; border-color: rgba(148, 163, 184, 0.35);">🗄️ Histórico / Archivados <span class="tag-badge" id="tag-count-archived">0</span></button>
+          <!-- FILA 2: Búsqueda Amplia con Filtro de Plataforma Integrado -->
+          <div class="feed-search-integrated-row">
+            <div class="search-box">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="feed-search-input" placeholder="Buscar por usuario, pregunta de precio, producto o palabra clave..." />
+            </div>
+
+            <div class="platform-pill-group">
+              <button class="platform-pill active" data-platform="all" title="Ver comentarios de todas las plataformas">🌐 Todos</button>
+              <button class="platform-pill ig-active" data-platform="instagram" title="Filtrar comentarios de Instagram">📸 IG</button>
+              <button class="platform-pill fb-active" data-platform="facebook" title="Filtrar comentarios de Facebook">📘 FB</button>
+            </div>
           </div>
 
+          <!-- FILA 3: Filtros de Estado Inteligentes & Menú 'Más filtros ▾' -->
+          <div class="feed-filter-tags-row">
+            <div class="filter-tags" id="primary-filter-tags">
+              <button class="filter-tag active" data-filter="pending_all" id="btn-filter-pending-all">📥 Pendientes <span class="tag-badge" id="tag-count-pending-all">0</span></button>
+              <button class="filter-tag" data-filter="pending_new" id="btn-filter-pending-new" style="color: #60a5fa; border-color: rgba(96, 165, 250, 0.4);">✨ Nuevos <span class="tag-badge" id="tag-count-pending-new">0</span></button>
+              <button class="filter-tag filter-tag-failed" data-filter="failed" id="btn-filter-failed" style="color: #f87171; border-color: rgba(239, 68, 68, 0.4); display: none;">⚠️ Fallidos <span class="tag-badge" id="tag-count-failed">0</span></button>
+              <button class="filter-tag" data-filter="ai_review" id="btn-filter-ai-review" style="color: #c084fc; border-color: rgba(192, 132, 252, 0.4); display: none;">🤖 Por Aprobar <span class="tag-badge" id="tag-count-ai-review">0</span></button>
+              <button class="filter-tag" data-filter="leads_urgent" id="btn-filter-leads-urgent" style="color: #facc15; border-color: rgba(250, 204, 21, 0.4); display: none;">🎯 Leads & Urgentes <span class="tag-badge" id="tag-count-leads-urgent">0</span></button>
+              <button class="filter-tag" data-filter="replied" id="btn-filter-replied" style="color: #34d399; border-color: rgba(52, 211, 153, 0.35);">✅ Respondidos <span class="tag-badge" id="tag-count-replied">0</span></button>
+            </div>
+
+            <!-- More Filters Menu Dropdown -->
+            <div class="more-filters-dropdown-wrap" id="more-filters-wrap" style="position: relative;">
+              <button type="button" class="btn-more-filters" id="btn-more-filters" onclick="App.toggleMoreFiltersMenu()" title="Ver más categorías de filtrado">
+                <span>Más filtros <span id="more-filters-badge" class="more-filters-count" style="display: none;">0</span> ▾</span>
+              </button>
+              <div class="more-filters-menu" id="more-filters-menu" style="display: none;">
+                <button type="button" class="more-filter-item" data-filter="archived" onclick="App.setFilterTag('archived'); App.toggleMoreFiltersMenu(false);">
+                  <span>🗄️ Histórico / Archivados</span>
+                  <span class="tag-badge" id="tag-count-archived">0</span>
+                </button>
+                <button type="button" class="more-filter-item" id="menu-item-leads" data-filter="leads_urgent" onclick="App.setFilterTag('leads_urgent'); App.toggleMoreFiltersMenu(false);" style="display: none;">
+                  <span>🎯 Leads & Urgentes</span>
+                  <span class="tag-badge" id="menu-count-leads-urgent">0</span>
+                </button>
+                <button type="button" class="more-filter-item" id="menu-item-ai-review" data-filter="ai_review" onclick="App.setFilterTag('ai_review'); App.toggleMoreFiltersMenu(false);" style="display: none;">
+                  <span>🤖 Por Aprobar</span>
+                  <span class="tag-badge" id="menu-count-ai-review">0</span>
+                </button>
+                <button type="button" class="more-filter-item" id="menu-item-failed" data-filter="failed" onclick="App.setFilterTag('failed'); App.toggleMoreFiltersMenu(false);" style="display: none;">
+                  <span>⚠️ Fallidos</span>
+                  <span class="tag-badge" id="menu-count-failed">0</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- FILA 4: Barra de Herramientas Operativa (Contador, Menú ⚙️ Acciones y Selector de Densidad) -->
           <div class="feed-toolbar-row">
             <div class="feed-toolbar-left" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
               <span class="feed-counter-text" id="feed-counter-display">Cargando comentarios...</span>
               <button type="button" class="btn-toolbar-assistant" onclick="AgentController.openAssistantModal()" title="Abrir Copiloto IA de Respuestas">
                 <span>🪄 Copiloto IA</span>
               </button>
-              <button type="button" class="btn-toolbar-assistant btn-toolbar-cleanup" id="btn-inbox-cleanup" onclick="App.confirmAndRunWeeklyCleanup()" title="Archivar comentarios respondidos y generar reporte de eficiencia semanal">
-                <span>🧹 Limpiar Bandeja</span>
-                <span class="badge-cleanup-count" id="badge-cleanup-count" style="display: none;">0</span>
-              </button>
-              <button type="button" class="btn-toolbar-assistant btn-toolbar-report" onclick="App.openWeeklyReportModal()" title="Ver Reporte Semanal de Eficiencia y Auditoría">
-                <span>📊 Reporte Semanal</span>
-              </button>
+              
+              <!-- Menú Desplegable Secundario ⚙️ Acciones -->
+              <div class="toolbar-actions-dropdown-wrap" id="toolbar-actions-wrap" style="position: relative;">
+                <button type="button" class="btn-toolbar-secondary-menu" id="btn-toolbar-actions-toggle" onclick="App.toggleToolbarActionsMenu()" title="Acciones de mantenimiento y auditoría">
+                  <span>⚙️ Acciones ▾</span>
+                </button>
+                <div class="toolbar-actions-menu" id="toolbar-actions-menu" style="display: none;">
+                  <button type="button" class="toolbar-action-item" onclick="App.confirmAndRunWeeklyCleanup(); App.toggleToolbarActionsMenu(false);" title="Archivar comentarios resueltos y despejar la bandeja">
+                    <span>🧹 Limpiar Bandeja</span>
+                    <span class="badge-cleanup-count" id="badge-cleanup-count" style="display: none;">0</span>
+                  </button>
+                  <button type="button" class="toolbar-action-item" onclick="App.openWeeklyReportModal(); App.toggleToolbarActionsMenu(false);" title="Ver Reporte Semanal de Eficiencia y Auditoría">
+                    <span>📊 Reporte Semanal</span>
+                  </button>
+                </div>
+              </div>
             </div>
+
+            <!-- Selector de Densidad: Operativa (Default 88px) | Compacta (56px) | Detallada -->
             <div class="density-toggle-group">
-              <button type="button" class="btn-density-toggle active" id="btn-density-cards" onclick="App.toggleViewDensity('cards')" title="Vista Detallada con multimedia">
-                <span>🎴 Detallada</span>
+              <button type="button" class="btn-density-toggle active" id="btn-density-operational" onclick="App.toggleViewDensity('operational')" title="Vista Operativa (88px, texto legible, semáforo lateral)">
+                <span>⚡ Operativa</span>
               </button>
-              <button type="button" class="btn-density-toggle" id="btn-density-compact" onclick="App.toggleViewDensity('compact')" title="Vista Compacta tipo lista rápida">
-                <span>📋 Compacta</span>
+              <button type="button" class="btn-density-toggle" id="btn-density-compact" onclick="App.toggleViewDensity('compact')" title="Vista Compacta (56px, 1 línea de texto)">
+                <span>📏 Compacta</span>
+              </button>
+              <button type="button" class="btn-density-toggle" id="btn-density-cards" onclick="App.toggleViewDensity('cards')" title="Vista Detallada con multimedia">
+                <span>🎴 Detallada</span>
               </button>
             </div>
           </div>
@@ -2003,6 +2083,9 @@ $isMetaConnected = ($activeAccountsCount > 0);
       <div class="modal-header-actions" style="display: flex; align-items: center; gap: 8px;">
         <button type="button" class="btn-modal-sugg-action" style="background: rgba(99,102,241,0.2); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.35); font-size: 0.75rem; padding: 6px 12px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" onclick="AgentController.copyFullModalSummary()" title="Copiar todo el resumen y opciones del asistente al portapapeles">
           <span>📋 Copiar Resumen</span>
+        </button>
+        <button type="button" class="btn-modal-sugg-action" id="btn-toggle-assistant-drawer" style="background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.3); font-size: 0.75rem; padding: 6px 10px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" onclick="AgentController.toggleAssistantViewMode()" title="Alternar entre Panel Lateral (Split-View) y Modal Centrado">
+          <span id="label-assistant-viewmode">◧ Panel Lateral</span>
         </button>
         <span class="score-badge high" id="modal-score-badge" onclick="App.openScoreGuideModal()" style="cursor: pointer;" title="Haz clic para ver la Guía de Score">⭐ Score 95/100 ℹ️</span>
         <button type="button" class="btn-close-modal" onclick="App.closeModal('modal-assistant-replies')" title="Cerrar">&times;</button>

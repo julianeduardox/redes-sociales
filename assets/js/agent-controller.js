@@ -469,10 +469,46 @@ const AgentController = {
   },
 
   // =========================================================================
-  // POPUP MODAL: Asistente de Respuestas & Conexión
+  // POPUP MODAL & DRAWER: Asistente de Respuestas & Conexión
   // =========================================================================
 
-  // Open the dedicated Assistant Popup Modal
+  initAssistantViewMode() {
+    const userId = (typeof App !== 'undefined' && App.getUserId) ? App.getUserId() : 'default';
+    const savedMode = localStorage.getItem(`xindro_assistant_view_mode_${userId}`) || 'drawer';
+    this.setAssistantViewMode(savedMode);
+  },
+
+  setAssistantViewMode(mode) {
+    const modal = document.getElementById('modal-assistant-replies');
+    const label = document.getElementById('label-assistant-viewmode');
+    const isDrawer = (mode === 'drawer');
+
+    if (modal) {
+      if (isDrawer) {
+        modal.classList.add('drawer-mode');
+      } else {
+        modal.classList.remove('drawer-mode');
+      }
+    }
+    if (label) {
+      label.textContent = isDrawer ? '🗗 Modo Flotante' : '◧ Panel Lateral';
+    }
+  },
+
+  toggleAssistantViewMode() {
+    const modal = document.getElementById('modal-assistant-replies');
+    const isCurrentlyDrawer = modal ? modal.classList.contains('drawer-mode') : false;
+    const newMode = isCurrentlyDrawer ? 'modal' : 'drawer';
+    const userId = (typeof App !== 'undefined' && App.getUserId) ? App.getUserId() : 'default';
+
+    localStorage.setItem(`xindro_assistant_view_mode_${userId}`, newMode);
+    this.setAssistantViewMode(newMode);
+    if (typeof App !== 'undefined' && App.showToast) {
+      App.showToast(newMode === 'drawer' ? 'Vista de asistente cambiada a Panel Lateral' : 'Vista de asistente cambiada a Ventana Flotante', 'info', 3000);
+    }
+  },
+
+  // Open the dedicated Assistant Popup Modal or Drawer
   openAssistantModal(commentId = null) {
     let targetComment = null;
 
@@ -505,10 +541,13 @@ const AgentController = {
       modalToneSelect.value = currentTone;
     }
 
+    // Initialize drawer/modal mode according to user preference
+    this.initAssistantViewMode();
+
     // Switch to manual view by default
     this.switchModalTab('manual');
 
-    // Open the modal
+    // Open the modal/drawer
     App.openModal('modal-assistant-replies');
 
     // Load AI suggestions for modal
