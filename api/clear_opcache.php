@@ -4,11 +4,14 @@
  * Authenticated via session OR CRON_SECRET_KEY
  */
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/settings.php';
 require_once __DIR__ . '/../services/CacheService.php';
+
+Database::loadEnv();
 
 header('Content-Type: application/json; charset=utf-8');
 
-$cronSecret = getenv('CRON_SECRET_KEY') ?: '';
+$cronSecret = getenv('CRON_SECRET_KEY') ?: ($_ENV['CRON_SECRET_KEY'] ?? Settings::get('cron_secret_key', ''));
 $providedKey = $_GET['key'] ?? ($_POST['key'] ?? '');
 
 $isAuth = false;
