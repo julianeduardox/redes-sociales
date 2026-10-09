@@ -761,11 +761,15 @@ const RadarController = {
 
           <!-- Dirección Visual Cinematográfica -->
           <div class="visual-prompt-card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-              <div class="studio-section-label">🎨 DIRECCIÓN VISUAL (MIDJOURNEY V6)</div>
-              <button type="button" class="btn-copy-mini" onclick="RadarController.copyText('${App.escapeHtml(visualPrompt.replace(/'/g, "\\'"))}', this)">
-                📋 Copiar Prompt
-              </button>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; gap: 8px; flex-wrap: wrap;">
+              <div class="studio-section-label">🎨 DIRECCIÓN VISUAL (MIDJOURNEY)</div>
+              <div style="display:flex; gap:6px; align-items:center;">
+                <select class="modal-control-select" style="width:auto; padding:4px 7px; font-size:.72rem;" onchange="RadarController.updateVisualRatio(this.value)">
+                  <option value="4:5">Feed 4:5</option><option value="9:16">Reels 9:16</option><option value="1:1">1:1</option>
+                </select>
+                <button type="button" class="btn-copy-mini" onclick="RadarController.copyCurrentVisualPrompt(this)">📋 Copiar</button>
+                <button type="button" class="btn-copy-mini" onclick="RadarController.openVisualLibrary()">📚 Biblioteca</button>
+              </div>
             </div>
 
             <div class="visual-chips">
@@ -775,7 +779,7 @@ const RadarController = {
               <div class="visual-chip">📷 <strong>Cámara:</strong> ${App.escapeHtml(visualDirector.camera || '35mm anamórfico, f/1.8')}</div>
             </div>
 
-            <div class="prompt-text-box" style="margin-top: 8px;">
+            <div id="studio-visual-prompt-text" class="prompt-text-box" style="margin-top: 8px;">
               ${App.escapeHtml(visualPrompt || 'Cinematic dark fine art portrait of Marcus Aurelius in obsidian marble, chiaroscuro lighting, 8k --ar 4:5 --v 6.0 --no text, typography')}
             </div>
             <span style="font-size: 0.72rem; color: var(--text-dim); display: block; margin-top: 6px;">
@@ -1162,6 +1166,89 @@ const RadarController = {
       console.error('Error deleting creator:', err);
       App.showToast('Error de conexión al eliminar la cuenta de referencia.', 'error');
     }
+  },
+
+  async updateVisualRatio(ratio) {
+    const promptEl = document.getElementById('studio-visual-prompt-text');
+    if (!promptEl) return;
+    try {
+      const res = await App.fetchWithCsrf('api/visual_director.php', { method: 'POST', body: JSON.stringify({ action: 'normalize_ratio', prompt: promptEl.textContent || '', aspect_ratio: ratio }) });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'No se pudo actualizar el formato');
+      promptEl.textContent = data.data.prompt;
+      App.showToast(`Formato ${ratio} aplicado al prompt`, 'success');
+    } catch (err) { App.showToast(err.message || 'No se pudo actualizar el formato', 'error'); }
+  },
+
+  copyCurrentVisualPrompt(btn) {
+    const prompt = document.getElementById('studio-visual-prompt-text')?.textContent || '';
+    this.copyText(prompt, btn);
+  },
+
+  async openVisualLibrary() {
+    const modal = document.getElementById('modal-visual-library');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    const list = document.getElementById('visual-library-list');
+    if (list) list.textContent = 'Cargando referencias aprobadas…';
+    try {
+      const res = await App.fetchWithCsrf('api/visual_director.php?action=list');
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'No se pudo cargar la biblioteca');
+      this.renderVisualLibrary(data.data.references || []);
+    } catch (err) {
+      if (list) list.textContent = err.message || 'No se pudo cargar la biblioteca.';
+    }
+  },
+
+  closeVisualLibrary() {
+    const modal = document.getElementById('modal-visual-library');
+    if (modal) modal.style.display = 'none';
+    document.body.style.overflow = '';
+  },
+
+  renderVisualLibrary(references) {
+    const list = document.getElementById('visual-library-list');
+    if (!list) return;
+    list.replaceChildren();
+    if (!references.length) { list.textContent = 'Aún no hay referencias visuales.'; return; }
+    references.forEach((reference) => {
+      const card = document.createElement('article');
+      card.className = 'phrase-plate-card';
+      const title = document.createElement('strong');
+      title.textContent = `${reference.is_favorite ? '⭐ ' : ''}${reference.subject} · ${reference.aspect_ratio}`;
+      const meta = document.createElement('div'); meta.style.cssText = 'font-size:.74rem;color:#94a3b8;margin:5px 0;';
+      meta.textContent = `${reference.visual_style} · ${reference.palette} · ${reference.atmosphere}`;
+      const prompt = document.createElement('div'); prompt.className = 'prompt-text-box'; prompt.textContent = reference.prompt_approved;
+      const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'btn-secondary-action'; remove.textContent = 'Archivar';
+      remove.addEventListener('click', () => this.archiveVisualReference(reference.id, remove));
+      card.append(title, meta, prompt, remove); list.appendChild(card);
+    });
+  },
+
+  async saveVisualReference(btn) {
+    const prompt = document.getElementById('visual-library-prompt')?.value.trim() || '';
+    const ratio = document.getElementById('visual-library-ratio')?.value || '4:5';
+    if (prompt.length < 20) { App.showToast('Escribe un prompt de al menos 20 caracteres.', 'error'); return; }
+    const original = btn.textContent; btn.disabled = true; btn.textContent = 'Guardando…';
+    try {
+      const res = await App.fetchWithCsrf('api/visual_director.php', { method: 'POST', body: JSON.stringify({ action: 'add', prompt, aspect_ratio: ratio, is_favorite: true }) });
+      const data = await res.json(); if (!data.success) throw new Error(data.error || 'No se pudo guardar');
+      document.getElementById('visual-library-prompt').value = '';
+      App.showToast('Referencia guardada para el Director Visual.', 'success'); await this.openVisualLibrary();
+    } catch (err) { App.showToast(err.message || 'No se pudo guardar la referencia.', 'error');
+    } finally { btn.disabled = false; btn.textContent = original; }
+  },
+
+  async archiveVisualReference(referenceId, btn) {
+    if (!confirm('¿Archivar esta referencia? El historial se conservará.')) return;
+    btn.disabled = true;
+    try {
+      const res = await App.fetchWithCsrf('api/visual_director.php', { method: 'POST', body: JSON.stringify({ action: 'archive', reference_id: referenceId }) });
+      const data = await res.json(); if (!data.success) throw new Error(data.error || 'No se pudo archivar');
+      App.showToast('Referencia archivada.', 'success'); await this.openVisualLibrary();
+    } catch (err) { App.showToast(err.message || 'No se pudo archivar.', 'error'); btn.disabled = false; }
   },
 
   // ──────────────────────────────────────────────────────────────────────────

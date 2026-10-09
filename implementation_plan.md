@@ -55,6 +55,31 @@ La corrección afecta exclusivamente a utilidades de prueba y automatización. P
 
 ---
 
+## 0.2 Director Visual persistente para Atenea (2026-10-09)
+
+### Diagnóstico y arquitectura
+
+- Atenea ya crea frases y una dirección visual dentro de `InspirationRadarService`, pero no conserva una biblioteca estructurada de las referencias aprobadas por el administrador ni las reutiliza de forma consistente.
+- Se ampliará el Director Visual existente; no se creará otro agente ni se tocará `ai_learning_feedback`, que pertenece exclusivamente a Hermes.
+- La memoria visual se guardará por `user_id` y `brand_voice_id`, con archivo lógico y versiones de prompt. Las referencias iniciales proceden de los prompts reales aprobados por el administrador: ronin contemplativo, jinete otoñal, guerrero y sombras, Wuxia al amanecer, Kioto Edo, tinta china y mecha samurái histórico.
+
+### Cambios propuestos
+
+1. Crear `services/AteneaVisualDirectorService.php` con catálogo validado de ratios, normalización de un único `--ar`, extracción heurística segura de atributos, semillas idempotentes, consulta de referencias y fallback local.
+2. Crear tablas tri-motor `atenea_visual_references` y `atenea_visual_feedback`; ambos modelos quedan aislados por usuario y marca e incluyen auditoría de edición/aprobación/archivado.
+3. Incorporar la memoria visual al prompt de `InspirationRadarService` y al fallback. Toda explicación se limita a evidencia observada y nunca afirma causalidad ni porcentajes inventados.
+4. Añadir `/api/visual_director.php`, protegido por sesión, CSRF y rate limit, para listar, agregar, aprobar/editar y archivar referencias.
+5. Añadir una interfaz de Biblioteca Visual y conmutador de ratio en Atenea Studio. La UI usará DOM seguro para datos no confiables y permitirá copiar el prompt final.
+
+### Verificación y reversión
+
+- Lint PHP/JS, prueba de normalización de ratios y de semillas idempotentes.
+- Prueba de aislamiento entre usuario/marca, validación CSRF y archivo lógico.
+- Prueba de que la memoria de Hermes no es consultada ni modificada.
+- Reversión: desactivar la interfaz y archivar referencias; no se borrarán datos ni se modificarán tablas de Hermes.
+
+---
+
 ## 1. 🔍 Diagnóstico y Flujo Actual del Sistema
 
 ### 1.1 Esquema y Flujos Existentes

@@ -17,6 +17,7 @@ require_once __DIR__ . '/../config/settings.php';
 require_once __DIR__ . '/../config/security.php';
 require_once __DIR__ . '/../services/AiAgentService.php';
 require_once __DIR__ . '/../services/AteneaLearningEngine.php';
+require_once __DIR__ . '/../services/AteneaVisualDirectorService.php';
 
 class InspirationRadarService {
     private const GRAPH_API_VERSION = 'v19.0';
@@ -1378,6 +1379,7 @@ PROMPT;
 
             // Obtener directivas y patrones empíricos aprendidos de la propia audiencia de @fortaleza_imparable
             $learnedDirectives = AteneaLearningEngine::getActivePatternsForPrompt($userId);
+            $visualGuidance = AteneaVisualDirectorService::getPromptGuidance($userId, $brandVoiceId, $theme, $visualText ?: $caption);
 
             $systemPrompt = "Eres ATENEA, la Directora de Estrategia de Contenido y Filosofía de 'Fortaleza Imparable' (@fortaleza_imparable). Eres una estratega maestra en psicología estoica grecorromana y ética marcial samurái (Bushido / Dokkōdō).
 
@@ -1398,6 +1400,12 @@ REGLAS DE RIGOR FILOSÓFICO Y PREVENCIÓN DE DRIFT SEMÁNTICO:
 
             if (!empty($learnedDirectives)) {
                 $systemPrompt .= "\n\n" . $learnedDirectives;
+            }
+            if (!empty($visualGuidance['prompt_context'])) {
+                $systemPrompt .= "\n\nMEMORIA DEL DIRECTOR VISUAL (atributos aprobados; úsala como guía, no copies texto):\n"
+                    . $visualGuidance['prompt_context']
+                    . "\nEVIDENCIA: " . $visualGuidance['evidence_summary']
+                    . "\nNo afirmes causalidad ni porcentajes que no estén presentes en la evidencia.";
             }
 
             $visualTextDisplay = !empty($visualText) 
@@ -1580,8 +1588,16 @@ PROMPT;
             $pStoic = $parsed['phrase_stoic'] ?? ($parsed['option_stoic'] ?? '');
 
             $dna = $parsed['content_dna'] ?? self::extractContentDna($caption, $theme, $visualText ?: $caption);
-            $visualDirector = $parsed['visual_director'] ?? self::generateVisualDirectorPrompt($dna, $theme);
-            $visualPrompt = $visualDirector['midjourney_prompt'] ?? ($parsed['image_prompt'] ?? '');
+            $visualDirector = $parsed['visual_director'] ?? [];
+            if (!is_array($visualDirector) || empty($visualDirector['midjourney_prompt'])) {
+                $visualDirector = $visualGuidance['fallback'];
+            }
+            $visualDirector['midjourney_prompt'] = AteneaVisualDirectorService::normalizeAspectRatio(
+                (string)($visualDirector['midjourney_prompt'] ?? $visualGuidance['fallback']['midjourney_prompt']),
+                (string)($visualDirector['format'] ?? '4:5')
+            );
+            $visualDirector['evidence_summary'] = $visualGuidance['evidence_summary'];
+            $visualPrompt = $visualDirector['midjourney_prompt'];
             $whyWorks = $parsed['why_it_works'] ?? ($dna['why_explanation'] ?? 'Alineación psicológica que conecta con la necesidad de rigor y soberanía interior.');
             $cFitScore = !empty($parsed['creative_fit_score']) ? (float)$parsed['creative_fit_score'] : $creativeFitScore;
 

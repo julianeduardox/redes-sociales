@@ -182,7 +182,7 @@ class Database {
             }
 
             // Concurrency Optimization: Cache schema state with PRAGMA user_version to skip redundant DDL checks on every request
-            $targetSchemaVersion = 20261016;
+            $targetSchemaVersion = 20261017;
             $currentSchemaVersion = 0;
             if ($driver === 'sqlite') {
                 try {
@@ -2356,6 +2356,50 @@ class Database {
                 }
             } catch (Throwable $e) {
                 error_log("Atenea Continuous Learning Engine migration notice: " . $e->getMessage());
+            }
+
+            // 10. Atenea Visual Director: referencias aprobadas y aprendizaje aislado de Hermes
+            try {
+                $driver = self::getDriver();
+                if ($driver === 'mysql') {
+                    $pdo->exec("CREATE TABLE IF NOT EXISTS atenea_visual_references (
+                        id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, brand_voice_id INT NOT NULL DEFAULT 1,
+                        prompt_original TEXT NOT NULL, prompt_approved TEXT NOT NULL, attributes_json TEXT NOT NULL,
+                        subject VARCHAR(255) NOT NULL, visual_style VARCHAR(255) NOT NULL, palette VARCHAR(255) NOT NULL,
+                        lighting VARCHAR(255) NOT NULL, atmosphere VARCHAR(255) NOT NULL, composition VARCHAR(255) NOT NULL,
+                        aspect_ratio VARCHAR(10) NOT NULL DEFAULT '4:5', source_type VARCHAR(50) NOT NULL DEFAULT 'human_reference',
+                        is_favorite TINYINT NOT NULL DEFAULT 0, prompt_status VARCHAR(30) NOT NULL DEFAULT 'approved',
+                        is_archived TINYINT NOT NULL DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        INDEX idx_atenea_visual_refs (user_id, brand_voice_id, is_archived, is_favorite),
+                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+                } elseif ($driver === 'pgsql') {
+                    $pdo->exec("CREATE TABLE IF NOT EXISTS atenea_visual_references (
+                        id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL, brand_voice_id INTEGER NOT NULL DEFAULT 1,
+                        prompt_original TEXT NOT NULL, prompt_approved TEXT NOT NULL, attributes_json TEXT NOT NULL,
+                        subject VARCHAR(255) NOT NULL, visual_style VARCHAR(255) NOT NULL, palette VARCHAR(255) NOT NULL,
+                        lighting VARCHAR(255) NOT NULL, atmosphere VARCHAR(255) NOT NULL, composition VARCHAR(255) NOT NULL,
+                        aspect_ratio VARCHAR(10) NOT NULL DEFAULT '4:5', source_type VARCHAR(50) NOT NULL DEFAULT 'human_reference',
+                        is_favorite INTEGER NOT NULL DEFAULT 0, prompt_status VARCHAR(30) NOT NULL DEFAULT 'approved',
+                        is_archived INTEGER NOT NULL DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
+                        CREATE INDEX IF NOT EXISTS idx_atenea_visual_refs ON atenea_visual_references(user_id, brand_voice_id, is_archived, is_favorite);");
+                } else {
+                    $pdo->exec("CREATE TABLE IF NOT EXISTS atenea_visual_references (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, brand_voice_id INTEGER NOT NULL DEFAULT 1,
+                        prompt_original TEXT NOT NULL, prompt_approved TEXT NOT NULL, attributes_json TEXT NOT NULL,
+                        subject TEXT NOT NULL, visual_style TEXT NOT NULL, palette TEXT NOT NULL, lighting TEXT NOT NULL,
+                        atmosphere TEXT NOT NULL, composition TEXT NOT NULL, aspect_ratio TEXT NOT NULL DEFAULT '4:5',
+                        source_type TEXT NOT NULL DEFAULT 'human_reference', is_favorite INTEGER NOT NULL DEFAULT 0,
+                        prompt_status TEXT NOT NULL DEFAULT 'approved', is_archived INTEGER NOT NULL DEFAULT 0,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_atenea_visual_refs ON atenea_visual_references(user_id, brand_voice_id, is_archived, is_favorite);");
+                }
+            } catch (Throwable $e) {
+                error_log("Atenea Visual Director migration notice: " . $e->getMessage());
             }
 
             // Ensure AI model, token quota & presence columns in users

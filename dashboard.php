@@ -2946,6 +2946,25 @@ $isMetaConnected = ($activeAccountsCount > 0);
   </div>
 </div>
 
+<!-- Modal: Biblioteca persistente del Director Visual de Atenea -->
+<div class="modal-overlay" id="modal-visual-library" style="display:none;" onclick="if(event.target===this) RadarController.closeVisualLibrary()">
+  <div class="modal-box" style="max-width:780px; background:#0c101b; border:1px solid rgba(139,92,246,.4);">
+    <div class="modal-header">
+      <div><h4 style="margin:0; color:#fff;">🎨 Biblioteca Visual de Atenea</h4><span style="font-size:.76rem; color:var(--text-muted);">Referencias aprobadas que guían el Director Visual.</span></div>
+      <button type="button" class="btn-close-modal" onclick="RadarController.closeVisualLibrary()">&times;</button>
+    </div>
+    <div class="modal-body" style="padding-top:14px;">
+      <label style="display:block; font-weight:700; margin-bottom:6px;">Nuevo prompt de referencia</label>
+      <textarea id="visual-library-prompt" class="studio-text-input" rows="5" maxlength="12000" placeholder="Pega un prompt de Midjourney que quieras enseñar al Director Visual..."></textarea>
+      <div style="display:flex; gap:8px; align-items:center; margin:10px 0 16px; flex-wrap:wrap;">
+        <select id="visual-library-ratio" class="modal-control-select" style="width:auto;"><option value="4:5">Feed 4:5</option><option value="9:16">Stories/Reels 9:16</option><option value="1:1">Cuadrado 1:1</option></select>
+        <button type="button" class="btn-primary-action" onclick="RadarController.saveVisualReference(this)">➕ Guardar referencia</button>
+      </div>
+      <div id="visual-library-list" aria-live="polite"></div>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: Atenea Studio - Estrategia Creativa & Filosofía para Fortaleza Imparable -->
 <div class="modal-overlay" id="modal-recreate-fortaleza" onclick="if(event.target===this) RadarController.closeRecreateModal()">
   <div class="modal-box" style="max-width: 1100px; background: #0c101b; border: 1px solid rgba(139,92,246,0.35); box-shadow: 0 25px 70px rgba(0,0,0,0.9);">

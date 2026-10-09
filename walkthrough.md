@@ -1,5 +1,20 @@
 # 🚀 Walkthrough: Acción "🚫 No responder / Ignorar", Restauración y Señales de Moderación para Hermes
 
+## Director Visual persistente para Atenea (2026-10-09)
+
+Se integró el Director Visual como subagente de Atenea, sin crear otro cerebro ni mezclar su memoria con Hermes.
+
+- Se creó `atenea_visual_references`, una biblioteca aislada por usuario y voz de marca. Conserva prompt original, prompt aprobado, atributos visuales, formato, favorito y archivo lógico.
+- La primera consulta siembra de forma idempotente siete referencias reales aportadas por el administrador: ronin contemplativo, jinete otoñal, guerrero y sombras, Wuxia, Kioto Edo, tinta china y mecha samurái histórico.
+- `AteneaVisualDirectorService` convierte esas referencias en una guía estructurada para Atenea: sujeto, composición, paleta, luz y atmósfera. No inyecta el prompt crudo como instrucción y nunca escribe en `ai_learning_feedback`.
+- Las recreaciones de Atenea ahora reciben esta guía visual y normalizan el resultado a un único `--ar`. Cuando falta dirección generada por IA, se entrega un fallback visual basado en referencias aprobadas.
+- Se añadió `api/visual_director.php` con sesión, CSRF, rate limit, validación de marca y archivo lógico, además de la Biblioteca Visual y el selector `4:5` / `9:16` / `1:1` dentro de Atenea Studio.
+- La evidencia de publicaciones propias se describe como asociación observada, con tamaño de muestra, y nunca como causalidad o porcentajes inventados.
+
+Verificación: `scripts/verify_visual_director.php` aprobó 4/4 (semillas, aislamiento de Hermes, ratio único y fallback); lint PHP/JS correcto; runner unificado 6/6 PASS.
+
+---
+
 **Proyecto:** XINDRO AI Copilot  
 **Fecha de Implementación:** 2026-10-06  
 **Resultado de Verificación:** Lint PHP sin errores, regresión de moderación 8/8 y suite de seguridad 37/37.
