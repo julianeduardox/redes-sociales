@@ -60,7 +60,9 @@ desktop.ini
 *.cache
 data/cache/
 !data/cache/.gitkeep
-scratch/
+scratch/*
+!scratch/.htaccess
+!scratch/verify_security_suite.php
 *voz*
 scripts/reset_admin_password.php
 *~

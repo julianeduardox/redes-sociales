@@ -19,8 +19,7 @@ class MailerService {
      * Send Password Recovery Email
      */
     public static function sendPasswordResetEmail(string $recipientEmail, string $recipientName, string $rawToken): bool {
-        $baseUrl = self::getBaseUrl();
-        $resetUrl = $baseUrl . '/reset-password.php?token=' . urlencode($rawToken);
+        $resetUrl = Security::getPasswordResetUrl($rawToken);
         $safeName = htmlspecialchars($recipientName, ENT_QUOTES, 'UTF-8');
         $safeEmail = htmlspecialchars($recipientEmail, ENT_QUOTES, 'UTF-8');
 

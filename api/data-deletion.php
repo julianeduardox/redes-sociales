@@ -72,7 +72,7 @@ try {
     }
 
     // Canonical status URL (Immune to Host Header Poisoning)
-    $statusUrl = Security::getAppUrl() . '/data-deletion.php?id=' . urlencode($confirmationCode);
+    $statusUrl = Security::getDataDeletionStatusUrl($confirmationCode);
 
     echo json_encode([
         'url' => $statusUrl,

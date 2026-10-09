@@ -66,8 +66,14 @@ class AiAgentService {
         $withoutMentions = preg_replace('/@[a-z0-9_\.]+/iu', ' ', $evalText);
         $withoutUrls = preg_replace('/https?:\/\/\S+/iu', ' ', $withoutMentions);
         $normalizedQuotes = str_replace(['“', '”', '‘', '’'], ['"', '"', "'", "'"], $withoutUrls);
-        $plainLettersOnly = preg_replace('/[^\p{L}\s\']/u', ' ', $normalizedQuotes);
-        $textLower = mb_strtolower(trim($normalizedQuotes), 'UTF-8');
+
+        // Normalize informal character elongations: collapse 3+ consecutive identical characters to exactly 1
+        // (e.g. "vamosssss" -> "vamos", "siiii" -> "si", "olaaaa" -> "ola").
+        // Legitimate double-letters like "llave", "perro", "posso" have exactly 2 repeats and remain untouched.
+        $normalizedElongations = preg_replace('/(.)\1{2,}/u', '$1', $normalizedQuotes);
+
+        $plainLettersOnly = preg_replace('/[^\p{L}\s\']/u', ' ', $normalizedElongations);
+        $textLower = mb_strtolower(trim($normalizedElongations), 'UTF-8');
 
         $words = preg_split('/\s+/u', mb_strtolower(trim($plainLettersOnly), 'UTF-8'), -1, PREG_SPLIT_NO_EMPTY) ?: [];
         $wordCount = count($words);
@@ -89,15 +95,16 @@ class AiAgentService {
         $scoreEn = 0.0;
 
         // ══════════════════════════════════════════════════════════════════
-        // 1. Distinctive Spanish Signals
+        // 1. Distinctive Spanish Signals (Strong Discriminators)
         // ══════════════════════════════════════════════════════════════════
         if (str_contains($clean, '¿') || str_contains($clean, '¡') || str_contains($textLower, 'ñ')) {
             $scoreEs += 3.5;
         }
 
         $esDistinctive = [
+            'mismo', 'misma', 'mismos', 'mismas',
             'qué', 'cómo', 'cuándo', 'dónde', 'por qué', 'también', 'además', 'gracias', 'muchas gracias',
-            'bueno', 'buenos', 'buenas', 'vida', 'hacer', 'tenemos', 'nosotros', 'ustedes', 'firmeza',
+            'bueno', 'buenos', 'buenas', 'hacer', 'tenemos', 'nosotros', 'ustedes', 'firmeza',
             'camino', 'hermano', 'hermana', 'guerrero', 'disciplina', 'estoico', 'estoicismo', 'pensar',
             'está', 'están', 'estoy', 'tiempo', 'siempre', 'nuestro', 'nuestra', 'nuestros', 'nuestras',
             'verdad', 'momento', 'hoy', 'mañana', 'ayer', 'buen día', 'saludos', 'abrazo', 'foco', 'totalmente',
@@ -106,25 +113,27 @@ class AiAgentService {
         ];
         foreach ($esDistinctive as $token) {
             if (preg_match('/(?:\b|^)' . preg_quote($token, '/') . '(?:\b|$)/iu', $textLower)) {
-                $scoreEs += 2.2;
+                $scoreEs += 2.5;
             }
         }
 
-        $esCommon = ['el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas', 'de', 'en', 'por', 'con', 'sin', 'pero', 'muy', 'más', 'este', 'esta', 'esto', 'estos', 'estas', 'es', 'al', 'del', 'su', 'sus', 'si', 'no'];
-        foreach ($esCommon as $token) {
+        // Auxiliary short words & prepositions for Spanish (low weight: 0.4, cannot decide alone)
+        $esAuxiliary = ['el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas', 'en', 'con', 'sin', 'pero', 'muy', 'más', 'este', 'esta', 'esto', 'estos', 'estas', 'es', 'al', 'del', 'su', 'sus', 'si', 'no', 'ni'];
+        foreach ($esAuxiliary as $token) {
             if (preg_match('/(?:\b|^)' . preg_quote($token, '/') . '(?:\b|$)/iu', $textLower)) {
-                $scoreEs += 1.0;
+                $scoreEs += 0.4;
             }
         }
 
         // ══════════════════════════════════════════════════════════════════
-        // 2. Distinctive Portuguese Signals
+        // 2. Distinctive Portuguese Signals (Strong Discriminators)
         // ══════════════════════════════════════════════════════════════════
         if (preg_match('/[ãõ]/u', $textLower) || preg_match('/(?:ção|ções|ência|ências)\b/iu', $textLower)) {
             $scorePt += 3.2;
         }
 
         $ptDistinctive = [
+            'mesmo', 'mesma', 'mesmos', 'mesmas', 'nem',
             'não', 'você', 'vocês', 'vitória', 'vitorias', 'derrota', 'derrotas', 'obrigado', 'obrigada',
             'muito obrigado', 'muito obrigada', 'também', 'então', 'nosso', 'nossa', 'nossos', 'nossas',
             'segundo', 'comentário', 'atenção', 'coração', 'ação', 'ações', 'isso', 'isto', 'aquilo',
@@ -132,18 +141,19 @@ class AiAgentService {
             'abraço', 'força', 'caminho', 'guerreiro', 'tudo', 'hoje',
             'amanhã', 'ontem', 'verdade', 'irmão', 'irmã', 'foco', 'com certeza', 'valeu',
             'parabéns', 'perfeito', 'incrível', 'sucesso', 'pergunta', 'conselho', 'postagem',
-            'sabedoria', 'derrotado', 'propósito'
+            'sabedoria', 'derrotado', 'propósito', 'sempre', 'bom', 'bons'
         ];
         foreach ($ptDistinctive as $token) {
             if (preg_match('/(?:\b|^)' . preg_quote($token, '/') . '(?:\b|$)/iu', $textLower)) {
-                $scorePt += 2.2;
+                $scorePt += 2.5;
             }
         }
 
-        $ptCommon = ['o', 'a', 'os', 'as', 'do', 'da', 'dos', 'das', 'no', 'na', 'nos', 'nas', 'pelo', 'pela', 'pelos', 'pelas', 'com', 'sem', 'mas', 'muito', 'mais', 'é', 'um', 'uma', 'uns', 'umas', 'seu', 'sua', 'seus', 'suas', 'se'];
-        foreach ($ptCommon as $token) {
+        // Auxiliary short words & prepositions for Portuguese (low weight: 0.4, cannot decide alone)
+        $ptAuxiliary = ['o', 'os', 'do', 'da', 'dos', 'das', 'no', 'na', 'nos', 'nas', 'pelo', 'pela', 'pelos', 'pelas', 'com', 'sem', 'mas', 'muito', 'mais', 'é', 'um', 'uma', 'uns', 'umas', 'seu', 'sua', 'seus', 'suas', 'se'];
+        foreach ($ptAuxiliary as $token) {
             if (preg_match('/(?:\b|^)' . preg_quote($token, '/') . '(?:\b|$)/iu', $textLower)) {
-                $scorePt += 1.2;
+                $scorePt += 0.4;
             }
         }
 
@@ -177,16 +187,17 @@ class AiAgentService {
         ];
         foreach ($enCommon as $token) {
             if (preg_match('/(?:\b|^)' . preg_quote($token, '/') . '(?:\b|$)/iu', $textLower)) {
-                $scoreEn += 1.2;
+                $scoreEn += 1.0;
             }
         }
 
-        // Shared words between Spanish and Portuguese (distributed neutrally)
-        $sharedEsPt = ['que', 'para', 'como', 'por', 'de', 'vida', 'disciplina', 'mente', 'tempo', 'sempre', 'sistema'];
+        // Shared neutral words between Spanish and Portuguese (balanced equally, neutral impact)
+        // Note: 'vamos', 'a', 'ti' exist in both languages and must never bias one over the other.
+        $sharedEsPt = ['vamos', 'a', 'ti', 'que', 'para', 'como', 'por', 'de', 'vida', 'disciplina', 'mente', 'sistema'];
         foreach ($sharedEsPt as $token) {
             if (preg_match('/(?:\b|^)' . preg_quote($token, '/') . '(?:\b|$)/iu', $textLower)) {
-                $scoreEs += 0.5;
-                $scorePt += 0.5;
+                $scoreEs += 0.3;
+                $scorePt += 0.3;
             }
         }
 
@@ -324,10 +335,60 @@ class AiAgentService {
 
     /**
      * Evaluate if a comment is suitable for Auto-Responder or if it should be marked as SPAM / TOXIC / STICKER
+     * Integrates active human moderation signals (is_active = 1):
+     * - Inequivocal recurring spam is omitted automatically.
+     * - Troll / Offensive / Irrelevant are flagged for HUMAN REVIEW (suggesting no-reply), never blindly dropped.
      */
-    public static function evaluateCommentSuitability(string $commentText, string $allowedLang = 'any', ?array $attachment = null): array {
+    public static function evaluateCommentSuitability(
+        string $commentText,
+        string $allowedLang = 'any',
+        ?array $attachment = null,
+        ?int $userId = null,
+        ?int $brandVoiceId = null
+    ): array {
         $text = trim($commentText);
         $textLower = mb_strtolower($text, 'UTF-8');
+
+        // Check active moderation signals if user context is provided
+        if ($userId !== null && $userId > 0) {
+            try {
+                $pdo = Database::getConnection();
+                $modSignals = self::getActiveModerationSignals($pdo, $userId, $brandVoiceId ?? 1, 15);
+                foreach ($modSignals as $sig) {
+                    $sigTxt = mb_strtolower(trim($sig['comment_text'] ?? ''), 'UTF-8');
+                    if (empty($sigTxt)) continue;
+
+                    // 1. Inequivocal spam recurrence -> Auto-Omission (Fail-Closed)
+                    if ($sig['reason'] === 'spam_link' && (str_contains($textLower, $sigTxt) || (mb_strlen($sigTxt) > 8 && str_contains($sigTxt, $textLower)))) {
+                        return [
+                            'status' => 'spam',
+                            'should_reply' => false,
+                            'reason' => '🚫 Silencio Operativo: Patrón de enlace/spam reincidente según moderación previa (NO_REPLY)',
+                            'category' => 'spam_recurring',
+                            'action' => 'NO_REPLY'
+                        ];
+                    }
+
+                    // 2. Troll / Offensive / Irrelevant -> Retain for HUMAN REVIEW, NEVER blind auto-drop
+                    if (in_array($sig['reason'], ['troll_provocation', 'offensive_language', 'irrelevant'], true)) {
+                        if ($sigTxt === $textLower || (mb_strlen($sigTxt) > 15 && str_contains($textLower, $sigTxt))) {
+                            return [
+                                'status' => 'pending_review',
+                                'should_reply' => false,
+                                'requires_human_review' => true,
+                                'suggest_ignore' => true,
+                                'reason' => '🛡️ Alerta de Moderación: Comentario similar a un descarte previo (' . htmlspecialchars($sig['reason'], ENT_QUOTES, 'UTF-8') . '). Retenido para revisión humana.',
+                                'category' => 'moderation_alert',
+                                'action' => 'REVIEW'
+                            ];
+                        }
+                    }
+                }
+            } catch (Throwable $e) {
+                // Fail-closed fallback: log error and proceed to normal evaluation
+                error_log("Notice checking active moderation signals: " . $e->getMessage());
+            }
+        }
 
         // 1. Check for Link Spam / Crypto / Bot Promotion / Unsolicited Commercial CTA
         $spamPatterns = [
@@ -1794,23 +1855,24 @@ class AiAgentService {
         $isAmbiguousLanguage = false;
 
         if ($configuredLanguage === 'any') {
-            if ($langDetection['is_supported'] && $langDetection['confidence'] >= 0.65) {
+            // High-confidence, non-ambiguous detection in the comment itself:
+            if ($langDetection['is_supported'] && !$langDetection['is_ambiguous'] && $langDetection['confidence'] >= 0.70) {
                 $resolvedLanguage = $langDetection['language'];
-            } elseif (!empty($langDetection['scores'])) {
-                // If scores indicate a clear leader among supported languages (e.g. English quotes with multi greetings)
-                $scores = $langDetection['scores'];
-                arsort($scores);
-                $top = array_key_first($scores);
-                if (in_array($top, ['es', 'pt', 'en'], true) && $scores[$top] >= 1.2) {
-                    $resolvedLanguage = $top;
-                    $isAmbiguousLanguage = ($langDetection['confidence'] < 0.65);
+            } else {
+                // Ambiguous or undetermined comment: NEVER rely on raw low scores!
+                // Context Fallback 1: Deduce language from the post caption ($postCaption) if detected with high confidence
+                $postCaptionClean = trim($postCaption);
+                $postLangDetection = !empty($postCaptionClean) ? self::detectSupportedLanguage($postCaptionClean) : null;
+
+                if ($postLangDetection && $postLangDetection['is_supported'] && !$postLangDetection['is_ambiguous'] && $postLangDetection['confidence'] >= 0.70) {
+                    $resolvedLanguage = $postLangDetection['language'];
+                    $isAmbiguousLanguage = true; // Relative to the comment itself, marked as ambiguous
                 } else {
-                    $resolvedLanguage = 'es';
+                    // Context Fallback 2: Base language of the brand voice (or default 'es')
+                    $baseBrandLang = $brandVoice['language'] ?? 'es';
+                    $resolvedLanguage = ($baseBrandLang !== 'any' && in_array($baseBrandLang, ['es', 'pt', 'en'], true)) ? $baseBrandLang : 'es';
                     $isAmbiguousLanguage = true;
                 }
-            } else {
-                $resolvedLanguage = 'es';
-                $isAmbiguousLanguage = true;
             }
         } else {
             $resolvedLanguage = in_array($configuredLanguage, ['es', 'pt', 'en'], true) ? $configuredLanguage : 'es';
@@ -5125,4 +5187,130 @@ PROMPT;
             return [];
         }
     }
+
+    /**
+     * Record an ignored / no-reply human decision as an isolated moderation signal.
+     * Engine-specific UPSERT ensures idempotency and soft-reactivation if previously revoked.
+     * NEVER stored in or mixed with ai_learning_feedback.
+     */
+    public static function recordModerationFeedback(
+        int $userId,
+        int $brandVoiceId,
+        int $commentId,
+        string $commentText,
+        string $reason,
+        ?string $authorName = null,
+        ?string $authorHandle = null,
+        ?string $platform = null,
+        ?string $notes = null
+    ): bool {
+        try {
+            $pdo = Database::getConnection();
+            $driver = Database::getDriver();
+            $cleanNotes = !empty($notes) ? mb_substr(strip_tags(trim($notes)), 0, 500, 'UTF-8') : null;
+            $bvid = $brandVoiceId > 0 ? $brandVoiceId : 1;
+
+            if ($driver === 'mysql') {
+                $sql = "
+                    INSERT INTO ai_moderation_feedback (
+                        user_id, brand_voice_id, comment_id, comment_text,
+                        author_name, author_handle, platform, reason, notes,
+                        is_active, restored_at, updated_at
+                    ) VALUES (
+                        :uid, :bvid, :cid, :txt,
+                        :aname, :ahandle, :plat, :reason, :notes,
+                        1, NULL, CURRENT_TIMESTAMP
+                    )
+                    ON DUPLICATE KEY UPDATE
+                        brand_voice_id = VALUES(brand_voice_id),
+                        reason = VALUES(reason),
+                        notes = VALUES(notes),
+                        is_active = 1,
+                        restored_at = NULL,
+                        updated_at = CURRENT_TIMESTAMP
+                ";
+            } else {
+                // SQLite and PostgreSQL standard ON CONFLICT
+                $sql = "
+                    INSERT INTO ai_moderation_feedback (
+                        user_id, brand_voice_id, comment_id, comment_text,
+                        author_name, author_handle, platform, reason, notes,
+                        is_active, restored_at, updated_at
+                    ) VALUES (
+                        :uid, :bvid, :cid, :txt,
+                        :aname, :ahandle, :plat, :reason, :notes,
+                        1, NULL, CURRENT_TIMESTAMP
+                    )
+                    ON CONFLICT (user_id, comment_id) DO UPDATE SET
+                        brand_voice_id = EXCLUDED.brand_voice_id,
+                        reason = EXCLUDED.reason,
+                        notes = EXCLUDED.notes,
+                        is_active = 1,
+                        restored_at = NULL,
+                        updated_at = CURRENT_TIMESTAMP
+                ";
+            }
+
+            $stmt = $pdo->prepare($sql);
+            return $stmt->execute([
+                ':uid' => $userId,
+                ':bvid' => $bvid,
+                ':cid' => $commentId,
+                ':txt' => $commentText,
+                ':aname' => $authorName,
+                ':ahandle' => $authorHandle,
+                ':plat' => $platform,
+                ':reason' => $reason,
+                ':notes' => $cleanNotes
+            ]);
+        } catch (Throwable $e) {
+            error_log("Error in recordModerationFeedback: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Soft-revoke a moderation signal when a comment is restored to pending.
+     * Retains full audit trail (is_active = 0, restored_at set) and excludes from active AI signals.
+     */
+    public static function revokeModerationFeedback(int $userId, int $commentId): bool {
+        try {
+            $pdo = Database::getConnection();
+            $stmt = $pdo->prepare("
+                UPDATE ai_moderation_feedback
+                SET is_active = 0, restored_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = :uid AND comment_id = :cid AND is_active = 1
+            ");
+            return $stmt->execute([':uid' => $userId, ':cid' => $commentId]);
+        } catch (Throwable $e) {
+            error_log("Error in revokeModerationFeedback: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Fetch active moderation signals for context in intent risk assessment.
+     * Uses composite index (user_id, brand_voice_id, is_active, updated_at).
+     * Strictly isolated: NEVER used as few-shot writing examples.
+     */
+    public static function getActiveModerationSignals(PDO $pdo, int $userId, int $brandVoiceId = 1, int $limit = 20): array {
+        try {
+            $stmt = $pdo->prepare("
+                SELECT id, comment_id, comment_text, author_name, author_handle, platform, reason, notes, updated_at
+                FROM ai_moderation_feedback
+                WHERE user_id = :uid AND brand_voice_id = :bvid AND is_active = 1
+                ORDER BY updated_at DESC
+                LIMIT :lim
+            ");
+            $stmt->bindValue(':uid', $userId, PDO::PARAM_INT);
+            $stmt->bindValue(':bvid', $brandVoiceId, PDO::PARAM_INT);
+            $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (Throwable $e) {
+            error_log("Error in getActiveModerationSignals: " . $e->getMessage());
+            return [];
+        }
+    }
 }
+

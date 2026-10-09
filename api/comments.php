@@ -223,7 +223,7 @@ try {
         $rawInput = file_get_contents('php://input');
         $input = json_decode($rawInput, true) ?? $_POST;
         
-        $allowedActions = ['reply', 'retry_reply', 'toggle_highlight', 'change_status', 'create_simulated', 'delete', 'run_weekly_cleanup', 'archive_comment', 'restore_comment', 'save_gold_example', 'save_draft'];
+        $allowedActions = ['reply', 'retry_reply', 'toggle_highlight', 'change_status', 'create_simulated', 'delete', 'run_weekly_cleanup', 'archive_comment', 'restore_comment', 'save_gold_example', 'save_draft', 'ignore_comment', 'restore_to_pending'];
         $action = Security::validateEnum($input['action'] ?? '', $allowedActions, '');
 
         if (empty($action)) {
@@ -269,7 +269,7 @@ try {
 
             // Post to Meta API first to verify if it actually publishes (manual action)
             $metaResult = MetaApiService::postReplyToMeta($commentId, $replyText, $userId, true);
-            $isPosted = !empty($metaResult['success']) ? 1 : 0;
+            $isPosted = (!empty($metaResult['success']) || !empty($metaResult['already_posted'])) ? 1 : 0;
 
             // Save reply in database with user_id and actual publication flag
             $stmtReply = $pdo->prepare("
@@ -286,23 +286,23 @@ try {
                 ':is_posted' => $isPosted
             ]);
 
-            // Human-in-the-Loop Continuous Learning: Record feedback to train Gemini's active context
-            $learnedCommentText = $commentData['comment_text'] ?? '';
-            $learnedBrandVoiceId = (int)($commentData['brand_voice_id'] ?? 1);
-            if (!empty($learnedCommentText)) {
-                AiAgentService::recordLearningFeedback(
-                    $userId,
-                    $learnedBrandVoiceId,
-                    $learnedCommentText,
-                    $replyText,
-                    $originalSuggestion,
-                    $wasEdited,
-                    $isGoldExample,
-                    $commentId
-                );
-            }
-
             if ($isPosted) {
+                // Human-in-the-Loop Continuous Learning: Record feedback ONLY when publication succeeds
+                $learnedCommentText = $commentData['comment_text'] ?? '';
+                $learnedBrandVoiceId = (int)($commentData['brand_voice_id'] ?? 1);
+                if (!empty($learnedCommentText)) {
+                    AiAgentService::recordLearningFeedback(
+                        $userId,
+                        $learnedBrandVoiceId,
+                        $learnedCommentText,
+                        $replyText,
+                        $originalSuggestion,
+                        $wasEdited,
+                        $isGoldExample,
+                        $commentId
+                    );
+                }
+
                 // Successfully posted to Meta or simulated locally in demo mode
                 $stmtUp = $pdo->prepare("UPDATE comments SET status = 'replied', highlight_reason = NULL WHERE id = :id AND user_id = :uid");
                 $stmtUp->execute([':id' => $commentId, ':uid' => $userId]);
@@ -310,9 +310,12 @@ try {
                 echo json_encode([
                     'success' => true,
                     'is_posted_to_platform' => 1,
+                    'already_posted' => !empty($metaResult['already_posted']),
                     'learned' => true,
                     'was_edited' => $wasEdited,
-                    'message' => "¡Respuesta publicada y registrada con éxito en {$platformName}! Gemini ha aprendido de esta interacción. 🧠",
+                    'message' => !empty($metaResult['already_posted'])
+                        ? "¡Respuesta ya registrada o entregada previamente en {$platformName}! Estado sincronizado. 🏛️✨"
+                        : "¡Respuesta publicada y registrada con éxito en {$platformName}! Hermes ha aprendido de esta interacción. 🧠✨",
                     'meta_result' => $metaResult
                 ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
                 exit;
@@ -437,6 +440,202 @@ try {
             $stmt->execute([':status' => $status, ':id' => $commentId, ':uid' => $userId]);
 
             echo json_encode(['success' => true, 'status' => $status]);
+            exit;
+        }
+
+        if ($action === 'ignore_comment') {
+            $commentId = Security::sanitizeInt($input['comment_id'] ?? 0, 1, 10000000, 0);
+            if ($commentId <= 0) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'comment_id es obligatorio e inválido.']);
+                exit;
+            }
+
+            $allowedReasons = ['spam_link', 'troll_provocation', 'offensive_language', 'irrelevant', 'already_resolved', 'other'];
+            $reason = Security::validateEnum($input['reason'] ?? 'irrelevant', $allowedReasons, 'irrelevant');
+            $rawNotes = isset($input['notes']) ? (string)$input['notes'] : '';
+            $notes = !empty($rawNotes) ? mb_substr(strip_tags(trim($rawNotes)), 0, 500, 'UTF-8') : null;
+
+            // Fetch comment to verify ownership and resolve brand_voice_id strictly on the server
+            $cCheck = $pdo->prepare("
+                SELECT c.id, c.comment_text, c.author_name, c.author_handle, c.platform, c.status,
+                       COALESCE(p.brand_voice_id, a.brand_voice_id, 1) as brand_voice_id
+                FROM comments c
+                LEFT JOIN posts p ON c.post_id = p.id
+                LEFT JOIN accounts a ON p.account_id = a.id
+                WHERE c.id = :id AND c.user_id = :uid LIMIT 1
+            ");
+            $cCheck->execute([':id' => $commentId, ':uid' => $userId]);
+            $commentData = $cCheck->fetch();
+
+            if (!$commentData) {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'error' => 'No tienes permiso sobre este comentario o no existe.']);
+                exit;
+            }
+
+            $reasonLabels = [
+                'spam_link' => '🚫 Omitido: Spam o enlace no solicitado',
+                'troll_provocation' => '🚫 Omitido: Troll o provocación',
+                'offensive_language' => '🚫 Omitido: Lenguaje ofensivo',
+                'irrelevant' => '🚫 Omitido: Irrelevante para la comunidad',
+                'already_resolved' => '🚫 Omitido: Ya atendido / No requiere respuesta',
+                'other' => '🚫 Omitido: Descartado por el moderador'
+            ];
+            $reasonLabel = $reasonLabels[$reason] ?? '🚫 Omitido por el moderador';
+
+            try {
+                $pdo->beginTransaction();
+
+                // Conditional update is the concurrency guard: only one eligible request can claim this comment.
+                $stmtUp = $pdo->prepare("
+                    UPDATE comments
+                    SET status = 'ignored', highlight_reason = :reason
+                    WHERE id = :id AND user_id = :uid AND status IN ('pending', 'failed', 'pending_review')
+                ");
+                $stmtUp->execute([
+                    ':reason' => $reasonLabel,
+                    ':id' => $commentId,
+                    ':uid' => $userId
+                ]);
+
+                if ($stmtUp->rowCount() !== 1) {
+                    $statusStmt = $pdo->prepare("SELECT status FROM comments WHERE id = :id AND user_id = :uid LIMIT 1");
+                    $statusStmt->execute([':id' => $commentId, ':uid' => $userId]);
+                    $currentStatus = $statusStmt->fetchColumn();
+                    $pdo->rollBack();
+
+                    if ($currentStatus === 'ignored') {
+                        echo json_encode([
+                            'success' => true,
+                            'message' => 'El comentario ya estaba ignorado.',
+                            'status' => 'ignored',
+                            'comment_id' => $commentId,
+                            'already_ignored' => true
+                        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+                        exit;
+                    }
+
+                    http_response_code(409);
+                    echo json_encode(['success' => false, 'error' => 'El comentario cambió de estado antes de poder ignorarlo. Actualiza la bandeja e inténtalo de nuevo.']);
+                    exit;
+                }
+
+                // Isolated moderation signal: it must succeed in the same transaction as the state change.
+                if (!AiAgentService::recordModerationFeedback(
+                    $userId,
+                    (int)$commentData['brand_voice_id'],
+                    $commentId,
+                    (string)$commentData['comment_text'],
+                    $reason,
+                    $commentData['author_name'] ?? null,
+                    $commentData['author_handle'] ?? null,
+                    $commentData['platform'] ?? null,
+                    $notes
+                )) {
+                    throw new RuntimeException('No se pudo registrar la señal de moderación.');
+                }
+
+                $pdo->commit();
+            } catch (Throwable $e) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                error_log('Error ignoring comment: ' . $e->getMessage());
+                http_response_code(500);
+                echo json_encode(['success' => false, 'error' => 'No se pudo ignorar el comentario de forma segura. Inténtalo de nuevo.']);
+                exit;
+            }
+
+            echo json_encode([
+                'success' => true,
+                'message' => 'Comentario marcado como ignorado. Hermes registró el patrón de descarte. 🛡️',
+                'status' => 'ignored',
+                'comment_id' => $commentId
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        if ($action === 'restore_to_pending') {
+            $commentId = Security::sanitizeInt($input['comment_id'] ?? 0, 1, 10000000, 0);
+            if ($commentId <= 0) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'comment_id es obligatorio e inválido.']);
+                exit;
+            }
+
+            // Verify ownership and ensure ONLY currently ignored comments can be restored
+            $cCheck = $pdo->prepare("SELECT id, status FROM comments WHERE id = :id AND user_id = :uid LIMIT 1");
+            $cCheck->execute([':id' => $commentId, ':uid' => $userId]);
+            $commentData = $cCheck->fetch();
+
+            if (!$commentData) {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'error' => 'No tienes permiso sobre este comentario o no existe.']);
+                exit;
+            }
+
+            if ($commentData['status'] !== 'ignored') {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'Solo se pueden restaurar comentarios que estén en estado ignorado.']);
+                exit;
+            }
+
+            try {
+                $pdo->beginTransaction();
+
+                // Conditional update avoids revoking a signal if another request changed the status first.
+                $stmtRestore = $pdo->prepare("
+                    UPDATE comments
+                    SET status = 'pending', highlight_reason = NULL
+                    WHERE id = :id AND user_id = :uid AND status = 'ignored'
+                ");
+                $stmtRestore->execute([':id' => $commentId, ':uid' => $userId]);
+
+                if ($stmtRestore->rowCount() !== 1) {
+                    $statusStmt = $pdo->prepare("SELECT status FROM comments WHERE id = :id AND user_id = :uid LIMIT 1");
+                    $statusStmt->execute([':id' => $commentId, ':uid' => $userId]);
+                    $currentStatus = $statusStmt->fetchColumn();
+                    $pdo->rollBack();
+
+                    if ($currentStatus === 'pending') {
+                        echo json_encode([
+                            'success' => true,
+                            'message' => 'El comentario ya estaba en pendientes.',
+                            'status' => 'pending',
+                            'comment_id' => $commentId,
+                            'already_pending' => true
+                        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+                        exit;
+                    }
+
+                    http_response_code(409);
+                    echo json_encode(['success' => false, 'error' => 'El comentario cambió de estado antes de poder restaurarlo. Actualiza la bandeja e inténtalo de nuevo.']);
+                    exit;
+                }
+
+                // Soft-revoke keeps the audit trail, but must be committed atomically with the restoration.
+                if (!AiAgentService::revokeModerationFeedback($userId, $commentId)) {
+                    throw new RuntimeException('No se pudo revocar la señal de moderación.');
+                }
+
+                $pdo->commit();
+            } catch (Throwable $e) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                error_log('Error restoring ignored comment: ' . $e->getMessage());
+                http_response_code(500);
+                echo json_encode(['success' => false, 'error' => 'No se pudo restaurar el comentario de forma segura. Inténtalo de nuevo.']);
+                exit;
+            }
+
+            echo json_encode([
+                'success' => true,
+                'message' => 'Comentario restaurado a pendientes con éxito. ↩️',
+                'status' => 'pending',
+                'comment_id' => $commentId
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
             exit;
         }
 

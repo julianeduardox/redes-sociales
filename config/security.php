@@ -29,6 +29,10 @@ if (session_status() === PHP_SESSION_NONE && !headers_sent() && php_sapi_name() 
     session_start();
 }
 
+// Security Hardening Harness Core Guards (Mandatory Runtime Protection)
+require_once __DIR__ . '/../services/Security/CorsGuard.php';
+require_once __DIR__ . '/../services/Security/TrustedHostGuard.php';
+
 class Security {
 
     /**
@@ -142,7 +146,33 @@ class Security {
      * Get trusted canonical OAuth Redirect URI
      */
     public static function getOAuthRedirectUri(): string {
+        $guard = self::getTrustedHostGuard();
+        if ($guard !== null) {
+            return $guard->getOAuthRedirectUri('/callback-meta.php');
+        }
         return self::getAppUrl() . '/callback-meta.php';
+    }
+
+    /**
+     * Get trusted canonical Password Reset URL for transactional emails
+     */
+    public static function getPasswordResetUrl(string $rawToken): string {
+        $guard = self::getTrustedHostGuard();
+        if ($guard !== null) {
+            return $guard->getPasswordResetUrl($rawToken, '/reset-password.php');
+        }
+        return self::getAppUrl() . '/reset-password.php?token=' . urlencode($rawToken);
+    }
+
+    /**
+     * Get trusted canonical Meta Data Deletion Status URL
+     */
+    public static function getDataDeletionStatusUrl(string $confirmationCode): string {
+        $guard = self::getTrustedHostGuard();
+        if ($guard !== null) {
+            return $guard->getDataDeletionStatusUrl($confirmationCode, '/data-deletion.php');
+        }
+        return self::getAppUrl() . '/data-deletion.php?id=' . urlencode($confirmationCode);
     }
 
     /**
@@ -381,28 +411,45 @@ class Security {
     /**
      * Check if an Origin is explicitly whitelisted (Zero-Trust)
      */
+    /**
+     * Check if an Origin is explicitly whitelisted (Zero-Trust via CorsGuard)
+     */
     public static function isAllowedOrigin(string $origin): bool {
         if (empty($origin)) {
             return false;
         }
 
+        return self::getCorsGuard()->isAllowedOrigin($origin);
+    }
+
+    /**
+     * Centralized Zero-Trust CORS header emission & preflight dispatcher
+     */
+    public static function applyStrictCors(): void {
+        $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+        if (empty($origin)) {
+            return;
+        }
+
+        $guard = self::getCorsGuard();
+        $isPreflight = (strtoupper($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS');
+
+        $isPreflightHandled = $guard->handleRequest($origin, $_SERVER['REQUEST_METHOD'] ?? 'GET');
+        if ($isPreflight && $isPreflightHandled) {
+            exit;
+        }
+    }
+
+    /**
+     * Get or initialize CorsGuard instance from Security Hardening Harness
+     */
+    public static function getCorsGuard(): \Harness\Http\CorsGuard {
+        static $guard = null;
+        if ($guard !== null) {
+            return $guard;
+        }
+
         self::loadEnv();
-
-        $parsedOrigin = parse_url($origin);
-        if (!$parsedOrigin || empty($parsedOrigin['scheme']) || empty($parsedOrigin['host'])) {
-            return false;
-        }
-
-        $originScheme = strtolower($parsedOrigin['scheme']);
-        $originHost = strtolower($parsedOrigin['host']);
-        $originPort = $parsedOrigin['port'] ?? ($originScheme === 'https' ? 443 : 80);
-
-        // Standardize origin representation (scheme://host[:port])
-        $normalizedOrigin = $originScheme . '://' . $originHost;
-        if (!($originScheme === 'https' && $originPort === 443) && !($originScheme === 'http' && $originPort === 80)) {
-            $normalizedOrigin .= ':' . $originPort;
-        }
-
         $allowedOrigins = [];
 
         // 1. Explicitly configured origins from .env (CORS_ALLOWED_ORIGINS)
@@ -411,7 +458,7 @@ class Security {
             foreach (explode(',', $configuredOrigins) as $o) {
                 $trimmed = trim($o);
                 if (!empty($trimmed)) {
-                    $allowedOrigins[] = rtrim(strtolower($trimmed), '/');
+                    $allowedOrigins[] = $trimmed;
                 }
             }
         }
@@ -419,17 +466,7 @@ class Security {
         // 2. Application canonical URL if configured in .env (APP_URL)
         $appUrl = getenv('APP_URL') ?: ($_ENV['APP_URL'] ?? '');
         if (!empty($appUrl)) {
-            $parsedApp = parse_url($appUrl);
-            if ($parsedApp && !empty($parsedApp['host'])) {
-                $appScheme = strtolower($parsedApp['scheme'] ?? 'http');
-                $appHost = strtolower($parsedApp['host']);
-                $appPort = $parsedApp['port'] ?? ($appScheme === 'https' ? 443 : 80);
-                $appNorm = $appScheme . '://' . $appHost;
-                if (!($appScheme === 'https' && $appPort === 443) && !($appScheme === 'http' && $appPort === 80)) {
-                    $appNorm .= ':' . $appPort;
-                }
-                $allowedOrigins[] = $appNorm;
-            }
+            $allowedOrigins[] = $appUrl;
         }
 
         // 3. Local trusted development addresses (exact matches only)
@@ -444,41 +481,34 @@ class Security {
             $allowedOrigins[] = "http://127.0.0.1:{$serverPort}";
             $allowedOrigins[] = "https://127.0.0.1:{$serverPort}";
         }
-        if (!in_array($originPort, [80, 443], true)) {
-            if ($originHost === 'localhost' || $originHost === '127.0.0.1') {
-                $allowedOrigins[] = "{$originScheme}://{$originHost}:{$originPort}";
-            }
-        }
 
-        $allowedOrigins = array_unique($allowedOrigins);
-
-        // Strict exact equality comparison (Zero-Trust)
-        return in_array($normalizedOrigin, $allowedOrigins, true);
+        $guard = new \Harness\Http\CorsGuard(
+            allowedOrigins: $allowedOrigins,
+            allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+            allowedHeaders: ['Content-Type', 'X-CSRF-Token', 'Authorization', 'X-Requested-With'],
+            allowCredentials: true,
+            maxAge: 86400
+        );
+        return $guard;
     }
 
     /**
-     * Apply strict zero-trust CORS validation against an explicit whitelist
-     * Eliminates Host-trust and substring-based CORS injection
+     * Get or initialize TrustedHostGuard instance from Security Hardening Harness
      */
-    public static function applyStrictCors(): void {
-        $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-        if (empty($origin)) {
-            return;
+    public static function getTrustedHostGuard(): \Harness\Http\TrustedHostGuard {
+        static $guard = null;
+        if ($guard !== null) {
+            return $guard;
         }
 
-        if (self::isAllowedOrigin($origin)) {
-            header('Access-Control-Allow-Origin: ' . $origin);
-            header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-            header('Access-Control-Allow-Headers: Content-Type, X-CSRF-Token, Authorization, X-Requested-With');
-            header('Access-Control-Allow-Credentials: true');
-            header('Access-Control-Max-Age: 86400');
-            header('Vary: Origin');
+        self::loadEnv();
+        $appUrl = self::getAppUrl();
 
-            if (strtoupper($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') {
-                http_response_code(204);
-                exit;
-            }
-        }
+        $guard = new \Harness\Http\TrustedHostGuard(
+            canonicalBaseUrl: $appUrl,
+            trustedHosts: ['localhost', '127.0.0.1']
+        );
+        return $guard;
     }
 
     /**

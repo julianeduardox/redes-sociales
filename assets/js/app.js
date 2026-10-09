@@ -1029,6 +1029,9 @@ const App = {
     if (menuCountFail) menuCountFail.textContent = failedCount;
     if (menuItemFail) menuItemFail.style.display = (failedCount > 0 && (!btnFailed || btnFailed.style.display === 'none')) ? 'flex' : 'none';
 
+    const elIgnored = document.getElementById('tag-count-ignored');
+    if (elIgnored) elIgnored.textContent = counts.ignored_count || 0;
+
     // 4. Header quick stats pills
     const leadsPill = document.getElementById('count-pill-leads');
     const urgentPill = document.getElementById('count-pill-urgent');
@@ -1157,7 +1160,8 @@ const App = {
 
       const isReplied = c.status === 'replied' && (c.is_posted_to_platform == 1 || c.is_posted_to_platform === null || c.is_posted_to_platform === undefined);
       const isFailed = c.status === 'failed' || (c.reply_text && c.is_posted_to_platform == 0);
-      const hasDraft = !isReplied && !isFailed && Boolean(c.draft_reply || c.ai_suggestion || c.status === 'needs_review');
+      const isIgnored = c.status === 'ignored';
+      const hasDraft = !isReplied && !isFailed && !isIgnored && Boolean(c.draft_reply || c.ai_suggestion || c.status === 'needs_review');
 
       let cardClass = 'comment-card';
       if (isSelected) cardClass += ' selected';
@@ -1182,6 +1186,7 @@ const App = {
       // Semantic status class for lateral colored bar
       let cardStatusClass = 'status-pending';
       if (isFailed) cardStatusClass = 'status-failed';
+      else if (isIgnored) cardStatusClass = 'status-ignored';
       else if (isLead) cardStatusClass = 'status-lead';
       else if (isUrgent) cardStatusClass = 'status-urgent';
       else if (hasDraft) cardStatusClass = 'status-review';
@@ -1189,7 +1194,13 @@ const App = {
 
       // Exactly ONE primary action per card (User Acceptance Condition)
       let primaryCtaHtml = '';
-      if (isFailed) {
+      if (isIgnored) {
+        primaryCtaHtml = `
+          <button type="button" class="btn-card-primary-action action-restore" onclick="event.stopPropagation(); App.restoreCommentToPending(${parseInt(c.id, 10)})" style="background: rgba(148, 163, 184, 0.15); border: 1px solid rgba(148, 163, 184, 0.35); color: #cbd5e1;" title="Restaurar este comentario a la bandeja de pendientes">
+            <span>↩️</span> Volver a pendientes
+          </button>
+        `;
+      } else if (isFailed) {
         primaryCtaHtml = `
           <button type="button" class="btn-card-primary-action action-retry" onclick="event.stopPropagation(); App.retryReply(${parseInt(c.id, 10)})" title="Reintentar publicación en ${c.platform === 'facebook' ? 'Facebook' : 'Instagram'}">
             <span>🔄</span> Reintentar
@@ -1241,11 +1252,15 @@ const App = {
                 <div class="operational-error-notice">
                   <span>⚠️ Falló envío en ${c.platform === 'facebook' ? 'Facebook' : 'Instagram'}${c.meta_error ? ': ' + this.escapeHtml(c.meta_error) : ''}</span>
                 </div>
+              ` : (isIgnored ? `
+                <div class="operational-ignore-notice" style="font-size: 0.76rem; color: #fca5a5; background: rgba(239, 68, 68, 0.08); border-left: 2px solid #ef4444; padding: 4px 8px; border-radius: 4px; margin-top: 6px; display: inline-flex; align-items: center; gap: 4px;">
+                  <span>${this.escapeHtml(c.highlight_reason || '🚫 Marcado como ignorado')}</span>
+                </div>
               ` : (hasDraft && (c.draft_reply || c.ai_suggestion) ? `
                 <div class="operational-draft-preview">
                   <span class="draft-tag">Borrador listo:</span> "${this.escapeHtml((c.draft_reply || c.ai_suggestion || '').substring(0, 90))}${((c.draft_reply || c.ai_suggestion || '').length > 90) ? '...' : ''}"
                 </div>
-              ` : '')}
+              ` : ''))}
             </div>
             <div class="card-operational-action">
               ${primaryCtaHtml}
@@ -1628,6 +1643,42 @@ const App = {
     } catch (err) {
       console.error(err);
       this.showToast('Error de red al reintentar publicación.', 'error');
+    }
+  },
+
+  // Restore an ignored comment back to pending
+  async restoreCommentToPending(commentId) {
+    if (!commentId) return;
+
+    try {
+      const response = await this.fetchWithCsrf('api/comments.php', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'restore_to_pending',
+          comment_id: parseInt(commentId, 10)
+        })
+      });
+
+      const res = await response.json();
+
+      if (res.success) {
+        this.showToast('¡Comentario restaurado a pendientes con éxito! ↩️', 'success');
+
+        // Mutate locally in memory to keep UI responsive immediately
+        const localComment = this.commentsList?.find(c => c.id == commentId);
+        if (localComment) {
+          localComment.status = 'pending';
+          localComment.highlight_reason = null;
+        }
+
+        // Background reload of comments and counters without reloading whole page
+        await this.loadComments();
+      } else {
+        this.showToast(`Error: ${res.error || 'No se pudo restaurar el comentario.'}`, 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      this.showToast('Error de conexión al restaurar el comentario.', 'error');
     }
   },
 

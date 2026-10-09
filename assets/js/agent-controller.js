@@ -11,6 +11,7 @@ const AgentController = {
   modalActiveComment: null,
   modalActiveReplies: null,
   modalSelectedVariant: 'engagement',
+  isSubmittingReply: false,
 
   // Request AI replies for the active comment in sidebar copilot
   async loadSuggestions(comment, overrideTone = '') {
@@ -315,6 +316,7 @@ const AgentController = {
   },
 
   // 1-Click High-Resolution Visual Card Screenshot Generator
+  // 1-Click High-Resolution Visual Card Screenshot Generator
   captureModalAsImage() {
     if (!this.modalActiveComment) {
       App.showToast('No hay ningún comentario cargado en el asistente.', 'info');
@@ -340,6 +342,8 @@ const AgentController = {
     const platform = (c.platform || 'Social').toUpperCase();
     const score = c.highlight_score || 0;
     const sentiment = (c.sentiment || 'neutral').toUpperCase();
+    const accountName = document.getElementById('modal-account-name-badge')?.textContent || 'Cuenta Conectada';
+    const brandVoice = document.getElementById('modal-brand-voice-badge')?.textContent || 'Fortaleza Imparable';
     const customText = (document.getElementById('modal-reply-text-input')?.value || '').trim();
 
     // Check if customText is genuinely a custom edition (not just a verbatim copy of one of the 3 variants)
@@ -353,184 +357,226 @@ const AgentController = {
     try {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      const width = 1100;
-      canvas.width = width;
+      const width = 1040;
+      const dpr = 2; // Ultra-crisp Retina 2x scale
+      const contentW = width - 80;
 
-      // Helper to wrap text
-      const getLines = (textToWrap, maxW, font) => {
+      // Text measuring helper respecting explicit line breaks and wrapping
+      const getWrappedLines = (textToWrap, maxW, font) => {
         ctx.font = font;
-        const words = String(textToWrap || '').split(/\s+/);
-        const lines = [];
-        let curLine = '';
-        for (const w of words) {
-          const test = curLine ? curLine + ' ' + w : w;
-          if (ctx.measureText(test).width > maxW && curLine) {
-            lines.push(curLine);
-            curLine = w;
-          } else {
-            curLine = test;
+        const paragraphs = String(textToWrap || '').split(/\r?\n/);
+        const result = [];
+        for (const p of paragraphs) {
+          const trimmed = p.trim();
+          if (!trimmed) {
+            result.push('');
+            continue;
           }
+          const words = trimmed.split(/\s+/);
+          let curLine = '';
+          for (const w of words) {
+            const test = curLine ? curLine + ' ' + w : w;
+            if (ctx.measureText(test).width > maxW && curLine) {
+              result.push(curLine);
+              curLine = w;
+            } else {
+              curLine = test;
+            }
+          }
+          if (curLine) result.push(curLine);
         }
-        if (curLine) lines.push(curLine);
-        return lines.length ? lines : [''];
+        return result.length ? result : [''];
       };
 
-      // Measure dynamic heights
-      const commentLines = getLines(`"${text}"`, width - 120, 'italic 20px system-ui, -apple-system, Segoe UI, Roboto');
-      const commentCardH = Math.max(90, 40 + commentLines.length * 28);
+      // Measure dynamic block heights
+      const commentLines = getWrappedLines(`“${text}”`, contentW - 50, 'italic 18px system-ui, -apple-system, Segoe UI, Roboto, sans-serif');
+      const commentCardH = Math.max(90, 48 + commentLines.length * 26);
 
-      const var1Lines = getLines(replies.engagement || 'Sin sugerencia disponible', width - 140, '16px system-ui, -apple-system, Segoe UI, Roboto');
-      const var1H = 55 + var1Lines.length * 24;
+      const var1Lines = getWrappedLines(replies.engagement || 'Sin sugerencia disponible', contentW - 50, '15px system-ui, -apple-system, Segoe UI, Roboto, sans-serif');
+      const var1H = 58 + var1Lines.length * 24;
 
-      const var2Lines = getLines(replies.conversion || 'Sin sugerencia disponible', width - 140, '16px system-ui, -apple-system, Segoe UI, Roboto');
-      const var2H = 55 + var2Lines.length * 24;
+      const var2Lines = getWrappedLines(replies.conversion || 'Sin sugerencia disponible', contentW - 50, '15px system-ui, -apple-system, Segoe UI, Roboto, sans-serif');
+      const var2H = 58 + var2Lines.length * 24;
 
-      const var3Lines = getLines(replies.support || 'Sin sugerencia disponible', width - 140, '16px system-ui, -apple-system, Segoe UI, Roboto');
-      const var3H = 55 + var3Lines.length * 24;
+      const var3Lines = getWrappedLines(replies.support || 'Sin sugerencia disponible', contentW - 50, '15px system-ui, -apple-system, Segoe UI, Roboto, sans-serif');
+      const var3H = 58 + var3Lines.length * 24;
 
       let customH = 0;
       let customLines = [];
       if (isCustomEdited) {
-        customLines = getLines(customText, width - 140, '16px system-ui, -apple-system, Segoe UI, Roboto');
-        customH = 65 + customLines.length * 24;
+        customLines = getWrappedLines(customText, contentW - 50, '15px system-ui, -apple-system, Segoe UI, Roboto, sans-serif');
+        customH = 58 + customLines.length * 24;
       }
 
-      const totalH = 140 + commentCardH + 30 + var1H + 18 + var2H + 18 + var3H + (customH ? 20 + customH : 0) + 70;
-      canvas.height = totalH;
+      // Total canvas height calculation
+      const headerH = 110;
+      const sectionTitleH = 34;
+      const footerH = 55;
+      const totalH = headerH + commentCardH + 20 + sectionTitleH + var1H + 16 + var2H + 16 + var3H + (isCustomEdited ? 16 + customH : 0) + footerH;
 
-      // Background gradient
+      canvas.width = width * dpr;
+      canvas.height = totalH * dpr;
+      canvas.style.width = width + 'px';
+      canvas.style.height = totalH + 'px';
+      ctx.scale(dpr, dpr);
+
+      // Helper for rounded rectangles
+      const drawCardBg = (x, y, w, h, radius, fillStyle, strokeStyle, strokeW = 1) => {
+        ctx.beginPath();
+        if (ctx.roundRect) {
+          ctx.roundRect(x, y, w, h, radius);
+        } else {
+          ctx.rect(x, y, w, h);
+        }
+        if (fillStyle) {
+          ctx.fillStyle = fillStyle;
+          ctx.fill();
+        }
+        if (strokeStyle) {
+          ctx.strokeStyle = strokeStyle;
+          ctx.lineWidth = strokeW;
+          ctx.stroke();
+        }
+      };
+
+      // 1. Overall Background
       const bgGrad = ctx.createLinearGradient(0, 0, width, totalH);
-      bgGrad.addColorStop(0, '#090d16');
+      bgGrad.addColorStop(0, '#0a0e1a');
       bgGrad.addColorStop(0.5, '#0f172a');
-      bgGrad.addColorStop(1, '#0b1120');
+      bgGrad.addColorStop(1, '#090d16');
       ctx.fillStyle = bgGrad;
       ctx.fillRect(0, 0, width, totalH);
 
-      // Outer accent border
-      ctx.strokeStyle = 'rgba(99, 102, 241, 0.4)';
-      ctx.lineWidth = 2;
+      // Neon Top Border Accent
+      const topGrad = ctx.createLinearGradient(0, 0, width, 0);
+      topGrad.addColorStop(0, '#6366f1');
+      topGrad.addColorStop(0.5, '#06b6d4');
+      topGrad.addColorStop(1, '#10b981');
+      ctx.fillStyle = topGrad;
+      ctx.fillRect(0, 0, width, 4);
+
+      // Outer Card Frame
+      ctx.strokeStyle = 'rgba(99, 102, 241, 0.35)';
+      ctx.lineWidth = 1.5;
       ctx.strokeRect(1, 1, width - 2, totalH - 2);
 
-      // Header Bar
+      // 2. Header Bar
       ctx.fillStyle = '#6366f1';
-      ctx.font = 'bold 22px system-ui, -apple-system, Segoe UI, Roboto';
-      ctx.fillText('🪄 XINDRO AI COPILOT · HERMES v2.1', 45, 55);
+      ctx.font = 'bold 22px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+      ctx.fillText('🪄 XINDRO AI COPILOT · HERMES v2.1', 40, 48);
 
       ctx.fillStyle = '#94a3b8';
-      ctx.font = '14px system-ui, -apple-system, Segoe UI, Roboto';
-      ctx.fillText('Asistente de Respuestas & Inteligencia de Comunidad', 45, 82);
+      ctx.font = '13px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+      ctx.fillText(`Asistente de Respuestas & Conexión · ${accountName} (${brandVoice})`, 40, 74);
 
-      // Platform & Score Pill
-      ctx.fillStyle = 'rgba(99, 102, 241, 0.2)';
-      ctx.fillRect(width - 240, 36, 195, 42);
-      ctx.strokeStyle = 'rgba(99, 102, 241, 0.5)';
-      ctx.strokeRect(width - 240, 36, 195, 42);
+      // Platform & Score Pill (Right-aligned)
+      const pillW = 210;
+      const pillX = width - 40 - pillW;
+      drawCardBg(pillX, 32, pillW, 44, 8, 'rgba(99, 102, 241, 0.15)', 'rgba(99, 102, 241, 0.4)');
       ctx.fillStyle = '#f8fafc';
-      ctx.font = 'bold 15px system-ui, -apple-system, Segoe UI, Roboto';
-      ctx.fillText(`${platform} · ⭐ SCORE ${score}/100`, width - 225, 62);
+      ctx.font = 'bold 14px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+      ctx.fillText(`${platform} · ⭐ SCORE ${score}/100`, pillX + 16, 59);
 
-      let curY = 120;
+      let curY = headerH;
 
-      // Comment Box
-      ctx.fillStyle = 'rgba(30, 41, 59, 0.85)';
-      ctx.fillRect(45, curY, width - 90, commentCardH);
-      ctx.strokeStyle = 'rgba(148, 163, 184, 0.25)';
-      ctx.strokeRect(45, curY, width - 90, commentCardH);
+      // 3. Follower Comment Card
+      drawCardBg(40, curY, contentW, commentCardH, 10, 'rgba(30, 41, 59, 0.75)', 'rgba(148, 163, 184, 0.25)');
+      // Cyan accent bar on comment card
+      ctx.fillStyle = '#06b6d4';
+      ctx.fillRect(40, curY, 5, commentCardH);
 
-      // Author & Handle
+      // Author & Sentiment Header
       ctx.fillStyle = '#38bdf8';
-      ctx.font = 'bold 16px system-ui, -apple-system, Segoe UI, Roboto';
-      ctx.fillText(`${author} (${handle})`, 65, curY + 28);
+      ctx.font = 'bold 15px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+      ctx.fillText(`💬 ${author} (${handle})`, 60, curY + 28);
 
       ctx.fillStyle = '#94a3b8';
-      ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto';
+      ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
       ctx.fillText(`SENTIMIENTO: ${sentiment}`, width - 260, curY + 28);
 
-      // Comment text
+      // Comment Text
       ctx.fillStyle = '#f1f5f9';
-      ctx.font = 'italic 18px system-ui, -apple-system, Segoe UI, Roboto';
-      let textY = curY + 58;
+      ctx.font = 'italic 16px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+      let textY = curY + 56;
       for (const line of commentLines) {
-        ctx.fillText(line, 65, textY);
-        textY += 26;
+        ctx.fillText(line, 60, textY);
+        textY += 24;
       }
 
-      curY += commentCardH + 30;
+      curY += commentCardH + 20;
 
-      // Section Title
+      // 4. Section Title
       ctx.fillStyle = '#cbd5e1';
-      ctx.font = 'bold 16px system-ui, -apple-system, Segoe UI, Roboto';
-      ctx.fillText('💡 SUGERENCIAS FORJADAS POR LA IA:', 45, curY);
-      curY += 20;
+      ctx.font = 'bold 15px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+      ctx.fillText('💡 SUGERENCIAS FORJADAS POR LA IA (HERMES v2.1):', 40, curY);
+      curY += 22;
 
       // Helper to render suggestion card
-      const drawVariantCard = (title, subtitle, lines, boxH, borderColor, tagColor) => {
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
-        ctx.fillRect(45, curY, width - 90, boxH);
-        ctx.strokeStyle = borderColor;
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(45, curY, width - 90, boxH);
+      const drawVariantBlock = (title, subtitle, lines, boxH, borderColor, tagColor) => {
+        drawCardBg(40, curY, contentW, boxH, 8, 'rgba(15, 23, 42, 0.88)', borderColor, 1.2);
 
         // Left accent bar
         ctx.fillStyle = tagColor;
-        ctx.fillRect(45, curY, 6, boxH);
+        ctx.fillRect(40, curY, 5, boxH);
 
-        // Header
+        // Header Title
         ctx.fillStyle = tagColor;
-        ctx.font = 'bold 15px system-ui, -apple-system, Segoe UI, Roboto';
-        ctx.fillText(title, 65, curY + 26);
+        ctx.font = 'bold 14px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+        ctx.fillText(title, 60, curY + 25);
+        const titleWidth = ctx.measureText(title).width;
 
+        // Subtitle
         ctx.fillStyle = '#64748b';
-        ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto';
-        ctx.fillText(subtitle, 65 + ctx.measureText(title).width + 15, curY + 26);
+        ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+        ctx.fillText(`— ${subtitle}`, 60 + titleWidth + 12, curY + 25);
 
-        // Text
+        // Body Text
         ctx.fillStyle = '#e2e8f0';
-        ctx.font = '16px system-ui, -apple-system, Segoe UI, Roboto';
+        ctx.font = '15px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
         let lineY = curY + 52;
         for (const l of lines) {
-          ctx.fillText(l, 65, lineY);
+          ctx.fillText(l, 60, lineY);
           lineY += 24;
         }
 
-        curY += boxH + 18;
+        curY += boxH + 16;
       };
 
-      // 1. Connection
-      drawVariantCard(
+      // 1. Connection & Empathy
+      drawVariantBlock(
         '🤝 Opción 1: Conexión & Empatía',
         'Cercanía, Agradecimiento & Pregunta',
         var1Lines,
         var1H,
-        'rgba(6, 182, 212, 0.4)',
+        'rgba(6, 182, 212, 0.45)',
         '#06b6d4'
       );
 
       // 2. Stoic Wisdom
-      drawVariantCard(
+      drawVariantBlock(
         '🏛️ Opción 2: Sabiduría & Fortaleza Estoica',
         'Profundidad Filosófica & Autodominio',
         var2Lines,
         var2H,
-        'rgba(16, 185, 129, 0.4)',
+        'rgba(16, 185, 129, 0.45)',
         '#10b981'
       );
 
       // 3. Drive & Determination
-      drawVariantCard(
+      drawVariantBlock(
         '⚡ Opción 3: Impulso & Determinación',
         'Energía, Resiliencia & Disciplina',
         var3Lines,
         var3H,
-        'rgba(168, 85, 247, 0.4)',
+        'rgba(168, 85, 247, 0.45)',
         '#a855f7'
       );
 
-      // Custom Text (only rendered if user actually modified or wrote custom text)
+      // Custom Edited Card (if applicable)
       if (isCustomEdited) {
-        drawVariantCard(
+        drawVariantBlock(
           '✍️ Respuesta Personalizada Redactada',
-          'Modificada manualmente por el usuario',
+          'Ajuste manual del usuario',
           customLines,
           customH,
           'rgba(245, 158, 11, 0.5)',
@@ -538,11 +584,11 @@ const AgentController = {
         );
       }
 
-      // Footer
+      // 5. Footer
       ctx.fillStyle = '#475569';
-      ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto';
+      ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
       const timestamp = new Date().toLocaleString();
-      ctx.fillText(`Generado con XINDRO Copilot · ${timestamp} · Fortaleza Imparable`, 45, totalH - 22);
+      ctx.fillText(`Generado con XINDRO Copilot · ${brandVoice} · ${timestamp} · Protección Anti-Alucinación Activa`, 40, totalH - 18);
 
       // Convert to blob and export
       canvas.toBlob(blob => {
@@ -566,7 +612,7 @@ const AgentController = {
           navigator.clipboard.write([
             new ClipboardItem({ 'image/png': blob })
           ]).then(() => {
-            App.showToast('📸 ¡Captura copiada al portapapeles y guardada en Descargas! Puedes pegarla con Ctrl+V.', 'success', 6000);
+            App.showToast('📸 ¡Captura Ultra-HD copiada al portapapeles y descargada! Puedes pegarla con Ctrl+V.', 'success', 6000);
           }).catch(() => {
             App.showToast('📸 ¡Captura descargada en tu carpeta de Descargas!', 'success', 5000);
           });
@@ -600,6 +646,8 @@ const AgentController = {
 
   // Quick send a specific variant with 1 click directly from sidebar copilot
   async quickSendVariant(variantType) {
+    if (this.isSubmittingReply) return;
+
     if (!this.activeComment) {
       App.showToast('Selecciona un comentario para responder.', 'error');
       return;
@@ -609,10 +657,20 @@ const AgentController = {
       return;
     }
 
+    this.isSubmittingReply = true;
+    const commentId = parseInt(this.activeComment.id, 10);
     const replyText = this.activeReplies[variantType];
     this.selectVariant(variantType);
 
-    App.showToast(`⚡ Publicando opción "${variantType}" con 1 solo clic...`, 'info');
+    // Disable all card action buttons to prevent double-click race conditions
+    const cardEl = document.getElementById(`card-variant-${variantType}`);
+    const cardButtons = cardEl ? cardEl.querySelectorAll('button') : [];
+    cardButtons.forEach(b => { b.disabled = true; });
+    const quickBtn = cardButtons.length > 0 ? cardButtons[cardButtons.length - 1] : null;
+    const oldQuickText = quickBtn ? quickBtn.innerHTML : '';
+    if (quickBtn) quickBtn.innerHTML = `<span>⏳ Enviando...</span>`;
+
+    App.showToast(`⚡ Publicando opción "${variantType}" en Meta...`, 'info');
 
     try {
       const tone = document.getElementById('select-tone')?.value || 'friendly_engaging';
@@ -620,7 +678,7 @@ const AgentController = {
         method: 'POST',
         body: JSON.stringify({
           action: 'reply',
-          comment_id: parseInt(this.activeComment.id, 10),
+          comment_id: commentId,
           reply_text: replyText,
           variant_type: variantType,
           tone_used: tone
@@ -629,15 +687,9 @@ const AgentController = {
 
       const res = await response.json();
       if (res.success) {
-        App.showToast('¡Respuesta publicada y enviada con éxito! 🚀✨', 'success');
+        App.showToast(res.message || '¡Respuesta publicada y enviada con éxito! 🚀✨', 'success');
         await App.loadComments();
-
-        // Update active comment and thread in copilot
-        const updated = App.commentsList ? App.commentsList.find(c => c.id == this.activeComment.id) : null;
-        if (updated) {
-          this.activeComment = updated;
-          this.loadSuggestions(updated);
-        }
+        this.advanceToNextPendingComment(commentId);
       } else {
         if (res.is_token_expired) {
           App.showToast('⚠️ La respuesta se guardó pero NO se publicó en Meta: Token expirado (Error 190). Renuévalo en Configuración.', 'warning', 8000);
@@ -650,6 +702,10 @@ const AgentController = {
     } catch (err) {
       console.error(err);
       App.showToast('Error de red al enviar la respuesta.', 'error');
+    } finally {
+      this.isSubmittingReply = false;
+      cardButtons.forEach(b => { b.disabled = false; });
+      if (quickBtn) quickBtn.innerHTML = oldQuickText;
     }
   },
 
@@ -667,6 +723,8 @@ const AgentController = {
 
   // Send the reply from sidebar copilot
   async submitReply() {
+    if (this.isSubmittingReply) return;
+
     if (!this.activeComment) {
       App.showToast('Selecciona un comentario para responder.', 'error');
       return;
@@ -680,10 +738,12 @@ const AgentController = {
       return;
     }
 
+    this.isSubmittingReply = true;
+    const commentId = parseInt(this.activeComment.id, 10);
     const btn = document.getElementById('btn-send-action');
     if (btn) {
       btn.disabled = true;
-      btn.innerHTML = `<span>Publicando...</span>`;
+      btn.innerHTML = `<span>⏳ Publicando...</span>`;
     }
 
     const originalSuggestion = (this.activeReplies && this.activeReplies[this.selectedVariant]) ? this.activeReplies[this.selectedVariant].trim() : '';
@@ -694,7 +754,7 @@ const AgentController = {
         method: 'POST',
         body: JSON.stringify({
           action: 'reply',
-          comment_id: parseInt(this.activeComment.id, 10),
+          comment_id: commentId,
           reply_text: replyText,
           variant_type: this.selectedVariant,
           tone_used: document.getElementById('select-tone')?.value || 'stoic_mentor',
@@ -711,10 +771,7 @@ const AgentController = {
           : '¡Respuesta aprobada y registrada! Gemini aprendió este éxito. 🏛️✨';
         App.showToast(learnMsg, 'success');
         await App.loadComments();
-        const updated = App.commentsList.find(c => c.id === this.activeComment.id);
-        if (updated) {
-          App.selectComment(updated);
-        }
+        this.advanceToNextPendingComment(commentId);
       } else {
         if (res.is_token_expired) {
           App.showToast('⚠️ Respuesta guardada pero NO se publicó en Meta: Token expirado (Error 190). Renuévalo en Configuración.', 'warning', 8000);
@@ -728,6 +785,7 @@ const AgentController = {
       console.error(err);
       App.showToast('Error al enviar la respuesta.', 'error');
     } finally {
+      this.isSubmittingReply = false;
       if (btn) {
         btn.disabled = false;
         btn.innerHTML = `<span>Publicar Respuesta</span> 🏛️`;
@@ -740,9 +798,56 @@ const AgentController = {
   // =========================================================================
 
   initAssistantViewMode() {
+    this.initAssistantGlobalListeners();
     const userId = (typeof App !== 'undefined' && App.getUserId) ? App.getUserId() : 'default';
-    const savedMode = localStorage.getItem(`xindro_assistant_view_mode_${userId}`) || 'drawer';
+    // Por defecto 'modal' para que en pantallas de computador abra como ventana centrada completa y elegante
+    const savedMode = localStorage.getItem(`xindro_assistant_view_mode_v2_${userId}`) || 'modal';
     this.setAssistantViewMode(savedMode);
+  },
+
+  // Registrar listeners globales de teclado una sola vez (Escape & Focus Trap para Lightbox)
+  initAssistantGlobalListeners() {
+    if (this._hasInitAssistantListeners) return;
+    this._hasInitAssistantListeners = true;
+
+    document.addEventListener('keydown', (e) => {
+      const viewer = document.getElementById('modal-post-media-viewer');
+      if (!viewer || !viewer.classList.contains('active')) return;
+
+      // 1. ESC / Escape -> Cerrar lightbox y devolver foco
+      if (e.key === 'Escape' || e.key === 'Esc') {
+        e.preventDefault();
+        e.stopPropagation();
+        this.closePostMediaViewer();
+        return;
+      }
+
+      // 2. Focus Trap (Tab & Shift+Tab) dentro del Lightbox aria-modal="true"
+      if (e.key === 'Tab') {
+        const focusable = viewer.querySelectorAll('button:not([disabled]), [tabindex]:not([tabindex="-1"])');
+        if (focusable.length === 0) {
+          e.preventDefault();
+          return;
+        }
+
+        const firstEl = focusable[0];
+        const lastEl = focusable[focusable.length - 1];
+
+        if (e.shiftKey) {
+          // Shift + Tab (hacia atrás)
+          if (document.activeElement === firstEl || !viewer.contains(document.activeElement)) {
+            e.preventDefault();
+            lastEl.focus();
+          }
+        } else {
+          // Tab (hacia adelante)
+          if (document.activeElement === lastEl || !viewer.contains(document.activeElement)) {
+            e.preventDefault();
+            firstEl.focus();
+          }
+        }
+      }
+    });
   },
 
   setAssistantViewMode(mode) {
@@ -758,7 +863,7 @@ const AgentController = {
       }
     }
     if (label) {
-      label.textContent = isDrawer ? '🗗 Modo Flotante' : '◧ Panel Lateral';
+      label.textContent = isDrawer ? '🗗 Ventana Flotante' : '◧ Panel Lateral';
     }
   },
 
@@ -768,10 +873,10 @@ const AgentController = {
     const newMode = isCurrentlyDrawer ? 'modal' : 'drawer';
     const userId = (typeof App !== 'undefined' && App.getUserId) ? App.getUserId() : 'default';
 
-    localStorage.setItem(`xindro_assistant_view_mode_${userId}`, newMode);
+    localStorage.setItem(`xindro_assistant_view_mode_v2_${userId}`, newMode);
     this.setAssistantViewMode(newMode);
     if (typeof App !== 'undefined' && App.showToast) {
-      App.showToast(newMode === 'drawer' ? 'Vista de asistente cambiada a Panel Lateral' : 'Vista de asistente cambiada a Ventana Flotante', 'info', 3000);
+      App.showToast(newMode === 'drawer' ? 'Vista: Panel Lateral acoplado a la derecha' : 'Vista: Ventana Flotante Centrada (Pantalla Completa)', 'info', 3000);
     }
   },
 
@@ -921,6 +1026,137 @@ const AgentController = {
       sentiment.textContent = sentimentText;
       sentiment.setAttribute('style', sentimentStyle);
     }
+
+    // Actualizar bloque visual de la publicación de origen (imagen, caption y visor)
+    this.updatePostOriginCard(comment);
+  },
+
+  // Validar URL de imagen: HTTPS para orígenes remotos; HTTP únicamente para localhost de pruebas
+  isValidPostImageUrl(url) {
+    if (!url || typeof url !== 'string') return false;
+    try {
+      const parsed = new URL(url.trim());
+      if (parsed.protocol === 'https:') return true;
+      return parsed.protocol === 'http:' &&
+        (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1');
+    } catch (e) {
+      return false;
+    }
+  },
+
+  // Actualizar la miniatura y contexto de la publicación original en el modal
+  updatePostOriginCard(comment) {
+    const card = document.getElementById('modal-post-origin-card');
+    const mediaBtn = document.getElementById('modal-post-origin-media-btn');
+    const img = document.getElementById('modal-post-origin-img');
+    const fallback = document.getElementById('modal-post-origin-fallback');
+    const captionEl = document.getElementById('modal-post-origin-caption');
+    const badge = document.getElementById('modal-post-origin-platform-badge');
+
+    if (!card) return;
+
+    const rawUrl = comment.post_media_url || '';
+    const isValid = this.isValidPostImageUrl(rawUrl);
+
+    if (isValid) {
+      if (img) {
+        img.src = rawUrl;
+      }
+      if (mediaBtn) {
+        mediaBtn.style.display = 'flex';
+        mediaBtn.disabled = false;
+        const captionPreview = comment.post_caption ? comment.post_caption.substring(0, 60) : 'ver imagen';
+        mediaBtn.setAttribute('aria-label', `Ampliar imagen de la publicación original: ${captionPreview}`);
+      }
+      if (fallback) {
+        fallback.style.display = 'none';
+      }
+    } else {
+      if (img) img.src = '';
+      if (mediaBtn) {
+        mediaBtn.style.display = 'none';
+        mediaBtn.disabled = true;
+      }
+      if (fallback) {
+        fallback.style.display = 'flex';
+      }
+    }
+
+    if (captionEl) {
+      captionEl.textContent = comment.post_caption ? comment.post_caption : 'Publicación de la comunidad sin descripción adicional.';
+    }
+
+    if (badge) {
+      const isFb = (comment.platform === 'facebook' || comment.post_platform === 'facebook');
+      badge.className = `platform-badge-mini ${isFb ? 'facebook' : 'instagram'}`;
+      badge.textContent = isFb ? 'FB' : 'IG';
+    }
+  },
+
+  // Fallback seguro cuando una imagen de Meta o CDN falla al cargar (404 / expirado)
+  onPostImageError(imgEl) {
+    if (imgEl) {
+      imgEl.onerror = null;
+      imgEl.removeAttribute('src');
+    }
+    const mediaBtn = document.getElementById('modal-post-origin-media-btn');
+    if (mediaBtn) {
+      mediaBtn.style.display = 'none';
+      mediaBtn.disabled = true;
+    }
+    const fallback = document.getElementById('modal-post-origin-fallback');
+    if (fallback) {
+      fallback.style.display = 'flex';
+    }
+  },
+
+  // Abrir Visor Ampliado (Lightbox) con gestión accesible de foco
+  openPostMediaViewer() {
+    const comment = this.modalActiveComment;
+    if (!comment) return;
+
+    const mediaUrl = comment.post_media_url || '';
+    if (!this.isValidPostImageUrl(mediaUrl)) return;
+
+    const viewer = document.getElementById('modal-post-media-viewer');
+    const expandedImg = document.getElementById('lightbox-expanded-img');
+    const captionText = document.getElementById('lightbox-caption-text');
+    const closeBtn = document.getElementById('btn-close-post-lightbox');
+
+    if (!viewer) return;
+
+    // Guardar elemento activo para restaurar el foco al cerrar
+    this.mediaViewerTriggerEl = document.activeElement;
+
+    if (expandedImg) {
+      expandedImg.src = mediaUrl;
+    }
+    if (captionText) {
+      captionText.textContent = comment.post_caption ? `📌 ${comment.post_caption}` : '📌 Publicación sin descripción adicional.';
+    }
+
+    viewer.classList.add('active');
+
+    // Mover foco accesible al botón de cierre
+    if (closeBtn) {
+      closeBtn.focus();
+    }
+  },
+
+  // Cerrar Visor Ampliado y restaurar foco
+  closePostMediaViewer() {
+    const viewer = document.getElementById('modal-post-media-viewer');
+    if (viewer) {
+      viewer.classList.remove('active');
+    }
+    // Restaurar foco al botón disparador que abrió el visor
+    if (this.mediaViewerTriggerEl && typeof this.mediaViewerTriggerEl.focus === 'function') {
+      try {
+        this.mediaViewerTriggerEl.focus();
+      } catch (e) {
+        // Safe focus restoration
+      }
+    }
   },
 
   // On comment selection changed in modal dropdown
@@ -1065,8 +1301,8 @@ const AgentController = {
           <button type="button" class="btn-modal-sugg-action" style="background: rgba(245,158,11,0.2); color: #fbbf24; font-weight: 700;" onclick="event.stopPropagation(); AgentController.saveAsGoldExample('engagement', true)" title="⭐ Guardar permanentemente como Ejemplo de Oro para Gemini">
             ⭐ Oro
           </button>
-          <button type="button" class="btn-modal-sugg-action" style="background: rgba(16,185,129,0.25); color: #34d399; font-weight: 700;" onclick="event.stopPropagation(); AgentController.quickPostModalVariant('engagement')" title="Publicar directamente esta opción con 1 clic">
-            ⚡ Enviar (1 Clic)
+          <button type="button" class="btn-modal-sugg-action btn-modal-sugg-quicksend" onclick="event.stopPropagation(); AgentController.quickPostModalVariant('engagement')" title="Publicar directamente esta opción con 1 clic">
+            ⚡ Enviar Directo (1 Clic)
           </button>
         </div>
       </div>
@@ -1088,8 +1324,8 @@ const AgentController = {
           <button type="button" class="btn-modal-sugg-action" style="background: rgba(245,158,11,0.2); color: #fbbf24; font-weight: 700;" onclick="event.stopPropagation(); AgentController.saveAsGoldExample('conversion', true)" title="⭐ Guardar permanentemente como Ejemplo de Oro para Gemini">
             ⭐ Oro
           </button>
-          <button type="button" class="btn-modal-sugg-action" style="background: rgba(16,185,129,0.25); color: #34d399; font-weight: 700;" onclick="event.stopPropagation(); AgentController.quickPostModalVariant('conversion')" title="Publicar directamente esta opción con 1 clic">
-            ⚡ Enviar (1 Clic)
+          <button type="button" class="btn-modal-sugg-action btn-modal-sugg-quicksend" onclick="event.stopPropagation(); AgentController.quickPostModalVariant('conversion')" title="Publicar directamente esta opción con 1 clic">
+            ⚡ Enviar Directo (1 Clic)
           </button>
         </div>
       </div>
@@ -1111,8 +1347,8 @@ const AgentController = {
           <button type="button" class="btn-modal-sugg-action" style="background: rgba(245,158,11,0.2); color: #fbbf24; font-weight: 700;" onclick="event.stopPropagation(); AgentController.saveAsGoldExample('support', true)" title="⭐ Guardar permanentemente como Ejemplo de Oro para Gemini">
             ⭐ Oro
           </button>
-          <button type="button" class="btn-modal-sugg-action" style="background: rgba(16,185,129,0.25); color: #34d399; font-weight: 700;" onclick="event.stopPropagation(); AgentController.quickPostModalVariant('support')" title="Publicar directamente esta opción con 1 clic">
-            ⚡ Enviar (1 Clic)
+          <button type="button" class="btn-modal-sugg-action btn-modal-sugg-quicksend" onclick="event.stopPropagation(); AgentController.quickPostModalVariant('support')" title="Publicar directamente esta opción con 1 clic">
+            ⚡ Enviar Directo (1 Clic)
           </button>
         </div>
       </div>
@@ -1162,26 +1398,36 @@ const AgentController = {
 
   // Submit reply from the modal
   async submitModalReply() {
+    if (this.isSubmittingReply) return;
+
     if (!this.modalActiveComment) {
-      App.showToast('No hay un comentario seleccionado en el asistente.', 'error');
+      App.showToast('No hay comentario activo para responder.', 'error');
       return;
     }
 
-    const textarea = document.getElementById('modal-reply-text-input');
-    const replyText = textarea?.value?.trim() || '';
+    const textarea = document.getElementById('modal-reply-text-input') || document.getElementById('modal-custom-reply-text');
+    let replyText = textarea?.value?.trim() || '';
+
+    // Si el textarea estuviera vacío pero hay una opción seleccionada, usarla como respaldo
+    if (!replyText && this.modalSelectedVariant && this.modalActiveReplies && this.modalActiveReplies[this.modalSelectedVariant]) {
+      replyText = this.modalActiveReplies[this.modalSelectedVariant].trim();
+      if (textarea) textarea.value = replyText;
+    }
 
     if (!replyText) {
       App.showToast('El texto de la respuesta no puede estar vacío.', 'error');
       return;
     }
 
+    this.isSubmittingReply = true;
+    const commentId = parseInt(this.modalActiveComment.id, 10);
     const originalSuggestion = (this.modalActiveReplies && this.modalActiveReplies[this.modalSelectedVariant]) ? this.modalActiveReplies[this.modalSelectedVariant].trim() : '';
     const wasEdited = !!(originalSuggestion && originalSuggestion !== replyText);
 
     const btn = document.getElementById('btn-modal-submit-reply');
     if (btn) {
       btn.disabled = true;
-      btn.innerHTML = `<span>Publicando...</span>`;
+      btn.innerHTML = `<span>⏳ Publicando...</span>`;
     }
 
     try {
@@ -1189,7 +1435,7 @@ const AgentController = {
         method: 'POST',
         body: JSON.stringify({
           action: 'reply',
-          comment_id: parseInt(this.modalActiveComment.id, 10),
+          comment_id: commentId,
           reply_text: replyText,
           variant_type: this.modalSelectedVariant,
           tone_used: document.getElementById('modal-select-tone')?.value || 'stoic_mentor',
@@ -1207,12 +1453,7 @@ const AgentController = {
         App.showToast(learnMsg, 'success');
         App.closeModal('modal-assistant-replies');
         await App.loadComments();
-        
-        // Also update selection in main copilot if same comment
-        const updated = App.commentsList.find(c => c.id === this.modalActiveComment.id);
-        if (updated) {
-          App.selectComment(updated);
-        }
+        this.advanceToNextPendingComment(commentId);
       } else {
         if (res.is_token_expired) {
           App.showToast('⚠️ Respuesta guardada pero NO se publicó en Meta: Token expirado (Error 190). Renuévalo en Configuración.', 'warning', 8000);
@@ -1226,11 +1467,193 @@ const AgentController = {
       console.error(err);
       App.showToast('Error al enviar la respuesta.', 'error');
     } finally {
+      this.isSubmittingReply = false;
       if (btn) {
         btn.disabled = false;
         btn.innerHTML = `<span>Publicar Respuesta</span> 🏛️`;
       }
     }
+  },
+
+  // Open the Ignore Confirmation Modal for the active comment
+  openIgnoreConfirmationModal() {
+    const comment = this.modalActiveComment || this.activeComment;
+    if (!comment) {
+      App.showToast('No hay un comentario activo seleccionado para ignorar.', 'warning');
+      return;
+    }
+
+    const authorEl = document.getElementById('modal-ignore-author');
+    const platEl = document.getElementById('modal-ignore-platform');
+    const snippetEl = document.getElementById('modal-ignore-snippet');
+    const reasonSelect = document.getElementById('ignore-reason-select');
+    const notesInput = document.getElementById('ignore-notes-input');
+    const counterEl = document.getElementById('ignore-notes-counter');
+
+    if (authorEl) authorEl.textContent = comment.author_name || 'Seguidor';
+    if (platEl) {
+      platEl.className = `platform-badge-mini ${comment.platform === 'facebook' ? 'facebook' : 'instagram'}`;
+      platEl.textContent = comment.platform === 'facebook' ? 'FB' : 'IG';
+    }
+    if (snippetEl) {
+      const rawText = comment.comment_text || '';
+      snippetEl.textContent = `"${rawText.length > 180 ? rawText.substring(0, 180) + '...' : rawText}"`;
+    }
+
+    // Heuristically pre-select most likely reason
+    if (reasonSelect) {
+      const txtLower = (comment.comment_text || '').toLowerCase();
+      if (txtLower.includes('http') || txtLower.includes('www.') || txtLower.includes('.com') || txtLower.includes('dm ') || txtLower.includes('whatsapp') || txtLower.includes('telegram')) {
+        reasonSelect.value = 'spam_link';
+      } else {
+        reasonSelect.value = 'troll_provocation';
+      }
+    }
+
+    if (notesInput) notesInput.value = '';
+    if (counterEl) counterEl.textContent = '0 / 500';
+
+    App.openModal('modal-confirm-ignore');
+    setTimeout(() => {
+      reasonSelect?.focus();
+    }, 100);
+  },
+
+  // Close the Ignore Confirmation Modal
+  closeIgnoreConfirmationModal() {
+    App.closeModal('modal-confirm-ignore');
+  },
+
+  // Character counter for ignore notes textarea
+  onIgnoreNotesInput(textarea) {
+    const counter = document.getElementById('ignore-notes-counter');
+    if (!counter || !textarea) return;
+    const len = (textarea.value || '').length;
+    counter.textContent = `${len} / 500`;
+  },
+
+  // Submit Ignore Comment action to api/comments.php
+  async submitIgnoreComment() {
+    if (this.isSubmittingIgnore) return;
+
+    const comment = this.modalActiveComment || this.activeComment;
+    if (!comment || !comment.id) {
+      App.showToast('No se encontró el comentario a ignorar.', 'error');
+      return;
+    }
+
+    const commentId = parseInt(comment.id, 10);
+    const reasonSelect = document.getElementById('ignore-reason-select');
+    const notesInput = document.getElementById('ignore-notes-input');
+    const reason = reasonSelect ? reasonSelect.value : 'irrelevant';
+    const notes = notesInput ? notesInput.value.trim() : '';
+
+    const btnSubmit = document.getElementById('btn-submit-confirm-ignore');
+    const labelSubmit = document.getElementById('label-submit-ignore');
+    const btnModalIgnore = document.getElementById('btn-modal-ignore-comment');
+
+    this.isSubmittingIgnore = true;
+    if (btnSubmit) btnSubmit.disabled = true;
+    if (btnModalIgnore) btnModalIgnore.disabled = true;
+    if (labelSubmit) labelSubmit.textContent = '⏳ Ignorando...';
+
+    try {
+      const response = await App.fetchWithCsrf('api/comments.php', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'ignore_comment',
+          comment_id: commentId,
+          reason: reason,
+          notes: notes
+        })
+      });
+
+      const res = await response.json();
+
+      if (res.success) {
+        App.showToast('Comentario marcado como ignorado. Hermes registró el patrón de descarte. 🛡️', 'success');
+        this.closeIgnoreConfirmationModal();
+
+        // Mutate status locally in memory to keep UI responsive immediately
+        const localComment = App.commentsList?.find(c => c.id == commentId);
+        if (localComment) {
+          localComment.status = 'ignored';
+          localComment.highlight_reason = '🚫 Omitido por el moderador';
+        }
+
+        // Refresh counts and comment list in background without reloading whole page
+        await App.loadComments();
+
+        // Transition seamlessly to next pending comment
+        this.advanceToNextPendingComment(commentId);
+      } else {
+        App.showToast(`Error: ${res.error || 'No se pudo ignorar el comentario.'}`, 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      App.showToast('Error de conexión al procesar la omisión.', 'error');
+    } finally {
+      this.isSubmittingIgnore = false;
+      if (btnSubmit) btnSubmit.disabled = false;
+      if (btnModalIgnore) btnModalIgnore.disabled = false;
+      if (labelSubmit) labelSubmit.textContent = '🚫 Confirmar y no responder';
+    }
+  },
+
+  // Transition seamlessly to next pending comment after successful publication or ignore
+  advanceToNextPendingComment(repliedCommentId) {
+    if (!App.commentsList || App.commentsList.length === 0) {
+      this.activeComment = null;
+      this.clearCopilotView();
+      return;
+    }
+
+    const nextPending = App.commentsList.find(c => c.id != repliedCommentId && (c.status === 'pending' || c.status === 'failed'));
+    if (nextPending) {
+      App.selectComment(nextPending);
+      this.loadSuggestions(nextPending);
+
+      // If Assistant modal/drawer is open, also seamlessly update the modal
+      const modal = document.getElementById('modal-assistant-replies');
+      if (modal && (modal.classList.contains('active') || modal.style.display === 'flex' || modal.style.display === 'block')) {
+        this.modalActiveComment = nextPending;
+        this.modalActiveReplies = null;
+        this.modalSelectedVariant = null;
+        const textInput = document.getElementById('modal-reply-text-input');
+        if (textInput) textInput.value = '';
+        this.populateModalCommentsDropdown(nextPending.id);
+        this.updateModalFollowerContext(nextPending);
+        this.loadModalSuggestions(nextPending);
+      }
+    } else {
+      this.activeComment = null;
+      this.clearCopilotView();
+      // If modal was open, close it gently and notify user
+      const modal = document.getElementById('modal-assistant-replies');
+      if (modal && modal.classList.contains('active')) {
+        App.closeModal('modal-assistant-replies');
+        App.showToast('🎉 ¡Bandeja al día! Todos los comentarios pendientes han sido atendidos.', 'success', 5000);
+      }
+    }
+  },
+
+  clearCopilotView() {
+    const suggestionsContainer = document.getElementById('suggestions-container');
+    if (suggestionsContainer) {
+      suggestionsContainer.innerHTML = `
+        <div style="text-align: center; padding: 40px 20px; color: var(--text-dim);">
+          <div style="font-size: 2.2rem; margin-bottom: 12px;">🎉</div>
+          <h4 style="color: #cbd5e1; font-weight: 600; margin-bottom: 6px;">¡Bandeja al día!</h4>
+          <p style="font-size: 0.85rem; max-width: 280px; margin: 0 auto; line-height: 1.4;">
+            No quedan comentarios pendientes en esta vista. Selecciona otro comentario de la lista para continuar.
+          </p>
+        </div>
+      `;
+    }
+    const threadHistoryBox = document.getElementById('copilot-thread-history');
+    if (threadHistoryBox) threadHistoryBox.style.display = 'none';
+    const textarea = document.getElementById('reply-text-input');
+    if (textarea) textarea.value = '';
   },
 
   // Switch sub-tabs inside Assistant Modal (Manual Suggestions vs Live Autopilot)

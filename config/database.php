@@ -182,7 +182,7 @@ class Database {
             }
 
             // Concurrency Optimization: Cache schema state with PRAGMA user_version to skip redundant DDL checks on every request
-            $targetSchemaVersion = 20261015;
+            $targetSchemaVersion = 20261016;
             $currentSchemaVersion = 0;
             if ($driver === 'sqlite') {
                 try {
@@ -476,6 +476,26 @@ class Database {
                     FOREIGN KEY (brand_voice_id) REFERENCES brand_voices(id) ON DELETE SET NULL
                 );
                 CREATE INDEX IF NOT EXISTS idx_sched_user_status ON scheduled_posts(user_id, status, scheduled_for);
+
+                CREATE TABLE IF NOT EXISTS ai_moderation_feedback (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER NOT NULL,
+                    brand_voice_id INTEGER NOT NULL DEFAULT 1,
+                    comment_id INTEGER NOT NULL,
+                    comment_text TEXT NOT NULL,
+                    author_name VARCHAR(255),
+                    author_handle VARCHAR(255),
+                    platform VARCHAR(50),
+                    reason VARCHAR(100) NOT NULL,
+                    notes VARCHAR(500),
+                    is_active INTEGER NOT NULL DEFAULT 1,
+                    restored_at TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    CONSTRAINT uq_user_comment_moderation UNIQUE (user_id, comment_id),
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                );
+                CREATE INDEX IF NOT EXISTS idx_ai_mod_perf ON ai_moderation_feedback(user_id, brand_voice_id, is_active, updated_at);
             ");
 
         } elseif ($driver === 'mysql') {
@@ -714,6 +734,26 @@ class Database {
                     INDEX idx_trend_posts_ai_pick (user_id, ai_top_pick),
                     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
                     FOREIGN KEY (niche_id) REFERENCES trend_niches(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+                CREATE TABLE IF NOT EXISTS ai_moderation_feedback (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NOT NULL,
+                    brand_voice_id INT NOT NULL DEFAULT 1,
+                    comment_id INT NOT NULL,
+                    comment_text TEXT NOT NULL,
+                    author_name VARCHAR(255),
+                    author_handle VARCHAR(255),
+                    platform VARCHAR(50),
+                    reason VARCHAR(100) NOT NULL,
+                    notes VARCHAR(500),
+                    is_active INT NOT NULL DEFAULT 1,
+                    restored_at DATETIME NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    UNIQUE KEY uq_user_comment_moderation (user_id, comment_id),
+                    INDEX idx_ai_mod_perf (user_id, brand_voice_id, is_active, updated_at),
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             ");
 
@@ -954,6 +994,26 @@ class Database {
                 CREATE INDEX IF NOT EXISTS idx_trend_posts_user_score ON trend_posts(user_id, engagement_score);
                 CREATE INDEX IF NOT EXISTS idx_trend_posts_niche ON trend_posts(niche_id, fetched_at);
                 CREATE INDEX IF NOT EXISTS idx_trend_posts_ai_pick ON trend_posts(user_id, ai_top_pick);
+
+                CREATE TABLE IF NOT EXISTS ai_moderation_feedback (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    brand_voice_id INTEGER NOT NULL DEFAULT 1,
+                    comment_id INTEGER NOT NULL,
+                    comment_text TEXT NOT NULL,
+                    author_name TEXT,
+                    author_handle TEXT,
+                    platform TEXT,
+                    reason TEXT NOT NULL,
+                    notes TEXT,
+                    is_active INTEGER NOT NULL DEFAULT 1,
+                    restored_at DATETIME,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                );
+                CREATE UNIQUE INDEX IF NOT EXISTS uq_user_comment_moderation ON ai_moderation_feedback(user_id, comment_id);
+                CREATE INDEX IF NOT EXISTS idx_ai_mod_perf ON ai_moderation_feedback(user_id, brand_voice_id, is_active, updated_at);
             ");
         }
     }
@@ -2344,6 +2404,75 @@ class Database {
                     );
                     CREATE INDEX IF NOT EXISTS idx_ai_learning_user ON ai_learning_feedback(user_id, brand_voice_id, id DESC);
                 ");
+
+                // AI Moderation Signals table (isolated from learning feedback)
+                if ($driver === 'mysql') {
+                    $pdo->exec("
+                        CREATE TABLE IF NOT EXISTS ai_moderation_feedback (
+                            id INT AUTO_INCREMENT PRIMARY KEY,
+                            user_id INT NOT NULL,
+                            brand_voice_id INT NOT NULL DEFAULT 1,
+                            comment_id INT NOT NULL,
+                            comment_text TEXT NOT NULL,
+                            author_name VARCHAR(255),
+                            author_handle VARCHAR(255),
+                            platform VARCHAR(50),
+                            reason VARCHAR(100) NOT NULL,
+                            notes VARCHAR(500),
+                            is_active INT NOT NULL DEFAULT 1,
+                            restored_at DATETIME NULL,
+                            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                            UNIQUE KEY uq_user_comment_moderation (user_id, comment_id),
+                            INDEX idx_ai_mod_perf (user_id, brand_voice_id, is_active, updated_at),
+                            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                    ");
+                } elseif ($driver === 'pgsql') {
+                    $pdo->exec("
+                        CREATE TABLE IF NOT EXISTS ai_moderation_feedback (
+                            id SERIAL PRIMARY KEY,
+                            user_id INTEGER NOT NULL,
+                            brand_voice_id INTEGER NOT NULL DEFAULT 1,
+                            comment_id INTEGER NOT NULL,
+                            comment_text TEXT NOT NULL,
+                            author_name VARCHAR(255),
+                            author_handle VARCHAR(255),
+                            platform VARCHAR(50),
+                            reason VARCHAR(100) NOT NULL,
+                            notes VARCHAR(500),
+                            is_active INTEGER NOT NULL DEFAULT 1,
+                            restored_at TIMESTAMP,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            CONSTRAINT uq_user_comment_moderation UNIQUE (user_id, comment_id),
+                            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                        );
+                        CREATE INDEX IF NOT EXISTS idx_ai_mod_perf ON ai_moderation_feedback(user_id, brand_voice_id, is_active, updated_at);
+                    ");
+                } else {
+                    $pdo->exec("
+                        CREATE TABLE IF NOT EXISTS ai_moderation_feedback (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            user_id INTEGER NOT NULL,
+                            brand_voice_id INTEGER NOT NULL DEFAULT 1,
+                            comment_id INTEGER NOT NULL,
+                            comment_text TEXT NOT NULL,
+                            author_name TEXT,
+                            author_handle TEXT,
+                            platform TEXT,
+                            reason TEXT NOT NULL,
+                            notes TEXT,
+                            is_active INTEGER NOT NULL DEFAULT 1,
+                            restored_at DATETIME,
+                            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                        );
+                        CREATE UNIQUE INDEX IF NOT EXISTS uq_user_comment_moderation ON ai_moderation_feedback(user_id, comment_id);
+                        CREATE INDEX IF NOT EXISTS idx_ai_mod_perf ON ai_moderation_feedback(user_id, brand_voice_id, is_active, updated_at);
+                    ");
+                }
             } catch (Throwable $e) {
                 error_log("Users AI and Plan columns migration notice: " . $e->getMessage());
             }

@@ -412,16 +412,32 @@ class MetaApiService {
             ];
         }
 
-        // Atomic lock for automatic/background threads to prevent duplicate posts under concurrent runs
-        if (!$isManual) {
-            $lockStmt = $pdo->prepare("UPDATE comments SET status = 'replying' WHERE id = :id AND user_id = :uid AND status != 'replying' AND status != 'replied'");
-            $lockStmt->execute([':id' => $commentDbId, ':uid' => $uid]);
-            if ($lockStmt->rowCount() === 0) {
+        // 2. Server-side Atomic Lock: Prevent concurrent or duplicate posts for both manual and automatic attempts
+        $lockStmt = $pdo->prepare("
+            UPDATE comments 
+            SET status = 'replying' 
+            WHERE id = :id AND user_id = :uid AND status != 'replying' AND status != 'replied'
+        ");
+        $lockStmt->execute([':id' => $commentDbId, ':uid' => $uid]);
+        if ($lockStmt->rowCount() === 0) {
+            $statusCheck = $pdo->prepare("SELECT status FROM comments WHERE id = :id AND user_id = :uid LIMIT 1");
+            $statusCheck->execute([':id' => $commentDbId, ':uid' => $uid]);
+            $currentStatus = $statusCheck->fetchColumn();
+
+            if ($currentStatus === 'replied') {
+                return [
+                    'success' => true,
+                    'already_posted' => true,
+                    'simulated' => false,
+                    'message' => 'El comentario ya fue respondido en Meta anteriormente.'
+                ];
+            }
+            if ($currentStatus === 'replying') {
                 return [
                     'success' => true,
                     'already_posted' => true,
                     'skipped' => true,
-                    'message' => 'El comentario ya está siendo procesado o ya fue respondido por otro proceso.'
+                    'message' => 'El comentario ya está siendo procesado por otra solicitud en curso.'
                 ];
             }
         }
@@ -525,7 +541,11 @@ class MetaApiService {
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($params));
-        curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 25);
+        if (defined('CURL_IPRESOLVE_V4')) {
+            curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+        }
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
 
@@ -545,13 +565,36 @@ class MetaApiService {
                 'meta_response' => $data
             ];
         } else {
-            if (!$isManual) {
-                $pdo->prepare("UPDATE comments SET status = 'failed' WHERE id = :id AND user_id = :uid AND status = 'replying'")->execute([':id' => $commentDbId, ':uid' => $uid]);
-            }
             $errorObj = is_array($data) && isset($data['error']) ? $data['error'] : [];
             $errorCode = $errorObj['code'] ?? null;
             $errorSubcode = $errorObj['error_subcode'] ?? null;
             $rawMsg = $errorObj['message'] ?? ($curlError ?: $response ?: "HTTP Error {$httpCode}");
+
+            // Detect duplicate reply error from Meta Graph API
+            // Error 1705 / Subcode 1363037 = comment already replied to or duplicate comment
+            $isDuplicate = (
+                $errorCode === 1705 ||
+                $errorSubcode === 1363037 ||
+                stripos($rawMsg, 'duplicate') !== false ||
+                stripos($rawMsg, 'already been replied') !== false ||
+                stripos($rawMsg, 'already exists') !== false
+            );
+
+            if ($isDuplicate) {
+                // Meta confirmed it already exists on the platform. Mark as replied and return success!
+                $pdo->prepare("UPDATE comments SET status = 'replied' WHERE id = :id AND user_id = :uid")->execute([':id' => $commentDbId, ':uid' => $uid]);
+                return [
+                    'success' => true,
+                    'already_posted' => true,
+                    'simulated' => false,
+                    'remote_id' => $data['id'] ?? null,
+                    'message' => 'El comentario ya fue publicado en Meta (detectado duplicado exitoso).',
+                    'meta_response' => $data
+                ];
+            }
+
+            // Real failure: reset 'replying' back to 'failed' so it does not remain stuck
+            $pdo->prepare("UPDATE comments SET status = 'failed' WHERE id = :id AND user_id = :uid AND status = 'replying'")->execute([':id' => $commentDbId, ':uid' => $uid]);
 
             // Detect expired or invalidated Meta Access Token (OAuthException 190 / 463 / 467)
             $isTokenExpired = (
@@ -2216,12 +2259,21 @@ class MetaApiService {
 
                                         // Autonomous Autopilot Response (Strictly for fresh, unreplied comments under 2 hours old)
                                         if ($autopilotEnabled && $newCommentId > 0 && !$isOldComment && !$hasReplies) {
-                                            $suitability = AiAgentService::evaluateCommentSuitability($cText);
+                                            $suitability = AiAgentService::evaluateCommentSuitability(
+                                                $cText,
+                                                'any',
+                                                null,
+                                                $uid,
+                                                $brandVoiceId
+                                            );
                                             if ($suitability['status'] === 'spam') {
                                                 $pdo->prepare("UPDATE comments SET status = 'spam', sentiment = 'spam', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
                                                     ->execute([':reason' => $suitability['reason'], ':id' => $newCommentId, ':uid' => $uid]);
                                             } elseif ($suitability['status'] === 'ignored') {
                                                 $pdo->prepare("UPDATE comments SET status = 'ignored', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
+                                                    ->execute([':reason' => $suitability['reason'], ':id' => $newCommentId, ':uid' => $uid]);
+                                            } elseif ($suitability['status'] === 'pending_review') {
+                                                $pdo->prepare("UPDATE comments SET status = 'pending_review', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
                                                     ->execute([':reason' => $suitability['reason'], ':id' => $newCommentId, ':uid' => $uid]);
                                             } elseif ($suitability['status'] === 'toxic' || !$suitability['should_reply']) {
                                                 $pdo->prepare("UPDATE comments SET status = 'ignored', sentiment = 'toxic', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
@@ -2570,12 +2622,21 @@ class MetaApiService {
 
                                     // Autonomous Autopilot Response (Strictly for fresh, unreplied comments under 2 hours old)
                                     if ($autopilotEnabled && $newCommentId > 0 && !$isOldComment && !$hasReplies) {
-                                        $suitability = AiAgentService::evaluateCommentSuitability($cText);
+                                        $suitability = AiAgentService::evaluateCommentSuitability(
+                                            $cText,
+                                            'any',
+                                            null,
+                                            $uid,
+                                            $brandVoiceId
+                                        );
                                         if ($suitability['status'] === 'spam') {
                                             $pdo->prepare("UPDATE comments SET status = 'spam', sentiment = 'spam', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
                                                 ->execute([':reason' => $suitability['reason'], ':id' => $newCommentId, ':uid' => $uid]);
                                         } elseif ($suitability['status'] === 'ignored') {
                                             $pdo->prepare("UPDATE comments SET status = 'ignored', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
+                                                ->execute([':reason' => $suitability['reason'], ':id' => $newCommentId, ':uid' => $uid]);
+                                        } elseif ($suitability['status'] === 'pending_review') {
+                                            $pdo->prepare("UPDATE comments SET status = 'pending_review', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
                                                 ->execute([':reason' => $suitability['reason'], ':id' => $newCommentId, ':uid' => $uid]);
                                         } elseif ($suitability['status'] === 'toxic' || !$suitability['should_reply']) {
                                             $pdo->prepare("UPDATE comments SET status = 'ignored', sentiment = 'toxic', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
@@ -2663,18 +2724,27 @@ class MetaApiService {
                 $pendingComments = $pendingSweepStmt->fetchAll();
 
                 foreach ($pendingComments as $pCmt) {
-                    $suitability = AiAgentService::evaluateCommentSuitability($pCmt['comment_text']);
+                    $bvid = (int)($pCmt['effective_bvid'] ?: $defaultBrandVoiceId);
+                    $suitability = AiAgentService::evaluateCommentSuitability(
+                        $pCmt['comment_text'],
+                        'any',
+                        null,
+                        $uid,
+                        $bvid
+                    );
                     if ($suitability['status'] === 'spam') {
                         $pdo->prepare("UPDATE comments SET status = 'spam', sentiment = 'spam', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
                             ->execute([':reason' => $suitability['reason'], ':id' => $pCmt['id'], ':uid' => $uid]);
                     } elseif ($suitability['status'] === 'ignored') {
                         $pdo->prepare("UPDATE comments SET status = 'ignored', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
                             ->execute([':reason' => $suitability['reason'], ':id' => $pCmt['id'], ':uid' => $uid]);
+                    } elseif ($suitability['status'] === 'pending_review') {
+                        $pdo->prepare("UPDATE comments SET status = 'pending_review', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
+                            ->execute([':reason' => $suitability['reason'], ':id' => $pCmt['id'], ':uid' => $uid]);
                     } elseif ($suitability['status'] === 'toxic' || !$suitability['should_reply']) {
                         $pdo->prepare("UPDATE comments SET status = 'ignored', sentiment = 'toxic', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
                             ->execute([':reason' => $suitability['reason'], ':id' => $pCmt['id'], ':uid' => $uid]);
                     } else {
-                        $bvid = (int)($pCmt['effective_bvid'] ?: $defaultBrandVoiceId);
                         $replies = AiAgentService::generateReplies($pCmt['author_name'], $pCmt['comment_text'], $pCmt['platform'], $pCmt['post_caption'], '', [
                             'brand_voice_id' => $bvid,
                             'user_id' => $uid,

@@ -427,6 +427,10 @@ $isMetaConnected = ($activeAccountsCount > 0);
                   <span>⚠️ Fallidos</span>
                   <span class="tag-badge" id="menu-count-failed">0</span>
                 </button>
+                <button type="button" class="more-filter-item" id="menu-item-ignored" data-filter="ignored" onclick="App.setFilterTag('ignored'); App.toggleMoreFiltersMenu(false);">
+                  <span>🚫 Ignorados / Omitidos</span>
+                  <span class="tag-badge" id="tag-count-ignored">0</span>
+                </button>
               </div>
             </div>
           </div>
@@ -2081,13 +2085,15 @@ $isMetaConnected = ($activeAccountsCount > 0);
         </div>
       </div>
       <div class="modal-header-actions" style="display: flex; align-items: center; gap: 8px;">
-        <button type="button" class="btn-modal-sugg-action" id="btn-modal-capture-image" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.35); font-size: 0.75rem; padding: 6px 12px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 600;" onclick="AgentController.captureModalAsImage()" title="📸 Capturar y copiar imagen PNG del asistente directamente al portapapeles y descargar">
-          <span>📸 Capturar Imagen</span>
+        <button type="button" class="btn-modal-sugg-action" id="btn-modal-capture-image" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.35); font-size: 0.75rem; padding: 6px 12px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; font-weight: 600;" onclick="AgentController.captureModalAsImage()" title="📸 Capturar y copiar imagen PNG del asistente directamente al portapapeles y descargar">
+          <span>📸</span>
+          <span class="btn-label-text">Capturar Imagen</span>
         </button>
-        <button type="button" class="btn-modal-sugg-action" style="background: rgba(99,102,241,0.2); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.35); font-size: 0.75rem; padding: 6px 12px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" onclick="AgentController.copyFullModalSummary()" title="Copiar todo el resumen y opciones del asistente al portapapeles">
-          <span>📋 Copiar Resumen</span>
+        <button type="button" class="btn-modal-sugg-action" id="btn-modal-copy-summary" style="background: rgba(99,102,241,0.2); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.35); font-size: 0.75rem; padding: 6px 12px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;" onclick="AgentController.copyFullModalSummary()" title="Copiar todo el resumen y opciones del asistente al portapapeles">
+          <span>📋</span>
+          <span class="btn-label-text">Copiar Resumen</span>
         </button>
-        <button type="button" class="btn-modal-sugg-action" id="btn-toggle-assistant-drawer" style="background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.3); font-size: 0.75rem; padding: 6px 10px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" onclick="AgentController.toggleAssistantViewMode()" title="Alternar entre Panel Lateral (Split-View) y Modal Centrado">
+        <button type="button" class="btn-modal-sugg-action" id="btn-toggle-assistant-drawer" style="background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.3); font-size: 0.75rem; padding: 6px 10px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" onclick="AgentController.toggleAssistantViewMode()" title="Alternar entre Ventana Centrada y Panel Lateral">
           <span id="label-assistant-viewmode">◧ Panel Lateral</span>
         </button>
         <span class="score-badge high" id="modal-score-badge" onclick="App.openScoreGuideModal()" style="cursor: pointer;" title="Haz clic para ver la Guía de Score">⭐ Score 95/100 ℹ️</span>
@@ -2135,6 +2141,42 @@ $isMetaConnected = ($activeAccountsCount > 0);
           <button type="button" class="btn-modal-refresh-suggestions" onclick="AgentController.refreshModalSuggestions()" title="Regenerar nuevas sugerencias con IA">
             <span>🔄 Regenerar</span>
           </button>
+        </div>
+
+        <!-- Publicación de Origen (Contexto Visual para ver imagen y texto del post) -->
+        <div class="modal-post-origin-card" id="modal-post-origin-card">
+          <!-- Botón accesible para ampliar imagen con teclado y mouse -->
+          <button type="button" 
+                  class="modal-post-origin-media-btn" 
+                  id="modal-post-origin-media-btn" 
+                  onclick="AgentController.openPostMediaViewer()" 
+                  aria-label="Ampliar imagen de la publicación original para leer su contenido" 
+                  title="🔍 Clic para ampliar imagen y leer el texto">
+            <img id="modal-post-origin-img" 
+                 src="" 
+                 alt="Miniatura de la publicación original" 
+                 loading="lazy" 
+                 decoding="async" 
+                 referrerpolicy="no-referrer"
+                 class="modal-post-origin-img" 
+                 onerror="AgentController.onPostImageError(this)" />
+            <span class="modal-post-origin-zoom-badge" aria-hidden="true">🔍 Ampliar</span>
+          </button>
+
+          <!-- Fallback accesible cuando no hay imagen o falla -->
+          <div class="modal-post-origin-fallback" id="modal-post-origin-fallback" style="display: none;">
+            <span class="fallback-icon" aria-hidden="true">🖼️</span>
+            <span class="fallback-text">Sin imagen disponible (Texto o Video)</span>
+          </div>
+
+          <!-- Contenido contextual del post -->
+          <div class="modal-post-origin-content">
+            <div class="modal-post-origin-header">
+              <span class="modal-post-origin-label">📌 Publicación Original:</span>
+              <span id="modal-post-origin-platform-badge" class="platform-badge-mini instagram">IG</span>
+            </div>
+            <p class="modal-post-origin-caption" id="modal-post-origin-caption">Cargando contexto de la publicación...</p>
+          </div>
         </div>
 
         <!-- Follower Comment Context Box -->
@@ -2218,6 +2260,9 @@ $isMetaConnected = ($activeAccountsCount > 0);
               <button type="button" class="btn-modal-cancel" onclick="App.closeModal('modal-assistant-replies')">
                 Cerrar
               </button>
+              <button type="button" class="btn-modal-sugg-action btn-modal-ignore" id="btn-modal-ignore-comment" style="background: rgba(239, 68, 68, 0.15); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.35); font-weight: 600; padding: 9px 14px; border-radius: 8px; font-size: 0.8rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;" onclick="AgentController.openIgnoreConfirmationModal()" title="Marcar como ignorado y no responder (spam, troll, irrelevante, ya atendido)">
+                <span>🚫 No responder</span>
+              </button>
               <button type="button" class="btn-modal-sugg-action" id="btn-modal-save-gold-custom" style="background: rgba(245,158,11,0.2); color: #fbbf24; border: 1px solid rgba(245,158,11,0.4); font-weight: 700; padding: 9px 15px; border-radius: 8px; font-size: 0.8rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;" onclick="AgentController.saveAsGoldExample(null, true)" title="⭐ Guardar tus palabras editadas en la memoria de Hermes sin publicar en Meta">
                 <span>⭐ Guardar como Oro (Sin Publicar)</span>
               </button>
@@ -2294,6 +2339,75 @@ $isMetaConnected = ($activeAccountsCount > 0);
         </div>
       </div>
 
+    </div>
+  </div>
+</div>
+
+<!-- Modal Accesible: Confirmación de No Responder / Ignorar Comentario -->
+<div class="modal-overlay" id="modal-confirm-ignore" role="dialog" aria-modal="true" aria-labelledby="modal-ignore-title" onclick="if(event.target===this) AgentController.closeIgnoreConfirmationModal()">
+  <div class="modal-box modal-ignore-box" style="max-width: 520px; border: 1px solid rgba(239, 68, 68, 0.35); box-shadow: 0 20px 50px rgba(0,0,0,0.6), 0 0 30px rgba(239, 68, 68, 0.1);">
+    <div class="modal-header" style="border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 14px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 1.4rem;">🚫</span>
+        <div>
+          <h3 id="modal-ignore-title" style="font-size: 1.1rem; font-weight: 700; color: #fff; margin: 0;">No Responder / Ignorar Comentario</h3>
+          <p style="font-size: 0.76rem; color: var(--text-muted); margin: 3px 0 0;">Esta decisión entrena a Hermes sobre qué omisiones realizar en esta marca.</p>
+        </div>
+      </div>
+      <button type="button" class="btn-close-modal" onclick="AgentController.closeIgnoreConfirmationModal()" title="Cerrar modal (Esc)">&times;</button>
+    </div>
+
+    <div class="modal-body" style="padding: 16px 20px;">
+      <!-- Preview del Comentario -->
+      <div class="ignore-comment-preview" style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+          <strong id="modal-ignore-author" style="color: #cbd5e1; font-size: 0.85rem;">Seguidor</strong>
+          <span id="modal-ignore-platform" class="platform-badge-mini instagram">IG</span>
+        </div>
+        <p id="modal-ignore-snippet" style="font-size: 0.82rem; color: #94a3b8; font-style: italic; margin: 0; line-height: 1.4; max-height: 60px; overflow-y: auto;">
+          "Comentario..."
+        </p>
+      </div>
+
+      <!-- Selección de Motivo -->
+      <div style="margin-bottom: 14px;">
+        <label for="ignore-reason-select" style="display: block; font-size: 0.8rem; font-weight: 600; color: #e2e8f0; margin-bottom: 6px;">
+          🎯 Motivo de Descarte (Requerido):
+        </label>
+        <select id="ignore-reason-select" class="modal-control-select" style="width: 100%; padding: 9px 12px; background: #0f172a; border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 8px; font-size: 0.85rem;">
+          <option value="spam_link">🔗 Spam, publicidad o enlace no solicitado</option>
+          <option value="troll_provocation">👹 Troll o provocación malintencionada</option>
+          <option value="offensive_language">⚠️ Lenguaje ofensivo, insulto o agresión</option>
+          <option value="irrelevant">💤 Irrelevante / Sin sustancia para la marca</option>
+          <option value="already_resolved">✅ Ya atendido / No requiere respuesta</option>
+          <option value="other">📁 Otro motivo de moderación</option>
+        </select>
+      </div>
+
+      <!-- Notas Seguras Opcionales con Contador -->
+      <div style="margin-bottom: 14px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+          <label for="ignore-notes-input" style="font-size: 0.78rem; font-weight: 600; color: #94a3b8;">
+            📝 Nota o contexto interno (Opcional, máx. 500 caracteres):
+          </label>
+          <span id="ignore-notes-counter" style="font-size: 0.72rem; color: var(--text-dim);">0 / 500</span>
+        </div>
+        <textarea id="ignore-notes-input" rows="2" maxlength="500" placeholder="Añade una breve nota interna si lo deseas..." style="width: 100%; padding: 8px 12px; background: #0f172a; border: 1px solid rgba(255,255,255,0.12); color: #e2e8f0; border-radius: 8px; font-size: 0.8rem; resize: vertical;" oninput="AgentController.onIgnoreNotesInput(this)"></textarea>
+      </div>
+
+      <!-- Aviso Fail-Closed y Cero Publicación -->
+      <div style="background: rgba(99, 102, 241, 0.08); border-left: 3px solid #6366f1; padding: 10px 12px; border-radius: 0 6px 6px 0; font-size: 0.75rem; color: #c7d2fe; line-height: 1.4;">
+        🛡️ <strong>Garantía:</strong> Esta acción no publica en Meta, no crea respuestas vacías y permite restaurar el comentario a pendientes en cualquier momento desde el filtro <em>"Ignorados"</em>.
+      </div>
+    </div>
+
+    <div class="modal-footer" style="padding: 12px 20px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: flex-end; gap: 10px;">
+      <button type="button" class="btn-modal-cancel" onclick="AgentController.closeIgnoreConfirmationModal()" style="padding: 8px 16px; font-size: 0.82rem; border-radius: 8px; background: rgba(148, 163, 184, 0.12); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.25); cursor: pointer;">
+        Cancelar
+      </button>
+      <button type="button" class="btn-send-reply" id="btn-submit-confirm-ignore" onclick="AgentController.submitIgnoreComment()" style="padding: 8px 18px; font-size: 0.82rem; font-weight: 700; border-radius: 8px; background: linear-gradient(135deg, #ef4444, #dc2626); color: #fff; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+        <span id="label-submit-ignore">🚫 Confirmar y no responder</span>
+      </button>
     </div>
   </div>
 </div>
@@ -3018,6 +3132,30 @@ $isMetaConnected = ($activeAccountsCount > 0);
         <button type="submit" class="btn-primary-action" style="background: linear-gradient(135deg, #10b981, #059669); font-weight: 700;">Evaluar y Asentar en Ledger</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- Modal Lightbox Accesible: Visor de Imagen Ampliada de la Publicación -->
+<div class="modal-overlay modal-lightbox-overlay" 
+     id="modal-post-media-viewer" 
+     role="dialog" 
+     aria-modal="true" 
+     aria-labelledby="lightbox-modal-title" 
+     onclick="if(event.target===this) AgentController.closePostMediaViewer()">
+  <div class="lightbox-box">
+    <div class="lightbox-header">
+      <h4 class="lightbox-title" id="lightbox-modal-title">🖼️ Imagen Original de la Publicación</h4>
+      <button type="button" 
+              class="btn-close-modal" 
+              id="btn-close-post-lightbox" 
+              onclick="AgentController.closePostMediaViewer()" 
+              aria-label="Cerrar visor ampliado (Escape)" 
+              title="Cerrar (Esc)">&times;</button>
+    </div>
+    <div class="lightbox-body">
+      <img id="lightbox-expanded-img" src="" alt="Publicación original en alta resolución" loading="lazy" decoding="async" referrerpolicy="no-referrer" />
+    </div>
+    <div class="lightbox-caption" id="lightbox-caption-text"></div>
   </div>
 </div>
 

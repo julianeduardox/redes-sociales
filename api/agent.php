@@ -290,7 +290,13 @@ try {
             $brandLang = $bvStmt->fetchColumn() ?: 'any';
         }
 
-        $suitability = AiAgentService::evaluateCommentSuitability($c['comment_text'], $brandLang);
+        $suitability = AiAgentService::evaluateCommentSuitability(
+            $c['comment_text'],
+            $brandLang,
+            null,
+            $userId,
+            $brandVoiceId
+        );
 
         if ($suitability['status'] === 'spam') {
             $pdo->prepare("UPDATE comments SET status = 'spam', sentiment = 'spam', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
@@ -321,6 +327,24 @@ try {
                     'action' => 'ignored_sticker',
                     'reason' => $suitability['reason'],
                     'status' => 'ignored'
+                ]
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        if ($suitability['status'] === 'pending_review') {
+            $pdo->prepare("UPDATE comments SET status = 'pending_review', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
+                ->execute([':reason' => $suitability['reason'], ':id' => $c['id'], ':uid' => $userId]);
+
+            echo json_encode([
+                'success' => true,
+                'item' => [
+                    'comment_id' => (int)$c['id'],
+                    'author' => htmlspecialchars($c['author_name'], ENT_QUOTES, 'UTF-8'),
+                    'action' => 'requires_human_review',
+                    'reason' => $suitability['reason'],
+                    'status' => 'pending_review',
+                    'suggest_ignore' => true
                 ]
             ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
             exit;
@@ -484,7 +508,13 @@ try {
             $brandVoiceId = (int)($c['effective_brand_voice_id'] ?? 1);
             $brandLang = !empty($c['brand_voice_language']) ? $c['brand_voice_language'] : 'any';
 
-            $suitability = AiAgentService::evaluateCommentSuitability($c['comment_text'], $brandLang);
+            $suitability = AiAgentService::evaluateCommentSuitability(
+                $c['comment_text'],
+                $brandLang,
+                null,
+                $userId,
+                $brandVoiceId
+            );
 
             if ($suitability['status'] === 'spam') {
                 // Mark as spam for human review
@@ -536,6 +566,21 @@ try {
                     'action' => 'ignored_sticker',
                     'reason' => $suitability['reason'],
                     'status' => 'ignored'
+                ];
+                continue;
+            }
+
+            if ($suitability['status'] === 'pending_review') {
+                $pdo->prepare("UPDATE comments SET status = 'pending_review', highlight_reason = :reason WHERE id = :id AND user_id = :uid")
+                    ->execute([':reason' => $suitability['reason'], ':id' => $c['id'], ':uid' => $userId]);
+
+                $processed[] = [
+                    'comment_id' => (int)$c['id'],
+                    'author' => htmlspecialchars($c['author_name'], ENT_QUOTES, 'UTF-8'),
+                    'action' => 'requires_human_review',
+                    'reason' => $suitability['reason'],
+                    'status' => 'pending_review',
+                    'suggest_ignore' => true
                 ];
                 continue;
             }

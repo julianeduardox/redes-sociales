@@ -2781,15 +2781,17 @@ select option:checked,
    Modal: Asistente de Respuestas & Conexión
    ========================================================================== */
 .modal-assistant-box {
-  max-width: 860px;
-  width: 95%;
+  max-width: 1100px;
+  width: 94%;
   max-height: 92vh;
-  padding: 24px;
+  padding: 22px 24px;
   background: linear-gradient(170deg, #111827 0%, #0d121f 100%);
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  border: 1px solid rgba(99, 102, 241, 0.35);
   box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.85), 0 0 40px rgba(99, 102, 241, 0.15);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .modal-assistant-header {
@@ -2896,9 +2898,12 @@ select option:checked,
 .modal-assistant-body {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
   overflow-y: auto;
-  padding-right: 4px;
+  overflow-x: hidden;
+  padding-right: 6px;
+  flex: 1;
+  min-height: 0;
 }
 
 .modal-assistant-controls-row {
@@ -2970,6 +2975,209 @@ select option:checked,
 .btn-modal-refresh-suggestions:hover {
   background: rgba(99, 102, 241, 0.25);
   border-color: var(--primary);
+}
+
+/* ==========================================================================
+   Publicación de Origen en el Asistente de Respuestas
+   ========================================================================== */
+.modal-post-origin-card {
+  display: flex;
+  align-items: stretch;
+  gap: 14px;
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  box-sizing: border-box;
+}
+
+.modal-post-origin-media-btn {
+  position: relative;
+  width: 86px;
+  height: 86px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  background: #090d16;
+  padding: 0;
+  cursor: pointer;
+  outline: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.modal-post-origin-media-btn:hover,
+.modal-post-origin-media-btn:focus-visible {
+  transform: scale(1.03);
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 14px rgba(6, 182, 212, 0.4);
+}
+
+.modal-post-origin-media-btn:focus-visible {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: 2px;
+}
+
+.modal-post-origin-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.modal-post-origin-zoom-badge {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  background: rgba(0, 0, 0, 0.75);
+  color: #67e8f9;
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 4px;
+  pointer-events: none;
+  letter-spacing: -0.01em;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(6, 182, 212, 0.3);
+}
+
+.modal-post-origin-fallback {
+  width: 86px;
+  height: 86px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.modal-post-origin-fallback .fallback-icon {
+  font-size: 1.3rem;
+  opacity: 0.6;
+}
+
+.modal-post-origin-fallback .fallback-text {
+  font-size: 0.58rem;
+  color: var(--text-dim);
+  line-height: 1.15;
+  margin-top: 3px;
+}
+
+.modal-post-origin-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  flex: 1;
+}
+
+.modal-post-origin-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.modal-post-origin-label {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--accent-cyan);
+  letter-spacing: -0.01em;
+}
+
+.modal-post-origin-caption {
+  font-size: 0.82rem;
+  color: #cbd5e1;
+  line-height: 1.4;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-word;
+}
+
+/* ==========================================================================
+   Modal Lightbox: Visor de Imagen Ampliada
+   ========================================================================== */
+.modal-lightbox-overlay {
+  z-index: 100005 !important;
+  background: rgba(0, 0, 0, 0.88) !important;
+  backdrop-filter: blur(10px) !important;
+}
+
+.lightbox-box {
+  background: linear-gradient(170deg, #111827 0%, #0b0f19 100%);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  max-width: 900px;
+  width: 92%;
+  max-height: 94vh;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.9), 0 0 35px rgba(99, 102, 241, 0.2);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.lightbox-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.lightbox-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #fff;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lightbox-body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-height: 70vh;
+  overflow: hidden;
+  background: #000;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.lightbox-body img {
+  max-width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+  display: block;
+}
+
+.lightbox-caption {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  line-height: 1.45;
+  max-height: 80px;
+  overflow-y: auto;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--accent-cyan);
 }
 
 /* Follower Context Card in Modal */
@@ -3065,6 +3273,7 @@ select option:checked,
   display: flex;
   flex-direction: column;
   gap: 10px;
+  width: 100%;
 }
 
 .modal-section-title {
@@ -3078,8 +3287,10 @@ select option:checked,
 
 .modal-suggestions-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .modal-suggestion-card {
@@ -3094,6 +3305,10 @@ select option:checked,
   gap: 10px;
   transition: all var(--transition-fast);
   position: relative;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  word-break: break-word;
 }
 
 .modal-suggestion-card:hover {
@@ -3122,12 +3337,16 @@ select option:checked,
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
 .modal-suggestion-tag {
   font-size: 0.74rem;
   font-weight: 800;
   letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .modal-suggestion-tag.reflection { color: #67e8f9; }
 .modal-suggestion-tag.motivation { color: #6ee7b7; }
@@ -3136,6 +3355,9 @@ select option:checked,
 .modal-suggestion-sub {
   font-size: 0.68rem;
   color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .modal-suggestion-text {
@@ -3143,33 +3365,60 @@ select option:checked,
   color: #e2e8f0;
   line-height: 1.45;
   flex: 1;
+  word-break: break-word;
 }
 
 .modal-suggestion-actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 6px;
-  padding-top: 8px;
+  padding-top: 10px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .btn-modal-sugg-action {
-  flex: 1;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid var(--border-subtle);
   color: var(--text-main);
   font-family: inherit;
   font-size: 0.72rem;
   font-weight: 700;
-  padding: 5px 8px;
+  padding: 6px 6px;
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: var(--transition-fast);
   text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
 }
 
 .btn-modal-sugg-action:hover {
   background: rgba(255, 255, 255, 0.15);
   color: #fff;
+}
+
+.btn-modal-sugg-action.btn-modal-sugg-quicksend {
+  grid-column: 1 / -1;
+  background: rgba(16, 185, 129, 0.22) !important;
+  color: #34d399 !important;
+  border: 1px solid rgba(16, 185, 129, 0.45) !important;
+  font-weight: 700;
+  padding: 8px 12px;
+  font-size: 0.78rem;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15);
+}
+
+.btn-modal-sugg-action.btn-modal-sugg-quicksend:hover {
+  background: rgba(16, 185, 129, 0.35) !important;
+  color: #a7f3d0 !important;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
 }
 
 /* Modal Reply Editor */
@@ -9453,20 +9702,20 @@ details.advanced-dev-details[open] summary {
 }
 
 /* ==========================================================================
-   DRAWER MODE (SPLIT-VIEW) PARA EL ASISTENTE
+   DRAWER MODE (SPLIT-VIEW) & RESPONSIVE DEL ASISTENTE
    ========================================================================== */
-@media (min-width: 1200px) {
+@media (min-width: 1025px) {
   .modal-assistant-overlay.drawer-mode {
     justify-content: flex-end;
     align-items: stretch;
-    background: rgba(0, 0, 0, 0.4);
+    background: rgba(0, 0, 0, 0.45);
     backdrop-filter: blur(4px);
     padding: 0;
   }
 
   .modal-assistant-overlay.drawer-mode .modal-assistant-box {
-    width: 600px;
-    max-width: 50vw;
+    width: clamp(520px, 45vw, 680px);
+    max-width: 90vw;
     height: 100vh;
     max-height: 100vh;
     border-radius: 0;
@@ -9474,6 +9723,12 @@ details.advanced-dev-details[open] summary {
     border-left: 1px solid rgba(139, 92, 246, 0.4);
     box-shadow: -10px 0 35px rgba(0, 0, 0, 0.7);
     animation: drawerSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    padding: 20px 22px;
+  }
+
+  /* En modo panel lateral, las 3 tarjetas se apilan verticalmente para máxima legibilidad sin cortes */
+  .modal-assistant-overlay.drawer-mode .modal-suggestions-grid {
+    grid-template-columns: 1fr !important;
   }
 
   @keyframes drawerSlideIn {
@@ -9481,5 +9736,143 @@ details.advanced-dev-details[open] summary {
     to { transform: translateX(0); }
   }
 }
+
+/* Teléfonos y Pantallas Pequeñas (< 768px) */
+@media (max-width: 768px) {
+  .modal-assistant-overlay,
+  .modal-assistant-overlay.drawer-mode {
+    padding: 0 !important;
+    align-items: stretch !important;
+    justify-content: stretch !important;
+  }
+
+  .modal-assistant-overlay .modal-assistant-box,
+  .modal-assistant-overlay.drawer-mode .modal-assistant-box {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    border: none !important;
+    padding: 12px 14px !important;
+  }
+
+  .modal-assistant-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding-bottom: 12px;
+    margin-bottom: 10px;
+  }
+
+  .modal-assistant-title-group {
+    gap: 8px;
+  }
+
+  .modal-assistant-icon-badge {
+    width: 36px;
+    height: 36px;
+    font-size: 1.15rem;
+  }
+
+  .modal-assistant-title {
+    font-size: 1.05rem;
+  }
+
+  .modal-assistant-subtitle {
+    font-size: 0.72rem;
+  }
+
+  .modal-header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    width: 100%;
+  }
+
+  /* Ocultar botón de panel lateral en móviles porque en móvil siempre es pantalla completa */
+  #btn-toggle-assistant-drawer {
+    display: none !important;
+  }
+
+  .modal-suggestions-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px;
+  }
+
+  .modal-assistant-controls-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .modal-control-item-comment,
+  .modal-control-item-tone {
+    width: 100%;
+  }
+
+  .modal-editor-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .modal-editor-footer > div:last-child {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .modal-btn-send {
+    width: 100%;
+    justify-content: center;
+    padding: 12px 18px;
+    font-size: 0.95rem;
+  }
+
+  /* Publicación de origen en móviles */
+  .modal-post-origin-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .modal-post-origin-media-btn {
+    width: 100%;
+    height: 140px;
+  }
+
+  .modal-post-origin-fallback {
+    width: 100%;
+    height: 60px;
+  }
+
+  .lightbox-box {
+    width: 96%;
+    padding: 12px;
+    max-height: 96vh;
+  }
+
+  .lightbox-body {
+    max-height: 55vh;
+  }
+
+  .lightbox-body img {
+    max-height: 55vh;
+  }
+}
+
+/* Pantallas medianas (tablets entre 769px y 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .modal-suggestions-grid {
+    grid-template-columns: 1fr !important;
+    gap: 14px;
+  }
+}
+
 
 
