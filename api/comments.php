@@ -441,6 +441,9 @@ try {
             $verification = MetaApiService::verifyCommentRepliedOnPlatform($commentId, $userId);
 
             if (!empty($verification['is_replied'])) {
+                $pdo->prepare("UPDATE comments SET status = 'replied', highlight_reason = NULL WHERE id = :id AND user_id = :uid")
+                    ->execute([':id' => $commentId, ':uid' => $userId]);
+
                 echo json_encode([
                     'success' => true,
                     'is_replied' => true,

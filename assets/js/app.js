@@ -1639,9 +1639,29 @@ const App = {
       const res = await response.json();
       if (res.success) {
         this.showToast(res.message || `¡Publicado con éxito en ${platName}! 🚀`, 'success');
+        const cardEl = document.querySelector(`.comment-card[data-id="${commentId}"]`);
+        if (cardEl) {
+          cardEl.style.transition = 'all 0.35s ease';
+          cardEl.style.opacity = '0';
+          cardEl.style.transform = 'translateX(25px)';
+          setTimeout(() => { if (cardEl.parentNode) cardEl.remove(); }, 350);
+        }
+        if (Array.isArray(this.commentsList)) {
+          this.commentsList = this.commentsList.filter(c => c.id != commentId);
+        }
         this.closeModal('modal-comment-detail');
         await this.loadComments();
+        if (typeof AgentController !== 'undefined' && AgentController.advanceToNextPendingComment) {
+          AgentController.advanceToNextPendingComment(commentId);
+        }
       } else {
+        if (typeof AgentController !== 'undefined' && AgentController.autoVerifyAndReconcile) {
+          const reconciled = await AgentController.autoVerifyAndReconcile(commentId, platName);
+          if (reconciled) {
+            this.closeModal('modal-comment-detail');
+            return;
+          }
+        }
         if (res.is_token_expired) {
           this.showToast('⚠️ El Token de Meta ha expirado. Por favor renuévalo en Configuración.', 'warning');
           this.showTokenExpiredBanner();
@@ -1652,6 +1672,13 @@ const App = {
       }
     } catch (err) {
       console.error(err);
+      if (typeof AgentController !== 'undefined' && AgentController.autoVerifyAndReconcile) {
+        const reconciled = await AgentController.autoVerifyAndReconcile(commentId, platName);
+        if (reconciled) {
+          this.closeModal('modal-comment-detail');
+          return;
+        }
+      }
       this.showToast('Error de red al reintentar publicación.', 'error');
     }
   },
@@ -1714,14 +1741,21 @@ const App = {
       if (res.success) {
         if (res.is_replied) {
           this.showToast(res.message || `¡Confirmado! La respuesta ya está publicada en ${platName}. Estado sincronizado a Respondido. ✅✨`, 'success', 6000);
-          if (this.commentsList) {
-            const localComment = this.commentsList.find(c => c.id == commentId);
-            if (localComment) {
-              localComment.status = 'replied';
-              localComment.highlight_reason = null;
-            }
+          const cardEl = document.querySelector(`.comment-card[data-id="${commentId}"]`);
+          if (cardEl) {
+            cardEl.style.transition = 'all 0.35s ease';
+            cardEl.style.opacity = '0';
+            cardEl.style.transform = 'translateX(25px)';
+            setTimeout(() => { if (cardEl.parentNode) cardEl.remove(); }, 350);
           }
+          if (Array.isArray(this.commentsList)) {
+            this.commentsList = this.commentsList.filter(c => c.id != commentId);
+          }
+          this.closeModal('modal-comment-detail');
           await this.loadComments();
+          if (typeof AgentController !== 'undefined' && AgentController.advanceToNextPendingComment) {
+            AgentController.advanceToNextPendingComment(commentId);
+          }
         } else {
           this.showToast(`No se detectó respuesta pública de tu cuenta en ${platName}. Puedes intentar reintentar el envío.`, 'warning', 5000);
         }
@@ -1753,14 +1787,21 @@ const App = {
       const res = await response.json();
       if (res.success) {
         this.showToast(`¡Comentario marcado como respondido en ${platName}! 🏛️✨`, 'success');
-        if (this.commentsList) {
-          const localComment = this.commentsList.find(c => c.id == commentId);
-          if (localComment) {
-            localComment.status = 'replied';
-            localComment.highlight_reason = null;
-          }
+        const cardEl = document.querySelector(`.comment-card[data-id="${commentId}"]`);
+        if (cardEl) {
+          cardEl.style.transition = 'all 0.35s ease';
+          cardEl.style.opacity = '0';
+          cardEl.style.transform = 'translateX(25px)';
+          setTimeout(() => { if (cardEl.parentNode) cardEl.remove(); }, 350);
         }
+        if (Array.isArray(this.commentsList)) {
+          this.commentsList = this.commentsList.filter(c => c.id != commentId);
+        }
+        this.closeModal('modal-comment-detail');
         await this.loadComments();
+        if (typeof AgentController !== 'undefined' && AgentController.advanceToNextPendingComment) {
+          AgentController.advanceToNextPendingComment(commentId);
+        }
       } else {
         this.showToast(`Error: ${res.error || 'No se pudo actualizar el estado'}`, 'error');
       }

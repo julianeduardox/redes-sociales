@@ -688,9 +688,26 @@ const AgentController = {
       const res = await response.json();
       if (res.success) {
         App.showToast(res.message || '¡Respuesta publicada y enviada con éxito! 🚀✨', 'success');
+        const cardEl = document.querySelector(`.comment-card[data-id="${commentId}"]`);
+        if (cardEl) {
+          cardEl.style.transition = 'all 0.35s ease';
+          cardEl.style.opacity = '0';
+          cardEl.style.transform = 'translateX(25px)';
+          setTimeout(() => { if (cardEl.parentNode) cardEl.remove(); }, 350);
+        }
+        if (Array.isArray(App.commentsList)) {
+          App.commentsList = App.commentsList.filter(c => c.id != commentId);
+        }
         await App.loadComments();
         this.advanceToNextPendingComment(commentId);
       } else {
+        if (quickBtn) quickBtn.innerHTML = `<span>🔍 Verificando...</span>`;
+        const plat = this.activeComment?.platform || 'instagram';
+        const reconciled = await this.autoVerifyAndReconcile(commentId, plat);
+        if (reconciled) {
+          return;
+        }
+
         if (res.is_token_expired) {
           App.showToast('⚠️ La respuesta se guardó pero NO se publicó en Meta: Token expirado (Error 190). Renuévalo en Configuración.', 'warning', 8000);
           if (App.showTokenExpiredBanner) App.showTokenExpiredBanner();
@@ -701,6 +718,12 @@ const AgentController = {
       }
     } catch (err) {
       console.error(err);
+      if (quickBtn) quickBtn.innerHTML = `<span>🔍 Verificando...</span>`;
+      const plat = this.activeComment?.platform || 'instagram';
+      const reconciled = await this.autoVerifyAndReconcile(commentId, plat);
+      if (reconciled) {
+        return;
+      }
       App.showToast('Error de red al enviar la respuesta.', 'error');
     } finally {
       this.isSubmittingReply = false;
@@ -770,9 +793,26 @@ const AgentController = {
           ? '¡Respuesta publicada y estilo corregido aprendido por Gemini! 🧠✨' 
           : '¡Respuesta aprobada y registrada! Gemini aprendió este éxito. 🏛️✨';
         App.showToast(learnMsg, 'success');
+        const cardEl = document.querySelector(`.comment-card[data-id="${commentId}"]`);
+        if (cardEl) {
+          cardEl.style.transition = 'all 0.35s ease';
+          cardEl.style.opacity = '0';
+          cardEl.style.transform = 'translateX(25px)';
+          setTimeout(() => { if (cardEl.parentNode) cardEl.remove(); }, 350);
+        }
+        if (Array.isArray(App.commentsList)) {
+          App.commentsList = App.commentsList.filter(c => c.id != commentId);
+        }
         await App.loadComments();
         this.advanceToNextPendingComment(commentId);
       } else {
+        if (btn) btn.innerHTML = `<span>🔍 Verificando red social...</span>`;
+        const plat = this.activeComment?.platform || 'instagram';
+        const reconciled = await this.autoVerifyAndReconcile(commentId, plat);
+        if (reconciled) {
+          return;
+        }
+
         if (res.is_token_expired) {
           App.showToast('⚠️ Respuesta guardada pero NO se publicó en Meta: Token expirado (Error 190). Renuévalo en Configuración.', 'warning', 8000);
           if (App.showTokenExpiredBanner) App.showTokenExpiredBanner();
@@ -783,6 +823,12 @@ const AgentController = {
       }
     } catch (err) {
       console.error(err);
+      if (btn) btn.innerHTML = `<span>🔍 Verificando red social...</span>`;
+      const plat = this.activeComment?.platform || 'instagram';
+      const reconciled = await this.autoVerifyAndReconcile(commentId, plat);
+      if (reconciled) {
+        return;
+      }
       App.showToast('Error al enviar la respuesta.', 'error');
     } finally {
       this.isSubmittingReply = false;
@@ -1456,10 +1502,31 @@ const AgentController = {
         App.showToast(learnMsg, 'success');
         const errBox = document.getElementById('modal-reply-error-box');
         if (errBox) { errBox.style.display = 'none'; errBox.innerHTML = ''; }
+
+        // Remove card from DOM immediately
+        const cardEl = document.querySelector(`.comment-card[data-id="${commentId}"]`);
+        if (cardEl) {
+          cardEl.style.transition = 'all 0.35s ease';
+          cardEl.style.opacity = '0';
+          cardEl.style.transform = 'translateX(25px)';
+          setTimeout(() => { if (cardEl.parentNode) cardEl.remove(); }, 350);
+        }
+        if (Array.isArray(App.commentsList)) {
+          App.commentsList = App.commentsList.filter(c => c.id != commentId);
+        }
+
         App.closeModal('modal-assistant-replies');
         await App.loadComments();
         this.advanceToNextPendingComment(commentId);
       } else {
+        // Auto-reconciliation check before giving up or showing error
+        if (btn) btn.innerHTML = `<span>🔍 Verificando en Meta...</span>`;
+        const plat = this.modalActiveComment?.platform || 'instagram';
+        const reconciled = await this.autoVerifyAndReconcile(commentId, plat);
+        if (reconciled) {
+          return;
+        }
+
         if (res.is_token_expired) {
           App.showToast('⚠️ Respuesta guardada pero NO se publicó en Meta: Token expirado (Error 190). Renuévalo en Configuración.', 'warning', 8000);
           if (App.showTokenExpiredBanner) App.showTokenExpiredBanner();
@@ -1475,11 +1542,11 @@ const AgentController = {
             <div style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35); border-radius: 8px; padding: 10px 14px; font-size: 0.82rem; color: #fca5a5;">
               <div style="font-weight: 700; margin-bottom: 4px;">⚠️ ${App.escapeHtml(res.error || 'Fallo de publicación')}</div>
               <p style="margin: 0 0 8px; font-size: 0.78rem; color: #cbd5e1; line-height: 1.4;">
-                A veces la red social procesa el mensaje pero la conexión se corta. Si el mensaje se publicó, puedes comprobarlo o marcarlo como respondido:
+                No se detectó respuesta pública de tu cuenta en la red social. Si ya la ves publicada desde la app oficial, puedes comprobarlo o marcarlo:
               </p>
               <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                 <button type="button" class="btn-primary-action" style="padding: 5px 12px; font-size: 0.78rem; background: rgba(99, 102, 241, 0.25); border: 1px solid rgba(99, 102, 241, 0.45); color: #c7d2fe; cursor: pointer;" onclick="AgentController.verifyActiveCommentOnPlatform()">
-                  🔍 Comprobar si ya se publicó
+                  🔍 Reintentar Comprobación
                 </button>
                 <button type="button" class="btn-primary-action" style="padding: 5px 12px; font-size: 0.78rem; background: rgba(52, 211, 153, 0.18); border: 1px solid rgba(52, 211, 153, 0.4); color: #6ee7b7; cursor: pointer;" onclick="AgentController.markActiveCommentAsReplied()">
                   ✅ Ya la vi publicada (Marcar Respondido)
@@ -1492,6 +1559,12 @@ const AgentController = {
       }
     } catch (err) {
       console.error(err);
+      if (btn) btn.innerHTML = `<span>🔍 Verificando en Meta...</span>`;
+      const plat = this.modalActiveComment?.platform || 'instagram';
+      const reconciled = await this.autoVerifyAndReconcile(commentId, plat);
+      if (reconciled) {
+        return;
+      }
       App.showToast('Error al enviar la respuesta.', 'error');
       const errBox = document.getElementById('modal-reply-error-box');
       if (errBox) {
@@ -1504,7 +1577,7 @@ const AgentController = {
             </p>
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
               <button type="button" class="btn-primary-action" style="padding: 5px 12px; font-size: 0.78rem; background: rgba(99, 102, 241, 0.25); border: 1px solid rgba(99, 102, 241, 0.45); color: #c7d2fe; cursor: pointer;" onclick="AgentController.verifyActiveCommentOnPlatform()">
-                🔍 Comprobar si ya se publicó
+                🔍 Reintentar Comprobación
               </button>
               <button type="button" class="btn-primary-action" style="padding: 5px 12px; font-size: 0.78rem; background: rgba(52, 211, 153, 0.18); border: 1px solid rgba(52, 211, 153, 0.4); color: #6ee7b7; cursor: pointer;" onclick="AgentController.markActiveCommentAsReplied()">
                 ✅ Ya la vi publicada (Marcar Respondido)
@@ -1520,6 +1593,62 @@ const AgentController = {
         btn.innerHTML = `<span>Publicar Respuesta</span> 🏛️`;
       }
     }
+  },
+
+  // Centralized auto-verification: If a send fails or network cuts, silently checks if Meta actually published the reply
+  // If verified, it automatically synchronizes the status, shows success, removes the comment from UI and advances!
+  async autoVerifyAndReconcile(commentId, platformName = '') {
+    if (!commentId) return false;
+    const platLabel = platformName ? (platformName.toLowerCase() === 'facebook' ? 'Facebook' : 'Instagram') : 'la red social';
+    
+    try {
+      // Allow Meta edge servers a moment (800ms) before querying replies endpoint
+      await new Promise(r => setTimeout(r, 800));
+
+      const response = await App.fetchWithCsrf('api/comments.php', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'verify_platform_reply',
+          comment_id: parseInt(commentId, 10)
+        })
+      });
+
+      const res = await response.json();
+      if (res.success && res.is_replied) {
+        // Confirmed published on Instagram/Facebook!
+        App.showToast(`¡Mensaje detectado y confirmado en ${platLabel}! Se quitó de la bandeja automáticamente. 🚀✨`, 'success', 6000);
+
+        // 1. Remove card from DOM with visual transition
+        const cardEl = document.querySelector(`.comment-card[data-id="${commentId}"]`);
+        if (cardEl) {
+          cardEl.style.transition = 'all 0.35s ease';
+          cardEl.style.opacity = '0';
+          cardEl.style.transform = 'translateX(25px)';
+          setTimeout(() => { if (cardEl.parentNode) cardEl.remove(); }, 350);
+        }
+
+        // 2. Remove from active memory list
+        if (Array.isArray(App.commentsList)) {
+          App.commentsList = App.commentsList.filter(c => c.id != commentId);
+        }
+
+        // 3. Close modals & clean error box
+        const errBox = document.getElementById('modal-reply-error-box');
+        if (errBox) { errBox.style.display = 'none'; errBox.innerHTML = ''; }
+        App.closeModal('modal-assistant-replies');
+        App.closeModal('modal-comment-detail');
+
+        // 4. Reload comments & counts
+        await App.loadComments();
+
+        // 5. Advance to next pending comment
+        this.advanceToNextPendingComment(commentId);
+        return true;
+      }
+    } catch (err) {
+      console.warn('Auto-reconciliation error:', err);
+    }
+    return false;
   },
 
   // Verify whether the currently active comment was published on Instagram/Facebook
@@ -1543,6 +1672,16 @@ const AgentController = {
       const res = await response.json();
       if (res.success && res.is_replied) {
         App.showToast(`¡Confirmado! La respuesta ya está visible en ${platName}. Estado sincronizado a Respondido. ✅✨`, 'success', 6000);
+        const cardEl = document.querySelector(`.comment-card[data-id="${commentId}"]`);
+        if (cardEl) {
+          cardEl.style.transition = 'all 0.35s ease';
+          cardEl.style.opacity = '0';
+          cardEl.style.transform = 'translateX(25px)';
+          setTimeout(() => { if (cardEl.parentNode) cardEl.remove(); }, 350);
+        }
+        if (Array.isArray(App.commentsList)) {
+          App.commentsList = App.commentsList.filter(c => c.id != commentId);
+        }
         const errBox = document.getElementById('modal-reply-error-box');
         if (errBox) { errBox.style.display = 'none'; errBox.innerHTML = ''; }
         App.closeModal('modal-assistant-replies');
@@ -1577,6 +1716,16 @@ const AgentController = {
       const res = await response.json();
       if (res.success) {
         App.showToast(`¡Comentario marcado como respondido en ${platName}! 🏛️✨`, 'success');
+        const cardEl = document.querySelector(`.comment-card[data-id="${commentId}"]`);
+        if (cardEl) {
+          cardEl.style.transition = 'all 0.35s ease';
+          cardEl.style.opacity = '0';
+          cardEl.style.transform = 'translateX(25px)';
+          setTimeout(() => { if (cardEl.parentNode) cardEl.remove(); }, 350);
+        }
+        if (Array.isArray(App.commentsList)) {
+          App.commentsList = App.commentsList.filter(c => c.id != commentId);
+        }
         const errBox = document.getElementById('modal-reply-error-box');
         if (errBox) { errBox.style.display = 'none'; errBox.innerHTML = ''; }
         App.closeModal('modal-assistant-replies');
@@ -1718,13 +1867,17 @@ const AgentController = {
 
   // Transition seamlessly to next pending comment after successful publication or ignore
   advanceToNextPendingComment(repliedCommentId) {
+    if (repliedCommentId && Array.isArray(App.commentsList)) {
+      App.commentsList = App.commentsList.filter(c => c.id != repliedCommentId);
+    }
+
     if (!App.commentsList || App.commentsList.length === 0) {
       this.activeComment = null;
       this.clearCopilotView();
       return;
     }
 
-    const nextPending = App.commentsList.find(c => c.id != repliedCommentId && (c.status === 'pending' || c.status === 'failed'));
+    const nextPending = App.commentsList.find(c => c.id != repliedCommentId && !['replied', 'ignored', 'spam'].includes(c.status));
     if (nextPending) {
       App.selectComment(nextPending);
       this.loadSuggestions(nextPending);

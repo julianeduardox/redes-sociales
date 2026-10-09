@@ -596,6 +596,7 @@ class MetaApiService {
             // Double-Check / Network Recovery: Verify if the reply was actually delivered on the platform
             // despite a cURL timeout, connection reset, or transient error.
             try {
+                usleep(1200000); // 1.2s delay to allow Meta's edge servers to replicate the new reply
                 $verification = self::verifyCommentRepliedOnPlatform($commentDbId, $uid);
                 if (!empty($verification['is_replied'])) {
                     $pdo->prepare("UPDATE comments SET status = 'replied', highlight_reason = NULL WHERE id = :id AND user_id = :uid")->execute([':id' => $commentDbId, ':uid' => $uid]);
@@ -605,7 +606,7 @@ class MetaApiService {
                         'reconciled' => true,
                         'simulated' => false,
                         'remote_id' => $verification['remote_id'] ?? ($data['id'] ?? null),
-                        'message' => '¡Respuesta confirmada y publicada en la red social (sincronizada tras verificación de red)! 🏛️✨',
+                        'message' => '¡Respuesta confirmada y publicada en la red social (sincronizada automáticamente)! 🏛️✨',
                         'meta_response' => $verification['remote_reply'] ?? $data
                     ];
                 }
@@ -793,6 +794,8 @@ class MetaApiService {
                 $firstReplyId = $localReplies[0]['id'];
                 $pdo->prepare("UPDATE replies SET is_posted_to_platform = 1, reply_text = :txt WHERE id = :rid AND user_id = :uid")
                     ->execute([':txt' => $matchedReply['text'], ':rid' => $firstReplyId, ':uid' => $uid]);
+                $pdo->prepare("UPDATE replies SET is_posted_to_platform = 1 WHERE comment_id = :cid AND user_id = :uid AND reply_type NOT IN ('gold_draft', 'draft')")
+                    ->execute([':cid' => $commentDbId, ':uid' => $uid]);
             } else {
                 $pdo->prepare("
                     INSERT INTO replies (user_id, comment_id, reply_text, reply_type, tone_used, variant_type, is_posted_to_platform)
