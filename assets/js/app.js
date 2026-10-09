@@ -1158,8 +1158,8 @@ const App = {
       const isHigh = c.is_highlighted == 1 || c.highlight_score >= 80;
       const isSelected = this.selectedCommentId === c.id;
 
-      const isReplied = c.status === 'replied' && (c.is_posted_to_platform == 1 || c.is_posted_to_platform === null || c.is_posted_to_platform === undefined);
-      const isFailed = c.status === 'failed' || (c.reply_text && c.is_posted_to_platform == 0);
+      const isReplied = c.status === 'replied';
+      const isFailed = (c.status === 'failed' || (c.reply_text && c.is_posted_to_platform == 0 && c.reply_type !== 'gold_draft' && c.reply_type !== 'draft')) && !isReplied && c.status !== 'ignored';
       const isIgnored = c.status === 'ignored';
       const hasDraft = !isReplied && !isFailed && !isIgnored && Boolean(c.draft_reply || c.ai_suggestion || c.status === 'needs_review');
 
@@ -1202,9 +1202,14 @@ const App = {
         `;
       } else if (isFailed) {
         primaryCtaHtml = `
-          <button type="button" class="btn-card-primary-action action-retry" onclick="event.stopPropagation(); App.retryReply(${parseInt(c.id, 10)})" title="Reintentar publicación en ${c.platform === 'facebook' ? 'Facebook' : 'Instagram'}">
-            <span>🔄</span> Reintentar
-          </button>
+          <div style="display: flex; gap: 6px; align-items: center;">
+            <button type="button" class="btn-card-primary-action action-retry" onclick="event.stopPropagation(); App.retryReply(${parseInt(c.id, 10)})" title="Reintentar publicación en ${c.platform === 'facebook' ? 'Facebook' : 'Instagram'}">
+              <span>🔄</span> Reintentar
+            </button>
+            <button type="button" class="btn-card-secondary-action action-verify-mini" onclick="event.stopPropagation(); App.verifyPlatformReply(${parseInt(c.id, 10)})" style="padding: 6px 9px; font-size: 0.76rem; background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.35); color: #c7d2fe; border-radius: 6px; cursor: pointer; white-space: nowrap;" title="Comprobar si ya se publicó en la red social">
+              <span>🔍</span> Verificar
+            </button>
+          </div>
         `;
       } else if (hasDraft) {
         primaryCtaHtml = `
@@ -1249,8 +1254,13 @@ const App = {
                 ${this.escapeHtml(c.comment_text)}
               </div>
               ${isFailed ? `
-                <div class="operational-error-notice">
+                <div class="operational-error-notice" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
                   <span>⚠️ Falló envío en ${c.platform === 'facebook' ? 'Facebook' : 'Instagram'}${c.meta_error ? ': ' + this.escapeHtml(c.meta_error) : ''}</span>
+                  <div style="display: inline-flex; gap: 8px; align-items: center;">
+                    <button type="button" style="background: none; border: none; color: #a5b4fc; text-decoration: underline; cursor: pointer; font-size: 0.74rem;" onclick="event.stopPropagation(); App.verifyPlatformReply(${parseInt(c.id, 10)})">🔍 Comprobar en ${c.platform === 'facebook' ? 'Facebook' : 'Instagram'}</button>
+                    <span style="color: #64748b; font-size: 0.7rem;">•</span>
+                    <button type="button" style="background: none; border: none; color: #6ee7b7; text-decoration: underline; cursor: pointer; font-size: 0.74rem;" onclick="event.stopPropagation(); App.markAsReplied(${parseInt(c.id, 10)})">✅ Ya respondido</button>
+                  </div>
                 </div>
               ` : (isIgnored ? `
                 <div class="operational-ignore-notice" style="font-size: 0.76rem; color: #fca5a5; background: rgba(239, 68, 68, 0.08); border-left: 2px solid #ef4444; padding: 4px 8px; border-radius: 4px; margin-top: 6px; display: inline-flex; align-items: center; gap: 4px;">
@@ -1679,6 +1689,84 @@ const App = {
     } catch (err) {
       console.error(err);
       this.showToast('Error de conexión al restaurar el comentario.', 'error');
+    }
+  },
+
+  // Verify if a failed comment was actually published on Instagram/Facebook
+  async verifyPlatformReply(commentId) {
+    if (!commentId) return;
+
+    const comment = this.commentsList ? this.commentsList.find(c => c.id == commentId) : null;
+    const platName = comment && comment.platform === 'facebook' ? 'Facebook' : 'Instagram';
+
+    this.showToast(`Verificando en ${platName}... 🔍`, 'info');
+
+    try {
+      const response = await this.fetchWithCsrf('api/comments.php', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'verify_platform_reply',
+          comment_id: parseInt(commentId, 10)
+        })
+      });
+
+      const res = await response.json();
+      if (res.success) {
+        if (res.is_replied) {
+          this.showToast(res.message || `¡Confirmado! La respuesta ya está publicada en ${platName}. Estado sincronizado a Respondido. ✅✨`, 'success', 6000);
+          if (this.commentsList) {
+            const localComment = this.commentsList.find(c => c.id == commentId);
+            if (localComment) {
+              localComment.status = 'replied';
+              localComment.highlight_reason = null;
+            }
+          }
+          await this.loadComments();
+        } else {
+          this.showToast(`No se detectó respuesta pública de tu cuenta en ${platName}. Puedes intentar reintentar el envío.`, 'warning', 5000);
+        }
+      } else {
+        this.showToast(`Error al verificar: ${res.error || 'No se pudo consultar el estado'}`, 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      this.showToast('Error de red al verificar estado en la red social.', 'error');
+    }
+  },
+
+  // Manually mark a comment as replied (e.g. user answered from Instagram mobile app)
+  async markAsReplied(commentId) {
+    if (!commentId) return;
+
+    const comment = this.commentsList ? this.commentsList.find(c => c.id == commentId) : null;
+    const platName = comment && comment.platform === 'facebook' ? 'Facebook' : 'Instagram';
+
+    try {
+      const response = await this.fetchWithCsrf('api/comments.php', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'mark_as_replied',
+          comment_id: parseInt(commentId, 10)
+        })
+      });
+
+      const res = await response.json();
+      if (res.success) {
+        this.showToast(`¡Comentario marcado como respondido en ${platName}! 🏛️✨`, 'success');
+        if (this.commentsList) {
+          const localComment = this.commentsList.find(c => c.id == commentId);
+          if (localComment) {
+            localComment.status = 'replied';
+            localComment.highlight_reason = null;
+          }
+        }
+        await this.loadComments();
+      } else {
+        this.showToast(`Error: ${res.error || 'No se pudo actualizar el estado'}`, 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      this.showToast('Error de conexión al marcar como respondido.', 'error');
     }
   },
 

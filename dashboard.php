@@ -2249,6 +2249,8 @@ $isMetaConnected = ($activeAccountsCount > 0);
             </div>
           </div>
 
+          <div id="modal-reply-error-box" style="display:none; margin-bottom: 12px;"></div>
+
           <textarea id="modal-reply-text-input" class="reply-textarea modal-reply-textarea" rows="3" placeholder="Selecciona una de las 3 opciones de arriba o redacta tu respuesta personalizada..."></textarea>
 
           <div class="modal-editor-footer">

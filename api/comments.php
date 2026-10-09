@@ -46,7 +46,7 @@ try {
             LEFT JOIN accounts a ON p.account_id = a.id
             LEFT JOIN brand_voices bv ON COALESCE(p.brand_voice_id, a.brand_voice_id) = bv.id
             LEFT JOIN (
-                SELECT comment_id, id, reply_text, variant_type, is_posted_to_platform, created_at
+                SELECT comment_id, id, reply_text, reply_type, variant_type, is_posted_to_platform, created_at
                 FROM replies
                 WHERE id IN (SELECT MAX(id) FROM replies GROUP BY comment_id)
             ) r ON r.comment_id = c.id
@@ -78,13 +78,13 @@ try {
             }
 
             if ($filter === 'pending_all') {
-                $whereSql .= " AND (c.status IN ('pending', 'pending_review', 'ai_unavailable', 'invalid_ai_output', 'failed') OR (r.is_posted_to_platform = 0 AND r.reply_text IS NOT NULL))";
+                $whereSql .= " AND (c.status IN ('pending', 'pending_review', 'ai_unavailable', 'invalid_ai_output', 'failed') OR (c.status NOT IN ('replied', 'ignored') AND r.is_posted_to_platform = 0 AND r.reply_type NOT IN ('gold_draft', 'draft') AND r.reply_text IS NOT NULL))";
             } elseif ($filter === 'pending_new') {
                 $whereSql .= " AND c.status = 'pending'";
             } elseif ($filter === 'ai_review') {
                 $whereSql .= " AND c.status IN ('pending_review', 'ai_unavailable', 'invalid_ai_output')";
             } elseif ($filter === 'leads_urgent') {
-                $whereSql .= " AND (c.sentiment IN ('lead', 'urgent') OR c.intent LIKE 'lead_%' OR c.intent = 'support') AND (c.status IN ('pending', 'pending_review', 'ai_unavailable', 'invalid_ai_output', 'failed') OR (r.is_posted_to_platform = 0 AND r.reply_text IS NOT NULL))";
+                $whereSql .= " AND (c.sentiment IN ('lead', 'urgent') OR c.intent LIKE 'lead_%' OR c.intent = 'support') AND (c.status IN ('pending', 'pending_review', 'ai_unavailable', 'invalid_ai_output', 'failed') OR (c.status NOT IN ('replied', 'ignored') AND r.is_posted_to_platform = 0 AND r.reply_type NOT IN ('gold_draft', 'draft') AND r.reply_text IS NOT NULL))";
             } elseif ($filter === 'ignored') {
                 $whereSql .= " AND c.status = 'ignored'";
             } elseif ($filter === 'spam_ignored') {
@@ -100,7 +100,7 @@ try {
             } elseif ($filter === 'replied') {
                 $whereSql .= " AND c.status = 'replied'";
             } elseif ($filter === 'failed') {
-                $whereSql .= " AND (c.status = 'failed' OR (r.is_posted_to_platform = 0 AND r.reply_text IS NOT NULL))";
+                $whereSql .= " AND ((c.status = 'failed') OR (c.status NOT IN ('replied', 'ignored') AND r.is_posted_to_platform = 0 AND r.reply_type NOT IN ('gold_draft', 'draft') AND r.reply_text IS NOT NULL))";
             } elseif ($filter === 'spam') {
                 $whereSql .= " AND (c.status = 'spam' OR c.sentiment = 'spam')";
             }
@@ -180,16 +180,16 @@ try {
                 SUM(CASE WHEN c.status = 'pending' AND (c.is_archived = 0 OR c.is_archived IS NULL) THEN 1 ELSE 0 END) as pending_count,
                 SUM(CASE WHEN c.status = 'pending' AND (c.is_archived = 0 OR c.is_archived IS NULL) THEN 1 ELSE 0 END) as pending_new_count,
                 SUM(CASE WHEN c.status IN ('pending_review', 'ai_unavailable', 'invalid_ai_output') AND (c.is_archived = 0 OR c.is_archived IS NULL) THEN 1 ELSE 0 END) as ai_review_count,
-                SUM(CASE WHEN (c.status = 'failed' OR (r.is_posted_to_platform = 0 AND r.reply_text IS NOT NULL)) AND (c.is_archived = 0 OR c.is_archived IS NULL) THEN 1 ELSE 0 END) as failed_count,
-                SUM(CASE WHEN (c.sentiment IN ('lead', 'urgent') OR c.intent LIKE 'lead_%' OR c.intent = 'support') AND (c.status IN ('pending', 'pending_review', 'ai_unavailable', 'invalid_ai_output', 'failed') OR (r.is_posted_to_platform = 0 AND r.reply_text IS NOT NULL)) AND (c.is_archived = 0 OR c.is_archived IS NULL) THEN 1 ELSE 0 END) as leads_urgent_count,
-                SUM(CASE WHEN (c.status IN ('pending', 'pending_review', 'ai_unavailable', 'invalid_ai_output', 'failed') OR (r.is_posted_to_platform = 0 AND r.reply_text IS NOT NULL)) AND (c.is_archived = 0 OR c.is_archived IS NULL) THEN 1 ELSE 0 END) as pending_all_count,
+                SUM(CASE WHEN ((c.status = 'failed') OR (c.status NOT IN ('replied', 'ignored') AND r.is_posted_to_platform = 0 AND r.reply_type NOT IN ('gold_draft', 'draft') AND r.reply_text IS NOT NULL)) AND (c.is_archived = 0 OR c.is_archived IS NULL) THEN 1 ELSE 0 END) as failed_count,
+                SUM(CASE WHEN (c.sentiment IN ('lead', 'urgent') OR c.intent LIKE 'lead_%' OR c.intent = 'support') AND (c.status IN ('pending', 'pending_review', 'ai_unavailable', 'invalid_ai_output', 'failed') OR (c.status NOT IN ('replied', 'ignored') AND r.is_posted_to_platform = 0 AND r.reply_type NOT IN ('gold_draft', 'draft') AND r.reply_text IS NOT NULL)) AND (c.is_archived = 0 OR c.is_archived IS NULL) THEN 1 ELSE 0 END) as leads_urgent_count,
+                SUM(CASE WHEN (c.status IN ('pending', 'pending_review', 'ai_unavailable', 'invalid_ai_output', 'failed') OR (c.status NOT IN ('replied', 'ignored') AND r.is_posted_to_platform = 0 AND r.reply_type NOT IN ('gold_draft', 'draft') AND r.reply_text IS NOT NULL)) AND (c.is_archived = 0 OR c.is_archived IS NULL) THEN 1 ELSE 0 END) as pending_all_count,
                 SUM(CASE WHEN c.status = 'replied' AND (c.is_archived = 0 OR c.is_archived IS NULL) THEN 1 ELSE 0 END) as replied_count,
                 SUM(CASE WHEN (c.status = 'spam' OR c.sentiment = 'spam') AND (c.is_archived = 0 OR c.is_archived IS NULL) THEN 1 ELSE 0 END) as spam_count,
                 SUM(CASE WHEN c.status = 'ignored' AND (c.is_archived = 0 OR c.is_archived IS NULL) THEN 1 ELSE 0 END) as ignored_count,
                 SUM(CASE WHEN (c.status IN ('spam', 'ignored') OR c.sentiment = 'spam') AND (c.is_archived = 0 OR c.is_archived IS NULL) THEN 1 ELSE 0 END) as spam_ignored_count
             FROM comments c
             LEFT JOIN (
-                SELECT comment_id, is_posted_to_platform, reply_text
+                SELECT comment_id, is_posted_to_platform, reply_text, reply_type
                 FROM replies
                 WHERE id IN (SELECT MAX(id) FROM replies GROUP BY comment_id)
             ) r ON r.comment_id = c.id
@@ -223,7 +223,7 @@ try {
         $rawInput = file_get_contents('php://input');
         $input = json_decode($rawInput, true) ?? $_POST;
         
-        $allowedActions = ['reply', 'retry_reply', 'toggle_highlight', 'change_status', 'create_simulated', 'delete', 'run_weekly_cleanup', 'archive_comment', 'restore_comment', 'save_gold_example', 'save_draft', 'ignore_comment', 'restore_to_pending'];
+        $allowedActions = ['reply', 'retry_reply', 'toggle_highlight', 'change_status', 'create_simulated', 'delete', 'run_weekly_cleanup', 'archive_comment', 'restore_comment', 'save_gold_example', 'save_draft', 'ignore_comment', 'restore_to_pending', 'verify_platform_reply', 'mark_as_replied'];
         $action = Security::validateEnum($input['action'] ?? '', $allowedActions, '');
 
         if (empty($action)) {
@@ -369,6 +369,19 @@ try {
                 exit;
             }
 
+            // 1. Double-Check on platform first: if already posted, avoid redundant Meta error and synchronize immediately
+            $quickCheck = MetaApiService::verifyCommentRepliedOnPlatform($commentId, $userId);
+            if (!empty($quickCheck['is_replied'])) {
+                echo json_encode([
+                    'success' => true,
+                    'is_posted_to_platform' => 1,
+                    'already_posted' => true,
+                    'message' => "¡La respuesta ya estaba publicada en {$platformName}! Estado sincronizado con éxito. 🏛️✨",
+                    'meta_result' => $quickCheck
+                ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
             // Re-attempt Meta Graph API post (manual action)
             $metaResult = MetaApiService::postReplyToMeta($commentId, $replyText, $userId, true);
 
@@ -405,6 +418,82 @@ try {
                 ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
                 exit;
             }
+        }
+
+        if ($action === 'verify_platform_reply') {
+            $commentId = Security::sanitizeInt($input['comment_id'] ?? 0, 1, 10000000, 0);
+            if ($commentId <= 0) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'comment_id inválido.']);
+                exit;
+            }
+
+            $cCheck = $pdo->prepare("SELECT id, platform, external_comment_id FROM comments WHERE id = :id AND user_id = :uid LIMIT 1");
+            $cCheck->execute([':id' => $commentId, ':uid' => $userId]);
+            $commentData = $cCheck->fetch();
+            if (!$commentData) {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'error' => 'Comentario no encontrado o sin permisos.']);
+                exit;
+            }
+
+            $platformName = ucfirst($commentData['platform'] ?? 'red social');
+            $verification = MetaApiService::verifyCommentRepliedOnPlatform($commentId, $userId);
+
+            if (!empty($verification['is_replied'])) {
+                echo json_encode([
+                    'success' => true,
+                    'is_replied' => true,
+                    'remote_id' => $verification['remote_id'] ?? null,
+                    'reply_text' => $verification['reply_text'] ?? null,
+                    'author' => $verification['author'] ?? null,
+                    'timestamp' => $verification['timestamp'] ?? null,
+                    'message' => "¡Respuesta confirmada en {$platformName}! Estado sincronizado a Respondido. 🏛️✨"
+                ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+                exit;
+            } else {
+                echo json_encode([
+                    'success' => true,
+                    'is_replied' => false,
+                    'message' => "No se detectó respuesta pública de tu cuenta en {$platformName}.",
+                    'details' => $verification
+                ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+        }
+
+        if ($action === 'mark_as_replied') {
+            $commentId = Security::sanitizeInt($input['comment_id'] ?? 0, 1, 10000000, 0);
+            if ($commentId <= 0) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'comment_id inválido.']);
+                exit;
+            }
+
+            $cCheck = $pdo->prepare("SELECT id, platform FROM comments WHERE id = :id AND user_id = :uid LIMIT 1");
+            $cCheck->execute([':id' => $commentId, ':uid' => $userId]);
+            $commentData = $cCheck->fetch();
+            if (!$commentData) {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'error' => 'Comentario no encontrado o sin permisos.']);
+                exit;
+            }
+
+            $platformName = ucfirst($commentData['platform'] ?? 'red social');
+
+            // Mark comment replied and clear highlight reason
+            $pdo->prepare("UPDATE comments SET status = 'replied', highlight_reason = NULL WHERE id = :id AND user_id = :uid")
+                ->execute([':id' => $commentId, ':uid' => $userId]);
+
+            // Mark any unposted replies as posted
+            $pdo->prepare("UPDATE replies SET is_posted_to_platform = 1 WHERE comment_id = :cid AND user_id = :uid")
+                ->execute([':cid' => $commentId, ':uid' => $userId]);
+
+            echo json_encode([
+                'success' => true,
+                'message' => "Comentario marcado manualmente como respondido en {$platformName}. 🏛️✨"
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            exit;
         }
 
         if ($action === 'toggle_highlight') {

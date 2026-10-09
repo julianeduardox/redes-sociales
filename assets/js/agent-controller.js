@@ -971,6 +971,9 @@ const AgentController = {
 
   // Update modal follower context display
   updateModalFollowerContext(comment) {
+    const errBox = document.getElementById('modal-reply-error-box');
+    if (errBox) { errBox.style.display = 'none'; errBox.innerHTML = ''; }
+
     const avatar = document.getElementById('modal-author-avatar');
     const name = document.getElementById('modal-author-name');
     const handle = document.getElementById('modal-author-handle');
@@ -1451,6 +1454,8 @@ const AgentController = {
           ? '¡Respuesta publicada y corrección aprendida por Gemini! 🧠✨' 
           : '¡Respuesta aprobada y publicada! Gemini registró el éxito de este patrón. 🏛️✨';
         App.showToast(learnMsg, 'success');
+        const errBox = document.getElementById('modal-reply-error-box');
+        if (errBox) { errBox.style.display = 'none'; errBox.innerHTML = ''; }
         App.closeModal('modal-assistant-replies');
         await App.loadComments();
         this.advanceToNextPendingComment(commentId);
@@ -1461,17 +1466,128 @@ const AgentController = {
         } else {
           App.showToast(`Error: ${res.error || 'No se pudo enviar la respuesta.'}`, 'error');
         }
+
+        // Show interactive recovery banner inside the modal
+        const errBox = document.getElementById('modal-reply-error-box');
+        if (errBox) {
+          errBox.style.display = 'block';
+          errBox.innerHTML = `
+            <div style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35); border-radius: 8px; padding: 10px 14px; font-size: 0.82rem; color: #fca5a5;">
+              <div style="font-weight: 700; margin-bottom: 4px;">⚠️ ${App.escapeHtml(res.error || 'Fallo de publicación')}</div>
+              <p style="margin: 0 0 8px; font-size: 0.78rem; color: #cbd5e1; line-height: 1.4;">
+                A veces la red social procesa el mensaje pero la conexión se corta. Si el mensaje se publicó, puedes comprobarlo o marcarlo como respondido:
+              </p>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button type="button" class="btn-primary-action" style="padding: 5px 12px; font-size: 0.78rem; background: rgba(99, 102, 241, 0.25); border: 1px solid rgba(99, 102, 241, 0.45); color: #c7d2fe; cursor: pointer;" onclick="AgentController.verifyActiveCommentOnPlatform()">
+                  🔍 Comprobar si ya se publicó
+                </button>
+                <button type="button" class="btn-primary-action" style="padding: 5px 12px; font-size: 0.78rem; background: rgba(52, 211, 153, 0.18); border: 1px solid rgba(52, 211, 153, 0.4); color: #6ee7b7; cursor: pointer;" onclick="AgentController.markActiveCommentAsReplied()">
+                  ✅ Ya la vi publicada (Marcar Respondido)
+                </button>
+              </div>
+            </div>
+          `;
+        }
         // Do NOT close the modal on error so the assistant remains visible for capture or edits
       }
     } catch (err) {
       console.error(err);
       App.showToast('Error al enviar la respuesta.', 'error');
+      const errBox = document.getElementById('modal-reply-error-box');
+      if (errBox) {
+        errBox.style.display = 'block';
+        errBox.innerHTML = `
+          <div style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35); border-radius: 8px; padding: 10px 14px; font-size: 0.82rem; color: #fca5a5;">
+            <div style="font-weight: 700; margin-bottom: 4px;">⚠️ Error de conexión o red</div>
+            <p style="margin: 0 0 8px; font-size: 0.78rem; color: #cbd5e1; line-height: 1.4;">
+              Hubo una interrupción en la red. Si el mensaje llegó a publicarse en Instagram/Facebook, puedes verificarlo aquí:
+            </p>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button type="button" class="btn-primary-action" style="padding: 5px 12px; font-size: 0.78rem; background: rgba(99, 102, 241, 0.25); border: 1px solid rgba(99, 102, 241, 0.45); color: #c7d2fe; cursor: pointer;" onclick="AgentController.verifyActiveCommentOnPlatform()">
+                🔍 Comprobar si ya se publicó
+              </button>
+              <button type="button" class="btn-primary-action" style="padding: 5px 12px; font-size: 0.78rem; background: rgba(52, 211, 153, 0.18); border: 1px solid rgba(52, 211, 153, 0.4); color: #6ee7b7; cursor: pointer;" onclick="AgentController.markActiveCommentAsReplied()">
+                ✅ Ya la vi publicada (Marcar Respondido)
+              </button>
+            </div>
+          </div>
+        `;
+      }
     } finally {
       this.isSubmittingReply = false;
       if (btn) {
         btn.disabled = false;
         btn.innerHTML = `<span>Publicar Respuesta</span> 🏛️`;
       }
+    }
+  },
+
+  // Verify whether the currently active comment was published on Instagram/Facebook
+  async verifyActiveCommentOnPlatform() {
+    const comment = this.modalActiveComment || this.activeComment;
+    if (!comment || !comment.id) return;
+
+    const commentId = parseInt(comment.id, 10);
+    const platName = comment.platform === 'facebook' ? 'Facebook' : 'Instagram';
+    App.showToast(`Verificando publicación en ${platName}... 🔍`, 'info');
+
+    try {
+      const response = await App.fetchWithCsrf('api/comments.php', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'verify_platform_reply',
+          comment_id: commentId
+        })
+      });
+
+      const res = await response.json();
+      if (res.success && res.is_replied) {
+        App.showToast(`¡Confirmado! La respuesta ya está visible en ${platName}. Estado sincronizado a Respondido. ✅✨`, 'success', 6000);
+        const errBox = document.getElementById('modal-reply-error-box');
+        if (errBox) { errBox.style.display = 'none'; errBox.innerHTML = ''; }
+        App.closeModal('modal-assistant-replies');
+        await App.loadComments();
+        this.advanceToNextPendingComment(commentId);
+      } else {
+        App.showToast(`No se detectó respuesta pública de tu cuenta en ${platName}. Puedes intentar enviar nuevamente.`, 'warning', 5000);
+      }
+    } catch (err) {
+      console.error(err);
+      App.showToast('Error al verificar estado en la red.', 'error');
+    }
+  },
+
+  // Manually mark currently active comment as replied
+  async markActiveCommentAsReplied() {
+    const comment = this.modalActiveComment || this.activeComment;
+    if (!comment || !comment.id) return;
+
+    const commentId = parseInt(comment.id, 10);
+    const platName = comment.platform === 'facebook' ? 'Facebook' : 'Instagram';
+
+    try {
+      const response = await App.fetchWithCsrf('api/comments.php', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'mark_as_replied',
+          comment_id: commentId
+        })
+      });
+
+      const res = await response.json();
+      if (res.success) {
+        App.showToast(`¡Comentario marcado como respondido en ${platName}! 🏛️✨`, 'success');
+        const errBox = document.getElementById('modal-reply-error-box');
+        if (errBox) { errBox.style.display = 'none'; errBox.innerHTML = ''; }
+        App.closeModal('modal-assistant-replies');
+        await App.loadComments();
+        this.advanceToNextPendingComment(commentId);
+      } else {
+        App.showToast(`Error: ${res.error || 'No se pudo actualizar'}`, 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      App.showToast('Error al marcar como respondido.', 'error');
     }
   },
 

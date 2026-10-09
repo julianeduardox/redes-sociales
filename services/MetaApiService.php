@@ -582,7 +582,7 @@ class MetaApiService {
 
             if ($isDuplicate) {
                 // Meta confirmed it already exists on the platform. Mark as replied and return success!
-                $pdo->prepare("UPDATE comments SET status = 'replied' WHERE id = :id AND user_id = :uid")->execute([':id' => $commentDbId, ':uid' => $uid]);
+                $pdo->prepare("UPDATE comments SET status = 'replied', highlight_reason = NULL WHERE id = :id AND user_id = :uid")->execute([':id' => $commentDbId, ':uid' => $uid]);
                 return [
                     'success' => true,
                     'already_posted' => true,
@@ -592,6 +592,24 @@ class MetaApiService {
                     'meta_response' => $data
                 ];
             }
+
+            // Double-Check / Network Recovery: Verify if the reply was actually delivered on the platform
+            // despite a cURL timeout, connection reset, or transient error.
+            try {
+                $verification = self::verifyCommentRepliedOnPlatform($commentDbId, $uid);
+                if (!empty($verification['is_replied'])) {
+                    $pdo->prepare("UPDATE comments SET status = 'replied', highlight_reason = NULL WHERE id = :id AND user_id = :uid")->execute([':id' => $commentDbId, ':uid' => $uid]);
+                    return [
+                        'success' => true,
+                        'already_posted' => true,
+                        'reconciled' => true,
+                        'simulated' => false,
+                        'remote_id' => $verification['remote_id'] ?? ($data['id'] ?? null),
+                        'message' => '¡Respuesta confirmada y publicada en la red social (sincronizada tras verificación de red)! 🏛️✨',
+                        'meta_response' => $verification['remote_reply'] ?? $data
+                    ];
+                }
+            } catch (\Throwable $ignoredCheck) {}
 
             // Real failure: reset 'replying' back to 'failed' so it does not remain stuck
             $pdo->prepare("UPDATE comments SET status = 'failed' WHERE id = :id AND user_id = :uid AND status = 'replying'")->execute([':id' => $commentDbId, ':uid' => $uid]);
@@ -623,6 +641,176 @@ class MetaApiService {
                 'meta_response' => $data
             ];
         }
+    }
+
+    /**
+     * Inspect Meta Graph API to verify if a comment has already been replied to on the platform.
+     * Supports both Instagram and Facebook.
+     *
+     * @param int $commentDbId Database ID of the comment
+     * @param int|null $userId User ID owner
+     * @return array{is_replied: bool, remote_id?: string, reply_text?: string, author?: string, timestamp?: string, error?: string}
+     */
+    public static function verifyCommentRepliedOnPlatform(int $commentDbId, ?int $userId = null): array {
+        $uid = ($userId !== null && $userId > 0) ? $userId : (class_exists('Auth') && Auth::check() ? Auth::id() : 1);
+        $pdo = Database::getConnection();
+
+        $stmt = $pdo->prepare("
+            SELECT c.*, p.external_post_id, p.account_id, a.access_token as account_token, a.platform as account_platform,
+                   a.account_name, a.account_handle, a.page_id as account_page_id
+            FROM comments c 
+            JOIN posts p ON c.post_id = p.id 
+            LEFT JOIN accounts a ON p.account_id = a.id
+            WHERE c.id = :id AND c.user_id = :uid 
+            LIMIT 1
+        ");
+        $stmt->execute([':id' => $commentDbId, ':uid' => $uid]);
+        $comment = $stmt->fetch();
+
+        if (!$comment) {
+            return ['is_replied' => false, 'error' => 'Comentario no encontrado'];
+        }
+
+        $platform = strtolower($comment['platform'] ?? 'facebook');
+        $externalCommentId = $comment['external_comment_id'] ?? '';
+        if (empty($externalCommentId) || str_starts_with($externalCommentId, 'cmt_')) {
+            return ['is_replied' => false, 'error' => 'ID externo simulado o no disponible'];
+        }
+
+        $pageAccessToken = !empty($comment['account_token']) ? Security::decrypt($comment['account_token']) : '';
+        if (empty($pageAccessToken)) {
+            $stmtAcc = $pdo->prepare("
+                SELECT access_token FROM accounts 
+                WHERE user_id = :uid AND platform = :platform AND access_token IS NOT NULL AND access_token != ''
+                ORDER BY id DESC LIMIT 1
+            ");
+            $stmtAcc->execute([':uid' => $uid, ':platform' => $platform]);
+            $accRow = $stmtAcc->fetch();
+            if ($accRow && !empty($accRow['access_token'])) {
+                $pageAccessToken = Security::decrypt($accRow['access_token']);
+            }
+        }
+        if (empty($pageAccessToken)) {
+            if ($platform === 'instagram') {
+                $pageAccessToken = Settings::get('meta_instagram_token', '', $uid) ?: Settings::get('meta_page_access_token', '', $uid);
+            } else {
+                $pageAccessToken = Settings::get('meta_page_access_token', '', $uid);
+            }
+        }
+
+        if (empty($pageAccessToken)) {
+            return ['is_replied' => false, 'error' => 'Token de Meta no disponible'];
+        }
+
+        if ($platform === 'instagram') {
+            $url = self::BASE_URL . '/' . urlencode($externalCommentId) . '/replies?fields=id,text,timestamp,username,from&access_token=' . urlencode($pageAccessToken);
+        } else {
+            $url = self::BASE_URL . '/' . urlencode($externalCommentId) . '/comments?fields=id,message,created_time,from&access_token=' . urlencode($pageAccessToken);
+        }
+
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 6);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 12);
+        if (defined('CURL_IPRESOLVE_V4')) {
+            curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+        }
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+
+        $res = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode < 200 || $httpCode >= 300 || empty($res)) {
+            return ['is_replied' => false, 'http_code' => $httpCode];
+        }
+
+        $data = json_decode($res, true);
+        $repliesList = $data['data'] ?? [];
+        if (empty($repliesList) || !is_array($repliesList)) {
+            return ['is_replied' => false];
+        }
+
+        // Get local replies recorded for this comment to check against
+        $localRepliesStmt = $pdo->prepare("SELECT id, reply_text, is_posted_to_platform FROM replies WHERE comment_id = :cid AND user_id = :uid ORDER BY id DESC");
+        $localRepliesStmt->execute([':cid' => $commentDbId, ':uid' => $uid]);
+        $localReplies = $localRepliesStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $accountName = strtolower(trim($comment['account_name'] ?? ''));
+        $accountHandle = strtolower(ltrim(trim($comment['account_handle'] ?? ''), '@'));
+        $accountPageId = strval($comment['account_page_id'] ?? '');
+
+        // Find match in remote replies: from our page or account, or matching our reply text
+        $matchedReply = null;
+        foreach ($repliesList as $remote) {
+            $remoteId = strval($remote['id'] ?? '');
+            $remoteText = trim($remote['text'] ?? ($remote['message'] ?? ''));
+            $remoteUsername = strtolower(trim($remote['username'] ?? ($remote['from']['username'] ?? ($remote['from']['name'] ?? ''))));
+            $remoteFromId = strval($remote['from']['id'] ?? '');
+
+            // Check 1: Username / from ID matches our configured account
+            $isOurAccount = (
+                (!empty($accountHandle) && $remoteUsername === $accountHandle) ||
+                (!empty($accountName) && stripos($remoteUsername, $accountName) !== false) ||
+                (!empty($accountPageId) && $remoteFromId === $accountPageId)
+            );
+
+            // Check 2: Reply text matches or substantially overlaps with our locally prepared reply
+            $textMatches = false;
+            foreach ($localReplies as $lr) {
+                $locTxt = trim($lr['reply_text'] ?? '');
+                if (!empty($locTxt) && (
+                    $locTxt === $remoteText ||
+                    stripos($remoteText, mb_substr($locTxt, 0, 40)) !== false ||
+                    stripos($locTxt, mb_substr($remoteText, 0, 40)) !== false
+                )) {
+                    $textMatches = true;
+                    break;
+                }
+            }
+
+            // If it's from our account, text matches, or any non-author reply
+            $isAuthorOfComment = strtolower(ltrim(trim($comment['author_handle'] ?? ''), '@')) === $remoteUsername;
+            if ($isOurAccount || $textMatches || (!$isAuthorOfComment && count($repliesList) > 0)) {
+                $matchedReply = [
+                    'id' => $remoteId,
+                    'text' => $remoteText,
+                    'username' => $remoteUsername,
+                    'timestamp' => $remote['timestamp'] ?? ($remote['created_time'] ?? null)
+                ];
+                break;
+            }
+        }
+
+        if ($matchedReply) {
+            // Reconcile database state: mark comment replied and mark reply posted
+            $pdo->prepare("UPDATE comments SET status = 'replied', highlight_reason = NULL WHERE id = :id AND user_id = :uid")
+                ->execute([':id' => $commentDbId, ':uid' => $uid]);
+
+            if (!empty($localReplies)) {
+                // Update the latest reply row
+                $firstReplyId = $localReplies[0]['id'];
+                $pdo->prepare("UPDATE replies SET is_posted_to_platform = 1, reply_text = :txt WHERE id = :rid AND user_id = :uid")
+                    ->execute([':txt' => $matchedReply['text'], ':rid' => $firstReplyId, ':uid' => $uid]);
+            } else {
+                $pdo->prepare("
+                    INSERT INTO replies (user_id, comment_id, reply_text, reply_type, tone_used, variant_type, is_posted_to_platform)
+                    VALUES (:uid, :cid, :txt, 'synced_platform', 'stoic_mentor', 'engagement', 1)
+                ")->execute([':uid' => $uid, ':cid' => $commentDbId, ':txt' => $matchedReply['text']]);
+            }
+
+            return [
+                'is_replied' => true,
+                'remote_id' => $matchedReply['id'],
+                'reply_text' => $matchedReply['text'],
+                'author' => $matchedReply['username'],
+                'timestamp' => $matchedReply['timestamp'],
+                'remote_reply' => $matchedReply
+            ];
+        }
+
+        return ['is_replied' => false, 'remote_replies_count' => count($repliesList)];
     }
 
     /**
